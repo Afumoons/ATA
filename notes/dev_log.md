@@ -78,3 +78,13 @@
   - python -c "import autonomous_trading_ai" (from workspace root) – PASS.
 - Notes:
   - This is a small, safety-oriented maintenance change confined to the Phase 2 file set, intended to reduce path/packaging brittleness while keeping existing exploratory + regime-aware execution behavior intact.
+
+## 2026-03-17 05:36 (Asia/Jakarta)
+
+- Phase: Phase 2 – regime-aware live selection (transparency)
+- Changes:
+  - Enhanced the regime-edge filtering in `execution.signals.execute_signals_for_symbol` so that when strategies are filtered by `regime_pnl` edge, the log now also records the range of edge values kept (min/max) per symbol/timeframe/regime. This does not change which strategies can trade; it only improves observability of the regime-aware selection step.
+- Tests:
+  - python -c "import autonomous_trading_ai" (from workspace root) – PASS.
+- Notes:
+  - This is a small, non-behavioral transparency improvement within the Phase 2 file set, intended to make it easier to audit and tune regime-edge thresholds in the future without altering current risk or selection behavior.

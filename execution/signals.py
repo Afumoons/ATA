@@ -135,6 +135,9 @@ def execute_signals_for_symbol(
             edge = _regime_edge(rec.stats or {}, regime_label)
             scored.append((edge, rec))
 
+        if not scored:
+            return []
+
         # Filter out strategies with very poor historical performance
         # in this regime (e.g. worse than -5% return).
         kept = [(edge, rec) for edge, rec in scored if edge > -5.0]
@@ -144,13 +147,17 @@ def execute_signals_for_symbol(
 
         filtered = [rec for edge, rec in kept]
         if filtered != records:
+            min_edge = min(edge for edge, _ in kept) if kept else None
+            max_edge = max(edge for edge, _ in kept) if kept else None
             logger.info(
-                "Regime filter for %s %s (%s): %d -> %d strategies",
+                "Regime filter for %s %s (%s): %d -> %d strategies (edge range kept: %s .. %s)",
                 symbol,
                 timeframe,
                 regime_label,
                 len(records),
                 len(filtered),
+                f"{min_edge:.2f}" if min_edge is not None else "n/a",
+                f"{max_edge:.2f}" if max_edge is not None else "n/a",
             )
         return filtered
 
