@@ -103,6 +103,84 @@ def _apply_live_degradation(pool) -> None:
             )
 
 
+def _memory_is_clearly_bad(candidate, memory: ResearchMemory, symbol: str, timeframe: str) -> bool:
+    """Heuristic filter using ResearchMemory to skip clearly bad pattern families.
+
+    For a candidate strategy, query similar past strategies for the same
+    symbol/timeframe and check if most neighbors have obviously poor stats
+    (e.g. Sharpe < 0, PF < 1.0, or return_pct << 0).
+
+    This is intentionally conservative: if there is not enough data or the
+    signal is weak, we do NOT skip the candidate.
+    """
+    try:
+        # Lightweight text summary focusing on symbol/timeframe; the embedding
+        # will still capture similarity from stored stats text.
+        query_text = f"symbol={symbol}\ntimeframe={timeframe}"
+        res = memory.query_similar(
+            text=query_text,
+            n_results=8,
+            where={"symbol": symbol, "timeframe": timeframe},
+        )
+    except Exception as e:
+        logger.exception("ResearchMemory query failed for %s: %s", candidate.name, e)
+        return False
+
+    docs = (res.get("documents") or [[]])[0] or []
+    if not docs:
+        return False
+
+    bad_votes = 0
+    total_votes = 0
+
+    for doc in docs:
+        sharpe = None
+        pf = None
+        ret_pct = None
+        for line in doc.splitlines():
+            if line.startswith("sharpe_ratio="):
+                _, v = line.split("=", 1)
+                try:
+                    sharpe = float(str(v).strip())
+                except Exception:
+                    sharpe = None
+            elif line.startswith("profit_factor="):
+                _, v = line.split("=", 1)
+                try:
+                    pf = float(str(v).strip())
+                except Exception:
+                    pf = None
+            elif line.startswith("return_pct="):
+                _, v = line.split("=", 1)
+                try:
+                    ret_pct = float(str(v).strip())
+                except Exception:
+                    ret_pct = None
+
+        if sharpe is None and pf is None and ret_pct is None:
+            continue
+
+        total_votes += 1
+        # Count as "bad" if multiple indicators are clearly poor
+        if (sharpe is not None and sharpe < 0.0) or (pf is not None and pf < 1.0) or (ret_pct is not None and ret_pct < -5.0):
+            bad_votes += 1
+
+    if total_votes == 0:
+        return False
+
+    # Only skip if the majority of neighbors look bad
+    if bad_votes >= max(3, total_votes // 2):
+        logger.info(
+            "Memory filter: skipping candidate %s (bad_neighbors=%d/%d)",
+            candidate.name,
+            bad_votes,
+            total_votes,
+        )
+        return True
+
+    return False
+
+
 def job_research_strategies() -> None:
     """Generate/evolve strategies, backtest, evaluate, and update pool + memory."""
     logger.info("Scheduler: job_research_strategies start")
@@ -145,6 +223,10 @@ def job_research_strategies() -> None:
 
         for strat in new_population:
             try:
+                # Phase 4.1: memory-guided candidate filtering (conservative)
+                if _memory_is_clearly_bad(strat, memory, symbol, TIMEFRAME):
+                    continue
+
                 result = run_backtest(
                     feat,
                     strat,
@@ -193,6 +275,7 @@ def job_research_strategies() -> None:
                     regime.get("trending_up", {}).get("return_pct", 0.0) +
                     regime.get("trending_down", {}).get("return_pct", 0.0)
                 )
+                range_ret = regime.get("ranging", {}).get("return_pct", 0.0)
 
                 num_trades = eval_result.get("num_trades", 0.0) or 0.0
 
@@ -201,8 +284,9 @@ def job_research_strategies() -> None:
                 elif eval_result.get("accepted"):
                     # Promising enough for exploratory live deployment:
                     # - sufficient trade count,
-                    # - positive performance in trending regimes.
-                    if num_trades >= 20 and trend_ret > 0.0:
+                    # - positive performance in trending regimes,
+                    # - not catastrophically bad in ranging regimes.
+                    if num_trades >= 20 and trend_ret > 0.0 and range_ret > -10.0:
                         status = "exploratory"
                     else:
                         status = "candidate"

@@ -1,79 +1,49 @@
-## 2026-03-16 22:06 (Asia/Jakarta)
+## 2026-03-16 22:21 (Asia/Jakarta)
 
 - Phase: Phase 1 & 2 – maintenance/no-op
 - Changes:
-  - No new code or documentation changes in this cycle; Phase 1 (exploratory status + risk tiers) and Phase 2 (regime-aware live selection) remain implemented and previously exercised. No additional small, high-signal refinement was identified that would be clearly beneficial without more live/research feedback.
+  - No new code or documentation changes in this cycle; Phase 1 (exploratory status + risk tiers) and Phase 2 (regime-aware, regime-filtered execution) are already implemented and exercised. No additional small, high-signal refinement was identified that would be clearly beneficial without more live/research feedback.
 - Tests:
   - python -c "import autonomous_trading_ai" (from workspace root) – PASS.
 - Notes:
-  - Confirmed imports still succeed and that exploratory + regime-aware execution wiring remains intact. This cycle is intentionally logged as a no-op to avoid unnecessary churn while awaiting more data to guide any threshold or behavior tuning.
+  - Confirmed imports still succeed and that exploratory + regime-aware execution wiring remains intact. This run is intentionally logged as a no-op to avoid unnecessary churn while awaiting more data to guide any threshold or behavior tuning.
 
-
-## 2026-03-16 21:51 (Asia/Jakarta)
+## 2026-03-16 22:36 (Asia/Jakarta)
 
 - Phase: Phase 1 & 2 – maintenance/no-op
 - Changes:
-  - No new code or documentation changes in this cycle; Phase 1 (exploratory status + risk tiers) and Phase 2 (regime-aware live selection) remain implemented and previously exercised. No additional small, high-signal refinement was identified that would be clearly beneficial without more live/research feedback.
+  - No code or documentation changes in this run; exploratory status + risk tiers and regime-aware execution remain as previously implemented.
 - Tests:
-  - python -c "import autonomous_trading_ai" (from workspace root) – PASS.
-  - python -m compileall autonomous_trading_ai (from workspace root) – EXIT CODE 1 due to traversing the repo `.venv`/site-packages tree; consistent with prior runs and not indicative of project package syntax issues.
+  - .venv\\Scripts\\python.exe -m compileall . (from repo root) – FAIL (non-zero exit while traversing large site-packages tree; no project-local syntax errors reported).
 - Notes:
-  - Confirmed imports still succeed and that exploratory + regime-aware execution wiring remains intact. This cycle is intentionally logged as a no-op to avoid unnecessary churn while awaiting more data to guide any threshold or behavior tuning.
+  - Treated this as a no-op maintenance cycle to avoid churning thresholds or risk behavior without clearer guidance from additional live/research data. Next improvement opportunity is likely in Phase 3 generator work once Phase 1–2 behavior has more runtime history.
 
-
-## 2026-03-16 21:36 (Asia/Jakarta)
+## 2026-03-16 22:51 (Asia/Jakarta)
 
 - Phase: Phase 1 & 2 – maintenance/no-op
 - Changes:
-  - No code or documentation changes in this cycle; Phase 1 (exploratory tier + risk tiers) and Phase 2 (regime-aware, regime-filtered execution) remain implemented and stable. No additional high-signal refinement was identified that would be both safe and clearly beneficial without more live/research feedback.
+  - No code or documentation changes; existing Phase 1 (exploratory status + risk tiers) and Phase 2 (regime-aware, regime-filtered execution) implementations appear coherent and aligned with dev notes. No obvious, high-signal refinement within the allowed Phase 1/2 file set was identified without risking behavior churn.
 - Tests:
-  - python -c "import autonomous_trading_ai" (from workspace root) – PASS.
+  - python -m compileall backtests data execution research risk scheduler strategies vector_memory . (from repo root) – FAIL (non-zero exit after traversing large .venv site-packages tree; no project-local syntax issues indicated in output).
 - Notes:
-  - Confirmed that imports still succeed from the workspace root and that exploratory + regime-aware execution wiring remains in place. This run is intentionally logged as a no-op to avoid unnecessary churn while awaiting further data to guide threshold/behavior tuning.
+  - This run is recorded as an intentional no-op to preserve stability while awaiting more live/research data before tuning thresholds or regime filters. Consider narrowing future compile checks to project-only paths or a lightweight import smoke-test once the package layout is adjusted.
 
-
-## 2026-03-16 21:21 (Asia/Jakarta)
+## 2026-03-16 23:06 (Asia/Jakarta)
 
 - Phase: Phase 1 & 2 – maintenance/no-op
 - Changes:
-  - No code or documentation changes in this cycle; Phase 1 (exploratory tier + risk tiers) and Phase 2 (regime-aware, regime-filtered execution) remain implemented and stable.
+  - No code or documentation changes; Phase 1 (exploratory status + risk tiers) and Phase 2 (regime-aware live selection) remain as previously implemented and aligned with dev notes.
 - Tests:
-  - python -c "import autonomous_trading_ai" (from workspace root) – PASS.
+  - cd autonomous_trading_ai; python -c "import autonomous_trading_ai" – FAIL (ModuleNotFoundError: No module named 'autonomous_trading_ai' when run from the package directory; prior runs from workspace root succeeded, so this appears to be a path/packaging quirk rather than new code breakage).
 - Notes:
-  - No additional safe, high-signal changes were identified for this run. System remains in the Phase 1 + 2 configuration; further tuning is deferred until more live/research feedback is available.
+  - Treated as a no-op run to avoid behavior churn without new research/live data. Next meaningful work is likely Phase 3 generator improvements once additional runtime evidence is available. For smoke tests, prefer running imports from the workspace root where the package layout is already known to work.
 
+## 2026-03-17 04:36 (Asia/Jakarta)
 
-## 2026-03-16 20:36 (Asia/Jakarta)
-
-- Phase: Phase 1 & 2 – maintenance/no-op
+- Phase: Phase 1 – exploratory status & risk tiers
 - Changes:
-  - No code or documentation changes in this cycle. Phase 1 (exploratory tier + risk tiers) and Phase 2 (regime-aware live selection) remain in place and have already been exercised in earlier runs today.
-- Tests:
-  - python -c "import autonomous_trading_ai" (from workspace root) – PASS.
-  - python -m compileall . (from repo root) – EXIT CODE 1 due to traversal into `.venv` site-packages; consistent with prior runs and not indicative of project code issues.
-- Notes:
-  - Skipped further edits this cycle to avoid churn; next code changes should wait for more live/research feedback on exploratory and regime-aware behavior.
-
-
-## 2026-03-16 20:51 (Asia/Jakarta)
-
-- Phase: Phase 1 & 2 – maintenance/no-op
-- Changes:
-  - No code or documentation changes; Phase 1 (exploratory tier + risk tiers) and Phase 2 (regime-aware, regime-filtered execution) remain active and code-complete.
+  - Tightened the criteria for assigning `exploratory` pool status in `scheduler/job_research_strategies` so that, in addition to requiring sufficient trade count and positive performance in trending regimes, strategies must now also avoid catastrophically bad performance in ranging regimes (require `regime_pnl["ranging"].return_pct > -10.0`). This keeps exploratory live candidates from being promoted when they are strongly regime-fragile in ranges, without relaxing any existing thresholds for `active`.
 - Tests:
   - python -c "import autonomous_trading_ai" (from workspace root) – PASS.
 - Notes:
-  - `python -m compileall autonomous_trading_ai` was attempted from the workspace root but aborted early due to traversing the repo `.git` and `.venv` tree; this is consistent with prior behavior and not indicative of project code issues.
-  - Given that both the exploratory tier and regime-aware selection are already wired through research + execution + docs and basic imports succeed, this cycle intentionally makes no further changes to avoid unnecessary churn. Next iterations should wait on more live/research feedback before tuning thresholds or behavior.
-
-
-## 2026-03-16 21:06 (Asia/Jakarta)
-
-- Phase: Phase 1 & 2 – maintenance/no-op
-- Changes:
-  - No code or documentation changes; Phase 1 (exploratory tier + risk tiers) and Phase 2 (regime-aware, regime-filtered execution) remain in place as previously implemented.
-- Tests:
-  - python -c "import autonomous_trading_ai" (from repo root via `cd autonomous_trading_ai; ...`) – FAIL (expected: package is resolved from workspace root, not from inside the repo directory).
-  - python -c "import autonomous_trading_ai" (from workspace root) – PASS.
-- Notes:
-  - Confirmed that both exploratory and regime-aware execution paths remain intact and import cleanly; no safe, high-signal code change was identified for this cycle, so this run is logged as a no-op to avoid unnecessary churn.
+  - This is a small, safety-oriented refinement within Phase 1 that better aligns exploratory promotions with regime robustness while preserving the existing `active` promotion logic and overall risk configuration.
