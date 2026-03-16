@@ -68,3 +68,13 @@
   - python -c "import autonomous_trading_ai" (from workspace root) – PASS.
 - Notes:
   - Phase 1 & 2 continue to look stable based on current structure and recent checks. Additional adjustments are deferred until more runtime evidence is available to justify threshold or regime-filter changes.
+
+## 2026-03-17 05:21 (Asia/Jakarta)
+
+- Phase: Phase 2 – regime-aware live selection (maintenance)
+- Changes:
+  - Switched `execution.signals` to use package-relative imports for `live_state_utils`, `risk_config`, and `live_monitor` instead of absolute `autonomous_trading_ai.*` imports. This makes the module more robust to different import contexts without changing any runtime behavior for signal generation, regime filtering, or risk tiers.
+- Tests:
+  - python -c "import autonomous_trading_ai" (from workspace root) – PASS.
+- Notes:
+  - This is a small, safety-oriented maintenance change confined to the Phase 2 file set, intended to reduce path/packaging brittleness while keeping existing exploratory + regime-aware execution behavior intact.
