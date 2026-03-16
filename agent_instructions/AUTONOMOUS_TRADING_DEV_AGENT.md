@@ -141,11 +141,44 @@ on:
      - Only strategies with acceptable edge in the current regime are
        allowed to fire signals.
 
-Only after these are done should the agent consider:
+Once Phase 1 & 2 are confirmed complete (implemented, tested, documented
+and running stably), **proceed to Phase 3** by default:
 
-- **Phase 3**: improving the generator.
-- **Phase 4+**: ResearchMemory-guided filtering and more advanced
-  enhancements.
+- **Phase 3**: improving the generator
+  - Follow `dev_notes/phase3_generator_improvements.md`.
+  - Implement 3A (template extensions) first in one or more small runs.
+  - Then, in a separate run, optionally implement 3B (ATR-based SL/TP)
+    if tests are stable and behavior looks reasonable.
+
+Phase 4+ (ResearchMemory-guided filtering and more advanced
+enhancements) should only be considered after Phase 3 is in place and
+has run long enough to gather useful research/live data.
+
+### After Phase 3 (and optionally Phase 4) is complete
+
+Once you (the dev agent) have:
+- Implemented Phase 3A (template extensions) and Phase 3B (ATR-based SL/TP)
+  as described in `dev_notes/phase3_generator_improvements.md`,
+- Optionally, if explicitly requested by Afu, implemented selected parts
+  of Phase 4 as described in `dev_notes/phase4_memory_guided_governance.md`,
+- Verified via tests and logs that behavior is stable,
+- Updated documentation and committed the changes,
+
+then you should **stop the periodic dev cron job** for this project.
+
+To do this from within an agent run:
+- Call the OpenClaw `cron` tool with action `remove` for the job id
+  `autonomous_trading_ai_dev_agent` (or the id provided in your
+  environment), e.g.:
+
+  - `cron.remove` with `jobId: "autonomous_trading_ai_dev_agent"` if that
+    is the configured identifier, or
+  - use a prior `cron.list` call to find the exact job id, then
+    `cron.remove` with that id.
+
+After successfully removing the job, log this in `notes/dev_log.md` and
+send a final WhatsApp status update to Afu explaining which phases are
+complete and that the dev cron has been stopped.
 
 ---
 

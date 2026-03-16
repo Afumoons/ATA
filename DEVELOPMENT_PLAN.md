@@ -141,23 +141,75 @@ Detailed file-level plan: to be defined in
 
 ---
 
-### Phase 4 – ResearchMemory-Guided Filtering (Optional / Advanced)
+### Phase 4 – Memory-Guided Governance (Optional / Advanced)
 
-**Goal:** Use vector-backed research memory to reduce compute spent on
-clearly bad pattern families and bias evolution towards historically
-promising areas.
+**Goal:** Use vector-backed ResearchMemory and live stats to:
 
-Key ideas:
+- Reduce compute spent on clearly bad pattern families.
+- Bias evolution and selection toward historically promising areas.
+- Make promotion/demotion decisions that combine backtest and live
+  performance.
+
+Phase 4 is split into several sub-phases:
+
+#### 4.1 Candidate Filtering via ResearchMemory
 
 - Before backtesting a new strategy candidate, query ResearchMemory for
-  similar strategies.
+  similar strategies (filtered by symbol/timeframe and relevant
+  metadata).
 - If most similar strategies show consistently poor performance
   (e.g. Sharpe < 0, PF < 1.0, or very bad in specific regimes), either:
-  - skip backtesting this candidate, or
-  - apply a penalty to its final score.
+  - skip backtesting this candidate entirely, or
+  - apply a strong penalty to its final score so it is unlikely to be
+    promoted.
+
+#### 4.2 Memory-Guided Elite Selection
+
+- When selecting parent strategies for evolution, augment the existing
+  score with a "memory consistency" bonus:
+  - Strategies whose nearest neighbors in ResearchMemory also perform
+    well across multiple windows receive a higher effective score.
+- Use this hybrid score (pool score + memory bonus) to choose elites for
+  `evolve_population`.
+
+#### 4.3 Hybrid Live + Backtest Scoring
+
+- Combine backtest stats and live stats (from
+  `execution/strategy_live_stats.json`) into a hybrid score:
+
+  ```text
+  hybrid_score = w_bt * normalized_bt_score + w_live * normalized_live_score
+  ```
+
+- Use the hybrid score for:
+  - ranking strategies in the pool,
+  - choosing parents for evolution,
+  - informing promotion/demotion decisions.
+
+#### 4.4 Regime-Specific Memory & Playbooks
+
+- Store and query ResearchMemory with richer metadata from
+  `strategy_explain`:
+  - best/worst regimes,
+  - dominant sessions,
+  - volatility buckets.
+- Provide helpers to query "playbooks" with edge in specific regimes and
+  contexts (e.g. trending_up + London + high_vol).
+- Use these playbooks to refine regime-aware selection in live
+  execution, beyond the basic Phase 2 logic.
+
+#### 4.5 Memory-Backed Circuit Breaker (Optional)
+
+- Add a meta risk layer that:
+  - observes repeated crash patterns (e.g. strategies with certain
+    characteristics consistently underperform around high-impact news),
+  - temporarily reduces risk or disables affected strategies when
+    similar conditions reappear.
 
 This phase requires careful design and iteration and should be tackled
-after Phase 1–3 are stable.
+after Phase 1–3 are stable. It is **optional** and should respect the
+same safety constraints: no increase in risk percentages, and no
+weakening of existing risk controls.
 
 ---
 
