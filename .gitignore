@@ -1,0 +1,80 @@
+# --- OS & editor junk ---
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.vscode/
+.idea/
+*.code-workspace
+
+# --- Python basics ---
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+.env
+.venv
+venv/
+env/
+
+# --- Build / dist / eggs ---
+build/
+dist/
+.eggs/
+*.egg-info/
+*.egg
+
+# --- Logs & temp ---
+logs/
+*.log
+tmp/
+temp/
+.cache/
+.ipynb_checkpoints/
+
+# --- Data (raw / heavy / generated) ---
+data/
+datasets/
+backtests/
+reports/
+results/
+artifacts/
+checkpoints/
+models/
+model_weights/
+strategies/generated/
+notebooks/.ipynb_checkpoints/
+
+# Kalau ada sample kecil yang mau di-track, taruh di data_samples/ dan hapus dari ignore
+!data_samples/
+
+# --- Credentials / config private ---
+*.env
+*.env.*
+.envrc
+secrets/
+keys/
+config/local_*.yml
+config/local_*.json
+config/private/
+*.pem
+*.key
+
+# --- Jupyter / experiments ---
+notebooks/.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# --- Cache dari tools ---
+.mypy_cache/
+.pytest_cache/
+coverage/
+htmlcov/
+.tox/
+pytest_debug.log
+
+# --- Node (kalau ada dashboard / UI pendukung) ---
+node_modules/
+npm-debug.log*
+yarn.lock
+pnpm-lock.yaml
