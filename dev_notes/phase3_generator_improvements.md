@@ -1,399 +1,308 @@
-# Phase 3 – Strategy Generator Improvements
+# Phase 3 – Generator Improvements (More Practical Strategies)
 
-**Goal:**
+Goal: increase the proportion of generated strategies that are **practical, active, and robust** for:
+- **XAUUSD 15m**
+- **BTCUSDT 15m**
 
-1. Increase the proportion of generated strategies that:
-   - trade often enough (reasonable `num_trades`), and
-   - have structurally sound logic for both trend and range regimes.
-2. Make SL/TP sizing more **volatility-aware** (ATR-based, optional but
-   recommended).
-3. Keep the generator simple and robust, avoiding overfitting and
-   excessive complexity.
+without weakening risk controls.
 
-This file provides **per-file, step-by-step instructions** for
-implementing Phase 3.
+The generator should focus on a small set of **simple, interpretable templates** built from:
+- Price action
+- Moving averages (EMA)
+- RSI
+- ATR
+- (Optionally) Bollinger Bands
 
-Root path for this project:
-
-```text
-C:\Users\afusi\.openclaw\workspace\autonomous_trading_ai
-```
+and avoid indicator soup (e.g. heavy Ichimoku/Fibonacci mixes) for now.
 
 ---
 
-## 0. Files Affected in Phase 3
+## 1. Template Families
 
-Primary:
+Implement these as new entries in your generator templates (e.g. `LONG_ENTRY_TEMPLATES` / `SHORT_ENTRY_TEMPLATES`), with metadata so later phases can use `regime_type` and `symbol/timeframe` hints.
 
-- `strategies/generator.py`
-- `strategies/base.py` (for optional ATR-based parameters)
-- `backtests/engine.py` (only if ATR-based SL/TP is implemented)
+Each template should carry at least:
+- `name`
+- `direction` (long/short)
+- `regime_type` (e.g. `trend`, `range`, `session_trend`)
+- `symbols` / `timeframes` it is primarily designed for (XAUUSD_15m, BTCUSDT_15m)
+- Parameter ranges (grids) as described below
 
-Secondary (documentation):
+### 1.1 Trend-Follow Breakout
 
-- `strategies/README.md`
-- `backtests/README.md`
+**Regime type:** `trend`
 
-Phase 3 can be implemented in two sub-steps:
+**Applies to:**
+- `XAUUSD_15m`
+- `BTCUSDT_15m`
 
-1. **3A – Template extensions** (safe, simple, no change in backtest API).
-2. **3B – ATR-based SL/TP** (slightly more involved, touches backtest
-   engine).
+**Core logic (long):**
+- Trend filter:
+  - `EMA(ma_fast) > EMA(ma_slow)`
+- Breakout:
+  - `close > highest(high, breakout_lookback)`
+- Entry:
+  - Enter long on bar close when both conditions hold.
+- Stop loss:
+  - `SL = entry_price - sl_atr_mult * ATR(atr_period)`
+- Take profit:
+  - `TP = entry_price + tp_atr_mult * ATR(atr_period)`
+- Optional early exit:
+  - Exit if `close < EMA(ma_fast)` before SL/TP.
 
-Background agent should complete 3A first, test, commit, then optionally
-proceed to 3B in a separate run.
+**Short version:** mirror conditions.
 
----
-
-## 3A – Extend Templates for Trend & Range Playbooks
-
-### 3A.1. Add range/mean-reversion templates
-
-**File:** `strategies/generator.py`
-
-Goal: introduce simple range / mean-reversion entry templates using RSI
-and low trend_strength.
-
-1. Open `strategies/generator.py` and locate:
-
-   ```python
-   LONG_ENTRY_TEMPLATES = [
-       # Ichimoku: bullish alignment above the cloud
-       "tenkan_sen > kijun_sen and close > senkou_span_a and close > senkou_span_b",
-       # Fib + trend
-       "fib_zone_382 == 1 and trend_strength > {trend_min}",
-   ]
-
-   SHORT_ENTRY_TEMPLATES = [
-       # Ichimoku: bearish alignment below the cloud
-       "tenkan_sen < kijun_sen and close < senkou_span_a and close < senkou_span_b",
-       # Fib + trend
-       "fib_zone_618 == 1 and trend_strength < -{trend_min}",
-   ]
-   ```
-
-2. Append **range/mean-reversion** patterns that use RSI and small
-   trend_strength:
-
-   ```python
-   # Range / mean reversion: fade extremes when trend_strength is low
-   LONG_ENTRY_TEMPLATES.append(
-       "rsi < 35 and trend_strength > -0.1 and trend_strength < 0.1"
-   )
-
-   SHORT_ENTRY_TEMPLATES.append(
-       "rsi > 65 and trend_strength > -0.1 and trend_strength < 0.1"
-   )
-   ```
-
-   Place these appends immediately after the initial template lists are
-declared.
-
-Notes:
-
-- Thresholds (35/65, ±0.1) are deliberately modest; they can be tuned
-  later based on research results.
-- This change does **not** require any other module changes.
+**Suggested parameter grids:**
+- `ma_fast` ∈ {10, 14, 20}
+- `ma_slow` ∈ {40, 50, 80}
+  - Constraint: `ma_slow > ma_fast`.
+- `breakout_lookback` ∈ {20, 40, 60}
+- `atr_period` = 14
+- `sl_atr_mult` ∈ {1.5, 2.0, 2.5}
+- `tp_atr_mult` ∈ {2.0, 3.0, 4.0}
 
 ---
 
-### 3A.2. Add simple MA-based trend templates (optional but useful)
+### 1.2 Pullback-in-Trend
 
-Still in `strategies/generator.py`, extend the templates further to
-include simple moving-average-based trend-follow entries.
+**Regime type:** `trend`
 
-1. After the previous appends, add:
+**Applies to:**
+- `XAUUSD_15m`
+- `BTCUSDT_15m`
 
-   ```python
-   # MA-based trend continuation
-   LONG_ENTRY_TEMPLATES.append(
-       "ma_short > ma_long and trend_strength > {trend_min}"
-   )
+**Core logic (long):**
+- Trend filter:
+  - `EMA(ma_trend)` sloping up (approximation: `EMA(ma_trend) > EMA(ma_trend, offset=trend_lookback)`), and
+  - `close > EMA(ma_trend)`.
+- Pullback condition:
+  - `close <= EMA(ma_pullback)` (price pulls back to/through fast MA), and
+  - `RSI(rsi_period)` in a mild pullback range: `[rsi_pullback_low, 50]`.
+- Entry:
+  - Bullish bar off MA: `close > open` AND `close > EMA(ma_pullback)` after touching/breaking below it.
+- Stop loss:
+  - Below recent swing low **or** `entry_price - sl_atr_mult * ATR(atr_period)`.
+- Take profit:
+  - `entry_price + tp_atr_mult * ATR(atr_period)` **or** trailing exit when `close < EMA(ma_pullback)`.
 
-   SHORT_ENTRY_TEMPLATES.append(
-       "ma_short < ma_long and trend_strength < -{trend_min}"
-   )
-   ```
+**Short version:** invert all conditions.
 
-2. Ensure that `compute_features` already populates `ma_short` and
-   `ma_long` (it does, according to `research/features.py`).
-
-Result:
-
-- Generator can now produce:
-  - Ichimoku + fib strategies (existing behavior),
-  - Range/mean-reversion strategies,
-  - MA-based trend continuation strategies.
-
----
-
-### 3A.3. Tests & docs for 3A
-
-1. **Syntax / import check**
-   - `python -m compileall autonomous_trading_ai` or
-     `python -c "import autonomous_trading_ai"`.
-
-2. **Dummy generation test** (optional but recommended)
-   - In a small script or REPL:
-
-     ```python
-     from autonomous_trading_ai.strategies.generator import generate_batch
-
-     batch = generate_batch("XAUUSDm", "M15", 5)
-     for s in batch:
-         print(s.name, s.long_entry_rule, s.short_entry_rule)
-     ```
-
-   - Confirm that some generated strategies use the new templates
-     (`rsi < 35 ...`, `ma_short > ma_long`, etc.).
-
-3. **Docs**
-   - Update `strategies/README.md` to:
-     - Mention that templates now cover:
-       - Ichimoku + fib continuation.
-       - Range/mean-reversion with RSI.
-       - MA-based trend continuation.
-
-4. **Commit**
-   - Commit with a message like:
-
-     ```text
-     feat: extend strategy generator with range and MA trend templates
-     ```
-
-   - Log the change in `notes/dev_log.md`.
-
-After 3A is complete, the system will explore a richer set of playbooks
-without changing SL/TP behavior.
+**Suggested parameter grids:**
+- `ma_trend` = 50 (EMA)
+- `ma_pullback` = 20 (EMA)
+- `trend_lookback` ∈ {10, 20}
+- `rsi_period` = 14
+- `rsi_pullback_low` ∈ {35, 40, 45} (cap logic at ≤ 50)
+- `atr_period` = 14
+- `sl_atr_mult` ∈ {1.5, 2.0, 2.5}
+- `tp_atr_mult` ∈ {2.0, 2.5, 3.0}
 
 ---
 
-## 3B – ATR-Based SL/TP (Optional, More Advanced)
+### 1.3 Range RSI Mean-Reversion
 
-> Only attempt this sub-phase after 3A is implemented, tested, and
-> committed.
+**Regime type:** `range`
 
-Goal: allow strategies to use SL/TP distances defined as multiples of
-ATR instead of fixed pips, making position sizing more robust to changes
-in volatility.
+**Applies to:**
+- `XAUUSD_15m`
+- `BTCUSDT_15m`
 
-### 3B.1. Extend StrategyDefinition with ATR multipliers
+**Core logic (long):**
+- Regime filter (no strong trend):
+  - `abs((close - EMA(ma_mid)) / ATR(atr_period)) < max_distance_atr`, and optionally
+  - A low-trend proxy (e.g. ADX(14) < 20) if available.
+- Entry:
+  - `RSI(rsi_period) < rsi_oversold`, and
+  - `close <= lower_bollinger(bb_period, bb_std)`.
+- Stop loss:
+  - `entry_price - sl_atr_mult * ATR(atr_period)`.
+- Take profit:
+  - Either `EMA(ma_mid)` or `entry_price + tp_atr_mult * ATR(atr_period)` (whichever exits first).
 
-**File:** `strategies/base.py`
+**Short version:**
+- `RSI > rsi_overbought` and `close >= upper_bollinger`, TP at EMA or ATR multiple.
 
-1. Locate `StrategyDefinition` dataclass. It currently defines fields
-   including `stop_loss_pips`, `take_profit_pips`, and `params`.
+**Suggested parameter grids:**
+- `ma_mid` = 50 EMA
+- `rsi_period` = 14
+- `rsi_oversold` ∈ {25, 30, 35}
+- `rsi_overbought` ∈ {65, 70, 75}
+- `bb_period` = 20
+- `bb_std` = 2.0
+- `atr_period` = 14
+- `max_distance_atr` ∈ {0.5, 1.0}
+- `sl_atr_mult` ∈ {1.0, 1.5, 1.8}
+- `tp_atr_mult` ∈ {1.5, 2.0, 2.5}
 
-2. Add two optional fields with default `None`:
-
-   ```python
-   from typing import Optional
-
-   @dataclass
-   class StrategyDefinition:
-       ...
-       stop_loss_pips: int
-       take_profit_pips: int
-       params: Dict[str, Any]
-
-       # Optional ATR-based risk parameters
-       sl_atr_mult: Optional[float] = None
-       tp_atr_mult: Optional[float] = None
-   ```
-
-3. Ensure `to_dict` / `from_dict` methods (if present) serialize and
-   deserialize these fields correctly. If `to_dict()` just does
-   `asdict(self)`, no extra work is needed.
-
----
-
-### 3B.2. Populate ATR multipliers in generator
-
-**File:** `strategies/generator.py`
-
-1. In `random_strategy`, after `params` dict is constructed, define
-   random ATR multipliers:
-
-   ```python
-   sl_atr_mult = round(random.choice([1.0, 1.5, 2.0]), 2)
-   tp_atr_mult = round(random.choice([1.5, 2.0, 2.5]), 2)
-
-   params["sl_atr_mult"] = sl_atr_mult
-   params["tp_atr_mult"] = tp_atr_mult
-   ```
-
-2. When instantiating `StrategyDefinition`, pass these fields:
-
-   ```python
-   strat = StrategyDefinition(
-       name=name,
-       symbol=symbol,
-       timeframe=timeframe,
-       long_entry_rule=long_entry_rule,
-       short_entry_rule=short_entry_rule,
-       exit_rule=exit_rule,
-       stop_loss_pips=stop_loss_pips,
-       take_profit_pips=take_profit_pips,
-       params=params,
-       sl_atr_mult=sl_atr_mult,
-       tp_atr_mult=tp_atr_mult,
-   )
-   ```
-
-3. Existing strategies without these fields will still load with
-   `sl_atr_mult=None`, `tp_atr_mult=None`.
+> Governance note: even if backtest metrics look good, **range mean-reversion** strategies on 15m can be nasty. When mapping to statuses, it’s reasonable to treat these as `exploratory` first.
 
 ---
 
-### 3B.3. Use ATR-based SL/TP in backtests (when available)
+### 1.4 Session Breakout
 
-**File:** `backtests/engine.py`
+**Regime type:** `session_trend`
 
-We modify `run_backtest` so that, when a strategy has ATR multipliers
-and the DataFrame has an `atr` column, we compute SL/TP levels based on
-ATR instead of fixed pips.
+**Applies to:**
+- `XAUUSD_15m` (priority)
+- `BTCUSDT_15m`
 
-1. In `run_backtest`, after `pip_size` is determined, add:
+**Core logic (long):**
+- Time filter (session-specific):
+  - Only trade during defined high-liquidity windows, e.g. London or NY sessions (convert to server timezone in implementation).
+- Pre-session range:
+  - For the last `pre_session_lookback` bars, compute:
+    - `session_low = lowest(low, pre_session_lookback)`
+    - `session_high = highest(high, pre_session_lookback)`
+- Volatility filter:
+  - `ATR(atr_period) > atr_min` (avoid dead volatility).
+- Entry:
+  - `close > session_high`
+  - `ATR(atr_period) > atr_min`
+- Stop loss:
+  - `entry_price - sl_atr_mult * ATR(atr_period)`.
+- Take profit:
+  - `entry_price + tp_atr_mult * ATR(atr_period)`.
 
-   ```python
-    # ATR-based SL/TP support
-    use_atr = "atr" in df.columns and getattr(strategy, "sl_atr_mult", None) is not None
-    sl_atr_mult = getattr(strategy, "sl_atr_mult", None)
-    tp_atr_mult = getattr(strategy, "tp_atr_mult", None)
-   ```
+**Short version:** breakout below `session_low` with analogous rules.
 
-2. When opening positions (inside the loop, in the long/short entry
-   sections), adjust the logic:
-
-   **Long entries** – replace the block:
-
-   ```python
-            if _eval_rule(row, strategy.long_entry_rule):
-                risk_amount = equity * (risk_per_trade_pct / 100.0)
-                sl_distance = strategy.stop_loss_pips * pip_size
-                if sl_distance > 0:
-                    size = risk_amount / sl_distance
-                    stop_loss = close - strategy.stop_loss_pips * pip_size
-                    take_profit = close + strategy.take_profit_pips * pip_size
-                    ...
-   ```
-
-   With logic that can use ATR:
-
-   ```python
-            if _eval_rule(row, strategy.long_entry_rule):
-                risk_amount = equity * (risk_per_trade_pct / 100.0)
-
-                if use_atr and sl_atr_mult is not None and tp_atr_mult is not None:
-                    atr_value = float(row["atr"])
-                    # Convert ATR to price distance directly (ATR is in price units)
-                    sl_distance = sl_atr_mult * atr_value
-                    tp_distance = tp_atr_mult * atr_value
-                else:
-                    sl_distance = strategy.stop_loss_pips * pip_size
-                    tp_distance = strategy.take_profit_pips * pip_size
-
-                if sl_distance > 0:
-                    size = risk_amount / sl_distance
-                    stop_loss = close - sl_distance
-                    take_profit = close + tp_distance
-                    regime = str(row[regime_column]) if regime_column and regime_column in row else None
-                    positions.append(
-                        {
-                            "entry_time": time,
-                            "entry_price": close,
-                            "direction": "long",
-                            "size": size,
-                            "stop_loss": stop_loss,
-                            "take_profit": take_profit,
-                            "regime": regime,
-                        }
-                    )
-   ```
-
-   **Short entries** – similarly, replace the current block with:
-
-   ```python
-            if len(positions) < max_positions_total and _eval_rule(row, strategy.short_entry_rule):
-                risk_amount = equity * (risk_per_trade_pct / 100.0)
-
-                if use_atr and sl_atr_mult is not None and tp_atr_mult is not None:
-                    atr_value = float(row["atr"])
-                    sl_distance = sl_atr_mult * atr_value
-                    tp_distance = tp_atr_mult * atr_value
-                else:
-                    sl_distance = strategy.stop_loss_pips * pip_size
-                    tp_distance = strategy.take_profit_pips * pip_size
-
-                if sl_distance > 0:
-                    size = risk_amount / sl_distance
-                    stop_loss = close + sl_distance
-                    take_profit = close - tp_distance
-                    regime = str(row[regime_column]) if regime_column and regime_column in row else None
-                    positions.append(
-                        {
-                            "entry_time": time,
-                            "entry_price": close,
-                            "direction": "short",
-                            "size": size,
-                            "stop_loss": stop_loss,
-                            "take_profit": take_profit,
-                            "regime": regime,
-                        }
-                    )
-   ```
-
-Notes:
-
-- ATR is assumed to be in price units (as computed by
-  `research/features.compute_atr`).
-- Existing behavior is preserved when `sl_atr_mult` / `tp_atr_mult` are
-  `None` or `atr` is missing.
+**Suggested parameter grids:**
+- `pre_session_lookback` ∈ {12, 16, 20} (≈ 3–5 hours on 15m)
+- `atr_period` = 14
+- `atr_min` can be implemented as e.g. a fraction of recent median ATR:
+  - `atr_min_mult` ∈ {0.6, 0.8, 1.0} × median ATR(atr_period) over last X days
+  - or 
+  - a static value per symbol/TF if simpler (choose sensible defaults).
+- `sl_atr_mult` ∈ {1.5, 2.0}
+- `tp_atr_mult` ∈ {2.0, 2.5, 3.0}
+- Session windows:
+  - Encode symbolic identifiers like `session_window = 'london' | 'ny'` and let execution-time code map those to timestamps.
 
 ---
 
-### 3B.4. Tests & docs for 3B
+## 2. Symbol/Timeframe Targeting
 
-1. **Syntax / import check**
-   - `python -m compileall autonomous_trading_ai` or
-     `python -c "import autonomous_trading_ai"`.
+To actually get **enough trades** on the key markets, bias generation toward:
 
-2. **Backtest sanity test**
-   - Pick a small sample of features with `atr` column present.
-   - Run `run_backtest` on a strategy that has `sl_atr_mult` set.
-   - Confirm that:
-     - positions are opened,
-     - SL/TP levels differ when ATR changes,
-     - no exceptions are thrown.
+- `XAUUSD_15m`
+- `BTCUSDT_15m`
 
-3. **Docs**
-   - Update `strategies/README.md` to mention ATR-based parameters.
-   - Update `backtests/README.md` to mention optional ATR-based SL/TP
-     sizing.
-
-4. **Commit**
-   - Commit with a message like:
-
-     ```text
-     feat: add ATR-based SL/TP support to strategy generator and backtests
-     ```
-
-   - Log details in `notes/dev_log.md`.
+Implementation suggestions:
+- Allow templates to specify a preferred list of `(symbol, timeframe)` tuples.
+- When sampling new candidates, overweight those symbol/TF combos.
+- You may still allow templates to be reused on other symbols/TFs, but treat these two as primary for this phase.
 
 ---
 
-## 4. Safety & Scope Notes for Phase 3
+## 3. Hard Filters for Backtest Results
 
-- Do **not** increase risk per trade; ATR-based sizing only changes how
-  SL distance is computed, not the fraction of equity at risk.
-- Keep generator changes **simple and interpretable**. Avoid adding
-  overly complex templates or opaque rule structures.
-- If ATR-based SL/TP introduces instability or unexpected behavior in
-  tests, it is acceptable to:
-  - keep the new fields in `StrategyDefinition`, but
-  - temporarily disable `use_atr` (force `use_atr = False`) until a
-    human reviews the behavior.
+These filters aim to remove obviously bad / overfitted strategies and raise the base quality of what reaches `candidate` / `exploratory` / `active`.
 
-Once Phase 3 is implemented and stable, the system should be exploring a
-more diverse and realistic set of strategies, with SL/TP distances that
-respond better to changing volatility regimes.
+### 3.1 Minimum Trade Count
+
+For 15m XAU/BTC, require **sufficient activity** over the backtest window:
+
+- Backtest window: at least **6–12 months** of data.
+- Hard floor: `num_trades >= 50`.
+- Preferred: `num_trades >= 80`.
+
+If a candidate fails `num_trades >= 50`, **discard it**, regardless of other stats.
+
+### 3.2 Performance Floors
+
+Starting thresholds (tune later if nothing passes):
+
+- Profit Factor (`pf`) ≥ **1.3**
+- Sharpe Ratio ≥ **0.5**
+- Max drawdown (normalized to per-trade risk) within existing risk budget.
+
+If these thresholds are too strict in practice, relax in this order:
+
+1. Sharpe floor down toward ~0.2 (but not below 0.0).
+2. Profit factor floor down toward ~1.15.
+3. **Do not relax drawdown/risk limits** without explicit plan changes.
+
+### 3.3 Indicator Simplicity / No Indicator Soup
+
+At generation time, enforce:
+
+- Each strategy uses **at most 2–3 core indicators** (e.g. EMA + RSI + ATR or EMA + Bollinger + ATR).
+- Avoid mixing heavy constructs like Ichimoku + MACD + multiple oscillators in a single rule.
+- For this phase, **down-weight or temporarily exclude** Ichimoku/Fibonacci-based templates from the generator. We can reintroduce 1–2 carefully constrained variants later once the MA/RSI/ATR families are working well.
+
+---
+
+## 4. Status / Risk Tier Mapping Guidance
+
+These generator changes interact with Phase 1+2 logic for statuses and risk tiers:
+
+- **Trend-Follow Breakout / Pullback / Session Breakout:**
+  - Eligible for `active` **if** they meet the stricter thresholds for active strategies in `job_research_strategies`.
+  - Otherwise, they may be promoted to `exploratory` if they satisfy the criteria for that tier (e.g. minimum trade count, positive performance in relevant regimes).
+
+- **Range RSI Mean-Reversion:**
+  - By default, treat as `exploratory` even with good backtest stats, due to mean-reversion risk on 15m.
+  - Only promote to `active` with strong, stable performance and when it fits the overall risk plan.
+
+Ensure that Phase 1 logic for:
+- `StrategyRecord.status`,
+- promotion/demotion between `candidate` / `exploratory` / `active`,
+
+is applied **after** these generator filters and metrics are computed.
+
+---
+
+## 5. Regime Metadata for Phase 2
+
+To support Phase 2 regime-aware selection, add simple metadata to each template:
+
+- `regime_type`:
+  - `trend` for Trend Breakout / Pullback
+  - `range` for RSI Mean-Reversion
+  - `session_trend` for Session Breakout
+
+Later, when computing `strategy_explain.regime_pnl` and selecting strategies in `execute_signals_for_symbol`, this metadata can be combined with regime labels and regime-specific performance to:
+- Prefer `trend` strategies in trending regimes,
+- Prefer `range` strategies in ranging regimes,
+- Prefer `session_trend` strategies during high-impact sessions.
+
+---
+
+## 6. Implementation Checklist for the Dev Agent
+
+When working on Phase 3:
+
+1. **Review existing generator code**
+   - Identify where `LONG_ENTRY_TEMPLATES` / `SHORT_ENTRY_TEMPLATES` (or equivalent) live.
+   - Identify where backtest stats (num_trades, pf, Sharpe, etc.) are computed and stored.
+
+2. **Add the new template families**
+   - Implement the four families above with parameter grids and metadata.
+   - Ensure they are wired to XAUUSD_15m and BTCUSDT_15m as preferred symbol/TF combos.
+
+3. **Implement hard filters**
+   - Enforce minimum trade count and performance floors when evaluating candidates.
+   - Discard strategies that fail hard constraints.
+
+4. **Enforce simplicity / down-weight Ichimoku & Fibonacci**
+   - Either disable existing heavy indicator templates or reduce their generation probability.
+
+5. **Tag templates with regime metadata**
+   - Add `regime_type` for each template family.
+
+6. **Run basic tests**
+   - `python -m compileall autonomous_trading_ai` **or** `python -c "import autonomous_trading_ai"`.
+   - If a test suite exists, run it (e.g. `pytest`).
+
+7. **Git + dev log**
+   - Commit changes with a clear message (e.g. `feat: add xau/btc 15m generator templates`).
+   - Append an entry to `notes/dev_log.md` summarizing:
+     - Phase: Phase 3 – generator improvements
+     - Changes: which template families / filters were added
+     - Tests run and results
+     - Any follow-up TODOs or tuning notes.
+
+8. **WhatsApp status report**
+   - In the cron-run summary, explicitly mention:
+     - New template families (trend breakout, pullback, range RSI, session breakout)
+     - That they are targeted at XAUUSD/BTCUSDT 15m
+     - Any observed impact on strategy counts (`candidate` / `exploratory` / `active`).

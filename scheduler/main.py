@@ -235,9 +235,14 @@ def job_research_strategies() -> None:
                 eval_result = evaluate_strategy(result.stats)
 
                 # Skip strategies that essentially never trade (num_trades too low)
+                # Phase 3 hard filter: require a more meaningful minimum trade count
                 num_trades = eval_result.get("num_trades", 0.0)
-                if num_trades < 5:
-                    logger.info("Skipping strategy %s due to low trade count: %.0f", strat.name, num_trades)
+                if num_trades < 50:
+                    logger.info(
+                        "Skipping strategy %s due to low trade count (Phase 3 floor=50): %.0f",
+                        strat.name,
+                        num_trades,
+                    )
                     continue
 
                 # Walk-forward
