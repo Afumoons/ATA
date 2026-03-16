@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Tuple
+from typing import List, Tuple, Any, Dict
 
 import pandas as pd
 
@@ -39,6 +39,42 @@ def generate_signals_for_row(
     return signals
 
 
+def _regime_edge(stats: Dict[str, Any], regime_label: str) -> float:
+    """Return a regime-specific edge score for a strategy.
+
+    Uses `strategy_explain.regime_pnl[regime_label].return_pct` when
+    available. If the information is missing, falls back to a large
+    negative value so the strategy is deprioritized when filtering by
+    that regime.
+    """
+    if not stats:
+        return -999.0
+
+    ex = stats.get("strategy_explain", {}) or {}
+    rp = ex.get("regime_pnl", {}) or {}
+    regime_stats = rp.get(regime_label, {}) or {}
+    try:
+        return float(regime_stats.get("return_pct", -999.0) or -999.0)
+    except Exception:
+        return -999.0
+
+
+def _map_current_to_regime_pnl_label(current_regime: str) -> str:
+    """Map the legacy `regime` label to a key in `regime_pnl`.
+
+    This keeps the mapping explicit and easy to adjust.
+    """
+    if current_regime in {"trending_up", "trending_down", "ranging"}:
+        return current_regime
+
+    # High volatility but not clearly trending: treat as high_vol / fallback
+    if current_regime in {"high_vol", "low_vol"}:
+        # For now, use "ranging" as a conservative default
+        return "ranging"
+
+    return "unknown"
+
+
 def execute_signals_for_symbol(
     symbol: str,
     timeframe: str,
@@ -54,6 +90,10 @@ def execute_signals_for_symbol(
         return []
 
     latest = features_df.sort_values("time").iloc[-1]
+
+    # Legacy regime label (e.g. "trending_up", "trending_down", "ranging", "high_vol", "low_vol")
+    current_regime = str(latest.get("regime", "unknown"))
+    logger.info("Current regime for %s %s: %s", symbol, timeframe, current_regime)
 
     # Daily limits: optionally block new trades after daily DD / trade cap
     from autonomous_trading_ai.config import risk_config
@@ -82,6 +122,47 @@ def execute_signals_for_symbol(
     ]
 
     if not active_records and not exploratory_records:
+        return []
+
+    regime_label = _map_current_to_regime_pnl_label(current_regime)
+
+    def _filter_and_rank(records):
+        if not records or regime_label == "unknown":
+            return records
+
+        scored = []
+        for rec in records:
+            edge = _regime_edge(rec.stats or {}, regime_label)
+            scored.append((edge, rec))
+
+        # Filter out strategies with very poor historical performance
+        # in this regime (e.g. worse than -5% return).
+        filtered = [rec for edge, rec in scored if edge > -5.0]
+
+        # Sort by edge descending (best first)
+        filtered.sort(key=lambda r: _regime_edge(r.stats or {}, regime_label), reverse=True)
+        return filtered
+
+    active_records = _filter_and_rank(active_records)
+    exploratory_records = _filter_and_rank(exploratory_records)
+
+    # Optionally cap the number of strategies considered per tier
+    MAX_ACTIVE_PER_SYMBOL = 5
+    MAX_EXPLORATORY_PER_SYMBOL = 3
+
+    if len(active_records) > MAX_ACTIVE_PER_SYMBOL:
+        active_records = active_records[:MAX_ACTIVE_PER_SYMBOL]
+
+    if len(exploratory_records) > MAX_EXPLORATORY_PER_SYMBOL:
+        exploratory_records = exploratory_records[:MAX_EXPLORATORY_PER_SYMBOL]
+
+    if not active_records and not exploratory_records:
+        logger.info(
+            "No strategies with acceptable regime edge for %s %s in regime=%s",
+            symbol,
+            timeframe,
+            current_regime,
+        )
         return []
 
     # Need StrategyDefinition instances; for now we reconstruct using minimal fields
