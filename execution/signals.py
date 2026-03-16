@@ -130,17 +130,28 @@ def execute_signals_for_symbol(
         if not records or regime_label == "unknown":
             return records
 
-        scored = []
+        scored: List[Tuple[float, Any]] = []
         for rec in records:
             edge = _regime_edge(rec.stats or {}, regime_label)
             scored.append((edge, rec))
 
         # Filter out strategies with very poor historical performance
         # in this regime (e.g. worse than -5% return).
-        filtered = [rec for edge, rec in scored if edge > -5.0]
+        kept = [(edge, rec) for edge, rec in scored if edge > -5.0]
 
         # Sort by edge descending (best first)
-        filtered.sort(key=lambda r: _regime_edge(r.stats or {}, regime_label), reverse=True)
+        kept.sort(key=lambda er: er[0], reverse=True)
+
+        filtered = [rec for edge, rec in kept]
+        if filtered != records:
+            logger.info(
+                "Regime filter for %s %s (%s): %d -> %d strategies",
+                symbol,
+                timeframe,
+                regime_label,
+                len(records),
+                len(filtered),
+            )
         return filtered
 
     active_records = _filter_and_rank(active_records)
