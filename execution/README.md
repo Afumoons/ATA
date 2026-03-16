@@ -23,12 +23,18 @@ and for **tracking live account state** used by risk controls:
 - `signals.py`
   - Bridges **backtested strategies** into **live execution**.
   - For the latest feature row per symbol/timeframe:
+    - Reads the current `regime` label from features and logs it per symbol/timeframe.
     - Generates entry signals by reusing backtest rule evaluation.
     - Checks daily limits via `can_open_new_trade(...)` from `live_state_utils`.
-    - Loads `active` and `exploratory` strategies from the strategy pool:
-      - `active` strategies trade at the normal configured risk tier.
-      - `exploratory` strategies, when present, trade at a significantly reduced per-trade risk.
-    - Executes resulting signals via `engine.execute_trade()`.
+    - Loads `active` and `exploratory` strategies from the strategy pool and computes a
+      regime-specific edge for each using `strategy_explain.regime_pnl`.
+    - Filters out strategies with very poor edge in the current regime, ranks the rest
+      by edge, and caps how many are allowed to fire per run (e.g. top 5 active, top 3
+      exploratory).
+    - Uses **two risk tiers** when executing via `engine.execute_trade()`:
+      - `active` strategies trade at the normal configured per-trade risk.
+      - `exploratory` strategies trade at a significantly reduced per-trade risk, capped
+        at a low percentage to keep exploratory exposure small.
 
 - `live_state_utils.py`
   - Defines `DailyState` structure stored in `live_state.json`.

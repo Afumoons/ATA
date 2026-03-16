@@ -42,3 +42,28 @@
 - Notes:
   - This sub-phase (3A) only extends generator templates; it does not change SL/TP sizing or backtest engine behavior.
   - Next step for Phase 3 is optional ATR-based SL/TP support (3B) once this template expansion has been exercised in research runs.
+
+## 2026-03-16 19:51 (Asia/Jakarta)
+
+- Phase: Phase 2 – Regime-aware live strategy selection (logging refinement)
+- Changes:
+  - Refactored regime-edge filtering in `execution/signals.py` to avoid recomputing edge values during sorting.
+  - Added a concise log line summarizing regime-based filtering per symbol/timeframe (before/after strategy counts) when the filtered set differs from the original.
+- Tests:
+  - python -m compileall autonomous_trading_ai – EXIT CODE 1 due to known upstream syntax issues in `.venv` site-packages (same ccxt static dependency errors as previous runs); project modules compiled successfully before upstream failures.
+  - python -c "import autonomous_trading_ai" – PASS.
+- Notes:
+  - Behavior of regime-aware selection is unchanged apart from additional logging and a small internal optimization; risk tiers and filtering thresholds remain the same.
+
+## 2026-03-16 20:06 (Asia/Jakarta)
+
+- Phase: Phase 1 & 2 – Documentation alignment for exploratory tier and regime-aware execution
+- Changes:
+  - Updated `strategies/README.md` to describe how `execution.signals.execute_signals_for_symbol` now uses both `active` and `exploratory` strategies, applies regime-aware edge filtering from `strategy_explain.regime_pnl`, caps strategies per run, and applies distinct risk tiers.
+  - Updated `execution/README.md` to document regime-aware selection, daily limits, and dual risk tiers for `active` vs `exploratory` strategies inside `signals.py`.
+  - Updated `scheduler/README.md` to explain how `job_research_strategies` now assigns `exploratory` status for promising-but-not-yet-active strategies and how `job_execute_signals` uses the current `regime` label and regime-specific edge to filter and cap strategies per tier.
+- Tests:
+  - python -m compileall autonomous_trading_ai (from workspace root) – EXIT CODE 1 due to known upstream syntax errors in `.venv` site-packages (`ccxt` static dependencies); no project modules were changed in this run.
+  - python -c "import autonomous_trading_ai" (from workspace root) – PASS.
+- Notes:
+  - This run was documentation-only and did not alter any code paths; it brings the high-level docs in line with the already-implemented exploratory tier and regime-aware selection behavior.

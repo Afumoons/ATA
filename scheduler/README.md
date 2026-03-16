@@ -58,21 +58,28 @@ Per symbol:
      - Walk-forward test via `walk_forward_test(...)`.
      - Monte Carlo PnL via `monte_carlo_pnl(...)`.
    - Merge robustness stats into `eval_result`.
-   - Decide pool status using `_should_promote(stats)`:
-     - `active`   → meets stricter performance criteria (PnL > 0, DD <= 20%,
-                   PF >= 1.1, good trend performance, not terrible in ranges,
-                   sufficient trade count).
-     - `candidate` → meets base acceptance criteria.
-     - `disabled` → otherwise.
+   - Decide pool status using `_should_promote(stats)` and additional heuristics:
+     - `active`       → meets stricter performance criteria (PnL > 0, DD <= 20%,
+                        PF >= 1.1, good trend performance, not terrible in ranges,
+                        sufficient trade count).
+     - `exploratory`  → accepted strategies with enough trades and positive
+                        performance in trending regimes, but not yet strong
+                        enough for `active`.
+     - `candidate`    → accepted but weaker strategies.
+     - `disabled`     → otherwise.
    - Call `pool.upsert_strategy(...)` to update `StrategyPool`.
    - Store evaluation in `ResearchMemory` (Chroma-backed) via
      `memory.store_strategy_result(...)`.
+
+After updating the pool based on backtests, a **live degradation pass** runs
+using `execution/strategy_live_stats.json` to conservatively demote clearly
+underperforming `active` strategies back to `candidate`.
 
 Finally, `save_pool(pool)` persists the updated pool to disk.
 
 ### `job_execute_signals()`
 
-**Goal:** Turn the latest features + active strategies into **live MT5 trades**.
+**Goal:** Turn the latest features + regime-aware strategy pool into **live MT5 trades**.
 
 Workflow:
 
@@ -89,7 +96,13 @@ Within `execute_signals_for_symbol`:
 - Daily limits are enforced via `can_open_new_trade(...)` from
   `execution.live_state_utils` using `risk_config.max_daily_drawdown_pct`,
   `risk_config.max_trades_per_day`, and `risk_config.daily_limits_enabled`.
-- Only `active` strategies for the given symbol/timeframe are considered.
+- Strategies with status `active` and `exploratory` for the given symbol/timeframe
+  are considered.
+- The latest feature row’s `regime` label is used to compute regime-specific edge
+  from `strategy_explain.regime_pnl`, filter out poor performers in the current
+  regime, and cap how many strategies per tier are allowed to fire.
+- `active` strategies trade at the normal risk tier, while `exploratory` strategies
+  trade at a significantly reduced per-trade risk.
 
 ### `job_live_monitor()`
 

@@ -124,10 +124,15 @@ It provides:
 
 - `execution/signals.execute_signals_for_symbol(...)`:
   - Reads `StrategyPool` via `load_pool()`.
-  - Filters for `status == "active"` for the given symbol/timeframe.
-  - Loads each active `StrategyDefinition` from `strategies/generated/`.
-  - Evaluates entry rules on the latest feature row and routes allowed signals
-    to `engine.execute_trade(...)`.
+  - Filters for `status in {"active", "exploratory"}` for the given symbol/timeframe.
+  - Computes a regime-specific edge per strategy from `strategy_explain.regime_pnl` and
+    prefers strategies with better historical performance in the **current regime**.
+  - Optionally caps the number of strategies considered per run (e.g. top 5 active,
+    top 3 exploratory) to keep live behavior focused.
+  - Loads each selected `StrategyDefinition` from `strategies/generated/`.
+  - Evaluates entry rules on the latest feature row and routes allowed signals to
+    `engine.execute_trade(...)`, using **normal risk** for `active` strategies and a
+    **reduced risk tier** for `exploratory` strategies.
 
 ## Gotchas / Notes
 
