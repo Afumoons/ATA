@@ -9,3 +9,15 @@
 - Notes:
   - This is a small Phase 3 safety/quality step focused purely on filtering; it does not change risk per trade or live execution wiring. Future Phase 3 work can build on this by adding the new XAU/BTC 15m templates and additional performance floors once more research/live data is available.
 
+## 2026-03-17 06:36 (Asia/Jakarta)
+
+- Phase: Phase 3 – generator improvements (template bias)
+- Changes:
+  - Updated `strategies/generator.py` so that for core 15m markets (XAUUSDm and BTCUSDm), the generator now prefers simpler MA/RSI-based templates (`ma_short`/`ma_long` trend continuation and RSI range-mean-reversion) and avoids heavy Ichimoku/Fibonacci templates. Other markets still have access to the full template set but are biased toward the lighter templates.
+  - Added lightweight family/regime metadata to generated strategies via `params` (`long_family`, `short_family`, `regime_type_long`, `regime_type_short`) to support future Phase 3/4 governance and regime-aware tooling.
+- Tests:
+  - python -m compileall autonomous_trading_ai (from workspace root) – RUN (non-zero exit due to third-party packages under `.venv`, but project package modules compiled without reported syntax errors).
+  - python -c "import autonomous_trading_ai" (from workspace root) – PASS.
+- Notes:
+  - This is a small, safe Phase 3 step that only affects how new strategies are generated; it does not change risk per trade, live execution routing, or status promotion logic. Existing strategies in the pool are untouched. Future Phase 3 work can introduce richer XAU/BTC-specific templates and optional ATR-based SL/TP once more data is available.
+
