@@ -30,6 +30,24 @@ SHORT_ENTRY_TEMPLATES = [
     "fib_zone_618 == 1 and trend_strength < -{trend_min}",
 ]
 
+# Range / mean reversion: fade extremes when trend_strength is low
+LONG_ENTRY_TEMPLATES.append(
+    "rsi < 35 and trend_strength > -0.1 and trend_strength < 0.1"
+)
+
+SHORT_ENTRY_TEMPLATES.append(
+    "rsi > 65 and trend_strength > -0.1 and trend_strength < 0.1"
+)
+
+# MA-based trend continuation
+LONG_ENTRY_TEMPLATES.append(
+    "ma_short > ma_long and trend_strength > {trend_min}"
+)
+
+SHORT_ENTRY_TEMPLATES.append(
+    "ma_short < ma_long and trend_strength < -{trend_min}"
+)
+
 EXIT_TEMPLATES = [
     "rsi > {rsi_exit}",
     "rsi < {rsi_exit}",

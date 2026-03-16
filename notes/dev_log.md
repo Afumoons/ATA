@@ -28,3 +28,17 @@
 - Notes:
   - Regime-aware filtering only activates when a valid `regime` label is present; otherwise the code falls back to using all active/exploratory strategies.
   - If no strategies show acceptable edge in the current regime after filtering, execution for that symbol/timeframe is skipped with a clear log message instead of forcing low-quality trades.
+
+## 2026-03-16 19:36 (Asia/Jakarta)
+
+- Phase: Phase 3 – Generator improvements (3A templates)
+- Changes:
+  - Extended `strategies/generator.py` to append new range/mean-reversion templates using RSI with low `trend_strength`.
+  - Added MA-based trend continuation templates using `ma_short` vs `ma_long` to broaden the generator's playbooks.
+  - Updated `strategies/README.md` to document the richer mix of generator templates (Ichimoku + fib, RSI range, MA trend continuation).
+- Tests:
+  - python -m compileall autonomous_trading_ai – EXIT CODE 1 due to known upstream syntax issues in `.venv` site-packages; project modules, including `strategies/generator.py`, compiled successfully during the run.
+  - python -c "import autonomous_trading_ai" – PASS.
+- Notes:
+  - This sub-phase (3A) only extends generator templates; it does not change SL/TP sizing or backtest engine behavior.
+  - Next step for Phase 3 is optional ATR-based SL/TP support (3B) once this template expansion has been exercised in research runs.

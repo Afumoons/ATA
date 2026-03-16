@@ -27,7 +27,10 @@ It provides:
 
 - `generator.py`
   - Focused on **initial strategy creation**.
-  - Uses Ichimoku/Fibonacci-flavored rule templates:
+  - Uses a mix of rule templates:
+    - Ichimoku + Fibonacci continuation patterns.
+    - Range/mean-reversion patterns using RSI with low `trend_strength`.
+    - MA-based trend continuation using `ma_short` vs `ma_long`.
     - `LONG_ENTRY_TEMPLATES`, `SHORT_ENTRY_TEMPLATES`, `EXIT_TEMPLATES`.
   - `random_strategy(symbol, timeframe)`:
     - Samples template parameters (`trend_min`, `rsi_exit`, `trend_exit`).
