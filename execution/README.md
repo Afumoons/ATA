@@ -25,7 +25,10 @@ and for **tracking live account state** used by risk controls:
   - For the latest feature row per symbol/timeframe:
     - Generates entry signals by reusing backtest rule evaluation.
     - Checks daily limits via `can_open_new_trade(...)` from `live_state_utils`.
-    - Loads `active` strategies from the strategy pool and executes them via `engine.execute_trade()`.
+    - Loads `active` and `exploratory` strategies from the strategy pool:
+      - `active` strategies trade at the normal configured risk tier.
+      - `exploratory` strategies, when present, trade at a significantly reduced per-trade risk.
+    - Executes resulting signals via `engine.execute_trade()`.
 
 - `live_state_utils.py`
   - Defines `DailyState` structure stored in `live_state.json`.

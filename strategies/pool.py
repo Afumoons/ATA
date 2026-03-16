@@ -19,7 +19,7 @@ class StrategyRecord:
     name: str
     symbol: str
     timeframe: str
-    status: str  # "candidate", "active", "disabled", "retired"
+    status: str  # "candidate", "active", "exploratory", "disabled", "retired"
     score: float
     stats: Dict[str, float]
 

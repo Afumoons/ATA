@@ -167,7 +167,7 @@ def job_research_strategies() -> None:
                 eval_result["wf_overall_max_drawdown_pct"] = wf.get("aggregate", {}).get("overall_max_drawdown_pct", 0.0)
                 eval_result.update(mc)
 
-                # Determine pool status: active / candidate / disabled
+                # Determine pool status: active / exploratory / candidate / disabled
                 def _should_promote(stats: dict) -> bool:
                     ex = stats.get("strategy_explain", {}) or {}
                     regime = ex.get("regime_pnl", {}) or {}
@@ -186,10 +186,26 @@ def job_research_strategies() -> None:
                         range_ret > -5.0
                     )
 
+                # Determine pool status: active / exploratory / candidate / disabled
+                ex = eval_result.get("strategy_explain", {}) or {}
+                regime = ex.get("regime_pnl", {}) or {}
+                trend_ret = (
+                    regime.get("trending_up", {}).get("return_pct", 0.0) +
+                    regime.get("trending_down", {}).get("return_pct", 0.0)
+                )
+
+                num_trades = eval_result.get("num_trades", 0.0) or 0.0
+
                 if _should_promote(eval_result):
                     status = "active"
                 elif eval_result.get("accepted"):
-                    status = "candidate"
+                    # Promising enough for exploratory live deployment:
+                    # - sufficient trade count,
+                    # - positive performance in trending regimes.
+                    if num_trades >= 20 and trend_ret > 0.0:
+                        status = "exploratory"
+                    else:
+                        status = "candidate"
                 else:
                     status = "disabled"
 

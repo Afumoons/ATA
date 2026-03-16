@@ -69,7 +69,7 @@ It provides:
   - Defines the persistent **strategy pool** abstraction.
   - `StrategyRecord` dataclass:
     - `name`, `symbol`, `timeframe`.
-    - `status` – `"candidate"`, `"active"`, `"disabled"`, `"retired"`.
+    - `status` – `"candidate"`, `"active"`, `"exploratory"`, `"disabled"`, `"retired"`.
     - `score` – numeric score (e.g. from evaluation metrics).
     - `stats` – evaluation stats dict (including `strategy_explain`).
   - `StrategyPool` dataclass:

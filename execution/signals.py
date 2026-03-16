@@ -68,57 +68,122 @@ def execute_signals_for_symbol(
         logger.info("Daily limits prevent opening new trades for %s %s", symbol, timeframe)
         return []
 
-    # Active strategies for this symbol/timeframe
+    # Strategies for this symbol/timeframe
     active_records = [
         rec
         for rec in pool.strategies.values()
         if rec.status == "active" and rec.symbol == symbol and rec.timeframe == timeframe
     ]
-    if not active_records:
+
+    exploratory_records = [
+        rec
+        for rec in pool.strategies.values()
+        if rec.status == "exploratory" and rec.symbol == symbol and rec.timeframe == timeframe
+    ]
+
+    if not active_records and not exploratory_records:
         return []
 
     # Need StrategyDefinition instances; for now we reconstruct using minimal fields
     from ..strategies.generator import load_strategy
     from pathlib import Path
 
-    strategies: List[StrategyDefinition] = []
-    for rec in active_records:
-        path = Path(__file__).resolve().parents[1] / "strategies" / "generated" / f"{rec.name}.json"
-        try:
-            strategies.append(load_strategy(path))
-        except Exception as e:
-            logger.exception("Failed to load strategy %s from %s: %s", rec.name, path, e)
+    active_strategies: List[StrategyDefinition] = []
+    exploratory_strategies: List[StrategyDefinition] = []
 
-    signals = generate_signals_for_row(latest, strategies)
+    base_dir = Path(__file__).resolve().parents[1] / "strategies" / "generated"
+
+    # Load active strategies
+    for rec in active_records:
+        path = base_dir / f"{rec.name}.json"
+        try:
+            active_strategies.append(load_strategy(path))
+        except Exception as e:
+            logger.exception("Failed to load active strategy %s from %s: %s", rec.name, path, e)
+
+    # Load exploratory strategies
+    for rec in exploratory_records:
+        path = base_dir / f"{rec.name}.json"
+        try:
+            exploratory_strategies.append(load_strategy(path))
+        except Exception as e:
+            logger.exception("Failed to load exploratory strategy %s from %s: %s", rec.name, path, e)
+
     results: List[Tuple[Signal, str]] = []
 
-    for sig in signals:
-        strat = sig.strategy
-        try:
-            res = execute_trade(
-                strategy_name=strat.name,
-                symbol=symbol,
-                direction=sig.direction,
-                risk_perc=risk_perc,
-                stop_loss_pips=strat.stop_loss_pips,
-                take_profit_pips=strat.take_profit_pips,
-                pip_size=0.01 if "XAU" in symbol or "XAG" in symbol else 0.0001,
-            )
-            results.append((sig, res.reason))
-            if res.success:
-                logger.info(
-                    "Signal executed: strategy=%s symbol=%s dir=%s", strat.name, symbol, sig.direction
+    # Risk tiers
+    risk_perc_active = risk_perc
+    # Exploratory strategies trade at significantly reduced risk
+    risk_perc_exploratory = min(risk_perc * 0.25, 0.1)
+
+    # Generate and execute signals for active strategies
+    if active_strategies:
+        active_signals = generate_signals_for_row(latest, active_strategies)
+        for sig in active_signals:
+            strat = sig.strategy
+            try:
+                res = execute_trade(
+                    strategy_name=strat.name,
+                    symbol=symbol,
+                    direction=sig.direction,
+                    risk_perc=risk_perc_active,
+                    stop_loss_pips=strat.stop_loss_pips,
+                    take_profit_pips=strat.take_profit_pips,
+                    pip_size=0.01 if "XAU" in symbol or "XAG" in symbol else 0.0001,
                 )
-            else:
-                logger.warning(
-                    "Signal not executed: strategy=%s symbol=%s dir=%s reason=%s",
-                    strat.name,
-                    symbol,
-                    sig.direction,
-                    res.reason,
+                results.append((sig, res.reason))
+                if res.success:
+                    logger.info(
+                        "Signal executed (active): strategy=%s symbol=%s dir=%s",
+                        strat.name,
+                        symbol,
+                        sig.direction,
+                    )
+                else:
+                    logger.warning(
+                        "Signal not executed (active): strategy=%s symbol=%s dir=%s reason=%s",
+                        strat.name,
+                        symbol,
+                        sig.direction,
+                        res.reason,
+                    )
+            except Exception as e:
+                logger.exception("Error executing active signal for %s: %s", strat.name, e)
+                results.append((sig, f"error: {e}"))
+
+    # Generate and execute signals for exploratory strategies (reduced risk)
+    if exploratory_strategies:
+        exploratory_signals = generate_signals_for_row(latest, exploratory_strategies)
+        for sig in exploratory_signals:
+            strat = sig.strategy
+            try:
+                res = execute_trade(
+                    strategy_name=strat.name,
+                    symbol=symbol,
+                    direction=sig.direction,
+                    risk_perc=risk_perc_exploratory,
+                    stop_loss_pips=strat.stop_loss_pips,
+                    take_profit_pips=strat.take_profit_pips,
+                    pip_size=0.01 if "XAU" in symbol or "XAG" in symbol else 0.0001,
                 )
-        except Exception as e:
-            logger.exception("Error executing signal for %s: %s", strat.name, e)
-            results.append((sig, f"error: {e}"))
+                results.append((sig, res.reason))
+                if res.success:
+                    logger.info(
+                        "Signal executed (exploratory): strategy=%s symbol=%s dir=%s",
+                        strat.name,
+                        symbol,
+                        sig.direction,
+                    )
+                else:
+                    logger.warning(
+                        "Signal not executed (exploratory): strategy=%s symbol=%s dir=%s reason=%s",
+                        strat.name,
+                        symbol,
+                        sig.direction,
+                        res.reason,
+                    )
+            except Exception as e:
+                logger.exception("Error executing exploratory signal for %s: %s", strat.name, e)
+                results.append((sig, f"error: {e}"))
 
     return results
