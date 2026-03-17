@@ -124,6 +124,12 @@ def random_strategy(symbol: str, timeframe: str) -> StrategyDefinition:
         "trend_exit": round(random.uniform(-0.1, 0.1), 2),
     }
 
+    # Phase 3 metadata enrichment: hint which symbol/timeframe a strategy
+    # was primarily generated for so later phases (governance, reporting)
+    # can reason about coverage without re-parsing the name.
+    params["preferred_symbols"] = [symbol]
+    params["preferred_timeframes"] = [timeframe]
+
     # For core 15m markets, optionally use ATR-based SL/TP multiples in
     # backtests while keeping pip-based distances available for live
     # execution. Other markets continue to use pip-based SL/TP only.
@@ -150,6 +156,14 @@ def random_strategy(symbol: str, timeframe: str) -> StrategyDefinition:
     params["short_family"] = short_family
     params["regime_type_long"] = long_regime
     params["regime_type_short"] = short_regime
+
+    # Aggregate regime type for this strategy to simplify downstream
+    # selection and reporting logic. If both sides agree, use that;
+    # otherwise mark as "mixed".
+    if long_regime == short_regime:
+        params["regime_type"] = long_regime
+    else:
+        params["regime_type"] = "mixed"
 
     name_prefix = "core15" if is_core_15m else "ichifib"
     name = f"{name_prefix}_{symbol}_{timeframe}_{random.randint(1000, 9999)}"

@@ -1,3 +1,16 @@
+## 2026-03-17 23:29 (Asia/Jakarta)
+
+- Phase: Phase 3 – generator improvements (metadata for regime-aware governance)
+- Changes:
+  - Extended `strategies/generator.random_strategy` to attach `preferred_symbols` and `preferred_timeframes` into `StrategyDefinition.params`, explicitly recording which symbol/timeframe each strategy was generated for.
+  - Added an aggregate `regime_type` field (alongside existing `regime_type_long`/`regime_type_short`) derived from the entry template families so downstream selection/governance code can reason about strategy regimes without re-parsing rule strings.
+  - Updated `strategies/README.md` to document the generator’s metadata outputs and how they are intended to support later Phase 2/4 regime-aware selection and governance.
+- Tests:
+  - python -c "import autonomous_trading_ai" (from repo root) – FAIL (ModuleNotFoundError: no module named 'autonomous_trading_ai'). This appears to be an environment/`PYTHONPATH` issue rather than a syntax error; no stack trace points into project code.
+- Notes:
+  - The code changes are metadata-only: they do not alter entry/exit logic, risk sizing, or status promotion thresholds, and therefore are safe for live use.
+  - Once the environment is configured to import the package (e.g. by installing it in the active venv or adjusting `PYTHONPATH`), the usual `python -c "import autonomous_trading_ai"` sanity check should pass again.
+
 ## 2026-03-17 20:21 (Asia/Jakarta)
 
 - Phase: Phase 4.1 – ResearchMemory candidate-neighborhood support

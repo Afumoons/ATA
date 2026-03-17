@@ -43,6 +43,14 @@ It provides:
     - For core 15m markets, additionally samples conservative ATR-based
       SL/TP multiples (`sl_atr_mult`, `tp_atr_mult`) used by the backtest
       engine while keeping pip-based distances available for live sizing.
+    - Attaches lightweight metadata into `StrategyDefinition.params` so later
+      phases can reason about each strategy family without re-parsing rule
+      strings, including:
+      - `long_family` / `short_family` (e.g. `ma_trend`, `rsi_range`, `ichifib`).
+      - `regime_type_long` / `regime_type_short` and an aggregate
+        `regime_type` (e.g. `trend`, `range`, `mixed`).
+      - `preferred_symbols` / `preferred_timeframes` indicating which
+        symbol/timeframe the strategy was generated for.
     - Produces a `StrategyDefinition` with a name like
       `"core15_{symbol}_{timeframe}_{rand_id}"` for core 15m markets or
       `"ichifib_{symbol}_{timeframe}_{rand_id}"` for others.
