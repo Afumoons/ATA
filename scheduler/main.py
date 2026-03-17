@@ -117,10 +117,16 @@ def _memory_is_clearly_bad(candidate, memory: ResearchMemory, symbol: str, timef
         # Lightweight text summary focusing on symbol/timeframe; the embedding
         # will still capture similarity from stored stats text.
         query_text = f"symbol={symbol}\ntimeframe={timeframe}"
+        where_filter = {
+            "$and": [
+                {"symbol": symbol},
+                {"timeframe": timeframe},
+            ]
+        }
         res = memory.query_similar(
             text=query_text,
             n_results=8,
-            where={"symbol": symbol, "timeframe": timeframe},
+            where=where_filter,
         )
     except Exception as e:
         logger.exception("ResearchMemory query failed for %s: %s", candidate.name, e)
@@ -266,6 +272,16 @@ def job_research_strategies() -> None:
                 eval_result["wf_overall_max_drawdown_pct"] = wf.get("aggregate", {}).get("overall_max_drawdown_pct", 0.0)
                 eval_result.update(mc)
 
+                # Phase 3b: walk-forward Sharpe floors for acceptance/tiering
+                wf_sharpe = float(eval_result.get("wf_overall_sharpe", 0.0) or 0.0)
+                if wf_sharpe < 0.1:
+                    logger.info(
+                        "Skipping strategy %s due to weak walk-forward Sharpe (wf_sharpe=%.3f < 0.10)",
+                        strat.name,
+                        wf_sharpe,
+                    )
+                    continue
+
                 # Determine pool status: active / exploratory / candidate / disabled
                 def _should_promote(stats: dict) -> bool:
                     ex = stats.get("strategy_explain", {}) or {}
@@ -296,9 +312,13 @@ def job_research_strategies() -> None:
 
                 num_trades = eval_result.get("num_trades", 0.0) or 0.0
 
-                if _should_promote(eval_result):
+                # Use walk-forward Sharpe to gate live deployment tiers:
+                # - wf_sharpe >= 0.20: eligible for active if other conditions met
+                # - 0.10 <= wf_sharpe < 0.20: at most exploratory/candidate
+                # (we already enforced wf_sharpe >= 0.10 above)
+                if _should_promote(eval_result) and wf_sharpe >= 0.2:
                     status = "active"
-                elif eval_result.get("accepted"):
+                elif eval_result.get("accepted") and wf_sharpe >= 0.1:
                     # Promising enough for exploratory live deployment:
                     # - sufficient trade count,
                     # - positive performance in trending regimes,

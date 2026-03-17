@@ -126,7 +126,7 @@ def execute_signals_for_symbol(
 
     regime_label = _map_current_to_regime_pnl_label(current_regime)
 
-    def _filter_and_rank(records):
+    def _filter_and_rank(records, tier: str):
         if not records or regime_label == "unknown":
             return records
 
@@ -150,21 +150,46 @@ def execute_signals_for_symbol(
             )
 
         # Filter out strategies with very poor historical performance
-        # in this regime (e.g. worse than -5% return).
-        kept = [(edge, rec) for edge, rec in scored if edge > -5.0]
+        # in this regime. Be stricter for active, slightly looser for exploratory.
+        if tier == "active":
+            threshold = -5.0
+        else:
+            # Allow somewhat weaker regime edge for exploratory to gather data
+            threshold = -10.0
+
+        kept = [(edge, rec) for edge, rec in scored if edge > threshold]
 
         # Sort by edge descending (best first)
         kept.sort(key=lambda er: er[0], reverse=True)
 
         filtered = [rec for edge, rec in kept]
+
+        # Fallback: if nothing passes the threshold but we had scored strategies,
+        # keep the single best exploratory strategy at tiny risk so the system
+        # doesn't go completely silent in that regime.
+        if not filtered and scored and tier == "exploratory":
+            scored.sort(key=lambda er: er[0], reverse=True)
+            best_edge, best_rec = scored[0]
+            filtered = [best_rec]
+            logger.info(
+                "Regime fallback for %s %s (%s): no exploratory strategies passed edge>%.1f; "
+                "keeping best exploratory with edge=%.2f",
+                symbol,
+                timeframe,
+                regime_label,
+                threshold,
+                best_edge,
+            )
+
         if filtered != records:
             min_edge = min(edge for edge, _ in kept) if kept else None
             max_edge = max(edge for edge, _ in kept) if kept else None
             logger.info(
-                "Regime filter for %s %s (%s): %d -> %d strategies (edge range kept: %s .. %s)",
+                "Regime filter for %s %s (%s) [tier=%s]: %d -> %d strategies (edge range kept: %s .. %s)",
                 symbol,
                 timeframe,
                 regime_label,
+                tier,
                 len(records),
                 len(filtered),
                 f"{min_edge:.2f}" if min_edge is not None else "n/a",
@@ -172,8 +197,8 @@ def execute_signals_for_symbol(
             )
         return filtered
 
-    active_records = _filter_and_rank(active_records)
-    exploratory_records = _filter_and_rank(exploratory_records)
+    active_records = _filter_and_rank(active_records, tier="active")
+    exploratory_records = _filter_and_rank(exploratory_records, tier="exploratory")
 
     # Optionally cap the number of strategies considered per tier
     MAX_ACTIVE_PER_SYMBOL = 5
