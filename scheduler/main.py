@@ -30,6 +30,12 @@ BASE_DIR = Path(__file__).resolve().parents[1]
 MANAGED_SYMBOLS = ["XAUUSDm"]
 TIMEFRAME = "M15"
 
+# Minimum edge score for a strategy to be allowed to execute live signals.
+# Strategies with score <= this value will be flagged but still pass through
+# to execute_signals_for_symbol (which has its own regime-based guard).
+# Set to 0.0 to only warn; raise to e.g. 0.5 to hard-block low-edge strategies.
+MINIMUM_EDGE_FOR_EXECUTION = 0.0
+
 
 def job_update_data() -> None:
     """Fetch latest OHLC, compute features + regimes for managed symbols."""
@@ -78,11 +84,12 @@ def _apply_live_degradation(pool) -> None:
 
         initial_eq = float(stats.get("initial_equity", 1.0) or 1.0)
         live_ret_total_pct = rec.total_pnl / max(initial_eq, 1.0) * 100.0
-        live_ret_recent_pct = sum(rec.recent_pnls) / max(initial_eq, 1.0) * 100.0 if rec.recent_pnls else 0.0
+        live_ret_recent_pct = (
+            sum(rec.recent_pnls) / max(initial_eq, 1.0) * 100.0
+            if rec.recent_pnls
+            else 0.0
+        )
 
-        # Simple degradation rules (conservative):
-        # - recent live return clearly negative, OR
-        # - recent live return far below backtest expectation.
         if (
             live_ret_recent_pct < -3.0
             or live_ret_recent_pct < 0.25 * bt_ret
@@ -90,8 +97,10 @@ def _apply_live_degradation(pool) -> None:
             old_status = pool_rec.status
             pool_rec.status = "candidate"
             logger.warning(
-                "Degradation: demoting %s from %s to candidate (bt_ret=%.2f%%, bt_sharpe=%.2f, "
-                "live_total_ret=%.2f%%, live_recent_ret=%.2f%%, live_trades=%d, recent_window=%d)",
+                "Degradation: demoting %s from %s to candidate "
+                "(bt_ret=%.2f%%, bt_sharpe=%.2f, "
+                "live_total_ret=%.2f%%, live_recent_ret=%.2f%%, "
+                "live_trades=%d, recent_window=%d)",
                 name,
                 old_status,
                 bt_ret,
@@ -103,30 +112,37 @@ def _apply_live_degradation(pool) -> None:
             )
 
 
-def _memory_is_clearly_bad(candidate, memory: ResearchMemory, symbol: str, timeframe: str) -> bool:
+def _memory_is_clearly_bad(
+    candidate, memory: ResearchMemory, symbol: str, timeframe: str
+) -> bool:
     """Heuristic filter using ResearchMemory to skip clearly bad pattern families.
 
     For a candidate strategy, query similar past strategies for the same
-    symbol/timeframe and check if most neighbors have obviously poor stats
-    (e.g. Sharpe < 0, PF < 1.0, or return_pct << 0).
+    symbol/timeframe and check if most neighbors have obviously poor stats.
 
     This is intentionally conservative: if there is not enough data or the
     signal is weak, we do NOT skip the candidate.
     """
     try:
-        # Lightweight text summary focusing on symbol/timeframe; the embedding
-        # will still capture similarity from stored stats text.
-        query_text = f"symbol={symbol}\ntimeframe={timeframe}"
-        where_filter = {
-            "$and": [
-                {"symbol": symbol},
-                {"timeframe": timeframe},
-            ]
-        }
+        # Build a rich query text from the candidate's rules so the embedding
+        # is meaningful. Fall back to symbol/timeframe if rules unavailable.
+        params = getattr(candidate, "params", {}) or {}
+        query_text = "\n".join([
+            f"symbol={symbol}",
+            f"timeframe={timeframe}",
+            f"long_entry={getattr(candidate, 'long_entry_rule', '')}",
+            f"short_entry={getattr(candidate, 'short_entry_rule', '')}",
+            f"exit={getattr(candidate, 'exit_rule', '')}",
+            f"sl_atr={getattr(candidate, 'sl_atr_mult', '')}",
+            f"tp_atr={getattr(candidate, 'tp_atr_mult', '')}",
+            f"regime={params.get('regime_type', '')}",
+        ])
+
+        # Let query_similar handle where-filter wrapping — do NOT pre-build $and here
         res = memory.query_similar(
             text=query_text,
             n_results=8,
-            where=where_filter,
+            where={"symbol": symbol, "timeframe": timeframe},
         )
     except Exception as e:
         logger.exception("ResearchMemory query failed for %s: %s", candidate.name, e)
@@ -167,14 +183,16 @@ def _memory_is_clearly_bad(candidate, memory: ResearchMemory, symbol: str, timef
             continue
 
         total_votes += 1
-        # Count as "bad" if multiple indicators are clearly poor
-        if (sharpe is not None and sharpe < 0.0) or (pf is not None and pf < 1.0) or (ret_pct is not None and ret_pct < -5.0):
+        if (
+            (sharpe is not None and sharpe < 0.0)
+            or (pf is not None and pf < 1.0)
+            or (ret_pct is not None and ret_pct < -5.0)
+        ):
             bad_votes += 1
 
     if total_votes == 0:
         return False
 
-    # Only skip if the majority of neighbors look bad
     if bad_votes >= max(3, total_votes // 2):
         logger.info(
             "Memory filter: skipping candidate %s (bad_neighbors=%d/%d)",
@@ -197,35 +215,53 @@ def job_research_strategies() -> None:
         try:
             feat = load_features(symbol, TIMEFRAME)
         except FileNotFoundError:
-            logger.warning("No features found for %s %s; skipping research", symbol, TIMEFRAME)
+            logger.warning(
+                "No features found for %s %s; skipping research", symbol, TIMEFRAME
+            )
             continue
         except Exception as e:
             logger.exception("Failed to load features for %s: %s", symbol, e)
             continue
 
-        # Select top parent strategies from pool for this symbol/timeframe.
-        # Phase 4.2: apply a small memory-guided bonus based on neighborhoods
-        # in ResearchMemory so that strategies surrounded by historically
-        # robust neighbors are slightly more likely to be chosen as parents.
         from ..strategies.generator import load_strategy
 
         def _memory_bonus_for_parent(rec) -> float:
             """Compute a small memory-based bonus for a parent candidate.
 
-            Uses ResearchMemory to query similar strategies for the same
-            symbol/timeframe and aggregates neighbor quality from stored
-            ``stat_*`` fields. The bonus is intentionally small so that it
-            nudges, but does not dominate, the base backtest score.
+            Uses ResearchMemory to query similar strategies and aggregates
+            neighbor quality from stored ``stat_*`` fields. The bonus is
+            intentionally small so it nudges but does not dominate the base
+            backtest score.
             """
             try:
+                # Build a rich query text from strategy rules.
+                # Load the strategy file so we have the actual rule strings.
+                strat_text = f"symbol={rec.symbol}\ntimeframe={rec.timeframe}"
+                try:
+                    path = BASE_DIR / "strategies" / "generated" / f"{rec.name}.json"
+                    strat_obj = load_strategy(path)
+                    params = getattr(strat_obj, "params", {}) or {}
+                    strat_text = "\n".join([
+                        f"symbol={rec.symbol}",
+                        f"timeframe={rec.timeframe}",
+                        f"long_entry={getattr(strat_obj, 'long_entry_rule', '')}",
+                        f"short_entry={getattr(strat_obj, 'short_entry_rule', '')}",
+                        f"exit={getattr(strat_obj, 'exit_rule', '')}",
+                        f"sl_atr={getattr(strat_obj, 'sl_atr_mult', '')}",
+                        f"tp_atr={getattr(strat_obj, 'tp_atr_mult', '')}",
+                        f"regime={params.get('regime_type', '')}",
+                    ])
+                except Exception:
+                    pass  # fall back to minimal text above
+
                 neighbors = memory.query_similar_strategies(
                     symbol=rec.symbol,
                     timeframe=rec.timeframe,
-                    text=f"symbol={rec.symbol}\ntimeframe={rec.timeframe}\nstrategy={rec.name}",
+                    text=strat_text,
                     n_results=10,
                 )
             except Exception as e:
-                logger.exception(
+                logger.error(
                     "Memory bonus: query failed for parent %s: %s", rec.name, e
                 )
                 return 0.0
@@ -240,11 +276,9 @@ def job_research_strategies() -> None:
                 pf = nb.get("stat_profit_factor")
                 ret_pct = nb.get("stat_return_pct")
 
-                # Skip neighbors without any basic stats
                 if sharpe is None and pf is None and ret_pct is None:
                     continue
 
-                # Very rough classification of neighbor quality
                 is_good = False
                 is_bad = False
 
@@ -276,7 +310,6 @@ def job_research_strategies() -> None:
                 return 0.0
 
             balance = (good - bad) / float(total)
-            # Scale into a small bonus in [-0.2, 0.2]
             bonus = max(-0.2, min(0.2, balance * 0.2))
 
             if bonus != 0.0:
@@ -296,7 +329,6 @@ def job_research_strategies() -> None:
             if rec.symbol == symbol and rec.timeframe == TIMEFRAME
         ]
 
-        # Apply memory-based bonus and rank by hybrid score
         scored_parents = []
         for rec in parent_candidates:
             bonus = _memory_bonus_for_parent(rec)
@@ -314,111 +346,97 @@ def job_research_strategies() -> None:
                 strat = load_strategy(path)
                 existing_strats.append((strat, rec.score))
             except Exception as e:
-                logger.exception("Failed to load parent strategy %s from %s: %s", rec.name, path, e)
+                logger.exception(
+                    "Failed to load parent strategy %s from %s: %s",
+                    rec.name,
+                    path,
+                    e,
+                )
 
-        # Evolve population for this symbol/timeframe (or random if no parents yet)
         new_population = evolve_population(symbol, TIMEFRAME, existing_strats)
         save_population(new_population)
 
         for strat in new_population:
             try:
-                # Phase 4.1: memory-guided candidate filtering (conservative)
                 if _memory_is_clearly_bad(strat, memory, symbol, TIMEFRAME):
                     continue
 
-                result = run_backtest(
-                    feat,
-                    strat,
-                    regime_column="regime",
-                )
+                result = run_backtest(feat, strat, regime_column="regime")
                 eval_result = evaluate_strategy(result.stats)
 
-                # Skip strategies that essentially never trade (num_trades too low)
-                # Phase 3 hard filter: require a more meaningful minimum trade count
                 num_trades = eval_result.get("num_trades", 0.0)
                 if num_trades < 50:
                     logger.info(
-                        "Skipping strategy %s due to low trade count (Phase 3 floor=50): %.0f",
+                        "Skipping strategy %s due to low trade count "
+                        "(Phase 3 floor=50): %.0f",
                         strat.name,
                         num_trades,
                     )
                     continue
 
-                # Phase 3 performance floors (conservative, can be tuned later)
                 pf = float(eval_result.get("profit_factor", 0.0) or 0.0)
                 sharpe = float(eval_result.get("sharpe_ratio", 0.0) or 0.0)
                 if pf < 1.15 or sharpe < 0.2:
                     logger.info(
-                        "Skipping strategy %s due to weak performance (Phase 3 floors pf>=1.15, sharpe>=0.2): pf=%.2f sharpe=%.2f",
+                        "Skipping strategy %s due to weak performance "
+                        "(Phase 3 floors pf>=1.15, sharpe>=0.2): "
+                        "pf=%.2f sharpe=%.2f",
                         strat.name,
                         pf,
                         sharpe,
                     )
                     continue
 
-                # Walk-forward
                 wf = walk_forward_test(feat, strat)
                 mc = monte_carlo_pnl(result.trades, n_runs=200)
 
-                # Merge robustness stats into eval_result
-                eval_result["wf_overall_sharpe"] = wf.get("aggregate", {}).get("overall_sharpe", 0.0)
-                eval_result["wf_overall_max_drawdown_pct"] = wf.get("aggregate", {}).get("overall_max_drawdown_pct", 0.0)
+                eval_result["wf_overall_sharpe"] = (
+                    wf.get("aggregate", {}).get("overall_sharpe", 0.0)
+                )
+                eval_result["wf_overall_max_drawdown_pct"] = (
+                    wf.get("aggregate", {}).get("overall_max_drawdown_pct", 0.0)
+                )
                 eval_result.update(mc)
 
-                # Phase 3b: walk-forward Sharpe floors for acceptance/tiering
                 wf_sharpe = float(eval_result.get("wf_overall_sharpe", 0.0) or 0.0)
                 if wf_sharpe < 0.1:
                     logger.info(
-                        "Skipping strategy %s due to weak walk-forward Sharpe (wf_sharpe=%.3f < 0.10)",
+                        "Skipping strategy %s due to weak walk-forward Sharpe "
+                        "(wf_sharpe=%.3f < 0.10)",
                         strat.name,
                         wf_sharpe,
                     )
                     continue
 
-                # Determine pool status: active / exploratory / candidate / disabled
                 def _should_promote(stats: dict) -> bool:
                     ex = stats.get("strategy_explain", {}) or {}
                     regime = ex.get("regime_pnl", {}) or {}
                     trend_ret = (
-                        regime.get("trending_up", {}).get("return_pct", 0.0) +
-                        regime.get("trending_down", {}).get("return_pct", 0.0)
+                        regime.get("trending_up", {}).get("return_pct", 0.0)
+                        + regime.get("trending_down", {}).get("return_pct", 0.0)
                     )
                     range_ret = regime.get("ranging", {}).get("return_pct", 0.0)
-
-                    # Phase 3: align active promotion with the minimum trade-count
-                    # floor used elsewhere (50 trades) so that fully active
-                    # strategies have a more meaningful activity history.
                     return (
-                        stats.get("num_trades", 0.0) >= 50 and
-                        stats.get("return_pct", 0.0) > 0.0 and
-                        stats.get("max_drawdown_pct", 100.0) <= 20.0 and
-                        stats.get("profit_factor", 0.0) >= 1.1 and
-                        trend_ret > 0.0 and
-                        range_ret > -5.0
+                        stats.get("num_trades", 0.0) >= 50
+                        and stats.get("return_pct", 0.0) > 0.0
+                        and stats.get("max_drawdown_pct", 100.0) <= 20.0
+                        and stats.get("profit_factor", 0.0) >= 1.1
+                        and trend_ret > 0.0
+                        and range_ret > -5.0
                     )
 
-                # Determine pool status: active / exploratory / candidate / disabled
                 ex = eval_result.get("strategy_explain", {}) or {}
                 regime = ex.get("regime_pnl", {}) or {}
                 trend_ret = (
-                    regime.get("trending_up", {}).get("return_pct", 0.0) +
-                    regime.get("trending_down", {}).get("return_pct", 0.0)
+                    regime.get("trending_up", {}).get("return_pct", 0.0)
+                    + regime.get("trending_down", {}).get("return_pct", 0.0)
                 )
                 range_ret = regime.get("ranging", {}).get("return_pct", 0.0)
-
                 num_trades = eval_result.get("num_trades", 0.0) or 0.0
 
-                # Use walk-forward Sharpe to gate live deployment tiers:
-                # - wf_sharpe >= 0.20: eligible for active if other conditions met
-                # - 0.10 <= wf_sharpe < 0.20: at most exploratory/candidate
-                # (we already enforced wf_sharpe >= 0.10 above)
                 if _should_promote(eval_result) and wf_sharpe >= 0.2:
                     status = "active"
                 elif eval_result.get("accepted") and wf_sharpe >= 0.1:
-                    # Promising enough for exploratory live deployment:
-                    # - sufficient trade count,
-                    # - positive performance in trending regimes,
-                    # - not catastrophically bad in ranging regimes.
                     if num_trades >= 20 and trend_ret > 0.0 and range_ret > -10.0:
                         status = "exploratory"
                     else:
@@ -433,7 +451,6 @@ def job_research_strategies() -> None:
                     status=status,
                 )
 
-                # Store research result in Chroma
                 memory.store_strategy_result(
                     strategy_name=strat.name,
                     symbol=strat.symbol,
@@ -442,12 +459,11 @@ def job_research_strategies() -> None:
                 )
 
             except Exception as e:
-                logger.exception("Research error for strategy %s: %s", strat.name, e)
+                logger.exception(
+                    "Research error for strategy %s: %s", strat.name, e
+                )
 
-    # After updating pool with latest backtest-based scores/statuses, apply
-    # conservative live degradation rules based on StrategyLiveStats.
     _apply_live_degradation(pool)
-
     save_pool(pool)
     logger.info("Scheduler: job_research_strategies done")
 
@@ -464,21 +480,71 @@ def job_execute_signals() -> None:
         try:
             feat = load_features(symbol, TIMEFRAME)
         except FileNotFoundError:
-            logger.warning("No features for %s %s; skipping signal execution", symbol, TIMEFRAME)
+            logger.warning(
+                "No features for %s %s; skipping signal execution", symbol, TIMEFRAME
+            )
             continue
         except Exception as e:
             logger.exception("Failed to load features for %s: %s", symbol, e)
             continue
 
-        results = execute_signals_for_symbol(symbol, TIMEFRAME, feat, pool, risk_perc=risk_perc)
-        for sig, reason in results:
-            logger.info(
-                "Signal result: strategy=%s symbol=%s dir=%s reason=%s",
-                sig.strategy.name,
+        # Audit pool health before execution
+        active_strats = [
+            rec
+            for rec in pool.strategies.values()
+            if rec.symbol == symbol
+            and rec.timeframe == TIMEFRAME
+            and rec.status == "active"
+        ]
+
+        if not active_strats:
+            logger.warning(
+                "No active strategies in pool for %s %s — skipping execution",
                 symbol,
-                sig.direction,
-                reason,
+                TIMEFRAME,
             )
+            continue
+
+        low_edge = [r for r in active_strats if r.score <= MINIMUM_EDGE_FOR_EXECUTION]
+        if low_edge:
+            logger.warning(
+                "Low/negative edge strategies active for %s %s: %s "
+                "(scores: %s) — consider triggering retraining",
+                symbol,
+                TIMEFRAME,
+                [r.name for r in low_edge],
+                {r.name: round(r.score, 3) for r in low_edge},
+            )
+
+        logger.info(
+            "Executing signals for %s %s — %d active strategies "
+            "(scores: %s)",
+            symbol,
+            TIMEFRAME,
+            len(active_strats),
+            {r.name: round(r.score, 3) for r in active_strats},
+        )
+
+        results = execute_signals_for_symbol(
+            symbol, TIMEFRAME, feat, pool, risk_perc=risk_perc
+        )
+
+        if not results:
+            logger.info(
+                "No signals generated for %s %s — "
+                "entry conditions not met or all blocked by guards",
+                symbol,
+                TIMEFRAME,
+            )
+        else:
+            for sig, reason in results:
+                logger.info(
+                    "Signal result: strategy=%s symbol=%s dir=%s reason=%s",
+                    sig.strategy.name,
+                    symbol,
+                    sig.direction,
+                    reason,
+                )
 
     logger.info("Scheduler: job_execute_signals done")
 
@@ -507,10 +573,14 @@ def start_scheduler() -> BackgroundScheduler:
     sched.add_job(job_update_data, "interval", minutes=5, id="update_data")
 
     # Every 30 minutes: research/evaluate/evolve strategies
-    sched.add_job(job_research_strategies, "interval", minutes=30, id="research_strategies")
+    sched.add_job(
+        job_research_strategies, "interval", minutes=30, id="research_strategies"
+    )
 
     # Every 5 minutes: generate/execute signals from active strategies
-    sched.add_job(job_execute_signals, "interval", minutes=5, id="execute_signals")
+    sched.add_job(
+        job_execute_signals, "interval", minutes=5, id="execute_signals"
+    )
 
     # Every 5 minutes: live monitoring
     sched.add_job(job_live_monitor, "interval", minutes=5, id="live_monitor")
@@ -527,7 +597,6 @@ def shutdown_scheduler(sched: BackgroundScheduler) -> None:
 
 
 if __name__ == "__main__":
-    # Simple standalone runner
     sched = start_scheduler()
     try:
         import time
