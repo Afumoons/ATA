@@ -28,16 +28,24 @@ It provides:
 - `generator.py`
   - Focused on **initial strategy creation**.
   - Uses a mix of rule templates:
-    - Ichimoku + Fibonacci continuation patterns.
-    - Range/mean-reversion patterns using RSI with low `trend_strength`.
     - MA-based trend continuation using `ma_short` vs `ma_long`.
+    - Range/mean-reversion patterns using RSI with low `trend_strength`.
+    - Legacy Ichimoku/Fibonacci continuation patterns (still available but
+      down-weighted for most markets).
     - `LONG_ENTRY_TEMPLATES`, `SHORT_ENTRY_TEMPLATES`, `EXIT_TEMPLATES`.
   - `random_strategy(symbol, timeframe)`:
+    - For core 15m markets (`XAUUSDm`, `BTCUSDm`), biases strongly toward
+      simpler MA/RSI-based templates and away from heavy Ichimoku/Fibonacci
+      patterns to favor more interpretable strategies.
     - Samples template parameters (`trend_min`, `rsi_exit`, `trend_exit`).
     - Builds rule strings by formatting templates with these params.
-    - Picks SL/TP from a discrete set of pip values.
+    - Picks SL/TP from a discrete set of pip values for all markets.
+    - For core 15m markets, additionally samples conservative ATR-based
+      SL/TP multiples (`sl_atr_mult`, `tp_atr_mult`) used by the backtest
+      engine while keeping pip-based distances available for live sizing.
     - Produces a `StrategyDefinition` with a name like
-      `"ichifib_{symbol}_{timeframe}_{rand_id}"`.
+      `"core15_{symbol}_{timeframe}_{rand_id}"` for core 15m markets or
+      `"ichifib_{symbol}_{timeframe}_{rand_id}"` for others.
   - `save_strategy(strategy)` / `load_strategy(path)` – read/write strategy
     JSON files under `strategies/generated/`.
   - `generate_batch(...)` / `generate_and_save_batch(...)` – helpers to create

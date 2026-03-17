@@ -64,3 +64,13 @@
   - python -c "import autonomous_trading_ai" (from workspace root) – PASS.
 - Notes:
   - Behavior of regime-aware filtering and risk tiers is unchanged; the new logging is purely diagnostic and only visible when the logger is set to DEBUG for `execution.signals`. State JSON files under `execution/` changed due to prior runtime activity and were not included in this code-focused commit.
+
+## 2026-03-17 15:10 (Asia/Jakarta)
+
+- Phase: Phase 3 – generator improvements (documentation alignment)
+- Changes:
+  - Updated `strategies/README.md` to accurately describe the current generator behavior: core 15m markets (XAUUSDm/BTCUSDm) are now biased toward simpler MA/RSI-based templates with optional ATR-based SL/TP multiples, while legacy Ichimoku/Fibonacci patterns are still available but down-weighted for most markets. Also documented the `core15_...` naming convention for these strategies.
+- Tests:
+  - python -m compileall . (from `autonomous_trading_ai` repo root) – RUN (non-zero exit due to syntax issues in third-party packages under `.venv`, notably ccxt `static_dependencies`; project modules compiled without reported syntax errors).
+- Notes:
+  - This is a documentation-only alignment step for Phase 3; no Python code or risk logic was changed in this run. JSON state files under `execution/` and `strategies/pool_state.json` remain runtime artifacts and should be excluded from this commit as before.
