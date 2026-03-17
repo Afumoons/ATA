@@ -38,14 +38,8 @@ class ResearchMemory:
         stats: Dict[str, Any],
         extra: Optional[Dict[str, Any]] = None,
     ) -> None:
-        """Store a strategy result as a Chroma document.
-
-        - stats: dict containing backtest/eval/WF/MC metrics
-        - extra: optional additional context (e.g. regime breakdowns)
-        """
         doc_id = f"{strategy_name}:{symbol}:{timeframe}"
 
-        # Simple text summary for now; can be expanded later
         text_lines = [
             f"strategy={strategy_name}",
             f"symbol={symbol}",
@@ -64,9 +58,6 @@ class ResearchMemory:
             "timeframe": timeframe,
         }
 
-        # Store a small set of key stats in metadata for quick filtering/analysis.
-        # This keeps Phase 4 logic simple and avoids having to re-parse documents
-        # in downstream candidate filtering.
         key_stats = [
             "return_pct",
             "sharpe_ratio",
@@ -91,15 +82,19 @@ class ResearchMemory:
         n_results: int = 5,
         where: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
-        """Query for similar strategy research documents by text.
+        if where and len(where) > 1:
+            chroma_where = {"$and": [{k: {"$eq": v}} for k, v in where.items()]}
+        elif where:
+            # single key — pastikan pakai $eq operator
+            k, v = next(iter(where.items()))
+            chroma_where = {k: {"$eq": v}}
+        else:
+            chroma_where = None
 
-        This uses Chroma's built-in embedding if configured; for more control,
-        a custom embedding function could be wired in the future.
-        """
         res = self.collection.query(
             query_texts=[text],
             n_results=n_results,
-            where=where or {},
+            **({"where": chroma_where} if chroma_where else {}),
         )
         logger.info(
             "ResearchMemory: query text='%s' -> %d results",
@@ -112,17 +107,27 @@ class ResearchMemory:
         self,
         symbol: str,
         timeframe: str,
+        strategy: Optional[Dict[str, Any]] = None,  # ← tambah parameter ini
         text: Optional[str] = None,
         n_results: int = 10,
     ) -> List[Dict[str, Any]]:
-        """Convenience helper for Phase 4 candidate filtering.
-
-        Returns a list of neighbor dicts with basic fields extracted, filtered
-        by symbol/timeframe metadata. Callers can use the returned
-        ``stat_*`` keys to reason about clusters of good/bad strategies
-        without re-parsing documents.
-        """
-        query_text = text or f"symbol={symbol}\ntimeframe={timeframe}"
+        # Bangun query text dari konten strategi, bukan hanya symbol/timeframe
+        if text:
+            query_text = text
+        elif strategy:
+            query_text = "\n".join([
+                f"symbol={symbol}",
+                f"timeframe={timeframe}",
+                f"long_entry={strategy.get('long_entry_rule', '')}",
+                f"short_entry={strategy.get('short_entry_rule', '')}",
+                f"exit={strategy.get('exit_rule', '')}",
+                f"sl_atr={strategy.get('sl_atr_mult', '')}",
+                f"tp_atr={strategy.get('tp_atr_mult', '')}",
+                f"regime={strategy.get('params', {}).get('regime_type', '')}",
+            ])
+        else:
+            # fallback: minimal tapi lebih baik dari sebelumnya
+            query_text = f"symbol={symbol}\ntimeframe={timeframe}"
 
         res = self.query_similar(
             text=query_text,
@@ -143,7 +148,6 @@ class ResearchMemory:
                 "symbol": meta.get("symbol"),
                 "timeframe": meta.get("timeframe"),
             }
-            # Attach any stat_* fields so callers can aggregate/threshold.
             for k, v in meta.items():
                 if k.startswith("stat_"):
                     neighbor[k] = v
