@@ -245,6 +245,18 @@ def job_research_strategies() -> None:
                     )
                     continue
 
+                # Phase 3 performance floors (conservative, can be tuned later)
+                pf = float(eval_result.get("profit_factor", 0.0) or 0.0)
+                sharpe = float(eval_result.get("sharpe_ratio", 0.0) or 0.0)
+                if pf < 1.15 or sharpe < 0.2:
+                    logger.info(
+                        "Skipping strategy %s due to weak performance (Phase 3 floors pf>=1.15, sharpe>=0.2): pf=%.2f sharpe=%.2f",
+                        strat.name,
+                        pf,
+                        sharpe,
+                    )
+                    continue
+
                 # Walk-forward
                 wf = walk_forward_test(feat, strat)
                 mc = monte_carlo_pnl(result.trades, n_runs=200)
