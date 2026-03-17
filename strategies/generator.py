@@ -107,10 +107,12 @@ def random_strategy(symbol: str, timeframe: str) -> StrategyDefinition:
         long_pool = long_light or LONG_ENTRY_TEMPLATES
         short_pool = short_light or SHORT_ENTRY_TEMPLATES
     else:
-        # For other markets, still prefer light templates but allow
-        # occasional heavy ones.
-        long_pool = long_light * 3 + long_heavy
-        short_pool = short_light * 3 + short_heavy
+        # For other markets in Phase 3, also favor simpler MA/RSI-based
+        # structures and temporarily disable heavy Ichimoku/Fibonacci
+        # templates to avoid indicator soup. This keeps generator output
+        # more interpretable and consistent with the Phase 3 plan.
+        long_pool = long_light or LONG_ENTRY_TEMPLATES
+        short_pool = short_light or SHORT_ENTRY_TEMPLATES
 
     long_tpl = random.choice(long_pool)
     short_tpl = random.choice(short_pool)

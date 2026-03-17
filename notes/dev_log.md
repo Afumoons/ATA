@@ -9,3 +9,12 @@
 - Notes:
   - This is a small, self-contained Phase 4.1 groundwork change confined to `vector_memory/research_memory.py`; it does not yet alter scheduler behavior or candidate filtering. Future runs can safely plug `query_similar_strategies` into `job_research_strategies` to implement conservative pre-backtest filtering based on clusters of historically poor strategies.
 
+## 2026-03-17 21:23 (Asia/Jakarta)
+
+- Phase: Phase 3 – generator improvements (indicator simplicity)
+- Changes:
+  - Updated `strategies/generator.random_strategy` so that for non-core markets it now also uses only the lighter MA/RSI-based entry templates, temporarily disabling heavy Ichimoku/Fibonacci-based templates. This aligns generator output with the Phase 3 goal of avoiding indicator soup and focusing on simpler, more interpretable structures.
+- Tests:
+  - python -c "import autonomous_trading_ai" (from workspace root) – PASS.
+- Notes:
+  - Heavy Ichimoku/Fibonacci templates remain defined for now but are no longer sampled by the generator for any symbol/timeframe. Future Phase 3 work can still introduce explicit XAUUSD/BTCUSDT 15m trend/range/session families using the existing MA/RSI/ATR features.
