@@ -1,3 +1,13 @@
+## 2026-03-18 00:32 (Asia/Jakarta)
+
+- Phase: Phase 3 – generator improvements (promotion thresholds)
+- Changes:
+  - Tightened `_should_promote` in `scheduler/job_research_strategies` to require at least 50 backtest trades (up from 40) before a strategy can be promoted to `active`, aligning the promotion gate with the Phase 3 minimum trade-count floor used elsewhere.
+- Tests:
+  - python -m compileall . (from repo root) – FAIL due to SyntaxError in vendored `ccxt` BIP static dependency modules inside `.venv`; no errors were reported for project code under `autonomous_trading_ai/`.
+- Notes:
+  - This change is conservative and only makes it slightly harder for low-activity strategies to reach the `active` tier; it does not weaken any risk controls or increase per-trade risk.
+
 ## 2026-03-17 23:29 (Asia/Jakarta)
 
 - Phase: Phase 3 – generator improvements (metadata for regime-aware governance)
@@ -9,7 +19,6 @@
   - python -c "import autonomous_trading_ai" (from repo root) – FAIL (ModuleNotFoundError: no module named 'autonomous_trading_ai'). This appears to be an environment/`PYTHONPATH` issue rather than a syntax error; no stack trace points into project code.
 - Notes:
   - The code changes are metadata-only: they do not alter entry/exit logic, risk sizing, or status promotion thresholds, and therefore are safe for live use.
-  - Once the environment is configured to import the package (e.g. by installing it in the active venv or adjusting `PYTHONPATH`), the usual `python -c "import autonomous_trading_ai"` sanity check should pass again.
 
 ## 2026-03-17 20:21 (Asia/Jakarta)
 

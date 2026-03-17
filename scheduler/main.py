@@ -385,8 +385,11 @@ def job_research_strategies() -> None:
                     )
                     range_ret = regime.get("ranging", {}).get("return_pct", 0.0)
 
+                    # Phase 3: align active promotion with the minimum trade-count
+                    # floor used elsewhere (50 trades) so that fully active
+                    # strategies have a more meaningful activity history.
                     return (
-                        stats.get("num_trades", 0.0) >= 40 and
+                        stats.get("num_trades", 0.0) >= 50 and
                         stats.get("return_pct", 0.0) > 0.0 and
                         stats.get("max_drawdown_pct", 100.0) <= 20.0 and
                         stats.get("profit_factor", 0.0) >= 1.1 and
