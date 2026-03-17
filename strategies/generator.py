@@ -122,6 +122,17 @@ def random_strategy(symbol: str, timeframe: str) -> StrategyDefinition:
         "trend_exit": round(random.uniform(-0.1, 0.1), 2),
     }
 
+    # For core 15m markets, optionally use ATR-based SL/TP multiples in
+    # backtests while keeping pip-based distances available for live
+    # execution. Other markets continue to use pip-based SL/TP only.
+    sl_atr_mult = None
+    tp_atr_mult = None
+    if is_core_15m:
+        sl_atr_mult = random.choice([1.5, 2.0, 2.5])
+        tp_atr_mult = random.choice([2.0, 3.0, 4.0])
+        params["sl_atr_mult"] = sl_atr_mult
+        params["tp_atr_mult"] = tp_atr_mult
+
     long_entry_rule = long_tpl.format(**params)
     short_entry_rule = short_tpl.format(**params)
     exit_rule = exit_tpl.format(**params)
@@ -150,6 +161,8 @@ def random_strategy(symbol: str, timeframe: str) -> StrategyDefinition:
         exit_rule=exit_rule,
         stop_loss_pips=stop_loss_pips,
         take_profit_pips=take_profit_pips,
+        sl_atr_mult=sl_atr_mult,
+        tp_atr_mult=tp_atr_mult,
         params=params,
     )
     logger.info("Generated strategy %s", strat.to_dict())

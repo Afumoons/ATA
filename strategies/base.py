@@ -22,8 +22,13 @@ class StrategyDefinition:
 
     exit_rule: str
 
+    # Legacy pip-based SL/TP distances (still used in live execution)
     stop_loss_pips: float
     take_profit_pips: float
+
+    # Optional ATR-based SL/TP multiples for backtests (Phase 3 enhancement)
+    sl_atr_mult: float | None = None
+    tp_atr_mult: float | None = None
 
     params: Dict[str, Any] = field(default_factory=dict)
 
@@ -37,6 +42,8 @@ class StrategyDefinition:
             "exit_rule": self.exit_rule,
             "stop_loss_pips": self.stop_loss_pips,
             "take_profit_pips": self.take_profit_pips,
+            "sl_atr_mult": self.sl_atr_mult,
+            "tp_atr_mult": self.tp_atr_mult,
             "params": self.params,
         }
 
@@ -51,5 +58,7 @@ class StrategyDefinition:
             exit_rule=data["exit_rule"],
             stop_loss_pips=float(data["stop_loss_pips"]),
             take_profit_pips=float(data["take_profit_pips"]),
+            sl_atr_mult=data.get("sl_atr_mult"),
+            tp_atr_mult=data.get("tp_atr_mult"),
             params=data.get("params", {}),
         )

@@ -21,3 +21,23 @@
 - Notes:
   - This is a small, safe Phase 3 step that only affects how new strategies are generated; it does not change risk per trade, live execution routing, or status promotion logic. Existing strategies in the pool are untouched. Future Phase 3 work can introduce richer XAU/BTC-specific templates and optional ATR-based SL/TP once more data is available.
 
+## 2026-03-17 07:36 (Asia/Jakarta)
+
+- Phase: Phase 3 – generator improvements (performance floors)
+- Changes:
+  - Extended `scheduler.job_research_strategies` to apply conservative Phase 3 performance floors for backtest results after the existing `num_trades >= 50` filter. Candidates with `profit_factor < 1.15` or `sharpe_ratio < 0.2` are now discarded with a clear log message, raising the baseline quality of what can reach `candidate` / `exploratory` / `active`.
+- Tests:
+  - python -m compileall . (from repo root) – RUN (non-zero exit due to `.venv`/third-party packages, but project modules including `scheduler/main.py` compiled without reported syntax errors).
+- Notes:
+  - This is a small, safety-oriented Phase 3 step that only tightens research-time selection; it does not change live risk percentages, execution routing, or status promotion thresholds beyond skipping weak candidates earlier.
+
+## 2026-03-17 13:07 (Asia/Jakarta)
+
+- Phase: Phase 3 – generator improvements (ATR SL/TP wiring)
+- Changes:
+  - Extended `StrategyDefinition` to carry optional `sl_atr_mult` and `tp_atr_mult` fields (with serialization in `to_dict`/`from_dict`), enabling the backtest engine’s existing ATR-based SL/TP support to be used by generated strategies in a structured way.
+  - Updated `strategies/generator.random_strategy` so that for core 15m markets (XAUUSDm and BTCUSDm), newly generated strategies now sample conservative ATR-based SL/TP multiples (e.g. SL 1.5–2.5 × ATR, TP 2–4 × ATR) and store them in both `params` and the new dataclass fields; other markets continue to use the existing fixed pip distances only.
+- Tests:
+  - python -c "import autonomous_trading_ai" (from workspace root) – PASS.
+- Notes:
+  - This is a contained Phase 3 step that only affects how new strategies define SL/TP during backtests; live execution still uses pip-based distances, and no risk percentages or live routing logic were changed. Existing saved strategies without ATR metadata remain compatible via the default `None` values.
