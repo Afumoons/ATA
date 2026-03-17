@@ -38,6 +38,11 @@ class ResearchMemory:
         stats: Dict[str, Any],
         extra: Optional[Dict[str, Any]] = None,
     ) -> None:
+        """Store a strategy result as a Chroma document.
+
+        - stats: dict containing backtest/eval/WF/MC metrics
+        - extra: optional additional context (e.g. regime breakdowns)
+        """
         doc_id = f"{strategy_name}:{symbol}:{timeframe}"
 
         text_lines = [
@@ -82,14 +87,28 @@ class ResearchMemory:
         n_results: int = 5,
         where: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
-        if where and len(where) > 1:
-            chroma_where = {"$and": [{k: {"$eq": v}} for k, v in where.items()]}
-        elif where:
-            # single key — pastikan pakai $eq operator
-            k, v = next(iter(where.items()))
-            chroma_where = {k: {"$eq": v}}
-        else:
-            chroma_where = None
+        """Query for similar strategy research documents by text.
+
+        Handles ChromaDB where-filter syntax:
+        - Single key  : {key: {"$eq": value}}
+        - Multi key   : {"$and": [{key: {"$eq": value}}, ...]}
+        - Pre-built   : pass through as-is if already contains "$and"/"$or"
+        """
+        chroma_where: Optional[Dict[str, Any]] = None
+
+        if where:
+            # Already a pre-built ChromaDB operator expression — pass through
+            if "$and" in where or "$or" in where:
+                chroma_where = where
+            elif len(where) > 1:
+                # Multiple plain key-value pairs — wrap with $and + $eq
+                chroma_where = {
+                    "$and": [{k: {"$eq": v}} for k, v in where.items()]
+                }
+            else:
+                # Single key-value pair — wrap with $eq
+                k, v = next(iter(where.items()))
+                chroma_where = {k: {"$eq": v}}
 
         res = self.collection.query(
             query_texts=[text],
@@ -107,11 +126,22 @@ class ResearchMemory:
         self,
         symbol: str,
         timeframe: str,
-        strategy: Optional[Dict[str, Any]] = None,  # ← tambah parameter ini
+        strategy: Optional[Dict[str, Any]] = None,
         text: Optional[str] = None,
         n_results: int = 10,
     ) -> List[Dict[str, Any]]:
-        # Bangun query text dari konten strategi, bukan hanya symbol/timeframe
+        """Convenience helper for Phase 4 candidate filtering.
+
+        Returns a list of neighbor dicts with basic fields extracted, filtered
+        by symbol/timeframe metadata.
+
+        Query text priority:
+        1. Explicit ``text`` argument (caller provides full query string)
+        2. ``strategy`` dict — builds a rich query from entry/exit rules
+        3. Fallback: minimal symbol/timeframe string
+
+        The richer the query text, the more meaningful the similarity search.
+        """
         if text:
             query_text = text
         elif strategy:
@@ -126,7 +156,7 @@ class ResearchMemory:
                 f"regime={strategy.get('params', {}).get('regime_type', '')}",
             ])
         else:
-            # fallback: minimal tapi lebih baik dari sebelumnya
+            # Minimal fallback — less meaningful but avoids errors
             query_text = f"symbol={symbol}\ntimeframe={timeframe}"
 
         res = self.query_similar(
