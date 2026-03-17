@@ -1,6 +1,9 @@
 {
   "core15_XAUUSDm_M15_4127": {
     "name": "core15_XAUUSDm_M15_4127",
+    "symbol": "XAUUSDm",
+    "timeframe": "M15",
+    "status": "candidate",
     "score": 1.2959580597424145,
     "stats": {
       "accepted": true,
@@ -112,13 +115,13 @@
       "wf_overall_max_drawdown_pct": -9.058415918634488,
       "wf_overall_sharpe": 0.10630206006428525,
       "win_rate": 0.3202614379084967
-    },
-    "status": "candidate",
-    "symbol": "XAUUSDm",
-    "timeframe": "M15"
+    }
   },
   "core15_XAUUSDm_M15_5678": {
     "name": "core15_XAUUSDm_M15_5678",
+    "symbol": "XAUUSDm",
+    "timeframe": "M15",
+    "status": "active",
     "score": 1.403270203293991,
     "stats": {
       "accepted": true,
@@ -230,13 +233,13 @@
       "wf_overall_max_drawdown_pct": -8.707125213481358,
       "wf_overall_sharpe": 0.08758613534318176,
       "win_rate": 0.3902439024390244
-    },
-    "status": "active",
-    "symbol": "XAUUSDm",
-    "timeframe": "M15"
+    }
   },
   "core15_XAUUSDm_M15_7941": {
     "name": "core15_XAUUSDm_M15_7941",
+    "symbol": "XAUUSDm",
+    "timeframe": "M15",
+    "status": "active",
     "score": 1.277948969564055,
     "stats": {
       "accepted": true,
@@ -348,13 +351,13 @@
       "wf_overall_max_drawdown_pct": -5.649235111679585,
       "wf_overall_sharpe": 0.026475313194910012,
       "win_rate": 0.6222222222222222
-    },
-    "status": "active",
-    "symbol": "XAUUSDm",
-    "timeframe": "M15"
+    }
   },
   "core15_XAUUSDm_M15_8154": {
     "name": "core15_XAUUSDm_M15_8154",
+    "symbol": "XAUUSDm",
+    "timeframe": "M15",
+    "status": "active",
     "score": 1.4670671877893422,
     "stats": {
       "accepted": true,
@@ -466,13 +469,13 @@
       "wf_overall_max_drawdown_pct": -9.888657344009744,
       "wf_overall_sharpe": 0.07972025772175448,
       "win_rate": 0.47928994082840237
-    },
-    "status": "active",
-    "symbol": "XAUUSDm",
-    "timeframe": "M15"
+    }
   },
   "core15_XAUUSDm_M15_9190": {
     "name": "core15_XAUUSDm_M15_9190",
+    "symbol": "XAUUSDm",
+    "timeframe": "M15",
+    "status": "active",
     "score": 1.3366473231284732,
     "stats": {
       "accepted": true,
@@ -584,9 +587,6 @@
       "wf_overall_max_drawdown_pct": -9.308449441466726,
       "wf_overall_sharpe": 0.0754574073947727,
       "win_rate": 0.5202702702702703
-    },
-    "status": "active",
-    "symbol": "XAUUSDm",
-    "timeframe": "M15"
+    }
   }
 }
