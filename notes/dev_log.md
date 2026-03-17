@@ -53,3 +53,14 @@
   - python -c "import autonomous_trading_ai" (from workspace root) – PASS.
 - Notes:
   - This was an explicit no-op development cycle focused on verification and basic tests only, to avoid unnecessary churn while the recent Phase 1–3 changes settle. Next small improvements should target Phase 3 template families or Phase 4 planning once enough new research/live data has accumulated.
+
+## 2026-03-17 14:07 (Asia/Jakarta)
+
+- Phase: Phase 2 – regime-aware live selection (observability)
+- Changes:
+  - Extended `execution.signals._filter_and_rank` to emit `DEBUG`-level logs of per-strategy regime edge values (strategy name + edge per current regime), alongside the existing aggregate filter summary. This makes it easier to inspect and tune `regime_pnl`-driven selection behavior without changing any selection thresholds or risk settings.
+- Tests:
+  - python -m compileall . (from `autonomous_trading_ai` repo root) – RUN (non-zero exit due to third-party packages under `.venv`, but project modules including `execution/signals.py` compiled without reported syntax errors).
+  - python -c "import autonomous_trading_ai" (from workspace root) – PASS.
+- Notes:
+  - Behavior of regime-aware filtering and risk tiers is unchanged; the new logging is purely diagnostic and only visible when the logger is set to DEBUG for `execution.signals`. State JSON files under `execution/` changed due to prior runtime activity and were not included in this code-focused commit.

@@ -138,6 +138,17 @@ def execute_signals_for_symbol(
         if not scored:
             return []
 
+        # Optional debug logging of per-strategy regime edge to aid tuning
+        for edge, rec in scored:
+            logger.debug(
+                "Regime edge detail for %s %s (%s): strategy=%s edge=%.3f",
+                symbol,
+                timeframe,
+                regime_label,
+                rec.name,
+                edge,
+            )
+
         # Filter out strategies with very poor historical performance
         # in this regime (e.g. worse than -5% return).
         kept = [(edge, rec) for edge, rec in scored if edge > -5.0]
