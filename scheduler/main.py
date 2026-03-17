@@ -203,16 +203,109 @@ def job_research_strategies() -> None:
             logger.exception("Failed to load features for %s: %s", symbol, e)
             continue
 
-        # Select top parent strategies from pool for this symbol/timeframe
+        # Select top parent strategies from pool for this symbol/timeframe.
+        # Phase 4.2: apply a small memory-guided bonus based on neighborhoods
+        # in ResearchMemory so that strategies surrounded by historically
+        # robust neighbors are slightly more likely to be chosen as parents.
         from ..strategies.generator import load_strategy
 
-        parent_records = [
+        def _memory_bonus_for_parent(rec) -> float:
+            """Compute a small memory-based bonus for a parent candidate.
+
+            Uses ResearchMemory to query similar strategies for the same
+            symbol/timeframe and aggregates neighbor quality from stored
+            ``stat_*`` fields. The bonus is intentionally small so that it
+            nudges, but does not dominate, the base backtest score.
+            """
+            try:
+                neighbors = memory.query_similar_strategies(
+                    symbol=rec.symbol,
+                    timeframe=rec.timeframe,
+                    text=f"symbol={rec.symbol}\ntimeframe={rec.timeframe}\nstrategy={rec.name}",
+                    n_results=10,
+                )
+            except Exception as e:
+                logger.exception(
+                    "Memory bonus: query failed for parent %s: %s", rec.name, e
+                )
+                return 0.0
+
+            if not neighbors:
+                return 0.0
+
+            good = 0
+            bad = 0
+            for nb in neighbors:
+                sharpe = nb.get("stat_sharpe_ratio")
+                pf = nb.get("stat_profit_factor")
+                ret_pct = nb.get("stat_return_pct")
+
+                # Skip neighbors without any basic stats
+                if sharpe is None and pf is None and ret_pct is None:
+                    continue
+
+                # Very rough classification of neighbor quality
+                is_good = False
+                is_bad = False
+
+                if sharpe is not None:
+                    if sharpe > 0.3:
+                        is_good = True
+                    elif sharpe < 0.0:
+                        is_bad = True
+
+                if pf is not None:
+                    if pf > 1.1:
+                        is_good = True
+                    elif pf < 1.0:
+                        is_bad = True
+
+                if ret_pct is not None:
+                    if ret_pct > 0.0:
+                        is_good = True
+                    elif ret_pct < -5.0:
+                        is_bad = True
+
+                if is_good:
+                    good += 1
+                if is_bad:
+                    bad += 1
+
+            total = good + bad
+            if total == 0:
+                return 0.0
+
+            balance = (good - bad) / float(total)
+            # Scale into a small bonus in [-0.2, 0.2]
+            bonus = max(-0.2, min(0.2, balance * 0.2))
+
+            if bonus != 0.0:
+                logger.info(
+                    "Memory bonus for parent %s: base_score=%.3f good=%d bad=%d bonus=%.3f",
+                    rec.name,
+                    rec.score,
+                    good,
+                    bad,
+                    bonus,
+                )
+            return bonus
+
+        parent_candidates = [
             rec
             for rec in pool.strategies.values()
             if rec.symbol == symbol and rec.timeframe == TIMEFRAME
         ]
-        parent_records.sort(key=lambda r: r.score, reverse=True)
-        parent_records = parent_records[:20]
+
+        # Apply memory-based bonus and rank by hybrid score
+        scored_parents = []
+        for rec in parent_candidates:
+            bonus = _memory_bonus_for_parent(rec)
+            hybrid_score = rec.score + bonus
+            scored_parents.append((hybrid_score, rec))
+
+        scored_parents.sort(key=lambda x: x[0], reverse=True)
+        top_scored = scored_parents[:20]
+        parent_records = [rec for _, rec in top_scored]
 
         existing_strats = []
         for rec in parent_records:

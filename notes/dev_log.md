@@ -18,3 +18,14 @@
   - python -c "import autonomous_trading_ai" (from workspace root) – PASS.
 - Notes:
   - Heavy Ichimoku/Fibonacci templates remain defined for now but are no longer sampled by the generator for any symbol/timeframe. Future Phase 3 work can still introduce explicit XAUUSD/BTCUSDT 15m trend/range/session families using the existing MA/RSI/ATR features.
+
+## 2026-03-17 22:30 (Asia/Jakarta)
+
+- Phase: Phase 4.2 – memory-guided elite parent selection
+- Changes:
+  - Updated `scheduler/job_research_strategies` to compute a small `memory_bonus` for each potential parent strategy using `ResearchMemory.query_similar_strategies`, based on the proportion of historically good vs bad neighbors (via `stat_sharpe_ratio`, `stat_profit_factor`, and `stat_return_pct`).
+  - Parent candidates for a given symbol/timeframe are now ranked by a hybrid score `rec.score + memory_bonus`, with the bonus capped to a small range ([-0.2, 0.2]) and logged for auditability, so backtest scores remain primary while memory gently nudges selection toward more robust neighborhoods.
+- Tests:
+  - python -c "import autonomous_trading_ai" (from workspace root) – PASS.
+- Notes:
+  - This is a conservative Phase 4.2 step: it does not change promotion/demotion thresholds or risk, only which parents are slightly favored during evolution. Future runs can tune the neighbor-quality heuristic or the bonus scale if needed, based on observed effects on pool composition.
