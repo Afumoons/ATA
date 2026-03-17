@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 
 from chromadb import PersistentClient
 
@@ -58,11 +58,27 @@ class ResearchMemory:
                 text_lines.append(f"extra_{k}={v}")
         document = "\n".join(text_lines)
 
-        metadata = {
+        metadata: Dict[str, Any] = {
             "strategy_name": strategy_name,
             "symbol": symbol,
             "timeframe": timeframe,
         }
+
+        # Store a small set of key stats in metadata for quick filtering/analysis.
+        # This keeps Phase 4 logic simple and avoids having to re-parse documents
+        # in downstream candidate filtering.
+        key_stats = [
+            "return_pct",
+            "sharpe_ratio",
+            "profit_factor",
+            "max_drawdown_pct",
+            "num_trades",
+            "score",
+        ]
+        for k in key_stats:
+            if k in stats:
+                metadata[f"stat_{k}"] = stats[k]
+
         if extra:
             metadata.update({f"extra_{k}": v for k, v in extra.items()})
 
@@ -91,3 +107,52 @@ class ResearchMemory:
             len(res.get("ids", [[]])[0]),
         )
         return res
+
+    def query_similar_strategies(
+        self,
+        symbol: str,
+        timeframe: str,
+        text: Optional[str] = None,
+        n_results: int = 10,
+    ) -> List[Dict[str, Any]]:
+        """Convenience helper for Phase 4 candidate filtering.
+
+        Returns a list of neighbor dicts with basic fields extracted, filtered
+        by symbol/timeframe metadata. Callers can use the returned
+        ``stat_*`` keys to reason about clusters of good/bad strategies
+        without re-parsing documents.
+        """
+        query_text = text or f"symbol={symbol}\ntimeframe={timeframe}"
+
+        res = self.query_similar(
+            text=query_text,
+            n_results=n_results,
+            where={"symbol": symbol, "timeframe": timeframe},
+        )
+
+        ids = res.get("ids", [[]])[0] or []
+        metadatas = res.get("metadatas", [[]])[0] or []
+        distances = res.get("distances", [[]])[0] or []
+
+        neighbors: List[Dict[str, Any]] = []
+        for i, meta in enumerate(metadatas):
+            neighbor: Dict[str, Any] = {
+                "id": ids[i] if i < len(ids) else None,
+                "distance": distances[i] if i < len(distances) else None,
+                "strategy_name": meta.get("strategy_name"),
+                "symbol": meta.get("symbol"),
+                "timeframe": meta.get("timeframe"),
+            }
+            # Attach any stat_* fields so callers can aggregate/threshold.
+            for k, v in meta.items():
+                if k.startswith("stat_"):
+                    neighbor[k] = v
+            neighbors.append(neighbor)
+
+        logger.info(
+            "ResearchMemory: query_similar_strategies symbol=%s timeframe=%s -> %d neighbors",
+            symbol,
+            timeframe,
+            len(neighbors),
+        )
+        return neighbors
