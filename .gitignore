@@ -34,9 +34,10 @@ temp/
 .ipynb_checkpoints/
 
 # --- Data (raw / heavy / generated) ---
-data/
+data/features/
+data/raw/
 datasets/
-backtests/
+backtests/results/
 reports/
 results/
 artifacts/
