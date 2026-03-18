@@ -21,20 +21,35 @@ and for **tracking live account state** used by risk controls:
   - Logs each executed trade to `trades.log`.
 
 - `signals.py`
-  - Bridges **backtested strategies** into **live execution**.
+  - Bridges **backtested strategies** into **live execution** with
+    regime-aware filtering and per-tier risk control.
   - For the latest feature row per symbol/timeframe:
     - Reads the current `regime` label from features and logs it per symbol/timeframe.
-    - Generates entry signals by reusing backtest rule evaluation.
-    - Checks daily limits via `can_open_new_trade(...)` from `live_state_utils`.
-    - Loads `active` and `exploratory` strategies from the strategy pool and computes a
-      regime-specific edge for each using `strategy_explain.regime_pnl`.
-    - Filters out strategies with very poor edge in the current regime, ranks the rest
-      by edge, and caps how many are allowed to fire per run (e.g. top 5 active, top 3
-      exploratory).
+    - Logs a feature snapshot (time, regime, key indicators like MA short/long,
+      trend strength, RSI) to aid post-mortem analysis.
+    - Checks **daily limits** via `can_open_new_trade(...)` from
+      `live_state_utils` using `risk_config.max_daily_drawdown_pct`,
+      `risk_config.max_trades_per_day`, and `risk_config.daily_limits_enabled`.
+    - Loads `active` and `exploratory` strategies from the strategy pool for the
+      given symbol/timeframe.
+    - Computes a regime-specific edge for each strategy using
+      `strategy_explain.regime_pnl[regime_label].return_pct` (via `_regime_edge`).
+    - Applies regime-based thresholds:
+      - `ACTIVE_REGIME_EDGE_THRESHOLD = 0.0` → active strategies only trade in
+        regimes that were historically profitable (edge > 0) for that strategy.
+      - `EXPLORATORY_REGIME_EDGE_THRESHOLD = -10.0` → exploratory tier is looser
+        to allow data gathering, with a fallback that keeps the best strategy
+        even if none pass the threshold.
+    - Ranks strategies by edge and caps how many are allowed to fire per run
+      (e.g. top 5 active, top 3 exploratory).
     - Uses **two risk tiers** when executing via `engine.execute_trade()`:
-      - `active` strategies trade at the normal configured per-trade risk.
-      - `exploratory` strategies trade at a significantly reduced per-trade risk, capped
-        at a low percentage to keep exploratory exposure small.
+      - `active` strategies trade at the normal configured per-trade risk
+        (`risk_perc`).
+      - `exploratory` strategies trade at a significantly reduced per-trade
+        risk (`min(risk_perc * 0.25, 0.1)`), keeping exploratory exposure small.
+    - Returns a list of `(Signal, reason)` tuples so callers (e.g.
+      `scheduler.job_execute_signals`) can log exactly why each trade was
+      accepted, rejected, or blocked by guards.
 
 - `live_state_utils.py`
   - Defines `DailyState` structure stored in `live_state.json`.

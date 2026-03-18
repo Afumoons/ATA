@@ -46,22 +46,42 @@ Errors per symbol are logged but do **not** stop other symbols from updating.
 Per symbol:
 
 1. Load features via `load_features(symbol, TIMEFRAME)`.
-2. Select up to 20 best parent strategies from the pool for that symbol/timeframe.
-3. Load their `StrategyDefinition` JSONs from `strategies/generated/`.
-4. Call `evolve_population(symbol, TIMEFRAME, existing_strats)` to generate a new
+2. Construct a `ResearchMemory` instance pointing at the configured Chroma
+   collection.
+3. Select up to 20 best parent strategies from the pool for that symbol/timeframe.
+4. For each parent candidate, compute a **memory-based bonus** that nudges the
+   GA toward pattern families that have historically worked well on this
+   symbol/timeframe:
+   - Build a rich query text from the strategy's rules (`long_entry_rule`,
+     `short_entry_rule`, `exit_rule`, `sl_atr_mult`, `tp_atr_mult`, regime
+     parameters).
+   - Use `ResearchMemory.query_similar_strategies(...)` to fetch neighbors from
+     past research runs.
+   - Aggregate neighbor stats (Sharpe, profit factor, return %) into a small
+     bonus/penalty in the range `[-0.2, +0.2]`.
+   - Add this to the parent's base score to form a "hybrid" parent score.
+5. Sort parents by hybrid score and keep the top N as the GA breeding pool.
+6. Load their `StrategyDefinition` JSONs from `strategies/generated/` and call
+   `evolve_population(symbol, TIMEFRAME, existing_strats)` to generate a new
    population.
-5. For each strategy in the population:
+7. For each strategy in the population:
+   - Optionally **skip clearly bad pattern families** via
+     `_memory_is_clearly_bad(...)`, which queries similar past strategies in
+     `ResearchMemory` and checks if most neighbors have obviously poor stats.
    - Run `run_backtest(...)` using the current features.
    - Evaluate with `evaluate_strategy(result.stats)`.
-   - Skip strategies with too few trades (`num_trades < 5`).
+   - Enforce Phase 3 floors:
+     - Minimum trade count (`num_trades >= 50`).
+     - Minimum profit factor and Sharpe (e.g. `pf >= 1.15`, `sharpe >= 0.2`).
    - Run robustness checks:
-     - Walk-forward test via `walk_forward_test(...)`.
+     - Walk-forward test via `walk_forward_test(...)` (with its own Sharpe
+       floor, e.g. `wf_sharpe >= 0.1` or `0.2` for promotion).
      - Monte Carlo PnL via `monte_carlo_pnl(...)`.
    - Merge robustness stats into `eval_result`.
    - Decide pool status using `_should_promote(stats)` and additional heuristics:
      - `active`       → meets stricter performance criteria (PnL > 0, DD <= 20%,
                         PF >= 1.1, good trend performance, not terrible in ranges,
-                        sufficient trade count).
+                        sufficient trade count, robust WF Sharpe).
      - `exploratory`  → accepted strategies with enough trades and positive
                         performance in trending regimes, but not yet strong
                         enough for `active`.
@@ -73,7 +93,8 @@ Per symbol:
 
 After updating the pool based on backtests, a **live degradation pass** runs
 using `execution/strategy_live_stats.json` to conservatively demote clearly
-underperforming `active` strategies back to `candidate`.
+underperforming `active` strategies back to `candidate` based on their
+aggregated live PnL and a rolling window of recent trade outcomes.
 
 Finally, `save_pool(pool)` persists the updated pool to disk.
 

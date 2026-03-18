@@ -34,7 +34,13 @@ live trading logic does not depend on it at runtime.
       - Adds the document + metadata into the Chroma collection via `add(...)`.
     - `query_similar(text, n_results=5, where=None)`:
       - Uses Chroma's `collection.query(...)` with `query_texts=[text]`.
+      - Accepts a simple `where` dict (e.g. `{ "symbol": "XAUUSDm", "timeframe": "M15" }`) and converts it into the appropriate Chroma `$eq` / `$and` expression; advanced `$and`/`$or` expressions are passed through as-is.
       - Returns the raw Chroma response (ids, documents, metadatas, distances).
+    - `query_similar_strategies(symbol, timeframe, strategy=None, text=None, n_results=10)`:
+      - Convenience helper for Phase 4 candidate filtering.
+      - Builds a rich query text from a strategy's rules (`long_entry_rule`, `short_entry_rule`, `exit_rule`, `sl_atr_mult`, `tp_atr_mult`, `regime_type`) when available, or falls back to a minimal `symbol`/`timeframe` query.
+      - Restricts neighbors to the same `symbol` and `timeframe` via metadata filters.
+      - Returns a list of neighbor dicts with key `stat_*` fields (Sharpe, PF, return %, etc.) extracted from metadata.
 
 ## How It’s Used
 
