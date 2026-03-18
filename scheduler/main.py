@@ -190,7 +190,7 @@ def _memory_is_clearly_bad(
         ):
             bad_votes += 1
 
-    if total_votes == 0:
+    if total_votes < 3:
         return False
 
     if bad_votes >= max(3, total_votes // 2):
