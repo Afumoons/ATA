@@ -368,6 +368,7 @@ def execute_signals_for_symbol(
                     stop_loss_pips=strat.stop_loss_pips,
                     take_profit_pips=strat.take_profit_pips,
                     pip_size=0.01 if "XAU" in symbol or "XAG" in symbol else 0.0001,
+                    pip_value_per_lot=1.0 if "XAU" in symbol or "XAG" in symbol else 10.0,
                 )
                 results.append((sig, res.reason))
                 if res.success:
