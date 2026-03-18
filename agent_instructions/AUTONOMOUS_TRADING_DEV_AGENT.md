@@ -6,6 +6,18 @@ This instruction file is designed for use by a **background agent or cron
 job** that periodically improves and maintains the
 `autonomous_trading_ai` system.
 
+> **Current status (2026-03-18)**
+> - Phase 1 (exploratory status + risk tiers), Phase 2 (regime-aware live
+>   selection), Phase 3 (generator improvements), dan baseline Phase 4
+>   (ResearchMemory-guided scoring & filtering) sudah diimplementasikan
+>   dan terdokumentasi.
+> - Dev agent berikutnya sebaiknya fokus pada:
+>   - bugfix kecil,
+>   - tuning threshold berbasis data historis tambahan,
+>   - atau fitur baru **hanya jika** diminta eksplisit oleh Afu.
+> - Jangan mengubah arsitektur utama atau risk posture tanpa instruksi
+>   manusia yang jelas.
+
 The agent MUST:
 
 - Work **only** inside this repo:

@@ -105,21 +105,31 @@ This will:
 
 ## 5. Strategy Selection & Self-Improvement (No Manual Promotion Needed)
 
-The system now promotes strategies automatically based on rich
-explanations of their behavior (`strategy_explain`) **dan juga menjaga
-kualitas pool berdasarkan performa live**. Kamu **tidak perlu** lagi
-menjalankan script promosi manual di workflow normal.
+The system now promotes strategies automatically based on:
+
+- rich explanations of behavior (`strategy_explain`),
+- a **Chroma-backed research memory** of past strategies,
+- and **live performance** (rolling per-strategy PnL).
+
+Kamu **tidak perlu** lagi menjalankan script promosi manual di workflow normal.
 
 Pada setiap `job_research_strategies`:
 
 - Agent akan:
   - Backtest dan evaluate strategi seperti biasa.
   - Membangun `strategy_explain` per strategi (regime/session/risk/stability/news).
-  - Menghitung skor dan menetapkan status pool:
-    - `active`   → lolos kriteria ketat (PnL > 0, DD <= ~20%, PF >= ~1.1,
-                   performa di tren oke, tidak hancur di range).
-    - `candidate` → lolos threshold dasar tapi belum layak `active`.
-    - `disabled` → sisanya.
+  - Menghitung skor dasar lalu memberi **bonus/penalty kecil** berdasarkan
+    kemiripan dengan strategi-strategi yang sudah pernah diteliti sebelumnya
+    di `vector_memory/ResearchMemory` untuk simbol/timeframe yang sama.
+  - Menetapkan status pool:
+    - `active`      → lolos kriteria ketat (PnL > 0, DD <= ~20%, PF >= ~1.1,
+                      performa di tren oke, tidak hancur di range, WF & MC
+                      sehat).
+    - `exploratory` → strategi yang diterima tapi masih tier percobaan (risk
+                      lebih kecil, dipakai untuk kumpulkan data live).
+    - `candidate`   → lolos threshold dasar tapi belum layak `exploratory`/`active`.
+    - `disabled`    → sisanya.
+  - Menyimpan hasil evaluasi ke Chroma sebagai memori riset.
 
 - Setelah itu, sistem juga melihat **performa live**:
   - Membaca `execution/strategy_live_stats.json`, yang berisi:
@@ -130,10 +140,20 @@ Pada setiap `job_research_strategies`:
     - kalau return live recent jelas jelek vs ekspektasi backtest,
     - status otomatis diturunkan dari `active` → `candidate`.
 
+Di sisi eksekusi signal:
+
+- Hanya strategi dengan status `active` dan `exploratory` yang dipertimbangkan.
+- Untuk setiap simbol/timeframe, sistem melihat **regime sekarang** dari fitur,
+  lalu membaca `strategy_explain.regime_pnl`:
+  - `active` hanya trade di regime yang historically **profit** (edge > 0).
+  - `exploratory` boleh trade di regime yang sedikit negatif untuk kumpulkan
+    data, tapi dengan **risk per trade jauh lebih kecil**.
+
 Artinya:
-- Promosi ke `active` masih berbasis riset backtest + explainability.
-- Strategi yang mulai busuk di live akan otomatis “ditarik ke bangku
-  cadangan” tanpa kamu harus pantau satu-satu.
+- Promosi ke `active` berbasis kombinasi riset (backtest + explain + memory).
+- Strategi yang mulai busuk di live akan otomatis “ditarik ke bangku cadangan”.
+- Exploratory dipakai sebagai lapisan eksperimen ber-risk kecil untuk mengenal
+  behaviour di regime yang lebih luas tanpa membahayakan akun.
 
 Untuk inspeksi/debug, kamu tetap bisa cek pool:
 

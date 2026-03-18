@@ -72,7 +72,7 @@ The `autonomous_trading_ai` directory should contain (non-exhaustive):
 - `scheduler/`
 - `scripts/`
 - `user_instructions/`
-- `agent_instruction/` (this file)
+- `agent_instructions/` (this file and dev agent docs)
 - `config.py`, `logging_utils.py`, etc.
 
 If any of these are missing, migration was incomplete.
@@ -231,6 +231,16 @@ python -c "from autonomous_trading_ai.data.collector_mt5 import initialize_mt5, 
 ```powershell
 python -c "from autonomous_trading_ai.data.collector_mt5 import initialize_mt5, shutdown_mt5; from autonomous_trading_ai.scheduler.main import job_research_strategies; initialize_mt5(); job_research_strategies(); shutdown_mt5()"
 ```
+
+Saat ini `job_research_strategies()` tidak hanya melakukan backtest + evaluasi,
+namun juga:
+- menulis hasil evaluasi ke **Chroma/ResearchMemory**,
+- menggunakan memori tersebut untuk memberi bonus/penalty kecil pada parent
+  strategies dan menyaring keluarga pola yang secara historis buruk untuk
+  simbol/timeframe yang sama,
+- menetapkan status `active` / `exploratory` / `candidate` / `disabled` di pool,
+- dan menerapkan degradasi berbasis performa live menggunakan
+  `execution/strategy_live_stats.json`.
 
 ### 7.3. Strategy selection, live-aware degradation & self-improvement
 

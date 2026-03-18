@@ -27,12 +27,18 @@ This README gives the high-level map. Each submodule has its own
 
 3. **Strategy Generation & Pool (`strategies/`)**
    - `base.py` defines the `StrategyDefinition` config (rules + SL/TP + params).
-   - `generator.py` creates Ichimoku/Fibonacci-biased strategies as JSON files
-     in `strategies/generated/`.
+   - `generator.py` creates MA/RSI/Ichimoku/Fibonacci-biased strategies as JSON
+     files in `strategies/generated/`, with metadata describing each strategy
+     family and intended regime.
    - `evolution.py` evolves strategies over time using an elite + mutation +
-     crossover scheme.
-   - `pool.py` maintains the persistent `StrategyPool` in `strategies/pool_state.json`,
-     tracking stats, scores, and statuses (`active` / `candidate` / `disabled`).
+     crossover scheme, optionally guided by **research memory**: parent scores
+     can be nudged up or down based on how similar strategies have behaved
+     historically on the same symbol/timeframe.
+   - `pool.py` maintains the persistent `StrategyPool` in
+     `strategies/pool_state.json`, tracking stats, scores, and statuses
+     (`active` / `exploratory` / `candidate` / `disabled` / `retired`), and is
+     updated both by research cycles and by live-performance-based degradation
+     rules.
 
 4. **Backtesting, Evaluation & Explainability (`backtests/`)**
    - `engine.py` runs bar-by-bar backtests, applying risk-based sizing and
@@ -71,23 +77,38 @@ This README gives the high-level map. Each submodule has its own
    - `main.py` uses APScheduler to orchestrate the whole loop:
      - `job_update_data` (every 5 min): fetch OHLC → compute features + regime → save.
      - `job_research_strategies` (every 30 min): evolve strategies, backtest,
-       evaluate, run robustness checks, update `StrategyPool`, and write to
-       `ResearchMemory`. After each cycle, it also applies conservative
-       **live-performance-based degradation rules** that demote clearly
-       underperforming `active` strategies back to `candidate` based on their
-       recent live returns.
-     - `job_execute_signals` (every 5 min): load features + active strategies,
-       generate/execute signals, enforced by risk + daily limits.
+       evaluate, run robustness checks, and update both `StrategyPool` and
+       **research memory**:
+       - Parents are scored using a hybrid of backtest score + a small
+         memory-based bonus/penalty derived from similar past strategies in
+         `ResearchMemory` for the same symbol/timeframe.
+       - New candidates can be skipped early if memory shows that their
+         pattern family has historically performed poorly.
+       - After each cycle, conservative **live-performance-based degradation
+         rules** demote clearly underperforming `active` strategies back to
+         `candidate` based on their aggregated live returns and a rolling
+         window of recent trades.
+     - `job_execute_signals` (every 5 min): load features + active/exploratory
+       strategies, generate regime-aware signals, and execute them subject to
+       risk + daily limits.
      - `job_live_monitor` (every 5 min): update equity history and daily state,
-       enforce portfolio-level safety.
+       enforce portfolio-level safety, and keep per-strategy live stats
+       up-to-date for the degradation rules.
    - `start_scheduler()` / `shutdown_scheduler()` manage MT5 and job lifecycle.
 
 8. **Research Memory (`vector_memory/`)**
    - `research_memory.py` wraps a Chroma `PersistentClient`.
    - `ResearchMemory.store_strategy_result(...)` stores evaluation outputs as
      text + metadata for later semantic search.
-   - `ResearchMemory.query_similar(...)` can be used by scripts/agents to find
-     strategies with similar stats/behavior.
+   - `ResearchMemory.query_similar(...)` accepts simple `where` filters and
+     handles Chroma's `$eq` / `$and` operators for you.
+   - `ResearchMemory.query_similar_strategies(...)` is a higher-level helper
+     that:
+     - builds rich query texts from strategy rules and parameters,
+     - restricts neighbors to the same symbol/timeframe,
+     - and returns neighbors with key `stat_*` fields extracted, making it
+       suitable for both **memory-based candidate filtering** and
+       **parent-scoring bonuses** in the research job.
 
 9. **Configuration (`config.py`)**
    - `RiskConfig` – defines risk thresholds (per-trade, portfolio DD, daily limits).
@@ -127,4 +148,4 @@ From there, the system loops indefinitely:
 For operational runbooks (how to start everything from scratch), see:
 
 - `user_instructions/START_AUTONOMOUS_TRADING.md`
-- `agent_instruction/SETUP_AUTONOMOUS_TRADING_ENVIRONMENT.md`
+- `agent_instructions/SETUP_AUTONOMOUS_TRADING_ENVIRONMENT.md`
