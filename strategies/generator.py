@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import json
 import random
+import uuid
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Tuple, Dict, Any
 
 from .base import StrategyDefinition
 from ..logging_utils import get_logger
@@ -14,43 +15,69 @@ STRATEGY_DIR = Path(__file__).resolve().parent
 GENERATED_DIR = STRATEGY_DIR / "generated"
 GENERATED_DIR.mkdir(exist_ok=True)
 
+# ---------------------------------------------------------------------------
+# Threshold alignment with regime.py RegimeConfig (ATR-normalised scale).
+#
+# These must stay in sync with regime.RegimeConfig defaults:
+#   trend_up_thresh    = 0.08
+#   strong_trend_thresh = 0.30
+#
+# RSI range templates use TREND_RANGING_BOUND as the flat-market filter so
+# that the boundary matches what regime detection considers "ranging".
+# ---------------------------------------------------------------------------
+_TREND_UP_THRESH = 0.08      # minimum trend_strength to count as trending
+_TREND_RANGING_BOUND = 0.08  # used in RSI range templates: |trend_strength| < this = ranging
+_STRONG_TREND_THRESH = 0.30  # strong-trend level
 
-# Entry templates
-# NOTE: Ordering and content are used for lightweight family classification
-# in random_strategy; if you change these, also update the classification
-# logic below.
+# trend_min sampling range aligned to ATR-normalised scale.
+# Values above _STRONG_TREND_THRESH start to be rare; going much above 0.5
+# means the entry condition almost never fires.
+_TREND_MIN_LOW = 0.05
+_TREND_MIN_HIGH = 0.50
 
-# Ichimoku: bullish alignment above the cloud (heavy template)
-LONG_ENTRY_TEMPLATES = [
+# trend_exit range: exit when trend_strength falls below this threshold.
+# Must be below _TREND_UP_THRESH to avoid immediate exit after entry.
+# Clamped to [-0.20, 0.15] to prevent drift during mutation.
+_TREND_EXIT_LOW = -0.15
+_TREND_EXIT_HIGH = 0.10
+_TREND_EXIT_CLAMP_MIN = -0.20
+_TREND_EXIT_CLAMP_MAX = 0.15
+
+# ---------------------------------------------------------------------------
+# Entry / exit templates
+# ---------------------------------------------------------------------------
+# RSI range templates use a parameterised trend_strength bound so that it
+# can be updated in one place (_TREND_RANGING_BOUND) rather than scattered
+# hardcoded values.
+
+_RSI_RANGE_LONG = (
+    f"rsi < 35 and trend_strength > -{_TREND_RANGING_BOUND}"
+    f" and trend_strength < {_TREND_RANGING_BOUND}"
+)
+_RSI_RANGE_SHORT = (
+    f"rsi > 65 and trend_strength > -{_TREND_RANGING_BOUND}"
+    f" and trend_strength < {_TREND_RANGING_BOUND}"
+)
+
+# Heavy Ichimoku / Fibonacci templates (disabled for core 15m markets)
+_ICHIFIB_LONG_TEMPLATES = [
     "tenkan_sen > kijun_sen and close > senkou_span_a and close > senkou_span_b",
-    # Fib + trend (heavy template)
     "fib_zone_382 == 1 and trend_strength > {trend_min}",
 ]
-
-SHORT_ENTRY_TEMPLATES = [
-    # Ichimoku: bearish alignment below the cloud (heavy template)
+_ICHIFIB_SHORT_TEMPLATES = [
     "tenkan_sen < kijun_sen and close < senkou_span_a and close < senkou_span_b",
-    # Fib + trend (heavy template)
     "fib_zone_618 == 1 and trend_strength < -{trend_min}",
 ]
 
-# Range / mean reversion: fade extremes when trend_strength is low (lighter, RSI-based)
-LONG_ENTRY_TEMPLATES.append(
-    "rsi < 35 and trend_strength > -0.1 and trend_strength < 0.1"
-)
-
-SHORT_ENTRY_TEMPLATES.append(
-    "rsi > 65 and trend_strength > -0.1 and trend_strength < 0.1"
-)
-
-# MA-based trend continuation (lighter, trend-follow)
-LONG_ENTRY_TEMPLATES.append(
-    "ma_short > ma_long and trend_strength > {trend_min}"
-)
-
-SHORT_ENTRY_TEMPLATES.append(
-    "ma_short < ma_long and trend_strength < -{trend_min}"
-)
+# Lighter MA / RSI templates (preferred for core 15m markets)
+_LIGHT_LONG_TEMPLATES = [
+    _RSI_RANGE_LONG,
+    "ma_short > ma_long and trend_strength > {trend_min}",
+]
+_LIGHT_SHORT_TEMPLATES = [
+    _RSI_RANGE_SHORT,
+    "ma_short < ma_long and trend_strength < -{trend_min}",
+]
 
 EXIT_TEMPLATES = [
     "rsi > {rsi_exit}",
@@ -58,131 +85,166 @@ EXIT_TEMPLATES = [
     "trend_strength < {trend_exit}",
 ]
 
+# Expose combined lists for backward compatibility (e.g. load_population scans)
+LONG_ENTRY_TEMPLATES = _ICHIFIB_LONG_TEMPLATES + _LIGHT_LONG_TEMPLATES
+SHORT_ENTRY_TEMPLATES = _ICHIFIB_SHORT_TEMPLATES + _LIGHT_SHORT_TEMPLATES
+
+
+# ---------------------------------------------------------------------------
+# Template classification
+# ---------------------------------------------------------------------------
 
 def _classify_template(tpl: str) -> Tuple[str, str]:
-    """Return (family, regime_type) for a given entry rule template.
-
-    This is a lightweight heuristic used to tag generated strategies with
-    metadata inside `StrategyDefinition.params` so that later phases
-    (regime-aware selection, governance) can reason about families.
-    """
+    """Return (family, regime_type) for a given entry rule template string."""
     if "tenkan_sen" in tpl or "fib_zone" in tpl:
         return "ichifib", "trend"
     if "ma_short" in tpl and "ma_long" in tpl:
         return "ma_trend", "trend"
     if "rsi" in tpl and "trend_strength" in tpl:
-        # mean-reversion in low-trend conditions
         return "rsi_range", "range"
     return "generic", "unknown"
 
 
-def random_strategy(symbol: str, timeframe: str) -> StrategyDefinition:
-    """Generate a strategy config.
+# ---------------------------------------------------------------------------
+# Core generation helper
+# ---------------------------------------------------------------------------
 
-    Phase 3 tweak: for key markets (XAUUSDm/BTCUSDm on M15), bias away
-    from heavy Ichimoku/Fibonacci templates and toward simpler
-    MA/RSI-based structures, while still allowing the legacy templates
-    for other markets.
+def _build_strategy_from_templates(
+    symbol: str,
+    timeframe: str,
+    long_tpl: str,
+    short_tpl: str,
+    exit_tpl: str,
+    params: Dict[str, Any],
+    name_prefix: str,
+) -> StrategyDefinition:
+    """Instantiate a StrategyDefinition from templates + params.
+
+    Rules are formatted from the provided params dict so that params and
+    rule strings are ALWAYS in sync. This is the single place where
+    rule baking happens.
     """
-
-    is_core_15m = symbol in {"XAUUSDm", "BTCUSDm"} and timeframe == "M15"
-
-    # Split templates by family so we can bias selection
-    def _split_templates(templates):
-        heavy = []   # ichimoku / fib
-        light = []   # ma/RSI-based
-        for tpl in templates:
-            family, _ = _classify_template(tpl)
-            if family == "ichifib":
-                heavy.append(tpl)
-            else:
-                light.append(tpl)
-        return heavy, light
-
-    long_heavy, long_light = _split_templates(LONG_ENTRY_TEMPLATES)
-    short_heavy, short_light = _split_templates(SHORT_ENTRY_TEMPLATES)
-
-    if is_core_15m:
-        # For core 15m markets, use only the lighter MA/RSI templates.
-        long_pool = long_light or LONG_ENTRY_TEMPLATES
-        short_pool = short_light or SHORT_ENTRY_TEMPLATES
-    else:
-        # For other markets in Phase 3, also favor simpler MA/RSI-based
-        # structures and temporarily disable heavy Ichimoku/Fibonacci
-        # templates to avoid indicator soup. This keeps generator output
-        # more interpretable and consistent with the Phase 3 plan.
-        long_pool = long_light or LONG_ENTRY_TEMPLATES
-        short_pool = short_light or SHORT_ENTRY_TEMPLATES
-
-    long_tpl = random.choice(long_pool)
-    short_tpl = random.choice(short_pool)
-    exit_tpl = random.choice(EXIT_TEMPLATES)
-
-    params = {
-        "trend_min": round(random.uniform(0.1, 1.0), 2),
-        "rsi_exit": random.randint(40, 60),
-        "trend_exit": round(random.uniform(-0.1, 0.1), 2),
-    }
-
-    # Phase 3 metadata enrichment: hint which symbol/timeframe a strategy
-    # was primarily generated for so later phases (governance, reporting)
-    # can reason about coverage without re-parsing the name.
-    params["preferred_symbols"] = [symbol]
-    params["preferred_timeframes"] = [timeframe]
-
-    # For core 15m markets, optionally use ATR-based SL/TP multiples in
-    # backtests while keeping pip-based distances available for live
-    # execution. Other markets continue to use pip-based SL/TP only.
-    sl_atr_mult = None
-    tp_atr_mult = None
-    if is_core_15m:
-        sl_atr_mult = random.choice([1.5, 2.0, 2.5])
-        tp_atr_mult = random.choice([2.0, 3.0, 4.0])
-        params["sl_atr_mult"] = sl_atr_mult
-        params["tp_atr_mult"] = tp_atr_mult
-
     long_entry_rule = long_tpl.format(**params)
     short_entry_rule = short_tpl.format(**params)
     exit_rule = exit_tpl.format(**params)
 
-    stop_loss_pips = random.choice([50, 75, 100, 150])
-    take_profit_pips = random.choice([50, 100, 150, 200])
-
     long_family, long_regime = _classify_template(long_tpl)
     short_family, short_regime = _classify_template(short_tpl)
 
-    # Basic metadata for later phases
+    params = dict(params)  # copy — don't mutate caller's dict
     params["long_family"] = long_family
     params["short_family"] = short_family
     params["regime_type_long"] = long_regime
     params["regime_type_short"] = short_regime
+    params["regime_type"] = long_regime if long_regime == short_regime else "mixed"
 
-    # Aggregate regime type for this strategy to simplify downstream
-    # selection and reporting logic. If both sides agree, use that;
-    # otherwise mark as "mixed".
-    if long_regime == short_regime:
-        params["regime_type"] = long_regime
-    else:
-        params["regime_type"] = "mixed"
+    # Use a short UUID suffix to avoid name collisions across many cycles.
+    # randint(1000, 9999) gives only 9000 possibilities — with population_size=20
+    # and research every 30min, collisions happen within hours and silently
+    # overwrite better strategies on disk.
+    uid = uuid.uuid4().hex[:4]
+    name = f"{name_prefix}_{symbol}_{timeframe}_{uid}"
 
-    name_prefix = "core15" if is_core_15m else "ichifib"
-    name = f"{name_prefix}_{symbol}_{timeframe}_{random.randint(1000, 9999)}"
+    sl_atr_mult = params.get("sl_atr_mult")
+    tp_atr_mult = params.get("tp_atr_mult")
+    stop_loss_pips = params.get("stop_loss_pips", random.choice([50, 75, 100, 150]))
+    take_profit_pips = params.get("take_profit_pips", random.choice([50, 100, 150, 200]))
 
-    strat = StrategyDefinition(
+    return StrategyDefinition(
         name=name,
         symbol=symbol,
         timeframe=timeframe,
         long_entry_rule=long_entry_rule,
         short_entry_rule=short_entry_rule,
         exit_rule=exit_rule,
-        stop_loss_pips=stop_loss_pips,
-        take_profit_pips=take_profit_pips,
+        stop_loss_pips=float(stop_loss_pips),
+        take_profit_pips=float(take_profit_pips),
         sl_atr_mult=sl_atr_mult,
         tp_atr_mult=tp_atr_mult,
         params=params,
     )
+
+
+# ---------------------------------------------------------------------------
+# Public API
+# ---------------------------------------------------------------------------
+
+def random_strategy(symbol: str, timeframe: str) -> StrategyDefinition:
+    """Generate a random strategy config.
+
+    For core 15m markets (XAUUSDm / BTCUSDm M15) only lighter MA/RSI
+    templates are used. All markets now use ATR-normalised thresholds that
+    align with regime.RegimeConfig defaults.
+    """
+    is_core_15m = symbol in {"XAUUSDm", "BTCUSDm"} and timeframe == "M15"
+
+    # Both core and non-core currently use only light templates.
+    # Heavy Ichimoku/Fib templates are available in _ICHIFIB_* for future use.
+    long_tpl = random.choice(_LIGHT_LONG_TEMPLATES)
+    short_tpl = random.choice(_LIGHT_SHORT_TEMPLATES)
+    exit_tpl = random.choice(EXIT_TEMPLATES)
+
+    # ATR-normalised param ranges (aligned with regime.RegimeConfig)
+    params: Dict[str, Any] = {
+        "trend_min": round(random.uniform(_TREND_MIN_LOW, _TREND_MIN_HIGH), 2),
+        "rsi_exit": random.randint(40, 60),
+        "trend_exit": round(random.uniform(_TREND_EXIT_LOW, _TREND_EXIT_HIGH), 2),
+        "preferred_symbols": [symbol],
+        "preferred_timeframes": [timeframe],
+        "stop_loss_pips": random.choice([50, 75, 100, 150]),
+        "take_profit_pips": random.choice([50, 100, 150, 200]),
+    }
+
+    if is_core_15m:
+        params["sl_atr_mult"] = random.choice([1.5, 2.0, 2.5])
+        params["tp_atr_mult"] = random.choice([2.0, 3.0, 4.0])
+
+    name_prefix = "core15" if is_core_15m else "ichifib"
+
+    strat = _build_strategy_from_templates(
+        symbol=symbol,
+        timeframe=timeframe,
+        long_tpl=long_tpl,
+        short_tpl=short_tpl,
+        exit_tpl=exit_tpl,
+        params=params,
+        name_prefix=name_prefix,
+    )
+
     logger.info("Generated strategy %s", strat.to_dict())
     return strat
+
+
+def rebuild_strategy_from_params(
+    symbol: str,
+    timeframe: str,
+    params: Dict[str, Any],
+    name_prefix: str = "core15",
+) -> StrategyDefinition:
+    """Re-generate rule strings from a params dict and fresh template selection.
+
+    Used by evolution (_mutate_strategy, _crossover) to ensure rule strings
+    and params are always in sync after modification.
+    """
+    is_core_15m = symbol in {"XAUUSDm", "BTCUSDm"} and timeframe == "M15"
+
+    long_tpl = random.choice(_LIGHT_LONG_TEMPLATES)
+    short_tpl = random.choice(_LIGHT_SHORT_TEMPLATES)
+    exit_tpl = random.choice(EXIT_TEMPLATES)
+
+    # Ensure name_prefix reflects market
+    if is_core_15m:
+        name_prefix = "core15"
+
+    return _build_strategy_from_templates(
+        symbol=symbol,
+        timeframe=timeframe,
+        long_tpl=long_tpl,
+        short_tpl=short_tpl,
+        exit_tpl=exit_tpl,
+        params=params,
+        name_prefix=name_prefix,
+    )
 
 
 def save_strategy(strategy: StrategyDefinition) -> Path:
@@ -202,14 +264,8 @@ def load_strategy(path: Path) -> StrategyDefinition:
 
 
 def generate_batch(symbol: str, timeframe: str, n: int) -> List[StrategyDefinition]:
-    strategies = []
-    for _ in range(n):
-        strategies.append(random_strategy(symbol, timeframe))
-    return strategies
+    return [random_strategy(symbol, timeframe) for _ in range(n)]
 
 
 def generate_and_save_batch(symbol: str, timeframe: str, n: int) -> List[Path]:
-    paths: List[Path] = []
-    for strat in generate_batch(symbol, timeframe, n):
-        paths.append(save_strategy(strat))
-    return paths
+    return [save_strategy(s) for s in generate_batch(symbol, timeframe, n)]
