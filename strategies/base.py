@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 
 @dataclass
@@ -9,27 +9,25 @@ class StrategyDefinition:
     """Serializable definition of a strategy.
 
     This is a config object, not executable code. The backtest/execute layers
-    will interpret these rules over feature data.
+    interpret these rules over feature data.
     """
 
     name: str
     symbol: str
     timeframe: str
 
-    # Explicit long/short entry rules
-    long_entry_rule: str | None
-    short_entry_rule: str | None
-
+    long_entry_rule: Optional[str]
+    short_entry_rule: Optional[str]
     exit_rule: str
 
-    # Legacy pip-based SL/TP distances (still used in live execution)
     stop_loss_pips: float
     take_profit_pips: float
 
-    # Optional ATR-based SL/TP multiples for backtests (Phase 3 enhancement)
-    sl_atr_mult: float | None = None
-    tp_atr_mult: float | None = None
+    sl_atr_mult: Optional[float] = None
+    tp_atr_mult: Optional[float] = None
 
+    # Dict[str, Any] — not Dict[str, float] — because it contains nested
+    # structures (lists, dicts, strings) in addition to numeric params.
     params: Dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
