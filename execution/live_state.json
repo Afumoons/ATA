@@ -1,9 +1,9 @@
 {
-  "date": "2026-03-17",
-  "equity_start": 2251.44,
-  "equity_current": 2251.44,
-  "daily_pnl": 0.0,
-  "daily_return_pct": 0.0,
-  "trades_today": 5,
+  "date": "2026-03-18",
+  "equity_start": 2252.81,
+  "equity_current": 2397.66,
+  "daily_pnl": 144.8499999999999,
+  "daily_return_pct": 6.429747737270339,
+  "trades_today": 7,
   "locked_for_day": false
 }
