@@ -215,9 +215,6 @@ def execute_signals_for_symbol(
         filtered = [rec for _, rec in kept]
 
         if len(filtered) != len(records):
-            blocked = [rec.name for _, rec in scored if edge <= threshold
-                       for edge, rec in [(next(e for e, r in scored if r.name == rec.name), rec)]]
-            # simpler approach:
             blocked_names = [
                 rec.name for edge, rec in scored if edge <= threshold
             ]
