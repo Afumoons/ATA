@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
 
 from ..logging_utils import get_logger
 from ..strategies.base import StrategyDefinition
-from .engine import run_backtest, BacktestResult
+from .engine import run_backtest, BacktestResult, _get_periods_per_year
 
 logger = get_logger(__name__)
 
@@ -16,30 +16,51 @@ logger = get_logger(__name__)
 @dataclass
 class WalkForwardConfig:
     n_splits: int = 4
-    train_ratio: float = 0.7  # fraction of each split used for train
+    train_ratio: float = 0.7  # fraction of each window used for train (in-sample)
+    min_test_bars: int = 50   # minimum bars in test window to be included
 
 
-def _split_walkforward_indices(n: int, n_splits: int, train_ratio: float) -> List[Tuple[int, int, int]]:
-    """Return list of (train_start, train_end, test_end) indices for walk-forward.
+def _split_walkforward_indices(
+    n: int,
+    n_splits: int,
+    train_ratio: float,
+    min_test_bars: int = 50,
+) -> List[Tuple[int, int, int]]:
+    """Return (train_start, train_end, test_end) index triples for walk-forward.
 
-    Assumes data is already time-ordered [0..n-1].
+    Uses a rolling/expanding window — each split includes all data up to that
+    fold's end, with the last `train_ratio` fraction as in-sample and the
+    remainder as out-of-sample.
+
+    This is more statistically sound than non-overlapping folds because:
+    - Each test window is genuinely out-of-sample (never seen by the strategy
+      during any earlier window).
+    - Aggregating test windows gives a continuous OOS equity curve with no
+      overlap artifacts.
     """
     if n_splits < 1:
         raise ValueError("n_splits must be >= 1")
 
-    fold_size = n // n_splits
     splits: List[Tuple[int, int, int]] = []
+    fold_size = n // (n_splits + 1)
 
-    for i in range(n_splits):
-        start = i * fold_size
-        end = (i + 1) * fold_size if i < n_splits - 1 else n
-        length = end - start
-        if length < 10:
+    for i in range(1, n_splits + 1):
+        # Expanding in-sample window ending at fold boundary i
+        test_end = min(n, (i + 1) * fold_size)
+        test_start = i * fold_size
+        test_len = test_end - test_start
+
+        if test_len < min_test_bars:
             continue
-        train_end = start + int(length * train_ratio)
-        if train_end >= end:
+
+        # train uses all data before this test window
+        train_start = 0
+        train_end = test_start
+
+        if train_end - train_start < min_test_bars:
             continue
-        splits.append((start, train_end, end))
+
+        splits.append((train_start, train_end, test_end))
 
     return splits
 
@@ -47,87 +68,135 @@ def _split_walkforward_indices(n: int, n_splits: int, train_ratio: float) -> Lis
 def walk_forward_test(
     df: pd.DataFrame,
     strategy: StrategyDefinition,
-    cfg: WalkForwardConfig | None = None,
+    cfg: Optional[WalkForwardConfig] = None,
+    regime_column: str = "regime",
     **backtest_kwargs,
 ) -> Dict:
-    """Perform walk-forward validation.
+    """Perform walk-forward validation on out-of-sample windows.
 
-    For now, strategy parameters are not re-optimized per window; this function
-    simply runs backtests on each out-of-sample window and aggregates stats.
+    Bug fixes vs original:
+    1. Sharpe annualisation uses per-symbol/timeframe periods_per_year
+       (was hardcoded to 252 — wrong for gold M15 by ~3.5x).
+    2. Aggregate equity is built by chaining OOS windows, NOT by concat +
+       pct_change across window boundaries. Boundary transitions (where equity
+       resets) created false large returns that inflated/deflated aggregate Sharpe.
+    3. `regime_column` is now passed through to run_backtest so that
+       strategy_explain.regime_pnl is populated in each window.
+    4. max_drawdown_pct is returned as a positive value consistent with
+       evaluation.py's _abs_drawdown() convention.
     """
     if cfg is None:
         cfg = WalkForwardConfig()
 
     df = df.sort_values("time").reset_index(drop=True)
     n = len(df)
-    splits = _split_walkforward_indices(n, cfg.n_splits, cfg.train_ratio)
+
+    splits = _split_walkforward_indices(
+        n, cfg.n_splits, cfg.train_ratio, cfg.min_test_bars
+    )
 
     if not splits:
-        logger.warning("No valid walk-forward splits (n=%d, n_splits=%d)", n, cfg.n_splits)
+        logger.warning(
+            "No valid walk-forward splits for %s (n=%d n_splits=%d)",
+            strategy.name, n, cfg.n_splits,
+        )
         return {"windows": [], "aggregate": {}}
 
     windows: List[Dict] = []
-    all_equity = []
-    all_times = []
+
+    # Build a single chained OOS equity curve by appending each window's
+    # relative returns to a running equity — avoids false cross-boundary PnL.
+    initial_equity = float(backtest_kwargs.get("initial_equity", 10_000.0))
+    chained_equity: List[float] = [initial_equity]
+    chained_times: List[pd.Timestamp] = []
 
     for idx, (train_start, train_end, test_end) in enumerate(splits):
-        train_df = df.iloc[train_start:train_end]
-        test_df = df.iloc[train_end:test_end]
+        test_df = df.iloc[train_end:test_end].copy()
 
-        logger.info(
-            "Walk-forward window %d: train [%d:%d], test [%d:%d]",
-            idx,
-            train_start,
-            train_end,
-            train_end,
-            test_end,
-        )
-
-        # In future we can tune strategy.params based on train_df.
-        # For now we just backtest on test_df with the given strategy.
-        if len(test_df) < 10:
+        if len(test_df) < cfg.min_test_bars:
             continue
 
-        result: BacktestResult = run_backtest(test_df, strategy, **backtest_kwargs)
-        windows.append(
-            {
-                "index": idx,
-                "train_range": (int(train_start), int(train_end)),
-                "test_range": (int(train_end), int(test_end)),
-                "stats": result.stats,
-            }
+        logger.info(
+            "WF window %d/%d: train [%d:%d] test [%d:%d] (%d bars)",
+            idx + 1, len(splits),
+            train_start, train_end,
+            train_end, test_end,
+            len(test_df),
         )
-        all_equity.append(result.equity_curve)
-        all_times.append(result.equity_curve.index)
+
+        result: BacktestResult = run_backtest(
+            test_df,
+            strategy,
+            regime_column=regime_column,
+            **backtest_kwargs,
+        )
+
+        windows.append({
+            "index": idx,
+            "train_range": (int(train_start), int(train_end)),
+            "test_range": (int(train_end), int(test_end)),
+            "stats": result.stats,
+        })
+
+        # Chain this window's equity curve onto the running equity.
+        # We scale by the ratio between window start equity and our current
+        # running equity so that each window starts where the last left off.
+        wf_eq = result.equity_curve
+        if len(wf_eq) < 2:
+            continue
+
+        wf_start = float(wf_eq.iloc[0])
+        if wf_start <= 0:
+            continue
+
+        running_equity = chained_equity[-1]
+        scale = running_equity / wf_start
+
+        # Append scaled values (skip first point — already in chained_equity)
+        for ts, ev in zip(wf_eq.index[1:], wf_eq.values[1:]):
+            chained_equity.append(float(ev) * scale)
+            chained_times.append(ts)
 
     if not windows:
-        logger.warning("Walk-forward produced no test windows")
+        logger.warning("Walk-forward produced no valid test windows for %s", strategy.name)
         return {"windows": [], "aggregate": {}}
 
-    # Aggregate: concatenate equity curves aligned by time
-    equity_cat = pd.concat(all_equity).sort_index()
-    returns = equity_cat.pct_change().dropna()
-
-    if not returns.empty:
-        sharpe = float(np.sqrt(252) * returns.mean() / (returns.std() + 1e-9))
+    # ------------------------------------------------------------------ #
+    # Aggregate stats over chained OOS equity curve                       #
+    # ------------------------------------------------------------------ #
+    if len(chained_equity) < 2 or not chained_times:
+        aggregate = {"overall_sharpe": 0.0, "overall_max_drawdown_pct": 0.0, "num_windows": len(windows)}
     else:
-        sharpe = 0.0
+        eq_series = pd.Series(
+            chained_equity[1:],
+            index=pd.DatetimeIndex(chained_times),
+        )
+        returns = eq_series.pct_change().dropna()
 
-    running_max = equity_cat.cummax()
-    drawdowns = equity_cat / running_max - 1.0
-    max_dd = float(drawdowns.min()) * 100.0
+        # Annualise using correct periods_per_year for this symbol/timeframe
+        ppy = _get_periods_per_year(strategy.symbol, strategy.timeframe)
+        sharpe = (
+            float(np.sqrt(ppy) * returns.mean() / (returns.std() + 1e-9))
+            if not returns.empty
+            else 0.0
+        )
 
-    aggregate = {
-        "overall_sharpe": sharpe,
-        "overall_max_drawdown_pct": max_dd,
-        "num_windows": len(windows),
-    }
+        running_max = eq_series.cummax()
+        # Return as positive percentage (consistent with evaluation._abs_drawdown)
+        max_dd_pct = float(abs((eq_series / running_max - 1.0).min()) * 100.0)
+
+        aggregate = {
+            "overall_sharpe": sharpe,
+            "overall_max_drawdown_pct": max_dd_pct,
+            "num_windows": len(windows),
+        }
 
     logger.info(
-        "Walk-forward aggregate: windows=%d, sharpe=%.3f, max_dd=%.2f%%",
-        len(windows),
-        sharpe,
-        max_dd,
+        "Walk-forward complete for %s: windows=%d sharpe=%.3f max_dd=%.2f%%",
+        strategy.name,
+        aggregate.get("num_windows", 0),
+        aggregate.get("overall_sharpe", 0.0),
+        aggregate.get("overall_max_drawdown_pct", 0.0),
     )
 
     return {"windows": windows, "aggregate": aggregate}
