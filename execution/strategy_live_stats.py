@@ -1,102 +1,179 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, asdict, field
+import os
+import tempfile
+from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, List
+from typing import Optional
 
-from autonomous_trading_ai.logging_utils import get_logger
+from ..logging_utils import get_logger
 
 logger = get_logger(__name__)
 
-STATS_PATH = Path(__file__).resolve().parent / "strategy_live_stats.json"
-MAX_RECENT_TRADES = 30  # rolling window size for recent PnL
+LIVE_STATE_PATH = Path(__file__).resolve().parent / "live_state.json"
 
 
 @dataclass
-class StrategyLiveStats:
-    name: str
-    total_pnl: float = 0.0
-    num_trades: int = 0
-    last_update: str = ""  # ISO-8601 UTC
-    recent_pnls: List[float] = field(default_factory=list)
+class DailyState:
+    date: str
+    equity_start: float
+    equity_current: float
+    daily_pnl: float
+    daily_return_pct: float
+    trades_today: int
+    locked_for_day: bool
 
-    @property
-    def avg_pnl(self) -> float:
-        return self.total_pnl / self.num_trades if self.num_trades > 0 else 0.0
+    @classmethod
+    def new(cls, equity: float, date: Optional[str] = None) -> "DailyState":
+        if date is None:
+            date = datetime.now(timezone.utc).date().isoformat()
+        return cls(
+            date=date,
+            equity_start=equity,
+            equity_current=equity,
+            daily_pnl=0.0,
+            daily_return_pct=0.0,
+            trades_today=0,
+            locked_for_day=False,
+        )
 
-    @property
-    def recent_avg_pnl(self) -> float:
-        if not self.recent_pnls:
-            return 0.0
-        return sum(self.recent_pnls) / len(self.recent_pnls)
 
+def load_daily_state(current_equity: float) -> DailyState:
+    """Load daily state from disk, resetting when the date changes.
 
-def _now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
-
-
-def load_all_strategy_stats() -> Dict[str, StrategyLiveStats]:
-    """Load live stats for all strategies from disk.
-
-    If the file does not exist or is invalid, returns an empty dict.
+    If the file does not exist or is invalid, a new state is created with
+    `current_equity` as the starting equity.
     """
-    if not STATS_PATH.exists():
-        return {}
-    try:
-        with STATS_PATH.open("r", encoding="utf-8") as f:
-            raw = json.load(f)
-    except Exception as e:
-        logger.exception("Failed to load strategy_live_stats: %s", e)
-        return {}
+    today = datetime.now(timezone.utc).date().isoformat()
 
-    out: Dict[str, StrategyLiveStats] = {}
-    for name, data in raw.get("strategies", {}).items():
+    if LIVE_STATE_PATH.exists():
         try:
-            # Backward compatibility: older files may not have recent_pnls
-            if "recent_pnls" not in data:
-                data["recent_pnls"] = []
-            out[name] = StrategyLiveStats(name=name, **{k: v for k, v in data.items() if k != "name"})
+            with LIVE_STATE_PATH.open("r", encoding="utf-8") as f:
+                data = json.load(f)
+            state = DailyState(**data)
+            if state.date != today:
+                logger.info(
+                    "DailyState: new day detected (%s -> %s), resetting",
+                    state.date,
+                    today,
+                )
+                state = DailyState.new(current_equity, date=today)
+            return state
         except Exception:
-            logger.exception("Failed to parse StrategyLiveStats for %s", name)
-    return out
+            logger.exception("Failed to load DailyState, resetting")
+            return DailyState.new(current_equity, date=today)
+
+    return DailyState.new(current_equity, date=today)
 
 
-def save_all_strategy_stats(stats: Dict[str, StrategyLiveStats]) -> None:
+def save_daily_state(state: DailyState) -> None:
+    """Persist DailyState atomically — crash-safe via temp file + rename."""
     try:
-        payload = {"strategies": {name: asdict(s) for name, s in stats.items()}}
-        with STATS_PATH.open("w", encoding="utf-8") as f:
-            json.dump(payload, f, indent=2)
-    except Exception as e:
-        logger.exception("Failed to save strategy_live_stats: %s", e)
+        data = json.dumps(asdict(state), indent=2)
+        # Write to a sibling temp file first, then atomically replace
+        fd, tmp_path = tempfile.mkstemp(
+            dir=LIVE_STATE_PATH.parent,
+            prefix=".live_state_",
+            suffix=".tmp",
+        )
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                f.write(data)
+            os.replace(tmp_path, LIVE_STATE_PATH)
+        except Exception:
+            # Clean up temp file if rename failed
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+            raise
+    except Exception:
+        logger.exception("Failed to save DailyState")
 
 
-def register_strategy_pnl(strategy_name: str, pnl: float) -> None:
-    """Update live stats for a single strategy after a closed deal.
+def register_trade_pnl(pnl: float, current_equity: float) -> DailyState:
+    """Update daily state after a trade has been closed.
 
-    This uses the strategy name encoded in the MT5 deal comment
-    (see execution.engine.execute_trade).
+    Increments trades_today and recomputes daily PnL / return based on
+    the actual current equity reported by MT5.
     """
-    stats = load_all_strategy_stats()
-    rec = stats.get(strategy_name) or StrategyLiveStats(name=strategy_name)
-    rec.total_pnl += float(pnl)
-    rec.num_trades += 1
-    rec.last_update = _now_iso()
-
-    # Maintain rolling window of recent PnLs
-    rec.recent_pnls.append(float(pnl))
-    if len(rec.recent_pnls) > MAX_RECENT_TRADES:
-        rec.recent_pnls = rec.recent_pnls[-MAX_RECENT_TRADES:]
-
-    stats[strategy_name] = rec
-    save_all_strategy_stats(stats)
+    state = load_daily_state(current_equity=current_equity)
+    state.trades_today += 1
+    state.equity_current = current_equity
+    state.daily_pnl = state.equity_current - state.equity_start
+    if state.equity_start > 0:
+        state.daily_return_pct = 100.0 * state.daily_pnl / state.equity_start
+    save_daily_state(state)
     logger.info(
-        "StrategyLiveStats: %s trades=%d total_pnl=%.2f avg_pnl=%.2f recent_avg_pnl=%.2f (n_recent=%d)",
-        strategy_name,
-        rec.num_trades,
-        rec.total_pnl,
-        rec.avg_pnl,
-        rec.recent_avg_pnl,
-        len(rec.recent_pnls),
+        "DailyState: date=%s trades_today=%d daily_pnl=%.2f daily_return_pct=%.2f%%",
+        state.date,
+        state.trades_today,
+        state.daily_pnl,
+        state.daily_return_pct,
     )
+    return state
+
+
+def can_open_new_trade(
+    current_equity: float,
+    max_dd_pct: float,
+    max_trades: int,
+    enabled: bool,
+) -> bool:
+    """Check whether new trades are allowed under daily limits.
+
+    Bug fix: equity_current is now updated to `current_equity` before
+    computing the drawdown check. Previously the stale value from the last
+    closed trade was used, so intraday drawdown between trade closes was
+    invisible to this guard.
+
+    If `enabled` is False, always returns True (guard disabled).
+    """
+    if not enabled:
+        return True
+
+    state = load_daily_state(current_equity=current_equity)
+
+    if state.locked_for_day:
+        logger.warning(
+            "DailyState: trading locked for the day (date=%s)", state.date
+        )
+        return False
+
+    # Update equity_current with the live value before checking DD.
+    # This is the key fix — without this, drawdown between trade closures
+    # is not detected until the next register_trade_pnl call.
+    state.equity_current = current_equity
+    if state.equity_start > 0:
+        dd_pct = 100.0 * (state.equity_start - state.equity_current) / state.equity_start
+    else:
+        dd_pct = 0.0
+
+    if dd_pct >= max_dd_pct:
+        state.locked_for_day = True
+        save_daily_state(state)
+        logger.warning(
+            "DailyState: max daily DD reached (%.2f%% >= %.2f%%), "
+            "locking for day %s (equity_start=%.2f equity_now=%.2f)",
+            dd_pct,
+            max_dd_pct,
+            state.date,
+            state.equity_start,
+            state.equity_current,
+        )
+        return False
+
+    if state.trades_today >= max_trades:
+        state.locked_for_day = True
+        save_daily_state(state)
+        logger.warning(
+            "DailyState: max trades/day reached (%d >= %d), locking for day %s",
+            state.trades_today,
+            max_trades,
+            state.date,
+        )
+        return False
+
+    return True
