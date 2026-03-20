@@ -1,15 +1,26 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 
 
 @dataclass
 class RiskConfig:
-    max_risk_per_trade_pct: float = 0.5  # 0.5% of equity
-    max_portfolio_drawdown_pct: float = 20.0
+    # Per-trade risk cap: percentage of current equity risked per trade
+    max_risk_per_trade_pct: float = 0.5       # 0.5% of equity
+
+    # Portfolio-level circuit breaker: disable all active strategies if
+    # drawdown from peak exceeds this threshold
+    max_portfolio_drawdown_pct: float = 20.0  # 20%
+
+    # Maximum simultaneous open positions across all strategies
     max_open_positions: int = 10
-    # Optional daily guardrails (can be disabled via the *_enabled flags)
-    max_daily_drawdown_pct: float = 3.0
-    max_trades_per_day: int = 5
-    daily_limits_enabled: bool = False
+
+    # Daily guardrails — enabled by default for live prop-firm style accounts.
+    # Set daily_limits_enabled = False to disable entirely (e.g. for backtesting
+    # or paper trading where daily limits are not meaningful).
+    max_daily_drawdown_pct: float = 3.0       # lock trading if daily DD > 3%
+    max_trades_per_day: int = 5               # lock trading after N trades/day
+    daily_limits_enabled: bool = True         # was False — guard now active by default
 
 
 @dataclass
@@ -23,6 +34,7 @@ class SchedulerConfig:
     enable_scheduler: bool = True
 
 
+# Module-level singletons — import and reference these directly in other modules
 risk_config = RiskConfig()
 data_config = DataConfig()
 scheduler_config = SchedulerConfig()
