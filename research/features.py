@@ -159,111 +159,133 @@ def compute_fib_zones(df: pd.DataFrame, window: int = 100) -> pd.DataFrame:
     return df
 
 
-NEWS_PATH = DATA_DIR / "raw" / "news_events.parquet"
-
+# ---------------------------------------------------------------------------
+# News features — backed by data/news_collector.py
+# ---------------------------------------------------------------------------
 
 def _load_news_events() -> pd.DataFrame | None:
-    """Load macro news events if available."""
-    if not NEWS_PATH.exists():
+    """Load gold-relevant news events from news_collector output.
+
+    Primary source: news_collector.load_news_events() which reads
+    news_events.parquet with column 'datetime_utc'.
+
+    Falls back to legacy format (column 'time') for backward compatibility.
+    Returns None if no data available — caller degrades gracefully.
+    """
+    try:
+        from ..data.news_collector import load_news_events
+        news = load_news_events()
+        if news is not None and not news.empty:
+            # Filter to gold-relevant only
+            if "is_gold_relevant" in news.columns:
+                news = news[news["is_gold_relevant"] == True].copy()
+            if not news.empty:
+                return news
+    except ImportError:
+        pass
+    except Exception:
+        logger.exception("Failed to load news events via news_collector")
+
+    # Legacy fallback: old format with 'time' column
+    news_path = DATA_DIR / "raw" / "news_events.parquet"
+    if not news_path.exists():
         logger.info(
-            "No news_events.parquet found at %s; skipping news features", NEWS_PATH
+            "No news_events.parquet found at %s; skipping news features", news_path
         )
         return None
     try:
-        news = pd.read_parquet(NEWS_PATH)
-    except Exception as e:
-        logger.exception("Failed to load news events from %s: %s", NEWS_PATH, e)
-        return None
-    if "time" not in news.columns:
-        logger.warning(
-            "News events file missing 'time' column; skipping news features"
-        )
-        return None
-    news = news.copy()
-    news["time"] = pd.to_datetime(news["time"], utc=True)
-    return news
+        news = pd.read_parquet(news_path)
+        if "time" in news.columns:
+            news = news.rename(columns={"time": "datetime_utc"})
+            news["datetime_utc"] = pd.to_datetime(news["datetime_utc"], utc=True)
+            return news
+    except Exception:
+        logger.exception("Failed to load legacy news events")
+    return None
 
 
 def _add_news_features(
-    df: pd.DataFrame, news: pd.DataFrame, window_min: int = 30
+    df: pd.DataFrame,
+    news: pd.DataFrame,
+    window_min: int = 60,
+    lockout_min: int = 15,
 ) -> pd.DataFrame:
-    """Join macro news context into the feature DataFrame.
+    """Join news calendar data into feature DataFrame.
 
-    For each bar, compute proximity to the nearest news event and derive:
-    - has_news_window    : bool, nearest event is within window_min minutes
-    - news_impact_level : int 1-3 (low/medium/high)
-    - news_time_delta_min: float, signed minutes to nearest event
-    - news_surprise     : float, actual - forecast surprise value
-    - in_news_lockout   : bool, high-impact event within window
+    Adds columns:
+        news_impact_level    : int 0-3
+        news_time_delta_min  : float, signed minutes to nearest event
+                               (negative = bar is before event)
+        has_news_window      : bool, within window_min of any impact>=2 event
+        in_news_lockout      : bool, within lockout_min of any impact==3 event
+
+    Uses vectorised numpy — O(n_bars + n_events), not O(n_bars × n_events).
     """
     if news is None or news.empty:
         return df
 
     df = df.copy()
-    # Ensure timezone-aware UTC on both sides to avoid comparison errors
     df["time"] = pd.to_datetime(df["time"], utc=True)
 
-    impact_map = {"low": 1, "medium": 2, "high": 3}
+    # Determine impact column name — news_collector uses 'impact' (int 0-3)
+    # legacy format may use 'impact' (str 'High'/'Medium') mapped via impact_level
+    if "impact" in news.columns:
+        if news["impact"].dtype == object:
+            # Legacy string format
+            impact_map = {"low": 1, "Low": 1, "medium": 2, "Medium": 2,
+                          "high": 3, "High": 3}
+            news = news.copy()
+            news["_impact_int"] = news["impact"].map(impact_map).fillna(0).astype(int)
+            impact_col = "_impact_int"
+        else:
+            impact_col = "impact"
+    elif "impact_level" in news.columns:
+        impact_col = "impact_level"
+    else:
+        logger.warning("News data has no recognizable impact column — skipping")
+        return df
+
+    # Ensure datetime_utc is UTC-aware
     news = news.copy()
-    news["impact_level"] = (
-        news["impact"].map(impact_map).fillna(0).astype(int)
+    news["datetime_utc"] = pd.to_datetime(news["datetime_utc"], utc=True)
+    news = news.sort_values("datetime_utc").reset_index(drop=True)
+
+    bar_ns = df["time"].values.astype(np.int64)           # (n_bars,)
+    event_ns = news["datetime_utc"].values.astype(np.int64)  # (n_events,)
+    impact_vals = news[impact_col].values.astype(int)     # (n_events,)
+
+    # delta_matrix[i, j] = (bar_i_time - event_j_time) in minutes
+    # positive = bar is AFTER event, negative = bar is BEFORE event
+    delta_matrix = (bar_ns[:, None] - event_ns[None, :]) / 1e9 / 60.0
+
+    abs_delta = np.abs(delta_matrix)
+    nearest_idx = abs_delta.argmin(axis=1)
+    nearest_delta = delta_matrix[np.arange(len(df)), nearest_idx]
+    nearest_impact = impact_vals[nearest_idx]
+
+    df["news_impact_level"] = nearest_impact
+    df["news_time_delta_min"] = nearest_delta.astype(float)
+    df["has_news_window"] = (
+        (nearest_impact >= 2) & (abs_delta[np.arange(len(df)), nearest_idx] <= window_min)
     )
-
-    # Rename news time so merge_asof exposes it as a separate column.
-    # When both frames share the same key name (on="time"), pandas keeps
-    # only the LEFT frame's key in the output — "time_y" never appears.
-    # Renaming the right key to "news_time" avoids the KeyError.
-    news = news.rename(columns={"time": "news_time"}).sort_values("news_time")
-    df = df.sort_values("time").reset_index(drop=True)
-
-    cols_right = ["news_time", "impact_level", "surprise"]
-
-    nearest_fwd = pd.merge_asof(
-        df[["time"]],
-        news[cols_right],
-        left_on="time",
-        right_on="news_time",
-        direction="forward",
-    )
-    nearest_bwd = pd.merge_asof(
-        df[["time"]],
-        news[cols_right],
-        left_on="time",
-        right_on="news_time",
-        direction="backward",
-    )
-
-    fwd_delta = (
-        (nearest_fwd["news_time"] - df["time"]).dt.total_seconds() / 60.0
-    ).fillna(np.inf)
-    bwd_delta = (
-        (df["time"] - nearest_bwd["news_time"]).dt.total_seconds() / 60.0
-    ).fillna(np.inf)
-
-    use_fwd = fwd_delta.abs() <= bwd_delta.abs()
-
-    nearest_impact = np.where(
-        use_fwd, nearest_fwd["impact_level"], nearest_bwd["impact_level"]
-    )
-    nearest_surprise = np.where(
-        use_fwd, nearest_fwd["surprise"], nearest_bwd["surprise"]
-    )
-    nearest_delta = np.where(use_fwd, fwd_delta, -bwd_delta)
-
-    df["news_time_delta_min"] = nearest_delta
-    df["news_impact_level"] = (
-        pd.Series(nearest_impact, index=df.index).fillna(0).astype(int)
-    )
-    df["news_surprise"] = pd.Series(nearest_surprise, index=df.index)
-
-    window = float(window_min)
-    df["has_news_window"] = df["news_time_delta_min"].abs() <= window
     df["in_news_lockout"] = (
-        (df["news_impact_level"] >= 3) & df["has_news_window"]
+        (nearest_impact == 3) & (abs_delta[np.arange(len(df)), nearest_idx] <= lockout_min)
     )
+
+    n_lockout = int(df["in_news_lockout"].sum())
+    n_window = int(df["has_news_window"].sum())
+    if n_lockout > 0 or n_window > 0:
+        logger.info(
+            "News features merged: %d bars in lockout zone, %d bars in news window",
+            n_lockout, n_window,
+        )
 
     return df
 
+
+# ---------------------------------------------------------------------------
+# Main entry point
+# ---------------------------------------------------------------------------
 
 def compute_features(
     df: pd.DataFrame,
@@ -307,13 +329,17 @@ def compute_features(
     # Fibonacci zones
     df = compute_fib_zones(df, window=100)
 
-    # Optional: macro news features
+    # News features — degrades gracefully if news_events.parquet not available
     news = _load_news_events()
     if news is not None:
         df = _add_news_features(df, news)
+    else:
+        # Safe defaults so downstream code never KeyErrors on news columns
+        df["news_impact_level"] = 0
+        df["news_time_delta_min"] = np.inf
+        df["has_news_window"] = False
+        df["in_news_lockout"] = False
 
-    # Drop only on core signal columns — not on Ichimoku/Fib/news tails.
-    # This preserves recent bars that have NaN in derived-only columns.
     before = len(df)
     df.dropna(subset=_CORE_FEATURE_COLS, inplace=True)
     df.reset_index(drop=True, inplace=True)
