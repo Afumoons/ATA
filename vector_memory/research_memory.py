@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
+from pathlib import Path
 
 from chromadb import PersistentClient
 
@@ -9,10 +10,14 @@ from ..logging_utils import get_logger
 
 logger = get_logger(__name__)
 
+# Base directory for this project (autonomous_trading_ai), so Chroma data
+# lives alongside the code regardless of current working directory.
+BASE_DIR = Path(__file__).resolve().parents[1]
+
 
 @dataclass
 class ResearchMemoryConfig:
-    chroma_path: str = "./chroma_data"
+    chroma_path: str = str(BASE_DIR / "chroma_data")
     collection_name: str = "strategy_research"
 
 
