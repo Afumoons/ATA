@@ -38,10 +38,16 @@ class NotifierConfig:
         default_factory=lambda: os.environ.get("OPENCLAW_WHATSAPP_WEBHOOK", "")
     )
 
+    # Optional shared-secret token for the webhook, passed as ?token=...
+    # This is kept in a separate env var so the raw URL can be reused safely.
+    webhook_token: str = field(
+        default_factory=lambda: os.environ.get("WEBHOOK_TOKEN", "clio-autotrading-hooks")
+    )
+
     # WhatsApp recipient number (international format, no +)
-    # e.g. "628123456789" for Indonesian number
+    # Default: Afu's number for this deployment (Indonesia, 62...)
     recipient: str = field(
-        default_factory=lambda: os.environ.get("OPENCLAW_WHATSAPP_RECIPIENT", "")
+        default_factory=lambda: os.environ.get("OPENCLAW_WHATSAPP_RECIPIENT", "628170090022")
     )
 
     # Minimum impact level to send alert (2=medium, 3=high only)
@@ -110,6 +116,24 @@ def _build_message(events: list[dict], account_info: Optional[dict] = None) -> s
     return "\n".join(lines)
 
 
+def _build_webhook_url(cfg: NotifierConfig) -> str:
+    """Append ?token=... to webhook URL if configured and not already present."""
+    base = (cfg.webhook_url or "").strip()
+    if not base:
+        return ""
+
+    token = (cfg.webhook_token or "").strip()
+    if not token:
+        return base
+
+    # If token already present in URL, don't duplicate
+    if "token=" in base:
+        return base
+
+    separator = "&" if "?" in base else "?"
+    return f"{base}{separator}token={token}"
+
+
 def _send_openclaw_webhook(
     message: str,
     cfg: NotifierConfig = DEFAULT_CONFIG,
@@ -123,7 +147,9 @@ def _send_openclaw_webhook(
         "message": "<text>"
     }
     """
-    if not cfg.webhook_url:
+    webhook_url = _build_webhook_url(cfg)
+
+    if not webhook_url:
         logger.warning(
             "WhatsApp notifier: OPENCLAW_WHATSAPP_WEBHOOK not set — skipping alert"
         )
@@ -148,7 +174,7 @@ def _send_openclaw_webhook(
     for attempt in range(1, cfg.retry_attempts + 1):
         try:
             resp = requests.post(
-                cfg.webhook_url,
+                webhook_url,
                 headers=headers,
                 data=json.dumps(payload),
                 timeout=cfg.request_timeout,
