@@ -94,14 +94,34 @@ def execute_signals_for_symbol(
     features_df: pd.DataFrame,
     pool: StrategyPool,
     risk_perc: float,
-) -> List[Tuple[Signal, str]]:
+) -> Tuple[List[Tuple[Signal, str]], Dict[str, bool]]:
     """Generate and execute signals for the latest row of a symbol.
 
-    Returns list of (Signal, result_reason).
+    Returns:
+        results: list of (Signal, result_reason)
+        summary: dict of boolean flags for high-level reasons, e.g.:
+            - blocked_daily_limits
+            - no_strategies_in_pool
+            - no_strategies_with_edge
+            - no_entry_active
+            - no_entry_exploratory
     """
+    summary: Dict[str, bool] = {
+        "blocked_daily_limits": False,
+        "no_strategies_in_pool": False,
+        "no_strategies_with_edge": False,
+        "no_entry_active": False,
+        "no_entry_exploratory": False,
+    }
+
     if features_df.empty:
-        logger.warning("execute_signals_for_symbol: empty features_df for %s %s", symbol, timeframe)
-        return []
+        logger.warning(
+            "execute_signals_for_symbol: empty features_df for %s %s",
+            symbol,
+            timeframe,
+        )
+        summary["no_strategies_with_edge"] = True
+        return [], summary
 
     latest = features_df.sort_values("time").iloc[-1]
 
@@ -139,7 +159,8 @@ def execute_signals_for_symbol(
             current_equity,
             risk_config.daily_limits_enabled,
         )
-        return []
+        summary["blocked_daily_limits"] = True
+        return [], summary
 
     # ------------------------------------------------------------------ #
     # Collect active + exploratory pool records                           #
@@ -166,7 +187,8 @@ def execute_signals_for_symbol(
             symbol,
             timeframe,
         )
-        return []
+        summary["no_strategies_in_pool"] = True
+        return [], summary
 
     regime_label = _map_current_to_regime_pnl_label(current_regime)
 
@@ -280,7 +302,8 @@ def execute_signals_for_symbol(
             timeframe,
             current_regime,
         )
-        return []
+        summary["no_strategies_with_edge"] = True
+        return [], summary
 
     # ------------------------------------------------------------------ #
     # Load StrategyDefinition objects from disk                           #
@@ -349,6 +372,7 @@ def execute_signals_for_symbol(
                 current_regime,
                 len(active_strategies),
             )
+            summary["no_entry_active"] = True
         else:
             logger.info(
                 "%d signal(s) generated from active strategies for %s %s",
@@ -397,7 +421,10 @@ def execute_signals_for_symbol(
     # Exploratory strategies                                              #
     # ------------------------------------------------------------------ #
     if exploratory_strategies:
-        exploratory_signals = generate_signals_for_row(latest, exploratory_strategies)
+        exploratory_signals = generate_signals_for_row(
+            latest,
+            exploratory_strategies,
+        )
 
         if not exploratory_signals:
             logger.info(
@@ -408,6 +435,7 @@ def execute_signals_for_symbol(
                 current_regime,
                 len(exploratory_strategies),
             )
+            summary["no_entry_exploratory"] = True
         else:
             logger.info(
                 "%d signal(s) generated from exploratory strategies for %s %s",
@@ -451,4 +479,4 @@ def execute_signals_for_symbol(
                 )
                 results.append((sig, f"error: {e}"))
 
-    return results
+    return results, summary
