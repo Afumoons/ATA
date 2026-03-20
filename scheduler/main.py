@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import time as _time
 from datetime import datetime
 from pathlib import Path
 
@@ -52,22 +53,101 @@ def job_update_data() -> None:
     logger.info("Scheduler: job_update_data done")
 
 
-def _apply_live_degradation(pool) -> None:
-    """Adjust strategy statuses based on simple live performance heuristics.
+# ---------------------------------------------------------------------------
+# News jobs
+# ---------------------------------------------------------------------------
 
-    Uses aggregated per-strategy PnL from `execution/strategy_live_stats.json`.
-    This is intentionally conservative: it only *downgrades* strategies that
-    are clearly underperforming live vs their backtest expectations.
+def job_update_news() -> None:
+    """Fetch Forex Factory calendar and save to news_events.parquet.
+
+    Runs once daily at 06:00 UTC. Also sends WhatsApp alert if any
+    high-impact gold events are within the next 8 hours.
     """
+    logger.info("Scheduler: job_update_news start")
+    try:
+        from ..data.news_collector import update_news_events, get_upcoming_high_impact
+        from ..notifications.whatsapp_notifier import send_news_alert
+        import MetaTrader5 as mt5
+
+        update_news_events()
+
+        upcoming = get_upcoming_high_impact(
+            hours_ahead=8.0,
+            min_impact=3,
+            gold_relevant_only=True,
+        )
+        if not upcoming.empty:
+            account_info = None
+            try:
+                from ..execution.live_monitor import get_equity_peak
+                info = mt5.account_info()
+                if info:
+                    account_info = {
+                        "equity": float(info.equity),
+                        "peak": get_equity_peak(),
+                    }
+            except Exception:
+                pass
+            send_news_alert(upcoming, account_info=account_info)
+
+    except Exception:
+        logger.exception("job_update_news failed")
+    logger.info("Scheduler: job_update_news done")
+
+
+def job_news_alert() -> None:
+    """Check for upcoming high-impact events and send WhatsApp alert if within 30 min.
+
+    Runs every 5 minutes. Per-event cooldown (60 min) prevents duplicate alerts.
+    """
+    try:
+        from ..data.news_collector import get_upcoming_high_impact
+        from ..notifications.whatsapp_notifier import send_news_alert
+        import MetaTrader5 as mt5
+
+        upcoming = get_upcoming_high_impact(
+            hours_ahead=1.0,
+            min_impact=3,
+            gold_relevant_only=True,
+        )
+        if upcoming.empty:
+            return
+
+        account_info = None
+        try:
+            from ..execution.live_monitor import get_equity_peak
+            info = mt5.account_info()
+            if info:
+                account_info = {
+                    "equity": float(info.equity),
+                    "peak": get_equity_peak(),
+                }
+        except Exception:
+            pass
+
+        sent = send_news_alert(upcoming, account_info=account_info)
+        if sent:
+            logger.info(
+                "WhatsApp news alert sent: %d upcoming high-impact events", len(upcoming)
+            )
+
+    except Exception:
+        logger.exception("job_news_alert failed")
+
+
+# ---------------------------------------------------------------------------
+# Strategy degradation
+# ---------------------------------------------------------------------------
+
+def _apply_live_degradation(pool) -> None:
+    """Demote clearly underperforming active strategies based on live PnL."""
     live_stats = load_all_strategy_stats()
     if not live_stats:
         return
 
     for name, rec in live_stats.items():
         pool_rec = pool.strategies.get(name)
-        if not pool_rec:
-            continue
-        if pool_rec.status != "active":
+        if not pool_rec or pool_rec.status != "active":
             continue
 
         stats = pool_rec.stats or {}
@@ -86,51 +166,42 @@ def _apply_live_degradation(pool) -> None:
         live_ret_total_pct = rec.total_pnl / max(initial_eq, 1.0) * 100.0
         live_ret_recent_pct = (
             sum(rec.recent_pnls) / max(initial_eq, 1.0) * 100.0
-            if rec.recent_pnls
-            else 0.0
+            if rec.recent_pnls else 0.0
         )
 
         if (
             live_ret_recent_pct < -3.0
             or live_ret_recent_pct < 0.25 * bt_ret
         ):
-            old_status = pool_rec.status
             pool_rec.status = "candidate"
             logger.warning(
-                "Degradation: demoting %s from %s to candidate "
-                "(bt_ret=%.2f%%, bt_sharpe=%.2f, "
-                "live_total_ret=%.2f%%, live_recent_ret=%.2f%%, "
-                "live_trades=%d, recent_window=%d)",
-                name,
-                old_status,
-                bt_ret,
-                bt_sharpe,
-                live_ret_total_pct,
-                live_ret_recent_pct,
-                rec.num_trades,
-                len(rec.recent_pnls),
+                "Degradation: demoting %s to candidate "
+                "(bt_ret=%.2f%% bt_sharpe=%.2f "
+                "live_total=%.2f%% live_recent=%.2f%% trades=%d)",
+                name, bt_ret, bt_sharpe,
+                live_ret_total_pct, live_ret_recent_pct, rec.num_trades,
             )
+            # WhatsApp alert for degraded strategy
+            try:
+                from ..notifications.whatsapp_notifier import send_strategy_degradation_alert
+                send_strategy_degradation_alert(
+                    strategy_name=name,
+                    recent_avg_pnl=rec.recent_avg_pnl,
+                    total_pnl=rec.total_pnl,
+                    new_status="candidate",
+                )
+            except Exception:
+                logger.exception("Failed to send strategy degradation WhatsApp alert")
 
+
+# ---------------------------------------------------------------------------
+# Memory helpers
+# ---------------------------------------------------------------------------
 
 def _memory_is_clearly_bad(
     candidate, memory: ResearchMemory, symbol: str, timeframe: str
 ) -> bool:
-    """Use ResearchMemory to veto only *obviously* bad pattern families.
-
-    AGGRESSIVE++ variant:
-    - Only considers veto if we have at least 5 neighbors in memory
-      for the same symbol/timeframe.
-    - A neighbor counts as "bad" if any of:
-      * Sharpe < 0.0
-      * Profit factor < 1.0
-      * Return_pct < -5.0
-      * WF Sharpe < 0.05
-    - We veto the candidate only if >= 70%% of neighbors are bad AND
-      at least 5 neighbors are bad.
-
-    This keeps exploration wide, but avoids repeatedly evolving into
-    pattern families that have been consistently terrible historically.
-    """
+    """Veto only obviously bad pattern families using ResearchMemory."""
     try:
         params = getattr(candidate, "params", {}) or {}
         query_text = "\n".join([
@@ -143,15 +214,13 @@ def _memory_is_clearly_bad(
             f"tp_atr={getattr(candidate, 'tp_atr_mult', '')}",
             f"regime={params.get('regime_type', '')}",
         ])
-
         neighbors = memory.query_similar_strategies(
-            symbol=symbol,
-            timeframe=timeframe,
-            text=query_text,
-            n_results=10,
+            symbol=symbol, timeframe=timeframe,
+            text=query_text, n_results=10,
         )
     except Exception as e:
-        logger.exception("ResearchMemory veto query failed for %s: %s", getattr(candidate, "name", "?"), e)
+        logger.exception("ResearchMemory veto query failed for %s: %s",
+                         getattr(candidate, "name", "?"), e)
         return False
 
     if not neighbors:
@@ -159,7 +228,6 @@ def _memory_is_clearly_bad(
 
     total = len(neighbors)
     if total < 5:
-        # Not enough evidence to veto
         return False
 
     bad = 0
@@ -178,24 +246,25 @@ def _memory_is_clearly_bad(
             is_bad = True
         if wf_sharpe is not None and wf_sharpe < 0.05:
             is_bad = True
-
         if is_bad:
             bad += 1
 
     if bad >= 5 and bad / float(total) >= 0.7:
         logger.info(
             "Memory veto: skipping candidate %s (bad_neighbors=%d/%d)",
-            getattr(candidate, "name", "<unnamed>"),
-            bad,
-            total,
+            getattr(candidate, "name", "<unnamed>"), bad, total,
         )
         return True
 
     return False
 
 
+# ---------------------------------------------------------------------------
+# Research job
+# ---------------------------------------------------------------------------
+
 def job_research_strategies() -> None:
-    """Generate/evolve strategies, backtest, evaluate, and update pool + memory."""
+    """Generate/evolve strategies, backtest, evaluate, update pool + memory."""
     logger.info("Scheduler: job_research_strategies start")
     pool = load_pool()
     memory = ResearchMemory()
@@ -204,9 +273,7 @@ def job_research_strategies() -> None:
         try:
             feat = load_features(symbol, TIMEFRAME)
         except FileNotFoundError:
-            logger.warning(
-                "No features found for %s %s; skipping research", symbol, TIMEFRAME
-            )
+            logger.warning("No features for %s %s; skipping research", symbol, TIMEFRAME)
             continue
         except Exception as e:
             logger.exception("Failed to load features for %s: %s", symbol, e)
@@ -215,16 +282,7 @@ def job_research_strategies() -> None:
         from ..strategies.generator import load_strategy
 
         def _memory_bonus_for_parent(rec) -> float:
-            """Compute a small memory-based bonus for a parent candidate.
-
-            Uses ResearchMemory to query similar strategies and aggregates
-            neighbor quality from stored ``stat_*`` fields. The bonus is
-            intentionally small so it nudges but does not dominate the base
-            backtest score.
-            """
             try:
-                # Build a rich query text from strategy rules.
-                # Load the strategy file so we have the actual rule strings.
                 strat_text = f"symbol={rec.symbol}\ntimeframe={rec.timeframe}"
                 try:
                     path = BASE_DIR / "strategies" / "generated" / f"{rec.name}.json"
@@ -241,92 +299,61 @@ def job_research_strategies() -> None:
                         f"regime={params.get('regime_type', '')}",
                     ])
                 except Exception:
-                    pass  # fall back to minimal text above
+                    pass
 
                 neighbors = memory.query_similar_strategies(
-                    symbol=rec.symbol,
-                    timeframe=rec.timeframe,
-                    text=strat_text,
-                    n_results=10,
+                    symbol=rec.symbol, timeframe=rec.timeframe,
+                    text=strat_text, n_results=10,
                 )
             except Exception as e:
-                logger.error(
-                    "Memory bonus: query failed for parent %s: %s", rec.name, e
-                )
+                logger.error("Memory bonus query failed for %s: %s", rec.name, e)
                 return 0.0
 
             if not neighbors:
                 return 0.0
 
-            good = 0
-            bad = 0
+            good = bad = 0
             for nb in neighbors:
                 sharpe = nb.get("stat_sharpe_ratio")
                 pf = nb.get("stat_profit_factor")
                 ret_pct = nb.get("stat_return_pct")
-
                 if sharpe is None and pf is None and ret_pct is None:
                     continue
-
-                is_good = False
-                is_bad = False
-
+                is_good = is_bad = False
                 if sharpe is not None:
-                    if sharpe > 0.3:
-                        is_good = True
-                    elif sharpe < 0.0:
-                        is_bad = True
-
+                    if sharpe > 0.3: is_good = True
+                    elif sharpe < 0.0: is_bad = True
                 if pf is not None:
-                    if pf > 1.1:
-                        is_good = True
-                    elif pf < 1.0:
-                        is_bad = True
-
+                    if pf > 1.1: is_good = True
+                    elif pf < 1.0: is_bad = True
                 if ret_pct is not None:
-                    if ret_pct > 0.0:
-                        is_good = True
-                    elif ret_pct < -5.0:
-                        is_bad = True
-
-                if is_good:
-                    good += 1
-                if is_bad:
-                    bad += 1
+                    if ret_pct > 0.0: is_good = True
+                    elif ret_pct < -5.0: is_bad = True
+                if is_good: good += 1
+                if is_bad: bad += 1
 
             total = good + bad
             if total == 0:
                 return 0.0
-
             balance = (good - bad) / float(total)
             bonus = max(-0.2, min(0.2, balance * 0.2))
-
             if bonus != 0.0:
                 logger.info(
-                    "Memory bonus for parent %s: base_score=%.3f good=%d bad=%d bonus=%.3f",
-                    rec.name,
-                    rec.score,
-                    good,
-                    bad,
-                    bonus,
+                    "Memory bonus for %s: score=%.3f good=%d bad=%d bonus=%.3f",
+                    rec.name, rec.score, good, bad, bonus,
                 )
             return bonus
 
         parent_candidates = [
-            rec
-            for rec in pool.strategies.values()
+            rec for rec in pool.strategies.values()
             if rec.symbol == symbol and rec.timeframe == TIMEFRAME
         ]
-
         scored_parents = []
         for rec in parent_candidates:
             bonus = _memory_bonus_for_parent(rec)
-            hybrid_score = rec.score + bonus
-            scored_parents.append((hybrid_score, rec))
-
+            scored_parents.append((rec.score + bonus, rec))
         scored_parents.sort(key=lambda x: x[0], reverse=True)
-        top_scored = scored_parents[:20]
-        parent_records = [rec for _, rec in top_scored]
+        parent_records = [rec for _, rec in scored_parents[:20]]
 
         existing_strats = []
         for rec in parent_records:
@@ -335,12 +362,7 @@ def job_research_strategies() -> None:
                 strat = load_strategy(path)
                 existing_strats.append((strat, rec.score))
             except Exception as e:
-                logger.exception(
-                    "Failed to load parent strategy %s from %s: %s",
-                    rec.name,
-                    path,
-                    e,
-                )
+                logger.exception("Failed to load parent %s: %s", rec.name, e)
 
         new_population = evolve_population(symbol, TIMEFRAME, existing_strats)
         save_population(new_population)
@@ -356,10 +378,7 @@ def job_research_strategies() -> None:
                 num_trades = eval_result.get("num_trades", 0.0)
                 if num_trades < 50:
                     logger.info(
-                        "Skipping strategy %s due to low trade count "
-                        "(Phase 3 floor=50): %.0f",
-                        strat.name,
-                        num_trades,
+                        "Skipping %s — low trade count (%.0f < 50)", strat.name, num_trades
                     )
                     continue
 
@@ -367,12 +386,7 @@ def job_research_strategies() -> None:
                 sharpe = float(eval_result.get("sharpe_ratio", 0.0) or 0.0)
                 if pf < 1.05 or sharpe < 0.15:
                     logger.info(
-                        "Skipping strategy %s due to weak performance "
-                        "(AGGRESSIVE Phase 3 floors pf>=1.05, sharpe>=0.15): "
-                        "pf=%.2f sharpe=%.2f",
-                        strat.name,
-                        pf,
-                        sharpe,
+                        "Skipping %s — weak perf (pf=%.2f sharpe=%.2f)", strat.name, pf, sharpe
                     )
                     continue
 
@@ -390,10 +404,7 @@ def job_research_strategies() -> None:
                 wf_sharpe = float(eval_result.get("wf_overall_sharpe", 0.0) or 0.0)
                 if wf_sharpe < 0.05:
                     logger.info(
-                        "Skipping strategy %s due to very weak walk-forward Sharpe "
-                        "(AGGRESSIVE wf_sharpe=%.3f < 0.05)",
-                        strat.name,
-                        wf_sharpe,
+                        "Skipping %s — weak WF sharpe (%.3f < 0.05)", strat.name, wf_sharpe
                     )
                     continue
 
@@ -423,10 +434,6 @@ def job_research_strategies() -> None:
                 range_ret = regime.get("ranging", {}).get("return_pct", 0.0)
                 num_trades = eval_result.get("num_trades", 0.0) or 0.0
 
-                # AGGRESSIVE promotion thresholds:
-                # - Active if core stats are good and wf_sharpe >= 0.15
-                # - Exploratory if accepted and wf_sharpe >= 0.08
-                # - Otherwise disabled
                 if _should_promote(eval_result) and wf_sharpe >= 0.15:
                     status = "active"
                 elif eval_result.get("accepted") and wf_sharpe >= 0.08:
@@ -443,7 +450,6 @@ def job_research_strategies() -> None:
                     score=eval_result.get("score", 0.0),
                     status=status,
                 )
-
                 memory.store_strategy_result(
                     strategy_name=strat.name,
                     symbol=strat.symbol,
@@ -452,20 +458,21 @@ def job_research_strategies() -> None:
                 )
 
             except Exception as e:
-                logger.exception(
-                    "Research error for strategy %s: %s", strat.name, e
-                )
+                logger.exception("Research error for %s: %s", strat.name, e)
 
     _apply_live_degradation(pool)
     save_pool(pool)
     logger.info("Scheduler: job_research_strategies done")
 
 
+# ---------------------------------------------------------------------------
+# Signal execution
+# ---------------------------------------------------------------------------
+
 def job_execute_signals() -> None:
-    """Generate and execute signals for active strategies based on latest features."""
+    """Generate and execute signals for active strategies."""
     logger.info("Scheduler: job_execute_signals start")
     pool = load_pool()
-    # AGGRESSIVE++: allow up to 1.0% per trade (bounded by config)
     risk_perc = min(1.0, risk_config.max_risk_per_trade_pct)
 
     from ..research.features import load_features
@@ -474,18 +481,29 @@ def job_execute_signals() -> None:
         try:
             feat = load_features(symbol, TIMEFRAME)
         except FileNotFoundError:
-            logger.warning(
-                "No features for %s %s; skipping signal execution", symbol, TIMEFRAME
-            )
+            logger.warning("No features for %s %s; skipping signals", symbol, TIMEFRAME)
             continue
         except Exception as e:
             logger.exception("Failed to load features for %s: %s", symbol, e)
             continue
 
-        # Audit pool health before execution
+        # ---- News lockout check ----
+        # Block signal generation entirely if we are within ±15 min of a
+        # high-impact gold event. This is the live equivalent of in_news_lockout.
+        try:
+            latest = feat.iloc[-1]
+            if bool(latest.get("in_news_lockout", False)):
+                logger.warning(
+                    "News lockout active for %s %s — skipping signal generation "
+                    "(high-impact event within ±15 min)",
+                    symbol, TIMEFRAME,
+                )
+                continue
+        except Exception:
+            pass  # never crash execution on news check failure
+
         active_strats = [
-            rec
-            for rec in pool.strategies.values()
+            rec for rec in pool.strategies.values()
             if rec.symbol == symbol
             and rec.timeframe == TIMEFRAME
             and rec.status == "active"
@@ -494,28 +512,22 @@ def job_execute_signals() -> None:
         if not active_strats:
             logger.warning(
                 "No active strategies in pool for %s %s — skipping execution",
-                symbol,
-                TIMEFRAME,
+                symbol, TIMEFRAME,
             )
             continue
 
         low_edge = [r for r in active_strats if r.score <= MINIMUM_EDGE_FOR_EXECUTION]
         if low_edge:
             logger.warning(
-                "Low/negative edge strategies active for %s %s: %s "
-                "(scores: %s) — consider triggering retraining",
-                symbol,
-                TIMEFRAME,
+                "Low/negative edge strategies active for %s %s: %s (scores: %s)",
+                symbol, TIMEFRAME,
                 [r.name for r in low_edge],
                 {r.name: round(r.score, 3) for r in low_edge},
             )
 
         logger.info(
-            "Executing signals for %s %s — %d active strategies "
-            "(scores: %s)",
-            symbol,
-            TIMEFRAME,
-            len(active_strats),
+            "Executing signals for %s %s — %d active strategies (scores: %s)",
+            symbol, TIMEFRAME, len(active_strats),
             {r.name: round(r.score, 3) for r in active_strats},
         )
 
@@ -527,64 +539,27 @@ def job_execute_signals() -> None:
             for sig, reason in results:
                 logger.info(
                     "Signal result: strategy=%s symbol=%s dir=%s reason=%s",
-                    sig.strategy.name,
-                    symbol,
-                    sig.direction,
-                    reason,
+                    sig.strategy.name, symbol, sig.direction, reason,
                 )
         else:
             if summary.get("blocked_daily_limits"):
-                logger.info(
-                    "No signals executed for %s %s — blocked by daily limits",
-                    symbol,
-                    TIMEFRAME,
-                )
+                logger.info("No signals for %s %s — blocked by daily limits", symbol, TIMEFRAME)
             elif summary.get("no_strategies_in_pool"):
-                logger.info(
-                    "No signals executed for %s %s — no active/exploratory strategies in pool",
-                    symbol,
-                    TIMEFRAME,
-                )
+                logger.info("No signals for %s %s — no active/exploratory strategies", symbol, TIMEFRAME)
             elif summary.get("no_strategies_with_edge"):
-                logger.info(
-                    "No signals executed for %s %s — no strategies passed regime/edge filters",
-                    symbol,
-                    TIMEFRAME,
-                )
+                logger.info("No signals for %s %s — no strategies passed regime/edge filters", symbol, TIMEFRAME)
             else:
-                no_entry_active = summary.get("no_entry_active", False)
-                no_entry_exploratory = summary.get("no_entry_exploratory", False)
-
-                if no_entry_active and not no_entry_exploratory:
-                    logger.info(
-                        "No signals executed for %s %s — entry conditions not met (active strategies)",
-                        symbol,
-                        TIMEFRAME,
-                    )
-                elif no_entry_exploratory and not no_entry_active:
-                    logger.info(
-                        "No signals executed for %s %s — entry conditions not met (exploratory strategies)",
-                        symbol,
-                        TIMEFRAME,
-                    )
-                elif no_entry_active and no_entry_exploratory:
-                    logger.info(
-                        "No signals executed for %s %s — entry conditions not met (active + exploratory)",
-                        symbol,
-                        TIMEFRAME,
-                    )
-                else:
-                    logger.info(
-                        "No signals executed for %s %s — see execute_signals_for_symbol logs for details",
-                        symbol,
-                        TIMEFRAME,
-                    )
+                logger.info("No signals for %s %s — entry conditions not met", symbol, TIMEFRAME)
 
     logger.info("Scheduler: job_execute_signals done")
 
 
+# ---------------------------------------------------------------------------
+# Live monitor
+# ---------------------------------------------------------------------------
+
 def job_live_monitor() -> None:
-    """Update live stats and enforce basic portfolio-level safety."""
+    """Update live stats and enforce portfolio-level safety."""
     logger.info("Scheduler: job_live_monitor start")
     try:
         update_live_stats()
@@ -592,6 +567,10 @@ def job_live_monitor() -> None:
         logger.exception("job_live_monitor error: %s", e)
     logger.info("Scheduler: job_live_monitor done")
 
+
+# ---------------------------------------------------------------------------
+# Scheduler lifecycle
+# ---------------------------------------------------------------------------
 
 def start_scheduler() -> BackgroundScheduler:
     if not scheduler_config.enable_scheduler:
@@ -603,24 +582,26 @@ def start_scheduler() -> BackgroundScheduler:
 
     sched = BackgroundScheduler(timezone="UTC")
 
-    # Every 5 minutes: update data/features/regimes
+    # Every 5 min: OHLC + features + regimes
     sched.add_job(job_update_data, "interval", minutes=5, id="update_data")
 
-    # Every 30 minutes: research/evaluate/evolve strategies
-    sched.add_job(
-        job_research_strategies, "interval", minutes=30, id="research_strategies"
-    )
+    # Every 30 min: research / evolve / backtest
+    sched.add_job(job_research_strategies, "interval", minutes=30, id="research_strategies")
 
-    # Every 5 minutes: generate/execute signals from active strategies
-    sched.add_job(
-        job_execute_signals, "interval", minutes=5, id="execute_signals"
-    )
+    # Every 5 min: live signal execution (with news lockout)
+    sched.add_job(job_execute_signals, "interval", minutes=5, id="execute_signals")
 
-    # Every 5 minutes: live monitoring
+    # Every 5 min: equity monitor + circuit breaker
     sched.add_job(job_live_monitor, "interval", minutes=5, id="live_monitor")
 
+    # Daily 06:00 UTC: fetch Forex Factory calendar
+    sched.add_job(job_update_news, "cron", hour=6, minute=0, id="update_news")
+
+    # Every 5 min: WhatsApp alert check for upcoming high-impact events
+    sched.add_job(job_news_alert, "interval", minutes=5, id="news_alert")
+
     sched.start()
-    logger.info("Scheduler started")
+    logger.info("Scheduler started with %d jobs", len(sched.get_jobs()))
     return sched
 
 
@@ -633,10 +614,8 @@ def shutdown_scheduler(sched: BackgroundScheduler) -> None:
 if __name__ == "__main__":
     sched = start_scheduler()
     try:
-        import time
-
         while True:
-            time.sleep(60)
+            _time.sleep(60)
     except KeyboardInterrupt:
         logger.info("KeyboardInterrupt received; shutting down")
         shutdown_scheduler(sched)
