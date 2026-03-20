@@ -63,6 +63,7 @@ def prune_pool() -> None:
         pf = float(stats.get("profit_factor", 0.0) or 0.0)
         wf_sharpe = float(stats.get("wf_overall_sharpe", 0.0) or 0.0)
         num_trades = float(stats.get("num_trades", 0.0) or 0.0)
+        final_eq = float(stats.get("final_equity", 0.0) or 0.0)
 
         # Group (b): dummy strategies with no trades / no edge
         is_dummy = (num_trades == 0.0 and return_pct == 0.0 and not accepted)
@@ -76,6 +77,7 @@ def prune_pool() -> None:
                 or pf < 1.0
                 or wf_sharpe < 0.0
                 or num_trades < 10
+                or (final_eq and final_eq < 7500.0)
             )
         )
 
