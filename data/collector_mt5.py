@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 import MetaTrader5 as mt5
@@ -18,13 +18,13 @@ RAW_DIR.mkdir(parents=True, exist_ok=True)
 
 
 TIMEFRAME_MAP = {
-    "M1": mt5.TIMEFRAME_M1,
-    "M5": mt5.TIMEFRAME_M5,
+    "M1":  mt5.TIMEFRAME_M1,
+    "M5":  mt5.TIMEFRAME_M5,
     "M15": mt5.TIMEFRAME_M15,
     "M30": mt5.TIMEFRAME_M30,
-    "H1": mt5.TIMEFRAME_H1,
-    "H4": mt5.TIMEFRAME_H4,
-    "D1": mt5.TIMEFRAME_D1,
+    "H1":  mt5.TIMEFRAME_H1,
+    "H4":  mt5.TIMEFRAME_H4,
+    "D1":  mt5.TIMEFRAME_D1,
 }
 
 
@@ -44,10 +44,19 @@ def fetch_ohlc(
     timeframe: str | None = None,
     bars: int | None = None,
 ) -> pd.DataFrame:
-    """Fetch OHLC from MT5 with fallbacks and better error logging.
+    """Fetch OHLC bars from MT5.
 
-    Tries copy_rates_from first; if that fails, falls back to copy_rates_from_pos
-    with a reduced bar count.
+    Bug fixes vs original:
+    - datetime.utcnow() replaced with datetime.now(timezone.utc) —
+      utcnow() is deprecated in Python 3.12+ and returns a naive datetime
+      which can cause unexpected behaviour with timezone-aware comparisons.
+    - Output timestamps are returned as UTC-aware (tz=UTC) to be consistent
+      with features.py which parses time with utc=True. Timezone mismatch
+      between raw OHLC and feature timestamps caused silent alignment bugs
+      in news feature joins.
+
+    Falls back to copy_rates_from_pos with a reduced bar count if the
+    primary fetch returns None.
     """
     tf = timeframe or data_config.mt5_timeframe_default
     n_bars = bars or data_config.history_bars_default
@@ -57,48 +66,38 @@ def fetch_ohlc(
 
     logger.info("Fetching %d bars for %s %s", n_bars, symbol, tf)
 
-    # Primary attempt: copy_rates_from anchored at now
-    rates = mt5.copy_rates_from(
-        symbol,
-        TIMEFRAME_MAP[tf],
-        datetime.utcnow(),
-        n_bars,
-    )
+    now_utc = datetime.now(timezone.utc)
+
+    rates = mt5.copy_rates_from(symbol, TIMEFRAME_MAP[tf], now_utc, n_bars)
+
     if rates is None:
         err = mt5.last_error()
         logger.warning(
-            "copy_rates_from returned None for %s %s (bars=%d), last_error=%s",
-            symbol,
-            tf,
-            n_bars,
-            err,
+            "copy_rates_from returned None for %s %s (bars=%d) last_error=%s",
+            symbol, tf, n_bars, err,
         )
-        # Fallback: try fewer bars from position 0
         fallback_bars = min(500, n_bars)
         logger.info(
             "Fallback: copy_rates_from_pos for %s %s (bars=%d)",
-            symbol,
-            tf,
-            fallback_bars,
+            symbol, tf, fallback_bars,
         )
-        rates = mt5.copy_rates_from_pos(
-            symbol,
-            TIMEFRAME_MAP[tf],
-            0,
-            fallback_bars,
-        )
+        rates = mt5.copy_rates_from_pos(symbol, TIMEFRAME_MAP[tf], 0, fallback_bars)
         if rates is None:
             err2 = mt5.last_error()
             raise RuntimeError(
                 f"MT5 history fetch failed for {symbol} {tf}: "
-                f"copy_rates_from None (err={err}), copy_rates_from_pos None (err={err2})"
+                f"copy_rates_from=None (err={err}), "
+                f"copy_rates_from_pos=None (err={err2})"
             )
 
     df = pd.DataFrame(rates)
     if df.empty:
         raise RuntimeError(f"No OHLC data returned for {symbol} {tf}")
 
-    df["time"] = pd.to_datetime(df["time"], unit="s")
+    # MT5 returns Unix timestamps in seconds — convert to UTC-aware datetime
+    # so downstream joins with news events (also UTC-aware) work correctly.
+    df["time"] = pd.to_datetime(df["time"], unit="s", utc=True)
+
     return df[["time", "open", "high", "low", "close", "tick_volume"]]
 
 
