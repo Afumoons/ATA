@@ -6,7 +6,18 @@ from dataclasses import dataclass
 @dataclass
 class RiskConfig:
     # Per-trade risk cap: percentage of current equity risked per trade
-    max_risk_per_trade_pct: float = 1.0       # 1.0% of equity (AGGRESSIVE profile)
+    max_risk_per_trade_pct: float = 1.0       # 1.0% of equity (AGGRESSIVE++ profile)
+
+    # Portfolio-level circuit breaker
+    max_portfolio_drawdown_pct: float = 25.0  # 25% DD limit
+
+    # Maximum simultaneous open positions across all strategies
+    max_open_positions: int = 8
+
+    # Daily guardrails — enabled by default for live prop-firm style accounts.
+    max_daily_drawdown_pct: float = 5.0       # lock trading if daily DD > 5%
+    max_trades_per_day: int = 8               # lock trading after N trades/day
+    daily_limits_enabled: bool = True
     # Portfolio-level circuit breaker: disable all active strategies if
     # drawdown from peak exceeds this threshold
     max_portfolio_drawdown_pct: float = 20.0  # 20%

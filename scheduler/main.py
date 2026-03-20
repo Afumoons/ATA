@@ -115,91 +115,12 @@ def _apply_live_degradation(pool) -> None:
 def _memory_is_clearly_bad(
     candidate, memory: ResearchMemory, symbol: str, timeframe: str
 ) -> bool:
-    """Heuristic filter using ResearchMemory to skip clearly bad pattern families.
+    """AGGRESSIVE++: disable memory veto to allow full exploration.
 
-    AGGRESSIVE MODE: significantly relaxed. Only veto a candidate if
-    *all* sufficiently similar neighbors in memory are clearly terrible.
-    This allows much wider exploration while still blocking obviously
-    toxic pattern families.
+    We still *write* results into ResearchMemory for later analysis, but we
+    do not block any candidate purely because its neighbors looked bad.
+    All selection pressure comes from backtest + WF filters.
     """
-    try:
-        params = getattr(candidate, "params", {}) or {}
-        query_text = "\n".join([
-            f"symbol={symbol}",
-            f"timeframe={timeframe}",
-            f"long_entry={getattr(candidate, 'long_entry_rule', '')}",
-            f"short_entry={getattr(candidate, 'short_entry_rule', '')}",
-            f"exit={getattr(candidate, 'exit_rule', '')}",
-            f"sl_atr={getattr(candidate, 'sl_atr_mult', '')}",
-            f"tp_atr={getattr(candidate, 'tp_atr_mult', '')}",
-            f"regime={params.get('regime_type', '')}",
-        ])
-
-        res = memory.query_similar(
-            text=query_text,
-            n_results=8,
-            where={"symbol": symbol, "timeframe": timeframe},
-        )
-    except Exception as e:
-        logger.exception("ResearchMemory query failed for %s: %s", candidate.name, e)
-        return False
-
-    docs = (res.get("documents") or [[]])[0] or []
-    if not docs:
-        return False
-
-    bad_votes = 0
-    total_votes = 0
-
-    for doc in docs:
-        sharpe = None
-        pf = None
-        ret_pct = None
-        for line in doc.splitlines():
-            if line.startswith("sharpe_ratio="):
-                _, v = line.split("=", 1)
-                try:
-                    sharpe = float(str(v).strip())
-                except Exception:
-                    sharpe = None
-            elif line.startswith("profit_factor="):
-                _, v = line.split("=", 1)
-                try:
-                    pf = float(str(v).strip())
-                except Exception:
-                    pf = None
-            elif line.startswith("return_pct="):
-                _, v = line.split("=", 1)
-                try:
-                    ret_pct = float(str(v).strip())
-                except Exception:
-                    ret_pct = None
-
-        if sharpe is None and pf is None and ret_pct is None:
-            continue
-
-        total_votes += 1
-        if (
-            (sharpe is not None and sharpe < 0.0)
-            or (pf is not None and pf < 1.0)
-            or (ret_pct is not None and ret_pct < -5.0)
-        ):
-            bad_votes += 1
-
-    # If we barely have any signal, don't veto
-    if total_votes < 3:
-        return False
-
-    # AGGRESSIVE: only skip if *every* neighbor looks bad
-    if bad_votes >= total_votes:
-        logger.info(
-            "Memory filter (aggressive): skipping candidate %s (bad_neighbors=%d/%d)",
-            candidate.name,
-            bad_votes,
-            total_votes,
-        )
-        return True
-
     return False
 
 
@@ -474,7 +395,8 @@ def job_execute_signals() -> None:
     """Generate and execute signals for active strategies based on latest features."""
     logger.info("Scheduler: job_execute_signals start")
     pool = load_pool()
-    risk_perc = min(0.5, risk_config.max_risk_per_trade_pct)
+    # AGGRESSIVE++: allow up to 1.0% per trade (bounded by config)
+    risk_perc = min(1.0, risk_config.max_risk_per_trade_pct)
 
     from ..research.features import load_features
 

@@ -357,118 +357,116 @@
     "name": "core15_XAUUSDm_M15_8154",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "disabled",
-    "score": 1.4670671877893422,
+    "status": "candidate",
+    "score": 1.2197093241807657,
     "stats": {
-      "accepted": true,
-      "final_equity": 10936.761049676494,
       "initial_equity": 10000.0,
-      "max_drawdown_pct": -10.878092651074855,
-      "mc_final_equity_mean": 936.7610496764889,
-      "mc_final_equity_p5": 936.7610496764884,
-      "mc_final_equity_p95": 936.7610496764895,
-      "mc_max_dd_mean": -550.9693076611042,
-      "mc_max_dd_p5": -843.6442013565985,
-      "mc_max_dd_p95": -350.0524441139539,
-      "net_profit": 936.7610496764937,
-      "num_trades": 169.0,
-      "profit_factor": 1.2145478574200248,
-      "return_pct": 9.367610496764938,
-      "score": 1.4670671877893422,
-      "sharpe_ratio": 1.4848047601314653,
+      "final_equity": 10367.474397852357,
+      "net_profit": 367.47439785235656,
+      "return_pct": 3.6747439785235656,
+      "sharpe_ratio": 1.843300856523894,
+      "max_drawdown_pct": -7.351870137791227,
+      "profit_factor": 1.1863589431637342,
+      "win_rate": 0.47368421052631576,
+      "num_trades": 76.0,
+      "avg_win": 64.98160826294901,
+      "avg_loss": 49.29658749034516,
+      "expectancy": 4.835189445425758,
       "strategy_explain": {
-        "meta": {
-          "best_regime": "low_vol",
-          "is_range_trader": false,
-          "is_trend_follower": true,
-          "worst_regime": "ranging"
-        },
-        "news_behavior": {
-          "avoidance_rate": 0.0,
-          "post_news_return_pct": 0.0,
-          "pre_news_return_pct": 0.0,
-          "trades_around_high_impact": {
-            "avg_rr": 0.0,
-            "num_trades": 0,
-            "return_pct": 0.0
-          }
-        },
         "regime_pnl": {
           "high_vol": {
-            "avg_rr": 0.0,
-            "net_profit": 264.0155802655793,
-            "num_trades": 4,
-            "return_pct": 2.6401558026557925,
-            "win_rate": 1.0
+            "return_pct": -0.2739178365560842,
+            "net_profit": -27.39178365560842,
+            "num_trades": 10,
+            "avg_rr": 1.3333333333333448,
+            "win_rate": 0.4
           },
           "low_vol": {
-            "avg_rr": 0.0,
-            "net_profit": 350.1047456617473,
-            "num_trades": 19,
-            "return_pct": 3.501047456617473,
-            "win_rate": 0.5789473684210527
+            "return_pct": 2.284403593253019,
+            "net_profit": 228.44035932530187,
+            "num_trades": 23,
+            "avg_rr": 1.3333333333333446,
+            "win_rate": 0.5217391304347826
           },
           "ranging": {
-            "avg_rr": 0.0,
-            "net_profit": -34.366791426106914,
-            "num_trades": 3,
-            "return_pct": -0.34366791426106913,
-            "win_rate": 0.3333333333333333
-          },
-          "trending_down": {
-            "avg_rr": 0.0,
-            "net_profit": 102.74293931700704,
-            "num_trades": 5,
-            "return_pct": 1.0274293931700704,
-            "win_rate": 0.6
+            "return_pct": 3.2079774610859055,
+            "net_profit": 320.79774610859056,
+            "num_trades": 26,
+            "avg_rr": 1.333333333333333,
+            "win_rate": 0.5384615384615384
           },
           "trending_up": {
-            "avg_rr": 0.0,
-            "net_profit": 254.26457585826222,
-            "num_trades": 138,
-            "return_pct": 2.5426457585826223,
-            "win_rate": 0.4492753623188406
+            "return_pct": -1.5437192392592636,
+            "net_profit": -154.37192392592635,
+            "num_trades": 17,
+            "avg_rr": 1.3333333333333306,
+            "win_rate": 0.35294117647058826
           }
-        },
-        "risk_behavior": {
-          "avg_holding_bars": 0.0,
-          "avg_rr": 0.0,
-          "exit_rule_ratio": 1.0,
-          "max_consecutive_losses": 12,
-          "sl_hit_ratio": 0.0,
-          "tp_hit_ratio": 0.0
         },
         "session_pnl": {
           "asia": {
-            "num_trades": 65,
-            "return_pct": 4.33915942951244
+            "return_pct": 3.8190560609680944,
+            "num_trades": 29
           },
           "london": {
-            "num_trades": 23,
-            "return_pct": 11.764081455578209
+            "return_pct": 4.8502547209676825,
+            "num_trades": 9
           },
           "new_york": {
-            "num_trades": 81,
-            "return_pct": -6.735630388325759
+            "return_pct": -4.994566803412201,
+            "num_trades": 38
           }
         },
+        "risk_behavior": {
+          "avg_rr": 1.3333333333333375,
+          "sl_hit_ratio": 0.5263157894736842,
+          "tp_hit_ratio": 0.47368421052631576,
+          "exit_rule_ratio": 0.0,
+          "avg_holding_bars": 0.0,
+          "max_consecutive_losses": 9
+        },
         "stability": {
-          "sharpe_std": 2.5349154564540606,
-          "subperiod_return_pct": [
-            -3.7667356563975534,
-            -4.642190579278737,
-            17.77653673244118
-          ],
           "subperiod_sharpe": [
-            -0.8908546709299254,
-            -1.1368186785843906,
-            4.3593104432145395
-          ]
+            -2.165517332677576,
+            1.6968214001077726,
+            1.4525692561157781
+          ],
+          "subperiod_return_pct": [
+            -5.414872108965394,
+            4.704401219481214,
+            4.385214868007755
+          ],
+          "sharpe_std": 1.7659706226518717
+        },
+        "news_behavior": {
+          "trades_around_high_impact": {
+            "num_trades": 0,
+            "return_pct": 0.0,
+            "avg_rr": 0.0
+          },
+          "avoidance_rate": 0.0,
+          "pre_news_return_pct": 0.0,
+          "post_news_return_pct": 0.0
+        },
+        "meta": {
+          "best_regime": "ranging",
+          "worst_regime": "trending_up",
+          "is_trend_follower": false,
+          "is_range_trader": true,
+          "total_pnl": 367.4743978523575,
+          "total_return_pct": 3.674743978523575
         }
       },
-      "wf_overall_max_drawdown_pct": -9.888657344009744,
-      "wf_overall_sharpe": 0.07972025772175448,
-      "win_rate": 0.47928994082840237
+      "score": 1.2197093241807657,
+      "accepted": true,
+      "wf_overall_sharpe": 7.812994088482919,
+      "wf_overall_max_drawdown_pct": 3.811666791666646,
+      "mc_final_pnl_mean": 367.4743978523576,
+      "mc_final_pnl_p5": 367.47439785235736,
+      "mc_final_pnl_p95": 367.4743978523578,
+      "mc_max_dd_mean": 401.0691317072076,
+      "mc_max_dd_p5": 255.84055182276762,
+      "mc_max_dd_p95": 585.5913171050689
     }
   },
   "core15_XAUUSDm_M15_9190": {
@@ -594,75 +592,78 @@
     "symbol": "XAUUSDm",
     "timeframe": "M15",
     "status": "candidate",
-    "score": 1.486590103890456,
+    "score": 2.3200185547612193,
     "stats": {
       "initial_equity": 10000.0,
-      "final_equity": 10934.801559738697,
-      "net_profit": 934.8015597386966,
-      "return_pct": 9.348015597386967,
-      "sharpe_ratio": 1.8813041854929264,
-      "max_drawdown_pct": -7.54783863706553,
-      "profit_factor": 1.5286334777421007,
-      "win_rate": 0.4788732394366197,
-      "num_trades": 71.0,
+      "final_equity": 10953.929859756301,
+      "net_profit": 953.9298597563011,
+      "return_pct": 9.539298597563011,
+      "sharpe_ratio": 4.174361862318724,
+      "max_drawdown_pct": -7.3861116345071975,
+      "profit_factor": 1.747116420596005,
+      "win_rate": 0.5178571428571429,
+      "num_trades": 56.0,
+      "avg_win": 76.92225533701588,
+      "avg_loss": 47.28946463026509,
+      "expectancy": 17.034461781362566,
       "strategy_explain": {
         "regime_pnl": {
           "high_vol": {
-            "return_pct": -2.180057345709413,
-            "net_profit": -218.00573457094129,
-            "num_trades": 13,
-            "avg_rr": 0.0,
-            "win_rate": 0.23076923076923078
+            "return_pct": -0.7724121803214962,
+            "net_profit": -77.24121803214962,
+            "num_trades": 10,
+            "avg_rr": 1.9999999999999953,
+            "win_rate": 0.3
           },
           "low_vol": {
-            "return_pct": 10.33829567170807,
-            "net_profit": 1033.829567170807,
-            "num_trades": 30,
-            "avg_rr": 0.0,
-            "win_rate": 0.6333333333333333
+            "return_pct": 6.526937711687135,
+            "net_profit": 652.6937711687135,
+            "num_trades": 23,
+            "avg_rr": 1.999999999999997,
+            "win_rate": 0.6086956521739131
           },
           "ranging": {
-            "return_pct": 1.1897772713883275,
-            "net_profit": 118.97772713883275,
-            "num_trades": 28,
-            "avg_rr": 0.0,
-            "win_rate": 0.42857142857142855
+            "return_pct": 3.784773066197391,
+            "net_profit": 378.4773066197391,
+            "num_trades": 23,
+            "avg_rr": 2.0000000000000075,
+            "win_rate": 0.5217391304347826
           }
         },
         "session_pnl": {
           "asia": {
-            "return_pct": 3.268778013204084,
-            "num_trades": 36
+            "return_pct": 6.306290372767526,
+            "num_trades": 24
           },
           "london": {
-            "return_pct": 8.131322861089703,
-            "num_trades": 10
+            "return_pct": 5.288683224169928,
+            "num_trades": 7
           },
           "new_york": {
-            "return_pct": -2.052085276906803,
+            "return_pct": -2.055674999374426,
             "num_trades": 25
           }
         },
         "risk_behavior": {
-          "avg_rr": 0.0,
-          "sl_hit_ratio": 0.0,
-          "tp_hit_ratio": 0.0,
-          "exit_rule_ratio": 1.0,
+          "avg_rr": 2.0000000000000013,
+          "sl_hit_ratio": 0.4642857142857143,
+          "tp_hit_ratio": 0.35714285714285715,
+          "exit_rule_ratio": 0.17857142857142858,
           "avg_holding_bars": 0.0,
           "max_consecutive_losses": 15
         },
         "stability": {
           "subperiod_sharpe": [
-            -1.4115055683472024,
-            -0.6150495257644256,
-            4.8346541624598425
+            -1.9612378340943273,
+            0.8085218923685956,
+            4.0869959385131045
           ],
           "subperiod_return_pct": [
-            -4.130205484375013,
-            -1.6237663406874128,
-            15.10198742244941
+            -4.52422528749998,
+            1.8777265286695526,
+            12.185797356393458
           ],
-          "sharpe_std": 2.775850698433972
+          "sharpe_std": 2.472090720685366
         },
         "news_behavior": {
           "trades_around_high_impact": {
@@ -678,19 +679,798 @@
           "best_regime": "low_vol",
           "worst_regime": "high_vol",
           "is_trend_follower": false,
-          "is_range_trader": true
+          "is_range_trader": true,
+          "total_pnl": 953.9298597563029,
+          "total_return_pct": 9.539298597563029
         }
       },
-      "score": 1.486590103890456,
+      "score": 2.3200185547612193,
       "accepted": true,
-      "wf_overall_sharpe": 0.35012451753138846,
-      "wf_overall_max_drawdown_pct": -2.995000000000003,
-      "mc_final_equity_mean": 934.8015597386984,
-      "mc_final_equity_p5": 934.801559738698,
-      "mc_final_equity_p95": 934.8015597386988,
-      "mc_max_dd_mean": -367.8091971748057,
-      "mc_max_dd_p5": -555.8481915086827,
-      "mc_max_dd_p95": -202.13974026519656
+      "wf_overall_sharpe": 10.890948089516405,
+      "wf_overall_max_drawdown_pct": 2.9974999999999974,
+      "mc_final_pnl_mean": 953.9298597563029,
+      "mc_final_pnl_p5": 953.9298597563027,
+      "mc_final_pnl_p95": 953.9298597563032,
+      "mc_max_dd_mean": 279.1730498720662,
+      "mc_max_dd_p5": 188.70709043375916,
+      "mc_max_dd_p95": 440.30843759384726
+    }
+  },
+  "core15_XAUUSDm_M15_84d3": {
+    "name": "core15_XAUUSDm_M15_84d3",
+    "symbol": "XAUUSDm",
+    "timeframe": "M15",
+    "status": "candidate",
+    "score": 1.6837813516665265,
+    "stats": {
+      "initial_equity": 10000.0,
+      "final_equity": 10113.466661518303,
+      "net_profit": 113.46666151830323,
+      "return_pct": 1.1346666151830322,
+      "sharpe_ratio": 2.787294667221202,
+      "max_drawdown_pct": -1.3159363688049597,
+      "profit_factor": 1.2734094948869839,
+      "win_rate": 0.6119402985074627,
+      "num_trades": 67.0,
+      "avg_win": 12.889584307658964,
+      "avg_loss": 15.961780580604154,
+      "expectancy": 1.6935322614673058,
+      "strategy_explain": {
+        "regime_pnl": {
+          "high_vol": {
+            "return_pct": -0.9452459510511347,
+            "net_profit": -94.52459510511348,
+            "num_trades": 12,
+            "avg_rr": 2.0000000000000244,
+            "win_rate": 0.5
+          },
+          "low_vol": {
+            "return_pct": 1.2170267867543865,
+            "net_profit": 121.70267867543866,
+            "num_trades": 27,
+            "avg_rr": 2.0000000000000164,
+            "win_rate": 0.6666666666666666
+          },
+          "ranging": {
+            "return_pct": 0.8628857794798438,
+            "net_profit": 86.28857794798438,
+            "num_trades": 28,
+            "avg_rr": 2.000000000000004,
+            "win_rate": 0.6071428571428571
+          }
+        },
+        "session_pnl": {
+          "asia": {
+            "return_pct": 1.0941896958836401,
+            "num_trades": 24
+          },
+          "london": {
+            "return_pct": 0.6863037027245906,
+            "num_trades": 8
+          },
+          "new_york": {
+            "return_pct": -0.6458267834251352,
+            "num_trades": 35
+          }
+        },
+        "risk_behavior": {
+          "avg_rr": 2.000000000000013,
+          "sl_hit_ratio": 0.014925373134328358,
+          "tp_hit_ratio": 0.0,
+          "exit_rule_ratio": 0.9850746268656716,
+          "avg_holding_bars": 0.0,
+          "max_consecutive_losses": 2
+        },
+        "stability": {
+          "subperiod_sharpe": [
+            -0.41133816579534144,
+            -0.20948975672730452,
+            3.055916788472431
+          ],
+          "subperiod_return_pct": [
+            -0.3715865189845624,
+            -0.18707605550881864,
+            1.6933291896764768
+          ],
+          "sharpe_std": 1.5890416260393134
+        },
+        "news_behavior": {
+          "trades_around_high_impact": {
+            "num_trades": 0,
+            "return_pct": 0.0,
+            "avg_rr": 0.0
+          },
+          "avoidance_rate": 0.0,
+          "pre_news_return_pct": 0.0,
+          "post_news_return_pct": 0.0
+        },
+        "meta": {
+          "best_regime": "low_vol",
+          "worst_regime": "high_vol",
+          "is_trend_follower": false,
+          "is_range_trader": true,
+          "total_pnl": 113.46666151830955,
+          "total_return_pct": 1.1346666151830955
+        }
+      },
+      "score": 1.6837813516665265,
+      "accepted": true,
+      "wf_overall_sharpe": 5.195824612193775,
+      "wf_overall_max_drawdown_pct": 1.0860468257568812,
+      "mc_final_pnl_mean": 113.46666151830955,
+      "mc_final_pnl_p5": 113.4666615183095,
+      "mc_final_pnl_p95": 113.4666615183096,
+      "mc_max_dd_mean": 111.43618659791024,
+      "mc_max_dd_p5": 70.6548942612729,
+      "mc_max_dd_p95": 169.71820399785818
+    }
+  },
+  "core15_XAUUSDm_M15_1ee7": {
+    "name": "core15_XAUUSDm_M15_1ee7",
+    "symbol": "XAUUSDm",
+    "timeframe": "M15",
+    "status": "candidate",
+    "score": 1.2010665888390941,
+    "stats": {
+      "initial_equity": 10000.0,
+      "final_equity": 10338.13931598363,
+      "net_profit": 338.1393159836298,
+      "return_pct": 3.3813931598362976,
+      "sharpe_ratio": 1.8090938561802523,
+      "max_drawdown_pct": -6.766846274460692,
+      "profit_factor": 1.1503250303719994,
+      "win_rate": 0.6028368794326241,
+      "num_trades": 141.0,
+      "avg_win": 30.441497566199537,
+      "avg_loss": 40.16764244898802,
+      "expectancy": 2.3981511771888737,
+      "strategy_explain": {
+        "regime_pnl": {
+          "high_vol": {
+            "return_pct": -1.4560487705547551,
+            "net_profit": -145.60487705547553,
+            "num_trades": 44,
+            "avg_rr": 1.3333333333333386,
+            "win_rate": 0.5681818181818182
+          },
+          "low_vol": {
+            "return_pct": 2.494130046206106,
+            "net_profit": 249.4130046206106,
+            "num_trades": 41,
+            "avg_rr": 1.3333333333333381,
+            "win_rate": 0.6585365853658537
+          },
+          "ranging": {
+            "return_pct": 2.3433118841849643,
+            "net_profit": 234.33118841849642,
+            "num_trades": 56,
+            "avg_rr": 1.333333333333334,
+            "win_rate": 0.5892857142857143
+          }
+        },
+        "session_pnl": {
+          "asia": {
+            "return_pct": 5.233246215986156,
+            "num_trades": 42
+          },
+          "london": {
+            "return_pct": 2.874636850124622,
+            "num_trades": 28
+          },
+          "new_york": {
+            "return_pct": -4.72648990627446,
+            "num_trades": 71
+          }
+        },
+        "risk_behavior": {
+          "avg_rr": 1.3333333333333366,
+          "sl_hit_ratio": 0.2907801418439716,
+          "tp_hit_ratio": 0.12056737588652482,
+          "exit_rule_ratio": 0.5886524822695035,
+          "avg_holding_bars": 0.0,
+          "max_consecutive_losses": 7
+        },
+        "stability": {
+          "subperiod_sharpe": [
+            -1.0054161048214434,
+            2.819195004514138,
+            -0.0073271658350615235
+          ],
+          "subperiod_return_pct": [
+            -3.1356690477421623,
+            6.536943881238978,
+            -0.019881673660499713
+          ],
+          "sharpe_std": 1.6197756788194695
+        },
+        "news_behavior": {
+          "trades_around_high_impact": {
+            "num_trades": 0,
+            "return_pct": 0.0,
+            "avg_rr": 0.0
+          },
+          "avoidance_rate": 0.0,
+          "pre_news_return_pct": 0.0,
+          "post_news_return_pct": 0.0
+        },
+        "meta": {
+          "best_regime": "low_vol",
+          "worst_regime": "high_vol",
+          "is_trend_follower": false,
+          "is_range_trader": true,
+          "total_pnl": 338.1393159836315,
+          "total_return_pct": 3.3813931598363145
+        }
+      },
+      "score": 1.2010665888390941,
+      "accepted": true,
+      "wf_overall_sharpe": 6.1886736642630025,
+      "wf_overall_max_drawdown_pct": 3.743969309617079,
+      "mc_final_pnl_mean": 338.13931598363166,
+      "mc_final_pnl_p5": 338.13931598363143,
+      "mc_final_pnl_p95": 338.1393159836319,
+      "mc_max_dd_mean": 405.27602261691123,
+      "mc_max_dd_p5": 251.3675032035064,
+      "mc_max_dd_p95": 648.2126383577722
+    }
+  },
+  "core15_XAUUSDm_M15_ad11": {
+    "name": "core15_XAUUSDm_M15_ad11",
+    "symbol": "XAUUSDm",
+    "timeframe": "M15",
+    "status": "candidate",
+    "score": 1.7355550410264045,
+    "stats": {
+      "initial_equity": 10000.0,
+      "final_equity": 10416.45181663078,
+      "net_profit": 416.45181663078074,
+      "return_pct": 4.164518166307808,
+      "sharpe_ratio": 2.871654128770868,
+      "max_drawdown_pct": -4.917615820544063,
+      "profit_factor": 1.4535651590783256,
+      "win_rate": 0.6842105263157895,
+      "num_trades": 57.0,
+      "avg_win": 34.221179322549744,
+      "avg_loss": 51.00967649714766,
+      "expectancy": 7.306172221592671,
+      "strategy_explain": {
+        "regime_pnl": {
+          "high_vol": {
+            "return_pct": -1.0301723819420985,
+            "net_profit": -103.01723819420985,
+            "num_trades": 10,
+            "avg_rr": 1.0,
+            "win_rate": 0.4
+          },
+          "low_vol": {
+            "return_pct": 3.4759108134798917,
+            "net_profit": 347.59108134798913,
+            "num_trades": 22,
+            "avg_rr": 1.0,
+            "win_rate": 0.8181818181818182
+          },
+          "ranging": {
+            "return_pct": 1.7187797347700295,
+            "net_profit": 171.87797347700297,
+            "num_trades": 25,
+            "avg_rr": 1.0,
+            "win_rate": 0.68
+          }
+        },
+        "session_pnl": {
+          "asia": {
+            "return_pct": 5.9562360128965235,
+            "num_trades": 23
+          },
+          "london": {
+            "return_pct": 2.987499094667422,
+            "num_trades": 7
+          },
+          "new_york": {
+            "return_pct": -4.7792169412561245,
+            "num_trades": 27
+          }
+        },
+        "risk_behavior": {
+          "avg_rr": 1.0,
+          "sl_hit_ratio": 0.3157894736842105,
+          "tp_hit_ratio": 0.2631578947368421,
+          "exit_rule_ratio": 0.42105263157894735,
+          "avg_holding_bars": 0.0,
+          "max_consecutive_losses": 6
+        },
+        "stability": {
+          "subperiod_sharpe": [
+            0.2948075961064079,
+            0.2924433328770544,
+            1.6552412690090672
+          ],
+          "subperiod_return_pct": [
+            0.5769368202180085,
+            0.5038030703849412,
+            3.0837782757048715
+          ],
+          "sharpe_std": 0.6418725715378674
+        },
+        "news_behavior": {
+          "trades_around_high_impact": {
+            "num_trades": 0,
+            "return_pct": 0.0,
+            "avg_rr": 0.0
+          },
+          "avoidance_rate": 0.0,
+          "pre_news_return_pct": 0.0,
+          "post_news_return_pct": 0.0
+        },
+        "meta": {
+          "best_regime": "low_vol",
+          "worst_regime": "high_vol",
+          "is_trend_follower": false,
+          "is_range_trader": true,
+          "total_pnl": 416.4518166307821,
+          "total_return_pct": 4.164518166307821
+        }
+      },
+      "score": 1.7355550410264045,
+      "accepted": true,
+      "wf_overall_sharpe": 7.0221767948197,
+      "wf_overall_max_drawdown_pct": 2.9975000000000196,
+      "mc_final_pnl_mean": 416.4518166307822,
+      "mc_final_pnl_p5": 416.45181663078205,
+      "mc_final_pnl_p95": 416.45181663078233,
+      "mc_max_dd_mean": 213.04188416878839,
+      "mc_max_dd_p5": 141.6977300371196,
+      "mc_max_dd_p95": 320.0082814812153
+    }
+  },
+  "core15_XAUUSDm_M15_9b3a": {
+    "name": "core15_XAUUSDm_M15_9b3a",
+    "symbol": "XAUUSDm",
+    "timeframe": "M15",
+    "status": "candidate",
+    "score": 1.6837813516665265,
+    "stats": {
+      "initial_equity": 10000.0,
+      "final_equity": 10113.466661518303,
+      "net_profit": 113.46666151830323,
+      "return_pct": 1.1346666151830322,
+      "sharpe_ratio": 2.787294667221202,
+      "max_drawdown_pct": -1.3159363688049597,
+      "profit_factor": 1.2734094948869839,
+      "win_rate": 0.6119402985074627,
+      "num_trades": 67.0,
+      "avg_win": 12.889584307658964,
+      "avg_loss": 15.961780580604154,
+      "expectancy": 1.6935322614673058,
+      "strategy_explain": {
+        "regime_pnl": {
+          "high_vol": {
+            "return_pct": -0.9452459510511347,
+            "net_profit": -94.52459510511348,
+            "num_trades": 12,
+            "avg_rr": 2.0000000000000244,
+            "win_rate": 0.5
+          },
+          "low_vol": {
+            "return_pct": 1.2170267867543865,
+            "net_profit": 121.70267867543866,
+            "num_trades": 27,
+            "avg_rr": 2.0000000000000164,
+            "win_rate": 0.6666666666666666
+          },
+          "ranging": {
+            "return_pct": 0.8628857794798438,
+            "net_profit": 86.28857794798438,
+            "num_trades": 28,
+            "avg_rr": 2.000000000000004,
+            "win_rate": 0.6071428571428571
+          }
+        },
+        "session_pnl": {
+          "asia": {
+            "return_pct": 1.0941896958836401,
+            "num_trades": 24
+          },
+          "london": {
+            "return_pct": 0.6863037027245906,
+            "num_trades": 8
+          },
+          "new_york": {
+            "return_pct": -0.6458267834251352,
+            "num_trades": 35
+          }
+        },
+        "risk_behavior": {
+          "avg_rr": 2.000000000000013,
+          "sl_hit_ratio": 0.014925373134328358,
+          "tp_hit_ratio": 0.0,
+          "exit_rule_ratio": 0.9850746268656716,
+          "avg_holding_bars": 0.0,
+          "max_consecutive_losses": 2
+        },
+        "stability": {
+          "subperiod_sharpe": [
+            -0.41133816579534144,
+            -0.20948975672730452,
+            3.055916788472431
+          ],
+          "subperiod_return_pct": [
+            -0.3715865189845624,
+            -0.18707605550881864,
+            1.6933291896764768
+          ],
+          "sharpe_std": 1.5890416260393134
+        },
+        "news_behavior": {
+          "trades_around_high_impact": {
+            "num_trades": 0,
+            "return_pct": 0.0,
+            "avg_rr": 0.0
+          },
+          "avoidance_rate": 0.0,
+          "pre_news_return_pct": 0.0,
+          "post_news_return_pct": 0.0
+        },
+        "meta": {
+          "best_regime": "low_vol",
+          "worst_regime": "high_vol",
+          "is_trend_follower": false,
+          "is_range_trader": true,
+          "total_pnl": 113.46666151830955,
+          "total_return_pct": 1.1346666151830955
+        }
+      },
+      "score": 1.6837813516665265,
+      "accepted": true,
+      "wf_overall_sharpe": 5.195824612193775,
+      "wf_overall_max_drawdown_pct": 1.0860468257568812,
+      "mc_final_pnl_mean": 113.46666151830955,
+      "mc_final_pnl_p5": 113.46666151830951,
+      "mc_final_pnl_p95": 113.46666151830959,
+      "mc_max_dd_mean": 109.74715710278836,
+      "mc_max_dd_p5": 72.58858685377541,
+      "mc_max_dd_p95": 167.25366623250505
+    }
+  },
+  "core15_XAUUSDm_M15_30fe": {
+    "name": "core15_XAUUSDm_M15_30fe",
+    "symbol": "XAUUSDm",
+    "timeframe": "M15",
+    "status": "candidate",
+    "score": 1.6837813516665265,
+    "stats": {
+      "initial_equity": 10000.0,
+      "final_equity": 10113.466661518303,
+      "net_profit": 113.46666151830323,
+      "return_pct": 1.1346666151830322,
+      "sharpe_ratio": 2.787294667221202,
+      "max_drawdown_pct": -1.3159363688049597,
+      "profit_factor": 1.2734094948869839,
+      "win_rate": 0.6119402985074627,
+      "num_trades": 67.0,
+      "avg_win": 12.889584307658964,
+      "avg_loss": 15.961780580604154,
+      "expectancy": 1.6935322614673058,
+      "strategy_explain": {
+        "regime_pnl": {
+          "high_vol": {
+            "return_pct": -0.9452459510511347,
+            "net_profit": -94.52459510511348,
+            "num_trades": 12,
+            "avg_rr": 1.3333333333333466,
+            "win_rate": 0.5
+          },
+          "low_vol": {
+            "return_pct": 1.2170267867543865,
+            "net_profit": 121.70267867543866,
+            "num_trades": 27,
+            "avg_rr": 1.3333333333333428,
+            "win_rate": 0.6666666666666666
+          },
+          "ranging": {
+            "return_pct": 0.8628857794798438,
+            "net_profit": 86.28857794798438,
+            "num_trades": 28,
+            "avg_rr": 1.3333333333333333,
+            "win_rate": 0.6071428571428571
+          }
+        },
+        "session_pnl": {
+          "asia": {
+            "return_pct": 1.0941896958836401,
+            "num_trades": 24
+          },
+          "london": {
+            "return_pct": 0.6863037027245906,
+            "num_trades": 8
+          },
+          "new_york": {
+            "return_pct": -0.6458267834251352,
+            "num_trades": 35
+          }
+        },
+        "risk_behavior": {
+          "avg_rr": 1.3333333333333395,
+          "sl_hit_ratio": 0.014925373134328358,
+          "tp_hit_ratio": 0.0,
+          "exit_rule_ratio": 0.9850746268656716,
+          "avg_holding_bars": 0.0,
+          "max_consecutive_losses": 2
+        },
+        "stability": {
+          "subperiod_sharpe": [
+            -0.41133816579534144,
+            -0.20948975672730452,
+            3.055916788472431
+          ],
+          "subperiod_return_pct": [
+            -0.3715865189845624,
+            -0.18707605550881864,
+            1.6933291896764768
+          ],
+          "sharpe_std": 1.5890416260393134
+        },
+        "news_behavior": {
+          "trades_around_high_impact": {
+            "num_trades": 0,
+            "return_pct": 0.0,
+            "avg_rr": 0.0
+          },
+          "avoidance_rate": 0.0,
+          "pre_news_return_pct": 0.0,
+          "post_news_return_pct": 0.0
+        },
+        "meta": {
+          "best_regime": "low_vol",
+          "worst_regime": "high_vol",
+          "is_trend_follower": false,
+          "is_range_trader": true,
+          "total_pnl": 113.46666151830955,
+          "total_return_pct": 1.1346666151830955
+        }
+      },
+      "score": 1.6837813516665265,
+      "accepted": true,
+      "wf_overall_sharpe": 5.195824612193775,
+      "wf_overall_max_drawdown_pct": 1.0860468257568812,
+      "mc_final_pnl_mean": 113.46666151830955,
+      "mc_final_pnl_p5": 113.4666615183095,
+      "mc_final_pnl_p95": 113.4666615183096,
+      "mc_max_dd_mean": 115.17168042845422,
+      "mc_max_dd_p5": 73.1703402326854,
+      "mc_max_dd_p95": 181.85411200276383
+    }
+  },
+  "core15_XAUUSDm_M15_6060": {
+    "name": "core15_XAUUSDm_M15_6060",
+    "symbol": "XAUUSDm",
+    "timeframe": "M15",
+    "status": "disabled",
+    "score": 3.1197498582960055,
+    "stats": {
+      "initial_equity": 10000.0,
+      "final_equity": 11637.822508964471,
+      "net_profit": 1637.8225089644711,
+      "return_pct": 16.37822508964471,
+      "sharpe_ratio": 5.941864374679738,
+      "max_drawdown_pct": -7.270768889805456,
+      "profit_factor": 1.3857059910738818,
+      "win_rate": 0.499054820415879,
+      "num_trades": 529.0,
+      "avg_win": 22.288334578479077,
+      "avg_loss": 16.02376535756229,
+      "expectancy": 3.0960727957740435,
+      "strategy_explain": {
+        "regime_pnl": {
+          "high_vol": {
+            "return_pct": 4.674550855051855,
+            "net_profit": 467.4550855051855,
+            "num_trades": 18,
+            "avg_rr": 1.6000000000000016,
+            "win_rate": 0.7222222222222222
+          },
+          "low_vol": {
+            "return_pct": 1.212681660109407,
+            "net_profit": 121.26816601094069,
+            "num_trades": 27,
+            "avg_rr": 1.5999999999999972,
+            "win_rate": 0.6666666666666666
+          },
+          "ranging": {
+            "return_pct": -0.1294198377326901,
+            "net_profit": -12.941983773269012,
+            "num_trades": 47,
+            "avg_rr": 1.599999999999997,
+            "win_rate": 0.44680851063829785
+          },
+          "trending_down": {
+            "return_pct": 10.372733706489388,
+            "net_profit": 1037.2733706489387,
+            "num_trades": 141,
+            "avg_rr": 1.6000000000000008,
+            "win_rate": 0.3971631205673759
+          },
+          "trending_up": {
+            "return_pct": 0.247678705726739,
+            "net_profit": 24.7678705726739,
+            "num_trades": 296,
+            "avg_rr": 1.6,
+            "win_rate": 0.527027027027027
+          }
+        },
+        "session_pnl": {
+          "asia": {
+            "return_pct": -0.15869366418783187,
+            "num_trades": 188
+          },
+          "london": {
+            "return_pct": 21.963494156539227,
+            "num_trades": 157
+          },
+          "new_york": {
+            "return_pct": -5.426575402706699,
+            "num_trades": 184
+          }
+        },
+        "risk_behavior": {
+          "avg_rr": 1.6,
+          "sl_hit_ratio": 0.06427221172022685,
+          "tp_hit_ratio": 0.0831758034026465,
+          "exit_rule_ratio": 0.8525519848771267,
+          "avg_holding_bars": 0.0,
+          "max_consecutive_losses": 13
+        },
+        "stability": {
+          "subperiod_sharpe": [
+            1.45288083034791,
+            0.04962125364557795,
+            2.2481692732375267
+          ],
+          "subperiod_return_pct": [
+            4.470382329725534,
+            0.17402122026505054,
+            11.73382153965411
+          ],
+          "sharpe_std": 0.9089208828454077
+        },
+        "news_behavior": {
+          "trades_around_high_impact": {
+            "num_trades": 0,
+            "return_pct": 0.0,
+            "avg_rr": 0.0
+          },
+          "avoidance_rate": 0.0,
+          "pre_news_return_pct": 0.0,
+          "post_news_return_pct": 0.0
+        },
+        "meta": {
+          "best_regime": "trending_down",
+          "worst_regime": "ranging",
+          "is_trend_follower": true,
+          "is_range_trader": false,
+          "total_pnl": 1637.8225089644698,
+          "total_return_pct": 16.378225089644697
+        }
+      },
+      "score": 3.1197498582960055,
+      "accepted": true,
+      "wf_overall_sharpe": 5.805669153991141,
+      "wf_overall_max_drawdown_pct": 7.624972038932743,
+      "mc_final_pnl_mean": 1637.82250896447,
+      "mc_final_pnl_p5": 1637.8225089644684,
+      "mc_final_pnl_p95": 1637.8225089644711,
+      "mc_max_dd_mean": 378.5316481047905,
+      "mc_max_dd_p5": 244.84252652720795,
+      "mc_max_dd_p95": 551.4530515764204
+    }
+  },
+  "core15_XAUUSDm_M15_837d": {
+    "name": "core15_XAUUSDm_M15_837d",
+    "symbol": "XAUUSDm",
+    "timeframe": "M15",
+    "status": "candidate",
+    "score": 1.4054597744826975,
+    "stats": {
+      "initial_equity": 10000.0,
+      "final_equity": 10589.802201079714,
+      "net_profit": 589.802201079714,
+      "return_pct": 5.89802201079714,
+      "sharpe_ratio": 2.3583183486050716,
+      "max_drawdown_pct": -9.82144098424187,
+      "profit_factor": 1.2011561496102914,
+      "win_rate": 0.4444444444444444,
+      "num_trades": 126.0,
+      "avg_win": 62.89042317301719,
+      "avg_loss": 41.88659280870365,
+      "expectancy": 4.680969849838945,
+      "strategy_explain": {
+        "regime_pnl": {
+          "high_vol": {
+            "return_pct": -3.0309402531866048,
+            "net_profit": -303.0940253186605,
+            "num_trades": 38,
+            "avg_rr": 1.500000000000001,
+            "win_rate": 0.34210526315789475
+          },
+          "low_vol": {
+            "return_pct": 6.137341926951494,
+            "net_profit": 613.7341926951494,
+            "num_trades": 40,
+            "avg_rr": 1.499999999999999,
+            "win_rate": 0.525
+          },
+          "ranging": {
+            "return_pct": 2.7916203370321817,
+            "net_profit": 279.1620337032182,
+            "num_trades": 48,
+            "avg_rr": 1.5000000000000036,
+            "win_rate": 0.4583333333333333
+          }
+        },
+        "session_pnl": {
+          "asia": {
+            "return_pct": 10.4174142965322,
+            "num_trades": 38
+          },
+          "london": {
+            "return_pct": 4.215267870069995,
+            "num_trades": 27
+          },
+          "new_york": {
+            "return_pct": -8.73466015580512,
+            "num_trades": 61
+          }
+        },
+        "risk_behavior": {
+          "avg_rr": 1.500000000000001,
+          "sl_hit_ratio": 0.4365079365079365,
+          "tp_hit_ratio": 0.36507936507936506,
+          "exit_rule_ratio": 0.1984126984126984,
+          "avg_holding_bars": 0.0,
+          "max_consecutive_losses": 13
+        },
+        "stability": {
+          "subperiod_sharpe": [
+            -3.2954915946008683,
+            3.817882523311494,
+            0.7255355993681725
+          ],
+          "subperiod_return_pct": [
+            -9.45345010477804,
+            12.580089196631178,
+            2.7713829189439325
+          ],
+          "sharpe_std": 2.9122606822811443
+        },
+        "news_behavior": {
+          "trades_around_high_impact": {
+            "num_trades": 0,
+            "return_pct": 0.0,
+            "avg_rr": 0.0
+          },
+          "avoidance_rate": 0.0,
+          "pre_news_return_pct": 0.0,
+          "post_news_return_pct": 0.0
+        },
+        "meta": {
+          "best_regime": "low_vol",
+          "worst_regime": "high_vol",
+          "is_trend_follower": false,
+          "is_range_trader": true,
+          "total_pnl": 589.8022010797073,
+          "total_return_pct": 5.898022010797073
+        }
+      },
+      "score": 1.4054597744826975,
+      "accepted": true,
+      "wf_overall_sharpe": 8.007775515869598,
+      "wf_overall_max_drawdown_pct": 5.806935338538189,
+      "mc_final_pnl_mean": 589.8022010797073,
+      "mc_final_pnl_p5": 589.802201079707,
+      "mc_final_pnl_p95": 589.8022010797075,
+      "mc_max_dd_mean": 483.0414250484528,
+      "mc_max_dd_p5": 294.70505602437936,
+      "mc_max_dd_p95": 723.4902256913621
     }
   }
 }
