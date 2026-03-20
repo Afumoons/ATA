@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, Any, Optional, List
+from typing import Any, Dict, List, Optional
 
 from chromadb import PersistentClient
 
@@ -17,6 +17,34 @@ class ResearchMemoryConfig:
 
 
 DEFAULT_CONFIG = ResearchMemoryConfig()
+
+# Stats stored in metadata for fast filtering/aggregation.
+# Must all be scalar (str/int/float/bool) — ChromaDB rejects nested types.
+_KEY_STATS = [
+    "return_pct",
+    "sharpe_ratio",
+    "profit_factor",
+    "max_drawdown_pct",
+    "num_trades",
+    "score",
+    "wf_overall_sharpe",
+]
+
+# Keys excluded from document text — large nested dicts that pollute embeddings.
+_SKIP_IN_DOCUMENT = {
+    "strategy_explain",
+    "mc_final_pnl_mean", "mc_final_pnl_p5", "mc_final_pnl_p95",
+    "mc_max_dd_mean", "mc_max_dd_p5", "mc_max_dd_p95",
+    # Legacy key names before rename
+    "mc_final_equity_mean", "mc_final_equity_p5", "mc_final_equity_p95",
+}
+
+
+def _safe_scalar(v: Any) -> Optional[Any]:
+    """Return v if ChromaDB-compatible scalar, else None."""
+    if isinstance(v, (str, int, float, bool)):
+        return v
+    return None
 
 
 class ResearchMemory:
@@ -38,48 +66,62 @@ class ResearchMemory:
         stats: Dict[str, Any],
         extra: Optional[Dict[str, Any]] = None,
     ) -> None:
-        """Store a strategy result as a Chroma document.
+        """Store or update a strategy evaluation result in Chroma.
 
-        - stats: dict containing backtest/eval/WF/MC metrics
-        - extra: optional additional context (e.g. regime breakdowns)
+        Bug fixes:
+        - Uses upsert() instead of add() — add() raises DuplicateIDError when
+          the same strategy is re-evaluated in subsequent research cycles.
+        - strategy_explain and MC stats (nested dicts) are excluded from
+          document text. Including them produced Python repr strings of
+          thousands of characters that dominated embeddings and broke
+          similarity search quality.
+        - Metadata values filtered to scalars — ChromaDB rejects nested
+          dicts/lists in metadata fields.
         """
         doc_id = f"{strategy_name}:{symbol}:{timeframe}"
 
+        # Document text — scalar stats only, no nested dicts
         text_lines = [
             f"strategy={strategy_name}",
             f"symbol={symbol}",
             f"timeframe={timeframe}",
         ]
         for k, v in stats.items():
-            text_lines.append(f"{k}={v}")
+            if k in _SKIP_IN_DOCUMENT:
+                continue
+            scalar = _safe_scalar(v)
+            if scalar is not None:
+                text_lines.append(f"{k}={scalar}")
+
         if extra:
             for k, v in extra.items():
-                text_lines.append(f"extra_{k}={v}")
+                scalar = _safe_scalar(v)
+                if scalar is not None:
+                    text_lines.append(f"extra_{k}={scalar}")
+
         document = "\n".join(text_lines)
 
+        # Metadata — key stats as scalars
         metadata: Dict[str, Any] = {
             "strategy_name": strategy_name,
             "symbol": symbol,
             "timeframe": timeframe,
         }
-
-        key_stats = [
-            "return_pct",
-            "sharpe_ratio",
-            "profit_factor",
-            "max_drawdown_pct",
-            "num_trades",
-            "score",
-        ]
-        for k in key_stats:
+        for k in _KEY_STATS:
             if k in stats:
-                metadata[f"stat_{k}"] = stats[k]
+                scalar = _safe_scalar(stats[k])
+                if scalar is not None:
+                    metadata[f"stat_{k}"] = scalar
 
         if extra:
-            metadata.update({f"extra_{k}": v for k, v in extra.items()})
+            for k, v in extra.items():
+                scalar = _safe_scalar(v)
+                if scalar is not None:
+                    metadata[f"extra_{k}"] = scalar
 
-        self.collection.add(ids=[doc_id], documents=[document], metadatas=[metadata])
-        logger.info("ResearchMemory: stored result for %s", doc_id)
+        # upsert — idempotent, safe for repeated research cycles
+        self.collection.upsert(ids=[doc_id], documents=[document], metadatas=[metadata])
+        logger.info("ResearchMemory: upserted result for %s", doc_id)
 
     def query_similar(
         self,
@@ -93,32 +135,40 @@ class ResearchMemory:
         - Single key  : {key: {"$eq": value}}
         - Multi key   : {"$and": [{key: {"$eq": value}}, ...]}
         - Pre-built   : pass through as-is if already contains "$and"/"$or"
+
+        Clamps n_results to collection size — ChromaDB throws if n_results
+        exceeds the number of documents in the collection.
         """
         chroma_where: Optional[Dict[str, Any]] = None
 
         if where:
-            # Already a pre-built ChromaDB operator expression — pass through
             if "$and" in where or "$or" in where:
                 chroma_where = where
             elif len(where) > 1:
-                # Multiple plain key-value pairs — wrap with $and + $eq
                 chroma_where = {
                     "$and": [{k: {"$eq": v}} for k, v in where.items()]
                 }
             else:
-                # Single key-value pair — wrap with $eq
                 k, v = next(iter(where.items()))
                 chroma_where = {k: {"$eq": v}}
 
+        # Guard: empty collection — return empty result immediately
+        count = self.collection.count()
+        if count == 0:
+            return {"ids": [[]], "documents": [[]], "metadatas": [[]], "distances": [[]]}
+
+        safe_n = max(1, min(n_results, count))
+
         res = self.collection.query(
             query_texts=[text],
-            n_results=n_results,
+            n_results=safe_n,
             **({"where": chroma_where} if chroma_where else {}),
         )
         logger.info(
-            "ResearchMemory: query text='%s' -> %d results",
-            text,
+            "ResearchMemory: query '%s' -> %d results (collection=%d)",
+            text[:60],
             len(res.get("ids", [[]])[0]),
+            count,
         )
         return res
 
@@ -130,17 +180,12 @@ class ResearchMemory:
         text: Optional[str] = None,
         n_results: int = 10,
     ) -> List[Dict[str, Any]]:
-        """Convenience helper for Phase 4 candidate filtering.
-
-        Returns a list of neighbor dicts with basic fields extracted, filtered
-        by symbol/timeframe metadata.
+        """Convenience helper for candidate filtering and parent scoring.
 
         Query text priority:
-        1. Explicit ``text`` argument (caller provides full query string)
-        2. ``strategy`` dict — builds a rich query from entry/exit rules
+        1. Explicit `text` argument
+        2. `strategy` dict — builds rich query from entry/exit rules
         3. Fallback: minimal symbol/timeframe string
-
-        The richer the query text, the more meaningful the similarity search.
         """
         if text:
             query_text = text
@@ -156,7 +201,6 @@ class ResearchMemory:
                 f"regime={strategy.get('params', {}).get('regime_type', '')}",
             ])
         else:
-            # Minimal fallback — less meaningful but avoids errors
             query_text = f"symbol={symbol}\ntimeframe={timeframe}"
 
         res = self.query_similar(
@@ -184,7 +228,7 @@ class ResearchMemory:
             neighbors.append(neighbor)
 
         logger.info(
-            "ResearchMemory: query_similar_strategies symbol=%s timeframe=%s -> %d neighbors",
+            "ResearchMemory: query_similar_strategies %s/%s -> %d neighbors",
             symbol,
             timeframe,
             len(neighbors),
