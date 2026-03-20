@@ -1245,7 +1245,7 @@
     "name": "core15_XAUUSDm_M15_6060",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "active",
+    "status": "disabled",
     "score": 3.4881436462073294,
     "stats": {
       "initial_equity": 10000.0,
@@ -1913,7 +1913,7 @@
     "name": "core15_XAUUSDm_M15_358f",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "active",
+    "status": "disabled",
     "score": 3.1982390903420717,
     "stats": {
       "initial_equity": 10000.0,
@@ -2015,7 +2015,7 @@
     "name": "core15_XAUUSDm_M15_4206",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "active",
+    "status": "disabled",
     "score": 2.2957934578725023,
     "stats": {
       "initial_equity": 10000.0,
@@ -2465,7 +2465,7 @@
     "name": "core15_XAUUSDm_M15_942d",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "active",
+    "status": "disabled",
     "score": 1.259803133846969,
     "stats": {
       "initial_equity": 10000.0,

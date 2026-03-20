@@ -115,12 +115,82 @@ def _apply_live_degradation(pool) -> None:
 def _memory_is_clearly_bad(
     candidate, memory: ResearchMemory, symbol: str, timeframe: str
 ) -> bool:
-    """AGGRESSIVE++: disable memory veto to allow full exploration.
+    """Use ResearchMemory to veto only *obviously* bad pattern families.
 
-    We still *write* results into ResearchMemory for later analysis, but we
-    do not block any candidate purely because its neighbors looked bad.
-    All selection pressure comes from backtest + WF filters.
+    AGGRESSIVE++ variant:
+    - Only considers veto if we have at least 5 neighbors in memory
+      for the same symbol/timeframe.
+    - A neighbor counts as "bad" if any of:
+      * Sharpe < 0.0
+      * Profit factor < 1.0
+      * Return_pct < -5.0
+      * WF Sharpe < 0.05
+    - We veto the candidate only if >= 70%% of neighbors are bad AND
+      at least 5 neighbors are bad.
+
+    This keeps exploration wide, but avoids repeatedly evolving into
+    pattern families that have been consistently terrible historically.
     """
+    try:
+        params = getattr(candidate, "params", {}) or {}
+        query_text = "\n".join([
+            f"symbol={symbol}",
+            f"timeframe={timeframe}",
+            f"long_entry={getattr(candidate, 'long_entry_rule', '')}",
+            f"short_entry={getattr(candidate, 'short_entry_rule', '')}",
+            f"exit={getattr(candidate, 'exit_rule', '')}",
+            f"sl_atr={getattr(candidate, 'sl_atr_mult', '')}",
+            f"tp_atr={getattr(candidate, 'tp_atr_mult', '')}",
+            f"regime={params.get('regime_type', '')}",
+        ])
+
+        neighbors = memory.query_similar_strategies(
+            symbol=symbol,
+            timeframe=timeframe,
+            text=query_text,
+            n_results=10,
+        )
+    except Exception as e:
+        logger.exception("ResearchMemory veto query failed for %s: %s", getattr(candidate, "name", "?"), e)
+        return False
+
+    if not neighbors:
+        return False
+
+    total = len(neighbors)
+    if total < 5:
+        # Not enough evidence to veto
+        return False
+
+    bad = 0
+    for nb in neighbors:
+        sharpe = nb.get("stat_sharpe_ratio")
+        pf = nb.get("stat_profit_factor")
+        ret_pct = nb.get("stat_return_pct")
+        wf_sharpe = nb.get("stat_wf_overall_sharpe")
+
+        is_bad = False
+        if sharpe is not None and sharpe < 0.0:
+            is_bad = True
+        if pf is not None and pf < 1.0:
+            is_bad = True
+        if ret_pct is not None and ret_pct < -5.0:
+            is_bad = True
+        if wf_sharpe is not None and wf_sharpe < 0.05:
+            is_bad = True
+
+        if is_bad:
+            bad += 1
+
+    if bad >= 5 and bad / float(total) >= 0.7:
+        logger.info(
+            "Memory veto: skipping candidate %s (bad_neighbors=%d/%d)",
+            getattr(candidate, "name", "<unnamed>"),
+            bad,
+            total,
+        )
+        return True
+
     return False
 
 
