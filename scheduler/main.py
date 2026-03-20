@@ -525,18 +525,11 @@ def job_execute_signals() -> None:
             {r.name: round(r.score, 3) for r in active_strats},
         )
 
-        results = execute_signals_for_symbol(
+        results, summary = execute_signals_for_symbol(
             symbol, TIMEFRAME, feat, pool, risk_perc=risk_perc
         )
 
-        if not results:
-            logger.info(
-                "No signals generated for %s %s — "
-                "entry conditions not met or all blocked by guards",
-                symbol,
-                TIMEFRAME,
-            )
-        else:
+        if results:
             for sig, reason in results:
                 logger.info(
                     "Signal result: strategy=%s symbol=%s dir=%s reason=%s",
@@ -545,6 +538,53 @@ def job_execute_signals() -> None:
                     sig.direction,
                     reason,
                 )
+        else:
+            if summary.get("blocked_daily_limits"):
+                logger.info(
+                    "No signals executed for %s %s — blocked by daily limits",
+                    symbol,
+                    TIMEFRAME,
+                )
+            elif summary.get("no_strategies_in_pool"):
+                logger.info(
+                    "No signals executed for %s %s — no active/exploratory strategies in pool",
+                    symbol,
+                    TIMEFRAME,
+                )
+            elif summary.get("no_strategies_with_edge"):
+                logger.info(
+                    "No signals executed for %s %s — no strategies passed regime/edge filters",
+                    symbol,
+                    TIMEFRAME,
+                )
+            else:
+                no_entry_active = summary.get("no_entry_active", False)
+                no_entry_exploratory = summary.get("no_entry_exploratory", False)
+
+                if no_entry_active and not no_entry_exploratory:
+                    logger.info(
+                        "No signals executed for %s %s — entry conditions not met (active strategies)",
+                        symbol,
+                        TIMEFRAME,
+                    )
+                elif no_entry_exploratory and not no_entry_active:
+                    logger.info(
+                        "No signals executed for %s %s — entry conditions not met (exploratory strategies)",
+                        symbol,
+                        TIMEFRAME,
+                    )
+                elif no_entry_active and no_entry_exploratory:
+                    logger.info(
+                        "No signals executed for %s %s — entry conditions not met (active + exploratory)",
+                        symbol,
+                        TIMEFRAME,
+                    )
+                else:
+                    logger.info(
+                        "No signals executed for %s %s — see execute_signals_for_symbol logs for details",
+                        symbol,
+                        TIMEFRAME,
+                    )
 
     logger.info("Scheduler: job_execute_signals done")
 
