@@ -117,15 +117,12 @@ def _memory_is_clearly_bad(
 ) -> bool:
     """Heuristic filter using ResearchMemory to skip clearly bad pattern families.
 
-    For a candidate strategy, query similar past strategies for the same
-    symbol/timeframe and check if most neighbors have obviously poor stats.
-
-    This is intentionally conservative: if there is not enough data or the
-    signal is weak, we do NOT skip the candidate.
+    AGGRESSIVE MODE: significantly relaxed. Only veto a candidate if
+    *all* sufficiently similar neighbors in memory are clearly terrible.
+    This allows much wider exploration while still blocking obviously
+    toxic pattern families.
     """
     try:
-        # Build a rich query text from the candidate's rules so the embedding
-        # is meaningful. Fall back to symbol/timeframe if rules unavailable.
         params = getattr(candidate, "params", {}) or {}
         query_text = "\n".join([
             f"symbol={symbol}",
@@ -138,7 +135,6 @@ def _memory_is_clearly_bad(
             f"regime={params.get('regime_type', '')}",
         ])
 
-        # Let query_similar handle where-filter wrapping — do NOT pre-build $and here
         res = memory.query_similar(
             text=query_text,
             n_results=8,
@@ -190,12 +186,14 @@ def _memory_is_clearly_bad(
         ):
             bad_votes += 1
 
+    # If we barely have any signal, don't veto
     if total_votes < 3:
         return False
 
-    if bad_votes >= max(3, total_votes // 2):
+    # AGGRESSIVE: only skip if *every* neighbor looks bad
+    if bad_votes >= total_votes:
         logger.info(
-            "Memory filter: skipping candidate %s (bad_neighbors=%d/%d)",
+            "Memory filter (aggressive): skipping candidate %s (bad_neighbors=%d/%d)",
             candidate.name,
             bad_votes,
             total_votes,
@@ -376,10 +374,10 @@ def job_research_strategies() -> None:
 
                 pf = float(eval_result.get("profit_factor", 0.0) or 0.0)
                 sharpe = float(eval_result.get("sharpe_ratio", 0.0) or 0.0)
-                if pf < 1.15 or sharpe < 0.2:
+                if pf < 1.05 or sharpe < 0.15:
                     logger.info(
                         "Skipping strategy %s due to weak performance "
-                        "(Phase 3 floors pf>=1.15, sharpe>=0.2): "
+                        "(AGGRESSIVE Phase 3 floors pf>=1.05, sharpe>=0.15): "
                         "pf=%.2f sharpe=%.2f",
                         strat.name,
                         pf,
@@ -399,10 +397,10 @@ def job_research_strategies() -> None:
                 eval_result.update(mc)
 
                 wf_sharpe = float(eval_result.get("wf_overall_sharpe", 0.0) or 0.0)
-                if wf_sharpe < 0.1:
+                if wf_sharpe < 0.05:
                     logger.info(
-                        "Skipping strategy %s due to weak walk-forward Sharpe "
-                        "(wf_sharpe=%.3f < 0.10)",
+                        "Skipping strategy %s due to very weak walk-forward Sharpe "
+                        "(AGGRESSIVE wf_sharpe=%.3f < 0.05)",
                         strat.name,
                         wf_sharpe,
                     )
@@ -434,9 +432,13 @@ def job_research_strategies() -> None:
                 range_ret = regime.get("ranging", {}).get("return_pct", 0.0)
                 num_trades = eval_result.get("num_trades", 0.0) or 0.0
 
-                if _should_promote(eval_result) and wf_sharpe >= 0.2:
+                # AGGRESSIVE promotion thresholds:
+                # - Active if core stats are good and wf_sharpe >= 0.15
+                # - Exploratory if accepted and wf_sharpe >= 0.08
+                # - Otherwise disabled
+                if _should_promote(eval_result) and wf_sharpe >= 0.15:
                     status = "active"
-                elif eval_result.get("accepted") and wf_sharpe >= 0.1:
+                elif eval_result.get("accepted") and wf_sharpe >= 0.08:
                     if num_trades >= 20 and trend_ret > 0.0 and range_ret > -10.0:
                         status = "exploratory"
                     else:
