@@ -121,7 +121,7 @@
     "name": "core15_XAUUSDm_M15_5678",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "active",
+    "status": "disabled",
     "score": 1.403270203293991,
     "stats": {
       "accepted": true,
@@ -239,7 +239,7 @@
     "name": "core15_XAUUSDm_M15_7941",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "active",
+    "status": "disabled",
     "score": 1.277948969564055,
     "stats": {
       "accepted": true,
@@ -357,7 +357,7 @@
     "name": "core15_XAUUSDm_M15_8154",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "active",
+    "status": "disabled",
     "score": 1.4670671877893422,
     "stats": {
       "accepted": true,
@@ -475,7 +475,7 @@
     "name": "core15_XAUUSDm_M15_9190",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "active",
+    "status": "disabled",
     "score": 1.3366473231284732,
     "stats": {
       "accepted": true,
