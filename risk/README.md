@@ -42,15 +42,22 @@ Risk thresholds are defined in `config.py` via `RiskConfig`:
 ```python
 @dataclass
 class RiskConfig:
-    max_risk_per_trade_pct: float = 0.5  # 0.5% of equity
-    max_portfolio_drawdown_pct: float = 20.0
-    max_open_positions: int = 10
-    # Optional daily guardrails (can be disabled via the *_enabled flags)
-    max_daily_drawdown_pct: float = 3.0
-    max_trades_per_day: int = 5
-    daily_limits_enabled: bool = False
+    # Per-trade risk cap: percentage of current equity risked per trade
+    max_risk_per_trade_pct: float = 1.0       # 1.0% of equity (AGGRESSIVE++ profile)
 
-risk_config = RiskConfig()
+    # Portfolio-level circuit breaker: disable all active strategies if
+    # drawdown from peak exceeds this threshold
+    max_portfolio_drawdown_pct: float = 20.0  # 20%
+
+    # Maximum simultaneous open positions across all strategies
+    max_open_positions: int = 10
+
+    # Daily guardrails — enabled by default for live prop-firm style accounts.
+    # Set daily_limits_enabled = False to disable entirely (e.g. for backtesting
+    # or paper trading where daily limits are not meaningful).
+    max_daily_drawdown_pct: float = 3.0       # lock trading if daily DD > 3%
+    max_trades_per_day: int = 5               # lock trading after N trades/day
+    daily_limits_enabled: bool = True         # guard active by default
 ```
 
 Fields used by `risk/manager.py`:
@@ -74,16 +81,31 @@ Fields used by **daily guardrails** (in `execution/live_state_utils.py`):
   - Calls `validate_trade(account, req, equity_peak)`.
   - Only if `allowed=True` does it send the MT5 order.
 
+- `execution/signals.execute_signals_for_symbol(...)`:
+  - Uses `risk_config.max_daily_drawdown_pct`, `risk_config.max_trades_per_day`,
+    and `risk_config.daily_limits_enabled` via `can_open_new_trade(...)` to
+    enforce **daily DD / trade-count caps** before any new trade is opened.
+
 - `scheduler/main.py`:
   - Uses `risk_config.max_risk_per_trade_pct` when computing
-    `risk_perc = min(0.5, risk_config.max_risk_per_trade_pct)` for live signals.
+    `risk_perc = min(1.0, risk_config.max_risk_per_trade_pct)` for live signals.
+
+- `execution/live_monitor.update_live_stats(...)`:
+  - Uses `risk_config.max_portfolio_drawdown_pct` as the **circuit breaker
+    threshold**: when drawdown from `peak_equity` exceeds this level, all
+    `active` strategies in the pool are automatically disabled.
 
 ## Gotchas / Notes
 
 - `equity_peak` is provided by the caller (e.g. from live monitor state). If it
   is `<= 0`, drawdown checks are skipped (`reason="no_peak"`).
-- Changes to `RiskConfig` affect both backtest behavior (indirectly, via
+- Changes to `RiskConfig` affect both backtest behaviour (indirectly, via
   sizing/limits in execution) and live trading. Adjust carefully and keep
   `config.py` under version control.
-- Daily risk limits (DD / trade count caps) are enforced **separately** from
+- Daily risk limits (DD / trade-count caps) are enforced **separately** from
   these checks, so both layers can block trades independently.
+
+## Changelog (Docs)
+
+- 2026-03-21: Updated for new `RiskConfig` defaults (1% per trade, 20% portfolio DD,
+  daily guardrails enabled by default) and clarified circuit-breaker usage.

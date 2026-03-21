@@ -1,14 +1,15 @@
-# strategies/ – Definitions, Generation & Pool
+# strategies/ – Definitions, Generation, Pool & Live-Aware Degradation
 
 ## Purpose
 
 This module defines **how strategies are represented**, how new ones are
-generated/evolved, and how the global strategy pool is stored.
+generated/evolved, and how the global strategy pool is stored and maintained.
 
 It provides:
 
 - A serializable `StrategyDefinition` config object (no executable code).
-- Tools to generate and mutate strategies (Ichimoku + Fibonacci-biased).
+- Tools to generate and mutate strategies (MA/RSI-focused with legacy
+  Ichimoku/Fibonacci support).
 - A `StrategyPool` abstraction to track scores, statuses, stats, and (via
   other modules) live performance.
 
@@ -21,6 +22,8 @@ It provides:
       feature rows (via backtest engine).
     - `exit_rule` – string expression controlling exits (used in backtests).
     - `stop_loss_pips`, `take_profit_pips` – SL/TP distances.
+    - Optional `sl_atr_mult`, `tp_atr_mult` – ATR-based SL/TP multipliers used
+      by the backtest engine when present (with ATR column in features).
     - `params` – free-form dict used by generator/evolution.
   - Methods:
     - `to_dict()` / `from_dict()` – JSON-serializable representation.
@@ -90,15 +93,22 @@ It provides:
     - `name`, `symbol`, `timeframe`.
     - `status` – `"candidate"`, `"active"`, `"exploratory"`, `"disabled"`, `"retired"`.
     - `score` – numeric score (e.g. from evaluation metrics).
-    - `stats` – evaluation stats dict (including `strategy_explain`).
+    - `stats` – evaluation stats dict (including `strategy_explain`), not just
+      flat floats.
   - `StrategyPool` dataclass:
     - `strategies: Dict[str, StrategyRecord]` – keyed by strategy name.
-    - `to_dict()` / `from_dict()` – JSON serialization helpers.
+    - `to_dict()` / `from_dict()` – JSON serialization helpers with defensive
+      handling of corrupt/mismatched records (bad entries are skipped with a
+      warning instead of crashing the whole pool load).
     - `upsert_strategy(strategy, stats, score, status="candidate")` – insert or
       update a strategy in the pool.
     - `set_status(name, status)` – manually change status.
     - `top_strategies(status_filter="candidate", limit=10)` – convenience
       method to fetch the highest scoring strategies.
+    - `prune(max_inactive=_MAX_INACTIVE_STRATEGIES)` – removes the lowest-scoring
+      **inactive** strategies (candidate/disabled/retired) beyond a size cap,
+      while never pruning `active` / `exploratory` entries. This prevents
+      `pool_state.json` from growing without bound.
   - File layout:
     - `pool_state.json` stores the serialized pool, managed via:
       - `load_pool()` – load or create an empty pool.
@@ -111,7 +121,7 @@ It provides:
   - Used by:
     - Research/evolution (`evolve_population`, `load_population`).
     - Live execution (`execution.signals.execute_signals_for_symbol`) to
-      reconstruct `StrategyDefinition` for `active` strategies.
+      reconstruct `StrategyDefinition` for `active` and `exploratory` strategies.
 
 - `strategies/pool_state.json`
   - Serialized `StrategyPool`.
@@ -120,31 +130,38 @@ It provides:
     are applied using aggregated stats from
     `execution/strategy_live_stats.json`, demoting clearly underperforming
     `active` strategies back to `candidate`.
+  - Periodically pruned (via `StrategyPool.prune`) to keep the number of
+    inactive strategies bounded.
 
 ## How It’s Used
 
 - `scheduler/job_research_strategies()`:
   - Loads `StrategyPool` via `load_pool()`.
-  - Selects best parent strategies for a symbol/timeframe using their scores.
+  - Selects best parent strategies for a symbol/timeframe using **hybrid**
+    scores (base score + small memory-based bonus from `ResearchMemory`).
   - Uses `evolve_population(...)` to generate new candidate strategies.
   - Backtests and evaluates each candidate.
   - Calls `pool.upsert_strategy(...)` with status determined by promotion logic
-    (active/candidate/disabled).
+    (active/candidate/exploratory/disabled).
   - Stores evaluation results in vector memory.
   - Finally, applies a conservative **live degradation pass** that:
     - reads `execution/strategy_live_stats.json`,
     - for each `active` strategy with enough live trades and good backtests,
       demotes it to `candidate` if live returns are significantly negative or
       far below backtest expectations.
-  - Calls `save_pool(pool)` at the end of the job.
+    - sends a WhatsApp alert via `send_strategy_degradation_alert(...)` when a
+      strategy is degraded.
+  - Calls `pool.prune(...)` to remove excess inactive strategies and then
+    `save_pool(pool)` at the end of the job.
 
 - `execution/signals.execute_signals_for_symbol(...)`:
   - Reads `StrategyPool` via `load_pool()`.
   - Filters for `status in {"active", "exploratory"}` for the given symbol/timeframe.
-  - Computes a regime-specific edge per strategy from `strategy_explain.regime_pnl` and
+  - Computes a regime-specific edge per strategy from
+    `strategy_explain.regime_pnl[regime_label].return_pct` and
     prefers strategies with better historical performance in the **current regime**.
   - Optionally caps the number of strategies considered per run (e.g. top 5 active,
-    top 3 exploratory) to keep live behavior focused.
+    top 3 exploratory) to keep live behaviour focused.
   - Loads each selected `StrategyDefinition` from `strategies/generated/`.
   - Evaluates entry rules on the latest feature row and routes allowed signals to
     `engine.execute_trade(...)`, using **normal risk** for `active` strategies and a
@@ -161,3 +178,11 @@ It provides:
 - Live degradation rules are intentionally conservative and one-sided: they
   only downgrade strategies that are clearly failing; they do not auto-upgrade
   based on live performance alone.
+- `StrategyPool.from_dict(...)` is defensive: a single corrupt record in
+  `pool_state.json` no longer crashes the whole scheduler; the bad record is
+  skipped with a warning.
+
+## Changelog (Docs)
+
+- 2026-03-21: Documented ATR-based SL/TP support, defensive pool loading,
+  pool pruning, and the live degradation + WhatsApp alert integration.

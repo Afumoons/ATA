@@ -7,6 +7,8 @@ using ChromaDB. It allows the system (and you/Clio) to:
 
 - Persist summaries of backtests/evaluations over time.
 - Query for similar strategies based on text descriptions.
+- Guide the evolutionary search process using past experience
+  (bonuses/penalties and vetoes).
 - Build AI-assisted research workflows on top of stored results.
 
 It is intentionally lightweight and used only for **research / analysis**;
@@ -25,7 +27,7 @@ live trading logic does not depend on it at runtime.
       - Gets/creates a collection named `cfg.collection_name`.
     - `store_strategy_result(strategy_name, symbol, timeframe, stats, extra=None)`:
       - Builds a document id: `"{strategy_name}:{symbol}:{timeframe}"`.
-      - Constructs a simple newline-separated text document summarizing:
+      - Constructs a simple newline-separated text document summarising:
         - strategy id, symbol, timeframe,
         - all key/value pairs in `stats`,
         - optional extra fields.
@@ -40,7 +42,7 @@ live trading logic does not depend on it at runtime.
       - Convenience helper for Phase 4 candidate filtering.
       - Builds a rich query text from a strategy's rules (`long_entry_rule`, `short_entry_rule`, `exit_rule`, `sl_atr_mult`, `tp_atr_mult`, `regime_type`) when available, or falls back to a minimal `symbol`/`timeframe` query.
       - Restricts neighbors to the same `symbol` and `timeframe` via metadata filters.
-      - Returns a list of neighbor dicts with key `stat_*` fields (Sharpe, PF, return %, etc.) extracted from metadata.
+      - Returns a list of neighbor dicts with key `stat_*` fields (Sharpe, PF, return %, WF Sharpe, etc.) extracted from metadata.
 
 ## How It’s Used
 
@@ -48,11 +50,17 @@ live trading logic does not depend on it at runtime.
   - For each evaluated strategy, after computing `eval_result` (which includes
     base stats + robustness + `strategy_explain`):
     - Calls `memory.store_strategy_result(...)` to persist the result in Chroma.
-  - This creates a long-lived corpus of strategy behaviors that can be
-    searched/analysed later.
+  - When selecting parents:
+    - Uses `query_similar_strategies(...)` to compute a **memory-based bonus**
+      per parent, nudging the GA toward pattern families that worked well in
+      the past and away from families that consistently underperformed.
+  - When filtering candidates:
+    - Uses `_memory_is_clearly_bad(...)` with `query_similar_strategies(...)` to
+      **veto only obviously bad pattern families** (e.g. neighbors with mostly
+      negative Sharpe, low PF, bad returns, very weak WF Sharpe).
 
 - Future AI-assisted research (Level 1/2):
-  - Scripts can call `ResearchMemory.query_similar(...)` to:
+  - Scripts can call `ResearchMemory.query_similar(...)` directly to:
     - Find strategies with similar performance/regime patterns.
     - Look up "what has worked before" under certain conditions.
 
@@ -72,4 +80,10 @@ live trading logic does not depend on it at runtime.
   usage, you may want to prune which fields are serialized or add a compact
   JSON representation.
 - Because this is research-only, failures in Chroma should **not** block live
-  trading, but they will reduce the richness of future analysis.
+  trading, but they will reduce the richness of future analysis and the
+  strength of memory-based guidance.
+
+## Changelog (Docs)
+
+- 2026-03-21: Clarified usage in `job_research_strategies` for bonuses/vetoes
+  and kept general configuration guidance.
