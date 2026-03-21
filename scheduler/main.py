@@ -57,6 +57,37 @@ EXEC_MIN_TRADES      = 200   # minimum trades for statistical significance
 EXEC_MAX_CONSEC_LOSS = 15    # max consecutive losses — controls tail risk
 MAX_EXECUTION_POOL   = 10    # hard cap on strategies executing per cycle
 
+# Regime-adaptive sort weight (Stage 3).
+# Final sort key = wf_sharpe × (1 + clip(regime_ret / REGIME_SORT_NORM, -0.5, +0.5))
+# Default 20.0 → ±20% regime return = ±50% weight adjustment.
+# Increase to reduce regime influence; decrease to amplify.
+REGIME_SORT_NORM     = 20.0
+
+
+# ---------------------------------------------------------------------------
+# Regime-adaptive execution scoring
+# ---------------------------------------------------------------------------
+
+def _hybrid_regime_score(rec, current_regime: str) -> float:
+    """Regime-aware sort key for execution pool selection.
+
+    hybrid = wf_sharpe × regime_bonus
+    regime_bonus = 1 + clip(regime_ret / REGIME_SORT_NORM, -0.5, +0.5)
+
+    WF Sharpe stays dominant. Regime return nudges ranking by ±50% at most.
+    At REGIME_SORT_NORM=20: +20% regime_ret → bonus 1.5, -20% → bonus 0.5.
+    Missing regime data → bonus 1.0 (pure WF Sharpe sort, no discrimination).
+    """
+    s = rec.stats or {}
+    wf = float(s.get("wf_overall_sharpe", 0) or 0)
+    ex = s.get("strategy_explain", {}) or {}
+    regime_pnl = ex.get("regime_pnl", {}) or {}
+    regime_ret = float(
+        (regime_pnl.get(current_regime, {}) or {}).get("return_pct", 0)
+    )
+    regime_bonus = 1.0 + max(-0.5, min(0.5, regime_ret / REGIME_SORT_NORM))
+    return wf * regime_bonus
+
 
 def job_update_data() -> None:
     """Fetch latest OHLC, compute features + regimes for managed symbols."""
@@ -583,19 +614,37 @@ def job_execute_signals() -> None:
         quality_strats = [r for r in unique_strats if _passes_quality(r)]
 
         # ------------------------------------------------------------------ #
-        # Stage 3 — Cap to MAX_EXECUTION_POOL                                 #
-        # Already sorted by WF Sharpe so top-N is the best N unique strategies #
+        # Stage 3 — Regime-adaptive sort + cap to MAX_EXECUTION_POOL          #
+        #                                                                      #
+        # Detect the current market regime from the latest feature bar, then  #
+        # sort quality_strats by hybrid_regime_score = wf × regime_bonus.     #
+        # This promotes strategies that historically profit in the current     #
+        # regime and suppresses those that historically lose in it, without    #
+        # discarding any strategy entirely (WF Sharpe still dominates).       #
+        #                                                                      #
+        # Fallback: if regime cannot be detected, sort by WF Sharpe alone.   #
         # ------------------------------------------------------------------ #
-        final_strats = quality_strats[:MAX_EXECUTION_POOL]
+        current_regime = "unknown"
+        try:
+            current_regime = str(feat.iloc[-1].get("regime", "unknown"))
+        except Exception:
+            pass
+
+        final_strats = sorted(
+            quality_strats,
+            key=lambda r: _hybrid_regime_score(r, current_regime),
+            reverse=True,
+        )[:MAX_EXECUTION_POOL]
 
         if len(active_strats) != len(final_strats):
             n_dupes = len(active_strats) - len(unique_strats)
             n_filtered = len(unique_strats) - len(quality_strats)
             n_capped = max(0, len(quality_strats) - len(final_strats))
             logger.info(
-                "Execution pool %s %s: %d active → %d unique (-%d clones) "
-                "→ %d quality (-%d below threshold) → %d final (-%d capped)",
-                symbol, TIMEFRAME,
+                "Execution pool %s %s [regime=%s]: "
+                "%d active → %d unique (-%d clones) "
+                "→ %d quality (-%d threshold) → %d final (-%d capped)",
+                symbol, TIMEFRAME, current_regime,
                 len(active_strats), len(unique_strats), n_dupes,
                 len(quality_strats), n_filtered,
                 len(final_strats), n_capped,
@@ -620,11 +669,11 @@ def job_execute_signals() -> None:
             )
 
         logger.info(
-            "Executing signals for %s %s — %d strategies "
-            "(wf_sharpe range: %.2f – %.2f)",
-            symbol, TIMEFRAME, len(final_strats),
-            float((final_strats[-1].stats or {}).get("wf_overall_sharpe", 0) or 0),
-            float((final_strats[0].stats or {}).get("wf_overall_sharpe", 0) or 0),
+            "Executing signals for %s %s [regime=%s] — %d strategies "
+            "(hybrid_score range: %.2f – %.2f)",
+            symbol, TIMEFRAME, current_regime, len(final_strats),
+            _hybrid_regime_score(final_strats[-1], current_regime),
+            _hybrid_regime_score(final_strats[0], current_regime),
         )
 
         # Build a temporary pool view containing only final_strats for signals
