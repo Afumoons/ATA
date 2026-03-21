@@ -130,6 +130,23 @@ def _crossover(a: StrategyDefinition, b: StrategyDefinition) -> StrategyDefiniti
     )
 
 
+def _strategy_fingerprint(strat: StrategyDefinition) -> str:
+    """Canonical fingerprint for deduplication.
+
+    Two strategies are considered duplicates if they share the same
+    long_entry_rule + short_entry_rule + exit_rule + sl_atr_mult + tp_atr_mult.
+    This catches clones produced when crossover/mutation picks identical
+    params from near-identical elite parents.
+    """
+    return "|".join([
+        str(strat.long_entry_rule or ""),
+        str(strat.short_entry_rule or ""),
+        str(strat.exit_rule or ""),
+        str(getattr(strat, "sl_atr_mult", "")),
+        str(getattr(strat, "tp_atr_mult", "")),
+    ])
+
+
 def evolve_population(
     symbol: str,
     timeframe: str,
@@ -138,7 +155,13 @@ def evolve_population(
 ) -> List[StrategyDefinition]:
     """Given existing strategies with scores, produce a new generation.
 
-    If no scored strategies are available, generates a fresh population.
+    Deduplication fix: tracks rule fingerprints to prevent identical
+    strategies from filling the population. Crossover/mutation of similar
+    elite parents frequently produces clones — without this guard, up to
+    8/20 slots can be wasted on the same strategy evaluated redundantly.
+
+    Falls back to random_strategy() if a unique candidate cannot be
+    produced within max_attempts, ensuring the population is always full.
     """
     if not scored_strategies:
         return [random_strategy(symbol, timeframe) for _ in range(cfg.population_size)]
@@ -147,26 +170,56 @@ def evolve_population(
     elites_count = max(1, int(cfg.elite_frac * cfg.population_size))
     elites = [s for s, _ in scored_strategies[:elites_count]]
 
-    new_pop: List[StrategyDefinition] = list(elites)  # elites carried forward
+    new_pop: List[StrategyDefinition] = []
+    seen_fingerprints: set = set()
+
+    # Carry elites forward, deduplicating even among them
+    for strat in elites:
+        fp = _strategy_fingerprint(strat)
+        if fp not in seen_fingerprints:
+            new_pop.append(strat)
+            seen_fingerprints.add(fp)
+
+    max_attempts_per_slot = 10  # avoid infinite loop if search space is exhausted
+    attempts = 0
 
     while len(new_pop) < cfg.population_size:
+        attempts += 1
         r = random.random()
+
         if r < cfg.mutation_rate:
             parent = random.choice(elites)
-            new_pop.append(_mutate_strategy(parent))
+            candidate = _mutate_strategy(parent)
         elif r < cfg.mutation_rate + cfg.crossover_rate:
             if len(elites) >= 2:
                 p1, p2 = random.sample(elites, 2)
             else:
                 p1 = p2 = elites[0]
-            new_pop.append(_crossover(p1, p2))
+            candidate = _crossover(p1, p2)
         else:
-            new_pop.append(random_strategy(symbol, timeframe))
+            candidate = random_strategy(symbol, timeframe)
+
+        fp = _strategy_fingerprint(candidate)
+        if fp not in seen_fingerprints:
+            new_pop.append(candidate)
+            seen_fingerprints.add(fp)
+            attempts = 0  # reset attempt counter on success
+        elif attempts >= max_attempts_per_slot:
+            # Can't find a unique variant — force a random strategy
+            candidate = random_strategy(symbol, timeframe)
+            fp = _strategy_fingerprint(candidate)
+            new_pop.append(candidate)
+            seen_fingerprints.add(fp)
+            attempts = 0
+            logger.debug(
+                "Evolution: forced random strategy after %d failed unique attempts",
+                max_attempts_per_slot,
+            )
 
     logger.info(
-        "Evolution: generated new population of %d strategies (elites=%d)",
+        "Evolution: generated new population of %d unique strategies (elites=%d)",
         len(new_pop),
-        elites_count,
+        len([s for s in new_pop if s in elites]),
     )
     return new_pop
 
