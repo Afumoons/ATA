@@ -27,15 +27,35 @@ logger = get_logger(__name__)
 BASE_DIR = Path(__file__).resolve().parents[1]
 
 # Symbols/timeframes to manage (can be externalized/configured later)
-# MANAGED_SYMBOLS = ["XAUUSDm", "BTCUSDm"]
-MANAGED_SYMBOLS = ["XAUUSDm"]
+# To manage both gold and BTC on M15:
+MANAGED_SYMBOLS = ["XAUUSDm", "BTCUSDm"]
 TIMEFRAME = "M15"
 
 # Minimum edge score for a strategy to be allowed to execute live signals.
-# Strategies with score <= this value will be flagged but still pass through
-# to execute_signals_for_symbol (which has its own regime-based guard).
-# Set to 0.0 to only warn; raise to e.g. 0.5 to hard-block low-edge strategies.
 MINIMUM_EDGE_FOR_EXECUTION = 0.0
+
+# ---------------------------------------------------------------------------
+# Execution pool filtering — applied every cycle before signal generation.
+#
+# Problem: research cycle can promote 40+ active strategies, many of which
+# are statistical clones (identical rules, same backtest result). Running all:
+#   1. Wastes computation (45 risk-manager calls per bar)
+#   2. Creates hidden concentration risk — 14 clones firing the same signal
+#      in the same direction effectively multiplies position size 14x
+#   3. Floods logs with redundant noise
+#
+# Three-stage filter:
+#   Stage 1 — Deduplicate: drop clones with identical backtest fingerprints,
+#             keeping only the one with the highest WF Sharpe per cluster.
+#   Stage 2 — Quality gate: enforce minimum robustness thresholds.
+#   Stage 3 — Cap: limit final pool to MAX_EXECUTION_POOL.
+# ---------------------------------------------------------------------------
+
+EXEC_MIN_WF_SHARPE   = 2.0   # walk-forward Sharpe — primary robustness gate
+EXEC_MAX_DD_PCT      = 12.0  # max drawdown ceiling (absolute %)
+EXEC_MIN_TRADES      = 200   # minimum trades for statistical significance
+EXEC_MAX_CONSEC_LOSS = 15    # max consecutive losses — controls tail risk
+MAX_EXECUTION_POOL   = 10    # hard cap on strategies executing per cycle
 
 
 def job_update_data() -> None:
@@ -516,23 +536,105 @@ def job_execute_signals() -> None:
             )
             continue
 
-        low_edge = [r for r in active_strats if r.score <= MINIMUM_EDGE_FOR_EXECUTION]
+        # ------------------------------------------------------------------ #
+        # Stage 1 — Deduplicate clones                                        #
+        # Two strategies are clones if their backtest stats are identical to   #
+        # 4 decimal places. Keep the one with the highest WF Sharpe per       #
+        # cluster. Sort descending by WF Sharpe first so the best member of   #
+        # each clone cluster is always the one that survives.                  #
+        # ------------------------------------------------------------------ #
+        strats_by_wf = sorted(
+            active_strats,
+            key=lambda r: float((r.stats or {}).get("wf_overall_sharpe", 0) or 0),
+            reverse=True,
+        )
+        seen_fps: set = set()
+        unique_strats = []
+        for rec in strats_by_wf:
+            s = rec.stats or {}
+            fp = (
+                round(float(s.get("sharpe_ratio", 0) or 0), 4),
+                round(float(s.get("profit_factor", 0) or 0), 4),
+                round(float(s.get("return_pct", 0) or 0), 4),
+                int(s.get("num_trades", 0) or 0),
+            )
+            if fp not in seen_fps:
+                seen_fps.add(fp)
+                unique_strats.append(rec)
+
+        # ------------------------------------------------------------------ #
+        # Stage 2 — Quality gate                                              #
+        # ------------------------------------------------------------------ #
+        def _passes_quality(rec) -> bool:
+            s = rec.stats or {}
+            ex = s.get("strategy_explain", {}) or {}
+            risk_beh = ex.get("risk_behavior", {}) or {}
+            wf  = float(s.get("wf_overall_sharpe", 0) or 0)
+            dd  = abs(float(s.get("max_drawdown_pct", 0) or 0))
+            tr  = int(s.get("num_trades", 0) or 0)
+            cls = int(risk_beh.get("max_consecutive_losses", 0) or 0)
+            return (
+                wf  >= EXEC_MIN_WF_SHARPE
+                and dd  <= EXEC_MAX_DD_PCT
+                and tr  >= EXEC_MIN_TRADES
+                and cls <= EXEC_MAX_CONSEC_LOSS
+            )
+
+        quality_strats = [r for r in unique_strats if _passes_quality(r)]
+
+        # ------------------------------------------------------------------ #
+        # Stage 3 — Cap to MAX_EXECUTION_POOL                                 #
+        # Already sorted by WF Sharpe so top-N is the best N unique strategies #
+        # ------------------------------------------------------------------ #
+        final_strats = quality_strats[:MAX_EXECUTION_POOL]
+
+        if len(active_strats) != len(final_strats):
+            n_dupes = len(active_strats) - len(unique_strats)
+            n_filtered = len(unique_strats) - len(quality_strats)
+            n_capped = max(0, len(quality_strats) - len(final_strats))
+            logger.info(
+                "Execution pool %s %s: %d active → %d unique (-%d clones) "
+                "→ %d quality (-%d below threshold) → %d final (-%d capped)",
+                symbol, TIMEFRAME,
+                len(active_strats), len(unique_strats), n_dupes,
+                len(quality_strats), n_filtered,
+                len(final_strats), n_capped,
+            )
+
+        if not final_strats:
+            logger.warning(
+                "No strategies passed execution filter for %s %s "
+                "(active=%d unique=%d quality=%d) — "
+                "consider relaxing EXEC_MIN_WF_SHARPE or EXEC_MAX_DD_PCT",
+                symbol, TIMEFRAME,
+                len(active_strats), len(unique_strats), len(quality_strats),
+            )
+            continue
+
+        low_edge = [r for r in final_strats if r.score <= MINIMUM_EDGE_FOR_EXECUTION]
         if low_edge:
             logger.warning(
-                "Low/negative edge strategies active for %s %s: %s (scores: %s)",
+                "Low/negative edge strategies in execution pool for %s %s: %s",
                 symbol, TIMEFRAME,
-                [r.name for r in low_edge],
                 {r.name: round(r.score, 3) for r in low_edge},
             )
 
         logger.info(
-            "Executing signals for %s %s — %d active strategies (scores: %s)",
-            symbol, TIMEFRAME, len(active_strats),
-            {r.name: round(r.score, 3) for r in active_strats},
+            "Executing signals for %s %s — %d strategies "
+            "(wf_sharpe range: %.2f – %.2f)",
+            symbol, TIMEFRAME, len(final_strats),
+            float((final_strats[-1].stats or {}).get("wf_overall_sharpe", 0) or 0),
+            float((final_strats[0].stats or {}).get("wf_overall_sharpe", 0) or 0),
         )
 
+        # Build a temporary pool view containing only final_strats for signals
+        # (execute_signals_for_symbol filters by pool.strategies internally)
+        from ..strategies.pool import StrategyPool
+        filtered_pool = StrategyPool()
+        filtered_pool.strategies = {r.name: r for r in final_strats}
+
         results, summary = execute_signals_for_symbol(
-            symbol, TIMEFRAME, feat, pool, risk_perc=risk_perc
+            symbol, TIMEFRAME, feat, filtered_pool, risk_perc=risk_perc
         )
 
         if results:
