@@ -19,6 +19,7 @@ from ..backtests.evaluation import evaluate_strategy
 from ..backtests.walkforward import walk_forward_test
 from ..backtests.monte_carlo import monte_carlo_pnl
 from ..execution.live_monitor import update_live_stats
+from ..execution import live_observer
 from ..execution.signals import execute_signals_for_symbol
 from ..execution.strategy_live_stats import load_all_strategy_stats, MAX_RECENT_TRADES
 from ..vector_memory.research_memory import ResearchMemory
@@ -755,7 +756,7 @@ def job_live_monitor() -> None:
 
     # Non-invasive observability: snapshot open MT5 positions for monitoring.
     try:
-        snapshot_open_trades()
+        live_observer.snapshot_open_trades()
     except Exception:
         logger.exception("job_live_monitor snapshot_open_trades error")
 
