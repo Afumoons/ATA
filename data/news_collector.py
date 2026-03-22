@@ -14,12 +14,11 @@ stable, no authentication required, updated in real-time.
 Run via scheduler: job_update_news() once daily at 06:00 UTC.
 """
 
+import json
 import time
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Optional
-import json
-import re
 
 import requests
 import pandas as pd
@@ -40,116 +39,183 @@ _ENDPOINTS = {
 }
 
 # Currencies that directly affect gold (XAUUSDm)
-_RELEVANT_CURRENCIES = {"USD", "EUR", "GBP", "JPY", "CNY", "XAU"}
+_RELEVANT_CURRENCIES = {"USD", "EUR", "GBP", "JPY", "CNY", "CHF", "XAU"}
 
-# Gold-specific high-impact events — always flag these regardless of FF impact level
+# Gold-specific keywords — flag events regardless of FF impact label
 _GOLD_KEYWORDS = {
     "non-farm", "nfp", "fomc", "federal reserve", "fed rate", "powell",
-    "cpi", "inflation", "ppi", "gdp", "retail sales", "jobless",
-    "unemployment", "interest rate", "monetary policy",
-    "gold", "treasury", "bond", "yield",
+    "cpi", "inflation", "core cpi", "ppi", "gdp", "retail sales", "jobless",
+    "unemployment", "initial claims", "interest rate", "monetary policy",
+    "quantitative", "balance sheet", "taper", "gold", "treasury", "bond",
+    "yield", "ism", "pmi", "china", "geopolit",
 }
 
 _IMPACT_MAP = {
-    "High":   3,
-    "Medium": 2,
-    "Low":    1,
+    "High":    3,
+    "Medium":  2,
+    "Low":     1,
     "Holiday": 0,
 }
 
-_REQUEST_TIMEOUT = 15  # seconds
+_REQUEST_TIMEOUT = 15
 _RETRY_ATTEMPTS = 3
-_RETRY_DELAY = 5  # seconds
+_RETRY_DELAY = 5
+
+
+# ---------------------------------------------------------------------------
+# Internal helpers
+# ---------------------------------------------------------------------------
+
+def _normalize_event(ev: dict) -> dict:
+    """Lowercase all keys — resilient to FF field name casing changes."""
+    return {k.lower(): v for k, v in ev.items()}
+
+
+def _get_field(ev: dict, *candidates: str, default: str = "") -> str:
+    """Return the first non-empty value among candidate field names."""
+    for key in candidates:
+        val = ev.get(key)
+        if val is not None and str(val).strip():
+            return str(val).strip()
+    return default
 
 
 def _parse_ff_datetime(date_str: str, time_str: str) -> Optional[datetime]:
-    """Parse Forex Factory date + time strings to UTC datetime.
+    """Parse Forex Factory date/time fields to a UTC-aware datetime.
 
-    FF format examples:
-        date: "Jan 10, 2025"
-        time: "1:30pm" | "All Day" | "Tentative" | ""
+    Handles two formats that FF has used:
+
+    Format A (legacy — pre-2026):
+        date = "Mar 23, 2026"       (human-readable, US Eastern implied)
+        time = "10:00am"            (separate field, US Eastern)
+
+    Format B (current — 2026+):
+        date = "2026-03-23T10:00:00-04:00"   (ISO 8601 with tz offset)
+        time = <field absent or empty>
+
+    Both are handled transparently. If neither parses, returns None and
+    the event is silently skipped.
     """
-    try:
-        dt = datetime.strptime(date_str.strip(), "%b %d, %Y")
-    except ValueError:
-        try:
-            dt = datetime.strptime(date_str.strip(), "%B %d, %Y")
-        except ValueError:
-            logger.debug("Could not parse FF date: %s", date_str)
-            return None
+    date_str = (date_str or "").strip()
+    if not date_str:
+        return None
 
-    # Parse time — default to 00:00 for all-day / tentative events
+    # --- Format B: ISO 8601 with timezone offset ---
+    # Detected by presence of 'T' + timezone indicator
+    if "T" in date_str and (date_str.endswith("Z") or "+" in date_str
+                            or (date_str.count("-") >= 3)):
+        try:
+            dt = datetime.fromisoformat(date_str)
+            return dt.astimezone(timezone.utc).replace(tzinfo=timezone.utc)
+        except (ValueError, TypeError):
+            pass
+        # Fallback: strip timezone and treat as UTC
+        try:
+            clean = date_str[:19]  # "2026-03-23T10:00:00"
+            dt = datetime.strptime(clean, "%Y-%m-%dT%H:%M:%S")
+            return dt.replace(tzinfo=timezone.utc)
+        except ValueError:
+            pass
+
+    # --- Format A: "Mon DD, YYYY" + separate time field ---
+    for fmt in ("%b %d, %Y", "%B %d, %Y", "%m/%d/%Y"):
+        try:
+            dt = datetime.strptime(date_str, fmt)
+            break
+        except ValueError:
+            continue
+    else:
+        logger.debug("Could not parse FF date: %r (time: %r)", date_str, time_str)
+        return None
+
     time_str = (time_str or "").strip().lower()
     if not time_str or time_str in {"all day", "tentative", ""}:
-        return dt.replace(tzinfo=timezone.utc)
+        return dt.replace(hour=0, minute=0, tzinfo=timezone.utc)
 
-    try:
-        # Handle "1:30pm", "10:00am" etc.
-        t = datetime.strptime(time_str, "%I:%M%p")
-        dt = dt.replace(hour=t.hour, minute=t.minute, tzinfo=timezone.utc)
-        # FF times are US Eastern — convert to UTC (+5h EST, +4h EDT)
-        # Simple heuristic: EDT (Mar-Nov), EST (Nov-Mar)
-        month = dt.month
-        utc_offset = 4 if 3 <= month <= 11 else 5
-        dt = dt + timedelta(hours=utc_offset)
-        return dt
-    except ValueError:
-        # Time unparseable — return date at midnight UTC
-        return dt.replace(tzinfo=timezone.utc)
+    for fmt in ("%I:%M%p", "%I%p", "%H:%M"):
+        try:
+            t = datetime.strptime(time_str, fmt)
+            dt = dt.replace(hour=t.hour, minute=t.minute)
+            break
+        except ValueError:
+            continue
+
+    # US Eastern → UTC: EDT (Mar–Nov) = UTC+4, EST (Nov–Mar) = UTC+5
+    utc_offset = 4 if 3 <= dt.month <= 11 else 5
+    return dt.replace(tzinfo=timezone.utc) + timedelta(hours=utc_offset)
 
 
-def _is_gold_relevant(event: dict) -> bool:
-    """Return True if event is likely to impact gold price."""
-    currency = (event.get("country") or "").upper()
+def _is_gold_relevant(ev: dict) -> bool:
+    """Return True if a (normalized, lowercase-key) event impacts gold."""
+    currency = _get_field(ev, "country", "currency", "curr").upper()
     if currency not in _RELEVANT_CURRENCIES:
         return False
-    title = (event.get("title") or "").lower()
-    if any(kw in title for kw in _GOLD_KEYWORDS):
+    title = _get_field(ev, "title", "name", "event").lower()
+    # All High-impact USD events
+    if currency == "USD" and _get_field(ev, "impact") == "High":
         return True
-    # Include all High-impact USD events
-    impact = (event.get("impact") or "").strip()
-    if currency == "USD" and impact == "High":
-        return True
-    return False
+    return any(kw in title for kw in _GOLD_KEYWORDS)
 
 
 def _fetch_with_retry(url: str) -> Optional[list]:
-    """Fetch JSON from URL with retry logic."""
+    """Fetch JSON from URL with retry + soft 404 handling."""
     headers = {
         "User-Agent": (
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
             "AppleWebKit/537.36 (KHTML, like Gecko) "
-            "Chrome/120.0.0.0 Safari/537.36"
+            "Chrome/122.0.0.0 Safari/537.36"
         ),
         "Accept": "application/json",
+        "Referer": "https://www.forexfactory.com/",
     }
     for attempt in range(1, _RETRY_ATTEMPTS + 1):
         try:
             resp = requests.get(url, headers=headers, timeout=_REQUEST_TIMEOUT)
+
+            # 404 = FF hasn't published this period yet (common on Sundays)
+            if resp.status_code == 404:
+                logger.warning(
+                    "FF calendar endpoint not available yet (404): %s", url
+                )
+                return None
+
             resp.raise_for_status()
             return resp.json()
+
         except requests.exceptions.HTTPError as e:
-            logger.warning("HTTP error fetching %s (attempt %d/%d): %s", url, attempt, _RETRY_ATTEMPTS, e)
+            logger.warning(
+                "HTTP error fetching %s (attempt %d/%d): %s",
+                url, attempt, _RETRY_ATTEMPTS, e,
+            )
         except requests.exceptions.RequestException as e:
-            logger.warning("Request error fetching %s (attempt %d/%d): %s", url, attempt, _RETRY_ATTEMPTS, e)
+            logger.warning(
+                "Request error fetching %s (attempt %d/%d): %s",
+                url, attempt, _RETRY_ATTEMPTS, e,
+            )
         except json.JSONDecodeError as e:
             logger.warning("JSON decode error from %s: %s", url, e)
             return None
+
         if attempt < _RETRY_ATTEMPTS:
             time.sleep(_RETRY_DELAY)
+
     return None
 
 
+# ---------------------------------------------------------------------------
+# Public API
+# ---------------------------------------------------------------------------
+
 def fetch_ff_calendar(weeks: int = 2) -> pd.DataFrame:
-    """Fetch Forex Factory calendar for this week and next week.
+    """Fetch Forex Factory calendar for this week (and optionally next week).
 
     Returns a DataFrame with columns:
-        datetime_utc  : pd.Timestamp (UTC-aware)
-        currency      : str
-        impact        : int (0-3)
-        event_name    : str
-        forecast      : str
-        previous      : str
+        datetime_utc     : pd.Timestamp (UTC-aware)
+        currency         : str
+        impact           : int (0-3)
+        event_name       : str
+        forecast         : str
+        previous         : str
         is_gold_relevant : bool
     """
     all_events: list[dict] = []
@@ -160,38 +226,48 @@ def fetch_ff_calendar(weeks: int = 2) -> pd.DataFrame:
         logger.info("Fetching FF calendar: %s", url)
         data = _fetch_with_retry(url)
         if data:
-            all_events.extend(data)
+            # Normalize field name casing immediately
+            normalized = [_normalize_event(ev) for ev in data]
+            all_events.extend(normalized)
             logger.info("Fetched %d events from %s", len(data), key)
         else:
-            logger.warning("Failed to fetch FF calendar: %s", key)
+            logger.warning("Skipped FF calendar endpoint: %s", key)
 
     if not all_events:
         logger.error("No events fetched from Forex Factory")
         return pd.DataFrame()
 
     rows = []
+    skipped = 0
     for ev in all_events:
-        dt = _parse_ff_datetime(
-            ev.get("date", ""),
-            ev.get("time", ""),
-        )
+        date_val = _get_field(ev, "date", "dateline", "event_date")
+        time_val = _get_field(ev, "time", "event_time")
+        dt = _parse_ff_datetime(date_val, time_val)
         if dt is None:
+            skipped += 1
             continue
 
-        impact_str = (ev.get("impact") or "").strip()
+        impact_str = _get_field(ev, "impact", "importance")
         impact_int = _IMPACT_MAP.get(impact_str, 0)
-        currency = (ev.get("country") or "").upper()
-        title = (ev.get("title") or "").strip()
+        currency   = _get_field(ev, "country", "currency", "curr").upper()
+        title      = _get_field(ev, "title", "name", "event")
 
         rows.append({
-            "datetime_utc": pd.Timestamp(dt),
-            "currency": currency,
-            "impact": impact_int,
-            "event_name": title,
-            "forecast": str(ev.get("forecast") or ""),
-            "previous": str(ev.get("previous") or ""),
+            "datetime_utc":     pd.Timestamp(dt),
+            "currency":         currency,
+            "impact":           impact_int,
+            "event_name":       title,
+            "forecast":         _get_field(ev, "forecast", "fore"),
+            "previous":         _get_field(ev, "previous", "prev"),
             "is_gold_relevant": _is_gold_relevant(ev),
         })
+
+    if skipped:
+        logger.warning(
+            "Skipped %d/%d FF events — date parse failed "
+            "(FF may have changed format again)",
+            skipped, len(all_events),
+        )
 
     df = pd.DataFrame(rows)
     if df.empty:
@@ -230,8 +306,7 @@ def save_news_events(df: pd.DataFrame) -> None:
 def update_news_events() -> pd.DataFrame:
     """Fetch latest FF calendar and merge with existing data.
 
-    Deduplicates by (datetime_utc, event_name) so re-runs are idempotent.
-    Returns the merged DataFrame.
+    Deduplicates by (datetime_utc, event_name) — idempotent on re-runs.
     """
     logger.info("Updating news events from Forex Factory...")
 
@@ -245,17 +320,19 @@ def update_news_events() -> pd.DataFrame:
     if existing.empty:
         combined = new_df
     else:
-        # Drop old events that are being refreshed (same datetime+name)
         cutoff = new_df["datetime_utc"].min()
         old_events = existing[existing["datetime_utc"] < cutoff]
         combined = pd.concat([old_events, new_df], ignore_index=True)
-        combined = combined.drop_duplicates(
-            subset=["datetime_utc", "event_name"], keep="last"
-        ).sort_values("datetime_utc").reset_index(drop=True)
+        combined = (
+            combined
+            .drop_duplicates(subset=["datetime_utc", "event_name"], keep="last")
+            .sort_values("datetime_utc")
+            .reset_index(drop=True)
+        )
 
     save_news_events(combined)
 
-    # Log upcoming high-impact events (next 48h)
+    # Log upcoming high-impact gold events (next 48h)
     now = pd.Timestamp.now(tz="UTC")
     upcoming = combined[
         (combined["datetime_utc"] >= now) &
