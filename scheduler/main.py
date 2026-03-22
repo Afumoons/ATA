@@ -746,12 +746,19 @@ def job_execute_signals() -> None:
 # ---------------------------------------------------------------------------
 
 def job_live_monitor() -> None:
-    """Update live stats and enforce portfolio-level safety."""
+    """Update live stats, enforce portfolio-level safety, and snapshot open trades."""
     logger.info("Scheduler: job_live_monitor start")
     try:
         update_live_stats()
     except Exception as e:
         logger.exception("job_live_monitor error: %s", e)
+
+    # Non-invasive observability: snapshot open MT5 positions for monitoring.
+    try:
+        snapshot_open_trades()
+    except Exception:
+        logger.exception("job_live_monitor snapshot_open_trades error")
+
     logger.info("Scheduler: job_live_monitor done")
 
 
