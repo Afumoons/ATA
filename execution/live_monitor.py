@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import json
+import os
+import tempfile
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import List, Optional
-import json
 
 import MetaTrader5 as mt5
 
@@ -19,12 +21,8 @@ logger = get_logger(__name__)
 LIVE_STATE_PATH = Path(__file__).resolve().parent / "equity_history.json"
 CLOSED_TRADES_STATE_PATH = Path(__file__).resolve().parent / "closed_trades_state.json"
 
-# Rolling window for equity history and processed deal IDs.
-# At 5-min intervals, 2016 points = ~1 week of history retained in memory.
-_MAX_EQUITY_HISTORY = 2016
-# Keep only the last N deal IDs to prevent unbounded JSON growth.
-# At ~5 deals/day, 1000 covers ~6 months.
-_MAX_PROCESSED_DEAL_IDS = 1000
+_MAX_EQUITY_HISTORY = 2016      # ~1 week at 5-min intervals
+_MAX_PROCESSED_DEAL_IDS = 1000  # ~6 months at ~5 deals/day
 
 
 @dataclass
@@ -35,7 +33,6 @@ class LiveStats:
 
     @classmethod
     def from_dict(cls, data: dict) -> "LiveStats":
-        """Safe deserialization — tolerates missing or extra keys."""
         return cls(
             equity_history=data.get("equity_history") or [],
             times=data.get("times") or [],
@@ -51,7 +48,7 @@ class LiveStats:
 
 
 # ---------------------------------------------------------------------------
-# Public helpers — used by execution/engine.py
+# Public helpers
 # ---------------------------------------------------------------------------
 
 def _get_account_equity() -> float:
@@ -62,9 +59,9 @@ def _get_account_equity() -> float:
 
 
 def get_equity_peak() -> float:
-    """Return the all-time equity peak stored in the live state file.
+    """Return all-time equity peak from live state file.
 
-    Used by execution/engine.py to feed the drawdown guard in risk/manager.py.
+    Used by execution/engine.py to feed the portfolio drawdown guard.
     Falls back to current equity if no history is available.
     """
     if LIVE_STATE_PATH.exists():
@@ -76,7 +73,6 @@ def get_equity_peak() -> float:
                 return peak
         except Exception:
             logger.exception("Failed to read equity peak from live state")
-    # Fallback: return current equity (drawdown guard disabled effectively)
     try:
         return _get_account_equity()
     except Exception:
@@ -106,28 +102,39 @@ def _load_closed_trades_state() -> dict:
 
 def _save_closed_trades_state(state: dict) -> None:
     try:
-        with CLOSED_TRADES_STATE_PATH.open("w", encoding="utf-8") as f:
-            json.dump(state, f, indent=2)
+        fd, tmp = tempfile.mkstemp(
+            dir=CLOSED_TRADES_STATE_PATH.parent,
+            prefix=".closed_trades_",
+            suffix=".tmp",
+        )
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                json.dump(state, f, indent=2)
+            os.replace(tmp, CLOSED_TRADES_STATE_PATH)
+        except Exception:
+            try:
+                os.unlink(tmp)
+            except OSError:
+                pass
+            raise
     except Exception:
         logger.exception("Failed to save closed_trades_state")
 
 
 def _update_daily_pnl_from_closed_deals() -> None:
-    """Pull new closed MT5 deals and register PnL into DailyState and per-strategy stats.
+    """Pull new closed MT5 deals and register PnL into DailyState + per-strategy stats.
 
-    Bug fixes vs original:
-    - _get_account_equity() called ONCE before loop, not per-deal (was N MT5 calls)
-    - Strategy name lookup uses full comment with no truncation assumption —
-      matches execution/engine.py which stores full name (truncated to 20 chars there,
-      so we strip prefix and accept whatever remains)
-    - processed_deal_ids capped at _MAX_PROCESSED_DEAL_IDS to prevent unbounded growth
-    - datetime.utcnow() replaced with datetime.now(timezone.utc) (utcnow deprecated 3.12+)
+    Strategy attribution fix (Exness):
+    Exness strips special characters from MT5 order comments, so comment-based
+    strategy lookup ("clio-auto-{name}") does not work. We instead read from
+    ticket_strategy_map.json which is written by signals.py at trade placement.
     """
+    from .signals import get_strategy_for_ticket  # avoid circular import at module level
+
     state = _load_closed_trades_state()
-
     now = datetime.now(timezone.utc)
-    last_check_str = state.get("last_check_time")
 
+    last_check_str = state.get("last_check_time")
     if last_check_str:
         try:
             from_time = datetime.fromisoformat(last_check_str)
@@ -146,14 +153,11 @@ def _update_daily_pnl_from_closed_deals() -> None:
         return
 
     if deals is None:
-        logger.warning(
-            "mt5.history_deals_get returned None (from=%s to=%s)", from_time, now
-        )
+        logger.warning("mt5.history_deals_get returned None (from=%s to=%s)", from_time, now)
         return
 
     processed_ids = set(state.get("processed_deal_ids") or [])
 
-    # Fetch equity once — avoids an MT5 round-trip per deal
     try:
         equity_now = _get_account_equity()
     except Exception:
@@ -168,10 +172,8 @@ def _update_daily_pnl_from_closed_deals() -> None:
         if ticket is None or ticket in processed_ids:
             continue
 
-        # Only realized close/exit events
         if close_entry_code is not None:
-            entry = getattr(deal, "entry", None)
-            if entry != close_entry_code:
+            if getattr(deal, "entry", None) != close_entry_code:
                 continue
 
         pnl = float(getattr(deal, "profit", 0.0))
@@ -179,19 +181,32 @@ def _update_daily_pnl_from_closed_deals() -> None:
         try:
             register_trade_pnl(pnl=pnl, current_equity=equity_now)
 
-            # execution/engine.py sets comment = "clio-auto-{strategy_name[:20]}"
-            comment = getattr(deal, "comment", "") or ""
-            if comment.startswith("clio-auto-"):
-                strategy_name = comment[len("clio-auto-"):]
-                if strategy_name:
-                    try:
-                        register_strategy_pnl(
-                            strategy_name=strategy_name, pnl=pnl
-                        )
-                    except Exception:
-                        logger.exception(
-                            "Failed to update StrategyLiveStats for %s", strategy_name
-                        )
+            # Look up strategy via ticket map (Exness-safe attribution)
+            order_ticket = getattr(deal, "order", ticket)
+            strategy_name = get_strategy_for_ticket(int(order_ticket))
+
+            if strategy_name:
+                try:
+                    register_strategy_pnl(strategy_name=strategy_name, pnl=pnl)
+                except Exception:
+                    logger.exception(
+                        "Failed to update StrategyLiveStats for %s", strategy_name
+                    )
+            else:
+                # Fallback: try comment (works on non-Exness brokers)
+                comment = getattr(deal, "comment", "") or ""
+                if comment.startswith("clio-auto-"):
+                    name_from_comment = comment[len("clio-auto-"):]
+                    if name_from_comment:
+                        try:
+                            register_strategy_pnl(
+                                strategy_name=name_from_comment, pnl=pnl
+                            )
+                        except Exception:
+                            logger.exception(
+                                "Failed to update StrategyLiveStats from comment for %s",
+                                name_from_comment,
+                            )
 
             processed_ids.add(ticket)
             trades_processed += 1
@@ -199,9 +214,8 @@ def _update_daily_pnl_from_closed_deals() -> None:
         except Exception:
             logger.exception("Failed to register PnL for deal %s", ticket)
 
-    # Cap processed_deal_ids size — keep most recent N
+    # Cap processed IDs size
     if len(processed_ids) > _MAX_PROCESSED_DEAL_IDS:
-        # Can't sort by time here so keep largest ticket numbers (most recent)
         processed_ids = set(
             sorted(processed_ids, reverse=True)[:_MAX_PROCESSED_DEAL_IDS]
         )
@@ -212,23 +226,22 @@ def _update_daily_pnl_from_closed_deals() -> None:
 
     if trades_processed:
         logger.info(
-            "Processed %d new closed deals into DailyState + StrategyLiveStats",
+            "Processed %d new closed deals → DailyState + StrategyLiveStats",
             trades_processed,
         )
 
 
 # ---------------------------------------------------------------------------
-# Main entry point called by scheduler
+# Main entry point
 # ---------------------------------------------------------------------------
 
 def update_live_stats() -> None:
-    """Update equity history, enforce portfolio drawdown circuit breaker,
-    and wire closed MT5 deals into DailyState + per-strategy stats.
+    """Update equity history, enforce portfolio circuit breaker,
+    and wire closed deals into DailyState + per-strategy stats.
     """
     equity = _get_account_equity()
     now_iso = datetime.now(timezone.utc).isoformat()
 
-    # Load existing state
     if LIVE_STATE_PATH.exists():
         try:
             with LIVE_STATE_PATH.open("r", encoding="utf-8") as f:
@@ -244,7 +257,6 @@ def update_live_stats() -> None:
     stats.times.append(now_iso)
     stats.peak_equity = max(stats.peak_equity, equity)
 
-    # Rolling window — prevent unbounded file growth
     if len(stats.equity_history) > _MAX_EQUITY_HISTORY:
         stats.equity_history = stats.equity_history[-_MAX_EQUITY_HISTORY:]
         stats.times = stats.times[-_MAX_EQUITY_HISTORY:]
@@ -254,16 +266,12 @@ def update_live_stats() -> None:
 
     logger.info("Live monitor: equity=%.2f peak=%.2f", equity, stats.peak_equity)
 
-    # Wire closed deals into DailyState + per-strategy stats
     try:
         _update_daily_pnl_from_closed_deals()
     except Exception:
         logger.exception("Error while updating DailyState from closed deals")
 
-    # ------------------------------------------------------------------ #
-    # Portfolio-level circuit breaker                                     #
-    # Uses risk_config.max_portfolio_drawdown_pct — was hardcoded 30.0   #
-    # ------------------------------------------------------------------ #
+    # Portfolio-level circuit breaker
     if stats.peak_equity > 0:
         dd_pct = (stats.peak_equity - equity) / stats.peak_equity * 100.0
         threshold = risk_config.max_portfolio_drawdown_pct
@@ -275,14 +283,10 @@ def update_live_stats() -> None:
                 if rec.status == "active":
                     rec.status = "disabled"
                     disabled_names.append(rec.name)
-
             if disabled_names:
                 save_pool(pool)
                 logger.warning(
-                    "Circuit breaker triggered: portfolio DD %.2f%% > %.2f%% — "
+                    "Circuit breaker: portfolio DD %.2f%% > %.2f%% — "
                     "disabled %d active strategies: %s",
-                    dd_pct,
-                    threshold,
-                    len(disabled_names),
-                    disabled_names,
+                    dd_pct, threshold, len(disabled_names), disabled_names,
                 )

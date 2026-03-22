@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+import json
+import os
+import tempfile
 from dataclasses import dataclass
-from typing import List, Tuple, Any, Dict
+from pathlib import Path
+from typing import List, Tuple, Any, Dict, Optional
 
 import pandas as pd
 
@@ -16,32 +20,90 @@ logger = get_logger(__name__)
 ACTIVE_REGIME_EDGE_THRESHOLD = 0.0
 EXPLORATORY_REGIME_EDGE_THRESHOLD = -10.0
 
+# ---------------------------------------------------------------------------
+# Ticket → strategy name mapping
+#
+# Exness MT5 strips special characters (-, _) from order comments, so the
+# comment field cannot be used for strategy attribution. Instead we persist
+# a side-channel mapping: ticket_id → full_strategy_name, written here
+# immediately after a successful order_send(), and read by live_monitor.py
+# when processing closed deals via history_deals_get().
+# ---------------------------------------------------------------------------
+_TICKET_MAP_PATH = Path(__file__).resolve().parent / "ticket_strategy_map.json"
+_MAX_TICKET_MAP_SIZE = 2000  # keep last N entries; at ~10 trades/day = ~6 months
 
-@dataclass
-class Signal:
-    strategy: StrategyDefinition
-    direction: str  # "long" or "short"
 
+def _load_ticket_map() -> Dict[str, str]:
+    if _TICKET_MAP_PATH.exists():
+        try:
+            with _TICKET_MAP_PATH.open("r", encoding="utf-8") as f:
+                data = json.load(f)
+            if isinstance(data, dict):
+                return data
+        except Exception:
+            logger.exception("Failed to load ticket_strategy_map")
+    return {}
+
+
+def _save_ticket_map(mapping: Dict[str, str]) -> None:
+    try:
+        if len(mapping) > _MAX_TICKET_MAP_SIZE:
+            # Keep most recent by ticket number
+            keys = sorted(mapping.keys(), key=lambda k: int(k) if k.isdigit() else 0)
+            mapping = {k: mapping[k] for k in keys[-_MAX_TICKET_MAP_SIZE:]}
+        data = json.dumps(mapping, indent=2)
+        fd, tmp = tempfile.mkstemp(
+            dir=_TICKET_MAP_PATH.parent, prefix=".ticket_map_", suffix=".tmp"
+        )
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                f.write(data)
+            os.replace(tmp, _TICKET_MAP_PATH)
+        except Exception:
+            try:
+                os.unlink(tmp)
+            except OSError:
+                pass
+            raise
+    except Exception:
+        logger.exception("Failed to save ticket_strategy_map")
+
+
+def register_ticket(ticket: int, strategy_name: str) -> None:
+    """Persist ticket → full strategy name for later PnL attribution."""
+    mapping = _load_ticket_map()
+    mapping[str(ticket)] = strategy_name
+    _save_ticket_map(mapping)
+    logger.debug("Registered ticket %s → %s", ticket, strategy_name)
+
+
+def get_strategy_for_ticket(ticket: int) -> Optional[str]:
+    """Look up full strategy name for an MT5 ticket. Returns None if not found."""
+    return _load_ticket_map().get(str(ticket))
+
+
+# ---------------------------------------------------------------------------
+# Pip params per instrument
+# ---------------------------------------------------------------------------
 
 def _pip_params(symbol: str) -> tuple[float, float]:
-    """Return (pip_size, pip_value_per_lot) for a given symbol.
-
-    Pip size is the price distance of 1 pip.
-    Pip value per lot is the $ value of 1 pip movement per standard lot.
-
-    Metals  (XAU/XAG): pip_size=0.01,  pip_value=1.0  ($1/pip/lot)
-    Crypto  (BTC/ETH):  pip_size=1.0,   pip_value=1.0  ($1/pip/lot, 1 lot=1 coin)
-    Forex   (default):  pip_size=0.0001, pip_value=10.0 ($10/pip/lot)
-
-    Without this, BTC SL of 150 pips × 0.0001 = $0.015 — rejected as
-    'Invalid stops' by broker (retcode 10016).
-    """
+    """Return (pip_size, pip_value_per_lot)."""
     sym = symbol.upper()
     if "XAU" in sym or "XAG" in sym:
         return 0.01, 1.0
     if "BTC" in sym or "ETH" in sym or "LTC" in sym or "XRP" in sym:
         return 1.0, 1.0
     return 0.0001, 10.0
+
+
+# ---------------------------------------------------------------------------
+# Signal dataclass + generation
+# ---------------------------------------------------------------------------
+
+@dataclass
+class Signal:
+    strategy: StrategyDefinition
+    direction: str  # "long" or "short"
 
 
 def generate_signals_for_row(
@@ -54,18 +116,14 @@ def generate_signals_for_row(
     for strat in strategies:
         long_hit = _eval_rule(row, strat.long_entry_rule)
         short_hit = _eval_rule(row, strat.short_entry_rule)
-
         logger.debug(
-            "Entry eval: strategy=%s long_rule='%s' -> %s | short_rule='%s' -> %s",
-            strat.name, strat.long_entry_rule, long_hit,
-            strat.short_entry_rule, short_hit,
+            "Entry eval: strategy=%s long=%s short=%s",
+            strat.name, long_hit, short_hit,
         )
-
         if long_hit:
             signals.append(Signal(strategy=strat, direction="long"))
         if short_hit:
             signals.append(Signal(strategy=strat, direction="short"))
-
     return signals
 
 
@@ -89,6 +147,10 @@ def _map_current_to_regime_pnl_label(current_regime: str) -> str:
     return "unknown"
 
 
+# ---------------------------------------------------------------------------
+# Main execution
+# ---------------------------------------------------------------------------
+
 def execute_signals_for_symbol(
     symbol: str,
     timeframe: str,
@@ -105,7 +167,7 @@ def execute_signals_for_symbol(
     }
 
     if features_df.empty:
-        logger.warning("execute_signals_for_symbol: empty features_df for %s %s", symbol, timeframe)
+        logger.warning("Empty features_df for %s %s", symbol, timeframe)
         summary["no_strategies_with_edge"] = True
         return [], summary
 
@@ -117,11 +179,6 @@ def execute_signals_for_symbol(
     from ..execution.live_monitor import _get_account_equity
 
     current_equity = _get_account_equity()
-    logger.debug(
-        "Daily limits check: symbol=%s equity=%.2f max_dd_pct=%.2f max_trades=%d enabled=%s",
-        symbol, current_equity, risk_config.max_daily_drawdown_pct,
-        risk_config.max_trades_per_day, risk_config.daily_limits_enabled,
-    )
 
     if not can_open_new_trade(
         current_equity=current_equity,
@@ -130,7 +187,7 @@ def execute_signals_for_symbol(
         enabled=risk_config.daily_limits_enabled,
     ):
         logger.info(
-            "Daily limits prevent opening new trades for %s %s (equity=%.2f)",
+            "Daily limits prevent new trades for %s %s (equity=%.2f)",
             symbol, timeframe, current_equity,
         )
         summary["blocked_daily_limits"] = True
@@ -146,7 +203,7 @@ def execute_signals_for_symbol(
     ]
 
     if not active_records and not exploratory_records:
-        logger.info("No active or exploratory strategies in pool for %s %s", symbol, timeframe)
+        logger.info("No active/exploratory strategies for %s %s", symbol, timeframe)
         summary["no_strategies_in_pool"] = True
         return [], summary
 
@@ -155,16 +212,14 @@ def execute_signals_for_symbol(
     def _filter_and_rank(records, tier: str) -> List[Any]:
         if not records:
             return []
-
         if regime_label == "unknown":
             logger.warning(
-                "Unknown regime for %s %s — skipping regime filter, passing all %d %s strategies",
+                "Unknown regime for %s %s — passing all %d %s strategies",
                 symbol, timeframe, len(records), tier,
             )
             return records
 
         threshold = ACTIVE_REGIME_EDGE_THRESHOLD if tier == "active" else EXPLORATORY_REGIME_EDGE_THRESHOLD
-
         scored: List[Tuple[float, Any]] = []
         for rec in records:
             edge = _regime_edge(rec.stats or {}, regime_label)
@@ -174,72 +229,49 @@ def execute_signals_for_symbol(
                 symbol, timeframe, regime_label, rec.name, tier, edge, threshold,
             )
 
-        kept = [(edge, rec) for edge, rec in scored if edge > threshold]
-        kept.sort(key=lambda er: er[0], reverse=True)
-        filtered = [rec for _, rec in kept]
+        kept = sorted([(e, r) for e, r in scored if e > threshold], key=lambda x: x[0], reverse=True)
+        filtered = [r for _, r in kept]
 
         if len(filtered) != len(records):
-            blocked_names = [rec.name for edge, rec in scored if edge <= threshold]
+            blocked = [r.name for e, r in scored if e <= threshold]
             logger.info(
-                "Regime filter for %s %s (%s) [tier=%s]: %d -> %d strategies passed "
-                "(threshold=%.1f) | blocked: %s",
-                symbol, timeframe, regime_label, tier,
-                len(records), len(filtered), threshold, blocked_names,
+                "Regime filter %s %s (%s) [%s]: %d → %d passed | blocked: %s",
+                symbol, timeframe, regime_label, tier, len(records), len(filtered), blocked,
             )
 
         if not filtered and scored and tier == "exploratory":
-            scored.sort(key=lambda er: er[0], reverse=True)
+            scored.sort(key=lambda x: x[0], reverse=True)
             best_edge, best_rec = scored[0]
             filtered = [best_rec]
             logger.info(
-                "Regime fallback for %s %s (%s): keeping best exploratory edge=%.2f",
-                symbol, timeframe, regime_label, best_edge,
-            )
-
-        if not filtered:
-            logger.info(
-                "All %s strategies blocked by regime filter for %s %s (regime=%s, threshold=%.1f)",
-                tier, symbol, timeframe, regime_label, threshold,
+                "Regime fallback %s %s: keeping best exploratory edge=%.2f",
+                symbol, timeframe, best_edge,
             )
 
         return filtered
 
-    active_records = _filter_and_rank(active_records, tier="active")
-    exploratory_records = _filter_and_rank(exploratory_records, tier="exploratory")
-
-    MAX_ACTIVE_PER_SYMBOL = 5
-    MAX_EXPLORATORY_PER_SYMBOL = 3
-    active_records = active_records[:MAX_ACTIVE_PER_SYMBOL]
-    exploratory_records = exploratory_records[:MAX_EXPLORATORY_PER_SYMBOL]
+    active_records = _filter_and_rank(active_records, "active")[:5]
+    exploratory_records = _filter_and_rank(exploratory_records, "exploratory")[:3]
 
     if not active_records and not exploratory_records:
-        logger.info(
-            "No strategies with acceptable regime edge for %s %s (regime=%s)",
-            symbol, timeframe, current_regime,
-        )
+        logger.info("No strategies with acceptable edge for %s %s", symbol, timeframe)
         summary["no_strategies_with_edge"] = True
         return [], summary
 
     from ..strategies.generator import load_strategy
-    from pathlib import Path
-
     base_dir = Path(__file__).resolve().parents[1] / "strategies" / "generated"
 
-    active_strategies: List[StrategyDefinition] = []
-    for rec in active_records:
-        path = base_dir / f"{rec.name}.json"
-        try:
-            active_strategies.append(load_strategy(path))
-        except Exception as e:
-            logger.exception("Failed to load active strategy %s: %s", rec.name, e)
+    def _load_strats(records):
+        out = []
+        for rec in records:
+            try:
+                out.append(load_strategy(base_dir / f"{rec.name}.json"))
+            except Exception:
+                logger.exception("Failed to load strategy %s", rec.name)
+        return out
 
-    exploratory_strategies: List[StrategyDefinition] = []
-    for rec in exploratory_records:
-        path = base_dir / f"{rec.name}.json"
-        try:
-            exploratory_strategies.append(load_strategy(path))
-        except Exception as e:
-            logger.exception("Failed to load exploratory strategy %s: %s", rec.name, e)
+    active_strategies = _load_strats(active_records)
+    exploratory_strategies = _load_strats(exploratory_records)
 
     logger.info(
         "Feature snapshot for %s %s: time=%s regime=%s "
@@ -252,109 +284,64 @@ def execute_signals_for_symbol(
     )
 
     results: List[Tuple[Signal, str]] = []
+    pip_size, pip_value_per_lot = _pip_params(symbol)
     risk_perc_active = risk_perc
     risk_perc_exploratory = min(risk_perc * 0.25, 0.1)
 
-    # Resolve pip params once per symbol
-    pip_size, pip_value_per_lot = _pip_params(symbol)
-    logger.debug(
-        "Pip params for %s: pip_size=%s pip_value_per_lot=%s",
-        symbol, pip_size, pip_value_per_lot,
-    )
+    def _execute_batch(strategies: List[StrategyDefinition], rp: float, tier: str) -> None:
+        sigs = generate_signals_for_row(latest, strategies)
+        if not sigs:
+            logger.info(
+                "No entry conditions met for %s strategies on %s %s (%d evaluated)",
+                tier, symbol, timeframe, len(strategies),
+            )
+            summary[f"no_entry_{tier}"] = True
+            return
 
-    # ------------------------------------------------------------------ #
-    # Active strategies                                                   #
-    # ------------------------------------------------------------------ #
+        logger.info("%d signal(s) from %s strategies for %s %s", len(sigs), tier, symbol, timeframe)
+
+        for sig in sigs:
+            strat = sig.strategy
+            try:
+                res = execute_trade(
+                    strategy_name=strat.name,
+                    symbol=symbol,
+                    direction=sig.direction,
+                    risk_perc=rp,
+                    stop_loss_pips=strat.stop_loss_pips,
+                    take_profit_pips=strat.take_profit_pips,
+                    pip_size=pip_size,
+                    pip_value_per_lot=pip_value_per_lot,
+                )
+                results.append((sig, res.reason))
+
+                if res.success:
+                    # Store ticket→strategy mapping (Exness strips special chars
+                    # from comment, so comment-based attribution is not reliable)
+                    if res.ticket is not None:
+                        try:
+                            register_ticket(res.ticket, strat.name)
+                        except Exception:
+                            logger.exception(
+                                "Failed to register ticket %s → %s", res.ticket, strat.name
+                            )
+                    logger.info(
+                        "Trade placed (%s): strategy=%s symbol=%s dir=%s vol=%s ticket=%s",
+                        tier, strat.name, symbol, sig.direction,
+                        getattr(res, "volume", "?"), res.ticket,
+                    )
+                else:
+                    logger.warning(
+                        "Trade rejected (%s): strategy=%s symbol=%s dir=%s reason=%s",
+                        tier, strat.name, symbol, sig.direction, res.reason,
+                    )
+            except Exception as e:
+                logger.exception("Error executing %s signal for %s: %s", tier, strat.name, e)
+                results.append((sig, f"error: {e}"))
+
     if active_strategies:
-        active_signals = generate_signals_for_row(latest, active_strategies)
-
-        if not active_signals:
-            logger.info(
-                "No entry conditions met for active strategies on %s %s "
-                "(regime=%s, %d strategies evaluated)",
-                symbol, timeframe, current_regime, len(active_strategies),
-            )
-            summary["no_entry_active"] = True
-        else:
-            logger.info(
-                "%d signal(s) generated from active strategies for %s %s",
-                len(active_signals), symbol, timeframe,
-            )
-
-        for sig in active_signals:
-            strat = sig.strategy
-            try:
-                res = execute_trade(
-                    strategy_name=strat.name,
-                    symbol=symbol,
-                    direction=sig.direction,
-                    risk_perc=risk_perc_active,
-                    stop_loss_pips=strat.stop_loss_pips,
-                    take_profit_pips=strat.take_profit_pips,
-                    pip_size=pip_size,
-                    pip_value_per_lot=pip_value_per_lot,
-                )
-                results.append((sig, res.reason))
-                if res.success:
-                    logger.info(
-                        "Trade placed (active): strategy=%s symbol=%s dir=%s vol=%s ticket=%s",
-                        strat.name, symbol, sig.direction,
-                        getattr(res, "volume", "?"), getattr(res, "ticket", "?"),
-                    )
-                else:
-                    logger.warning(
-                        "Trade rejected (active): strategy=%s symbol=%s dir=%s reason=%s",
-                        strat.name, symbol, sig.direction, res.reason,
-                    )
-            except Exception as e:
-                logger.exception("Error executing active signal for %s: %s", strat.name, e)
-                results.append((sig, f"error: {e}"))
-
-    # ------------------------------------------------------------------ #
-    # Exploratory strategies                                              #
-    # ------------------------------------------------------------------ #
+        _execute_batch(active_strategies, risk_perc_active, "active")
     if exploratory_strategies:
-        exploratory_signals = generate_signals_for_row(latest, exploratory_strategies)
-
-        if not exploratory_signals:
-            logger.info(
-                "No entry conditions met for exploratory strategies on %s %s "
-                "(regime=%s, %d strategies evaluated)",
-                symbol, timeframe, current_regime, len(exploratory_strategies),
-            )
-            summary["no_entry_exploratory"] = True
-        else:
-            logger.info(
-                "%d signal(s) generated from exploratory strategies for %s %s",
-                len(exploratory_signals), symbol, timeframe,
-            )
-
-        for sig in exploratory_signals:
-            strat = sig.strategy
-            try:
-                res = execute_trade(
-                    strategy_name=strat.name,
-                    symbol=symbol,
-                    direction=sig.direction,
-                    risk_perc=risk_perc_exploratory,
-                    stop_loss_pips=strat.stop_loss_pips,
-                    take_profit_pips=strat.take_profit_pips,
-                    pip_size=pip_size,
-                    pip_value_per_lot=pip_value_per_lot,
-                )
-                results.append((sig, res.reason))
-                if res.success:
-                    logger.info(
-                        "Trade placed (exploratory): strategy=%s symbol=%s dir=%s",
-                        strat.name, symbol, sig.direction,
-                    )
-                else:
-                    logger.warning(
-                        "Trade rejected (exploratory): strategy=%s symbol=%s dir=%s reason=%s",
-                        strat.name, symbol, sig.direction, res.reason,
-                    )
-            except Exception as e:
-                logger.exception("Error executing exploratory signal for %s: %s", strat.name, e)
-                results.append((sig, f"error: {e}"))
+        _execute_batch(exploratory_strategies, risk_perc_exploratory, "exploratory")
 
     return results, summary
