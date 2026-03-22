@@ -1,4 +1,8 @@
-# --- OS & editor junk ---
+# ============================================================
+# .gitignore — autonomous_trading_ai
+# ============================================================
+
+# --- OS & editor ---
 .DS_Store
 Thumbs.db
 *.swp
@@ -7,18 +11,18 @@ Thumbs.db
 .idea/
 *.code-workspace
 
-# --- Python basics ---
+# --- Python ---
 __pycache__/
 *.py[cod]
 *.pyo
 *.pyd
 *.so
-.env
-.venv
+.venv/
 venv/
 env/
+.env
 
-# --- Build / dist / eggs ---
+# --- Build / dist ---
 build/
 dist/
 .eggs/
@@ -26,31 +30,49 @@ dist/
 *.egg
 
 # --- Logs & temp ---
-logs/
 *.log
+logs/
 tmp/
 temp/
 .cache/
 .ipynb_checkpoints/
-
-# --- Data (raw / heavy / generated) ---
-data/features/
-data/raw/
-datasets/
-backtests/results/
-reports/
-results/
-artifacts/
-checkpoints/
-models/
-model_weights/
-strategies/generated/
 notebooks/.ipynb_checkpoints/
+*.ipynb_checkpoints
 
-# Kalau ada sample kecil yang mau di-track, taruh di data_samples/ dan hapus dari ignore
-!data_samples/
+# ============================================================
+# Autonomous Trading AI — specific ignores
+# ============================================================
 
-# --- Credentials / config private ---
+# --- MT5 / broker data (large, regenerated each run) ---
+data/raw/
+data/features/
+
+# Keep news events (manually curated, lightweight)
+!data/raw/news_events.parquet
+!data/raw/news_events.csv
+
+# --- Backtest outputs (large, reproducible) ---
+backtests/results/
+
+# --- Generated strategy files (hundreds of JSONs, regenerated) ---
+strategies/generated/
+
+# --- Live state files (machine-specific, changes every 5 min) ---
+execution/live_state.json
+execution/equity_history.json
+execution/closed_trades_state.json
+execution/strategy_live_stats.json
+execution/trades.log
+
+# --- ChromaDB vector store (large, rebuilt from research cycles) ---
+chroma_data/
+
+# --- Pool state: KEEP THIS in git ---
+# pool_state.json is valuable — tracks which strategies are active
+# Uncomment below ONLY if pool grows too large (>5MB)
+# strategies/pool_state.json
+
+# --- Credentials & private config ---
 *.env
 *.env.*
 .envrc
@@ -63,10 +85,9 @@ config/private/
 *.key
 
 # --- Jupyter / experiments ---
-notebooks/.ipynb_checkpoints/
-*.ipynb_checkpoints
+*.ipynb
 
-# --- Cache dari tools ---
+# --- Tool caches ---
 .mypy_cache/
 .pytest_cache/
 coverage/
@@ -74,7 +95,7 @@ htmlcov/
 .tox/
 pytest_debug.log
 
-# --- Node (kalau ada dashboard / UI pendukung) ---
+# --- Node (if dashboard added later) ---
 node_modules/
 npm-debug.log*
 yarn.lock
