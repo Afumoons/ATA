@@ -250,11 +250,17 @@ def execute_trade(
     #   1 = ORDER_FILLING_FOK  (Fill or Kill)                            #
     #   2 = ORDER_FILLING_IOC  (Immediate or Cancel)                     #
     # ------------------------------------------------------------------ #
-    filling_mode = mt5.ORDER_FILLING_IOC  # safe default for most brokers
+    # Exness returns filling_mode=0 (not exposed via symbol_info).
+    # For Exness MT5: use ORDER_FILLING_IOC which works for all account types.
+    # If filling_mode bitmask is available, prefer FOK → IOC → RETURN.
+    filling_mode = mt5.ORDER_FILLING_IOC  # Exness default — works for Hedge accounts
     sym_info = mt5.symbol_info(symbol)
     if sym_info is not None:
         fm = int(sym_info.filling_mode)
-        if fm & 1:
+        if fm == 0:
+            # Broker does not expose filling mode (e.g. Exness) — use IOC
+            filling_mode = mt5.ORDER_FILLING_IOC
+        elif fm & 1:
             filling_mode = mt5.ORDER_FILLING_FOK
         elif fm & 2:
             filling_mode = mt5.ORDER_FILLING_IOC
@@ -271,7 +277,7 @@ def execute_trade(
         "tp":           round(tp_price, 5),
         "deviation":    10,
         "magic":        987654,
-        "comment":      f"clio-auto-{strategy_name[:20]}",
+        "comment":      "".join(c for c in strategy_name[:15] if c.isalnum()),
         "type_filling": filling_mode,
     }
 
