@@ -63,30 +63,65 @@ MAX_EXECUTION_POOL   = 10    # hard cap on strategies executing per cycle
 # Increase to reduce regime influence; decrease to amplify.
 REGIME_SORT_NORM     = 20.0
 
+# Session-adaptive sort weight.
+# wf × regime_bonus × session_bonus applied together in Stage 3.
+# SESSION_SORT_NORM=10 → ±10% session return = ±50% weight adjustment.
+# Kept smaller than REGIME_SORT_NORM because sessions are shorter windows
+# and the signal is more immediately actionable.
+SESSION_SORT_NORM    = 10.0
+
+
+def _current_session() -> str:
+    """Return current trading session based on UTC hour."""
+    from datetime import datetime, timezone
+    hour = datetime.now(timezone.utc).hour
+    if 0 <= hour < 7:
+        return "asia"
+    if 7 <= hour < 13:
+        return "london"
+    return "new_york"
+
 
 # ---------------------------------------------------------------------------
 # Regime-adaptive execution scoring
 # ---------------------------------------------------------------------------
 
-def _hybrid_regime_score(rec, current_regime: str) -> float:
-    """Regime-aware sort key for execution pool selection.
+def _hybrid_regime_score(rec, current_regime: str, current_session: str = "") -> float:
+    """Regime- and session-adaptive sort key for execution pool selection.
 
-    hybrid = wf_sharpe × regime_bonus
-    regime_bonus = 1 + clip(regime_ret / REGIME_SORT_NORM, -0.5, +0.5)
+    hybrid = wf_sharpe × regime_bonus × session_bonus
 
-    WF Sharpe stays dominant. Regime return nudges ranking by ±50% at most.
-    At REGIME_SORT_NORM=20: +20% regime_ret → bonus 1.5, -20% → bonus 0.5.
-    Missing regime data → bonus 1.0 (pure WF Sharpe sort, no discrimination).
+    Both bonuses are independent multipliers capped at ±50%:
+        regime_bonus  = 1 + clip(regime_ret  / REGIME_SORT_NORM,  -0.5, +0.5)
+        session_bonus = 1 + clip(session_ret / SESSION_SORT_NORM, -0.5, +0.5)
+
+    Combined effect: a strategy with +20% regime_ret and +10% session_ret
+    gets bonus 1.5 × 1.5 = 2.25× its WF Sharpe in the ranking.
+    A strategy that is bad in both regime AND session gets 0.5 × 0.5 = 0.25×.
+
+    Missing data → bonus 1.0 (falls back to pure WF Sharpe, no discrimination).
     """
     s = rec.stats or {}
     wf = float(s.get("wf_overall_sharpe", 0) or 0)
     ex = s.get("strategy_explain", {}) or {}
+
+    # Regime component
     regime_pnl = ex.get("regime_pnl", {}) or {}
     regime_ret = float(
         (regime_pnl.get(current_regime, {}) or {}).get("return_pct", 0)
     )
     regime_bonus = 1.0 + max(-0.5, min(0.5, regime_ret / REGIME_SORT_NORM))
-    return wf * regime_bonus
+
+    # Session component
+    session_bonus = 1.0
+    if current_session:
+        session_pnl = ex.get("session_pnl", {}) or {}
+        session_ret = float(
+            (session_pnl.get(current_session, {}) or {}).get("return_pct", 0)
+        )
+        session_bonus = 1.0 + max(-0.5, min(0.5, session_ret / SESSION_SORT_NORM))
+
+    return wf * regime_bonus * session_bonus
 
 
 def job_update_data() -> None:
@@ -423,7 +458,7 @@ def job_research_strategies() -> None:
                 if _memory_is_clearly_bad(strat, memory, symbol, TIMEFRAME):
                     continue
 
-                result = run_backtest(feat, strat, regime_column="regime", risk_per_trade_pct=1.0)
+                result = run_backtest(feat, strat, regime_column="regime")
                 eval_result = evaluate_strategy(result.stats)
 
                 num_trades = eval_result.get("num_trades", 0.0)
@@ -625,6 +660,7 @@ def job_execute_signals() -> None:
         # Fallback: if regime cannot be detected, sort by WF Sharpe alone.   #
         # ------------------------------------------------------------------ #
         current_regime = "unknown"
+        current_session = _current_session()
         try:
             current_regime = str(feat.iloc[-1].get("regime", "unknown"))
         except Exception:
@@ -632,7 +668,7 @@ def job_execute_signals() -> None:
 
         final_strats = sorted(
             quality_strats,
-            key=lambda r: _hybrid_regime_score(r, current_regime),
+            key=lambda r: _hybrid_regime_score(r, current_regime, current_session),
             reverse=True,
         )[:MAX_EXECUTION_POOL]
 
@@ -641,10 +677,10 @@ def job_execute_signals() -> None:
             n_filtered = len(unique_strats) - len(quality_strats)
             n_capped = max(0, len(quality_strats) - len(final_strats))
             logger.info(
-                "Execution pool %s %s [regime=%s]: "
+                "Execution pool %s %s [regime=%s session=%s]: "
                 "%d active → %d unique (-%d clones) "
                 "→ %d quality (-%d threshold) → %d final (-%d capped)",
-                symbol, TIMEFRAME, current_regime,
+                symbol, TIMEFRAME, current_regime, current_session,
                 len(active_strats), len(unique_strats), n_dupes,
                 len(quality_strats), n_filtered,
                 len(final_strats), n_capped,
@@ -669,11 +705,11 @@ def job_execute_signals() -> None:
             )
 
         logger.info(
-            "Executing signals for %s %s [regime=%s] — %d strategies "
+            "Executing signals for %s %s [regime=%s session=%s] — %d strategies "
             "(hybrid_score range: %.2f – %.2f)",
-            symbol, TIMEFRAME, current_regime, len(final_strats),
-            _hybrid_regime_score(final_strats[-1], current_regime),
-            _hybrid_regime_score(final_strats[0], current_regime),
+            symbol, TIMEFRAME, current_regime, current_session, len(final_strats),
+            _hybrid_regime_score(final_strats[-1], current_regime, current_session),
+            _hybrid_regime_score(final_strats[0], current_regime, current_session),
         )
 
         # Build a temporary pool view containing only final_strats for signals
