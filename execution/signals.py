@@ -312,6 +312,7 @@ def execute_signals_for_symbol(
                     take_profit_pips=strat.take_profit_pips,
                     pip_size=pip_size,
                     pip_value_per_lot=pip_value_per_lot,
+                    timeframe=timeframe,
                 )
                 results.append((sig, res.reason))
 
