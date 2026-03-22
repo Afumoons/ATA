@@ -14,12 +14,12 @@ from ..research.regime import add_regime_column
 from ..research.features import load_features
 from ..strategies.pool import load_pool, save_pool
 from ..strategies.evolution import evolve_population, load_population, save_population
+from ..strategies.generator import load_strategy
 from ..backtests.engine import run_backtest
 from ..backtests.evaluation import evaluate_strategy
 from ..backtests.walkforward import walk_forward_test
 from ..backtests.monte_carlo import monte_carlo_pnl
 from ..execution.live_monitor import update_live_stats
-from ..execution import live_observer
 from ..execution.signals import execute_signals_for_symbol
 from ..execution.strategy_live_stats import load_all_strategy_stats, MAX_RECENT_TRADES
 from ..vector_memory.research_memory import ResearchMemory
@@ -36,18 +36,14 @@ TIMEFRAME = "M15"
 MINIMUM_EDGE_FOR_EXECUTION = 0.0
 
 # ---------------------------------------------------------------------------
-# Execution pool filtering — applied every cycle before signal generation.
-#
-# Problem: research cycle can promote 40+ active strategies, many of which
-# are statistical clones (identical rules, same backtest result). Running all:
-#   1. Wastes computation (45 risk-manager calls per bar)
-#   2. Creates hidden concentration risk — 14 clones firing the same signal
-#      in the same direction effectively multiplies position size 14x
-#   3. Floods logs with redundant noise
+# Execution pool filtering
 #
 # Three-stage filter:
-#   Stage 1 — Deduplicate: drop clones with identical backtest fingerprints,
+#   Stage 1 — Deduplicate: drop clones with identical RULE STRINGS,
 #             keeping only the one with the highest WF Sharpe per cluster.
+#             Previously used backtest stats as fingerprint — this allowed
+#             strategies with identical long/short rules but different names
+#             to all fire simultaneously (concentration blast).
 #   Stage 2 — Quality gate: enforce minimum robustness thresholds.
 #   Stage 3 — Cap: limit final pool to MAX_EXECUTION_POOL.
 # ---------------------------------------------------------------------------
@@ -604,27 +600,56 @@ def job_execute_signals() -> None:
             continue
 
         # ------------------------------------------------------------------ #
-        # Stage 1 — Deduplicate clones                                        #
-        # Two strategies are clones if their backtest stats are identical to   #
-        # 4 decimal places. Keep the one with the highest WF Sharpe per       #
-        # cluster. Sort descending by WF Sharpe first so the best member of   #
-        # each clone cluster is always the one that survives.                  #
+        # Stage 1 — Deduplicate clones by RULE STRINGS                        #
+        #                                                                      #
+        # FIX: Previously fingerprinted by backtest stats (sharpe, pf, etc.)  #
+        # which allowed strategies with identical entry/exit rules but         #
+        # different names to all fire the same signal simultaneously,          #
+        # creating a concentration blast (e.g. 5 identical shorts in 1 bar).  #
+        #                                                                      #
+        # New fingerprint: (long_entry_rule, short_entry_rule, exit_rule,      #
+        # stop_loss_pips) — two strategies are clones if they fire the same    #
+        # signal under the same conditions with the same SL.                  #
+        #                                                                      #
+        # Keep the one with the highest WF Sharpe per clone cluster.          #
+        # Fall back to stats-based fingerprint if strategy JSON cannot be     #
+        # loaded (e.g. file deleted after pool upsert).                       #
         # ------------------------------------------------------------------ #
         strats_by_wf = sorted(
             active_strats,
             key=lambda r: float((r.stats or {}).get("wf_overall_sharpe", 0) or 0),
             reverse=True,
         )
+
         seen_fps: set = set()
         unique_strats = []
+        _strat_base_dir = BASE_DIR / "strategies" / "generated"
+        _rule_cache: dict = {}  # name → fingerprint tuple, avoid re-loading same file
+
         for rec in strats_by_wf:
-            s = rec.stats or {}
-            fp = (
-                round(float(s.get("sharpe_ratio", 0) or 0), 4),
-                round(float(s.get("profit_factor", 0) or 0), 4),
-                round(float(s.get("return_pct", 0) or 0), 4),
-                int(s.get("num_trades", 0) or 0),
-            )
+            if rec.name in _rule_cache:
+                fp = _rule_cache[rec.name]
+            else:
+                try:
+                    _path = _strat_base_dir / f"{rec.name}.json"
+                    _s = load_strategy(_path)
+                    fp = (
+                        str(getattr(_s, "long_entry_rule", "") or ""),
+                        str(getattr(_s, "short_entry_rule", "") or ""),
+                        str(getattr(_s, "exit_rule", "") or ""),
+                        round(float(getattr(_s, "stop_loss_pips", 0) or 0), 0),
+                    )
+                except Exception:
+                    # Fallback: stats-based fingerprint if file not loadable
+                    s = rec.stats or {}
+                    fp = (
+                        round(float(s.get("sharpe_ratio", 0) or 0), 4),
+                        round(float(s.get("profit_factor", 0) or 0), 4),
+                        round(float(s.get("return_pct", 0) or 0), 4),
+                        int(s.get("num_trades", 0) or 0),
+                    )
+                _rule_cache[rec.name] = fp
+
             if fp not in seen_fps:
                 seen_fps.add(fp)
                 unique_strats.append(rec)
@@ -756,7 +781,8 @@ def job_live_monitor() -> None:
 
     # Non-invasive observability: snapshot open MT5 positions for monitoring.
     try:
-        live_observer.snapshot_open_trades()
+        from ..execution.live_observer import snapshot_open_trades
+        snapshot_open_trades()
     except Exception:
         logger.exception("job_live_monitor snapshot_open_trades error")
 
