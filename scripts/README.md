@@ -443,8 +443,8 @@ python -m autonomous_trading_ai.scripts.print_live_summary
 
 - `execution/live_state.json`.
 - `strategies/pool_state.json`.
-- `execution/strategy_live_stats.json` (if present, usually from `live_observer.py`).
-- `execution/open_trades.json` (if present, usually from `live_observer.py`).
+- `execution/strategy_live_stats.json` (maintained automatically by `live_monitor`/`strategy_live_stats`).
+- `execution/open_trades.json` (snapshotted automatically by `live_observer.snapshot_open_trades` via `job_live_monitor`).
 
 ### What It Writes
 
