@@ -428,6 +428,7 @@ It prints:
 - Count of strategies by status.
 - Top-N active strategies by backtest score.
 - (If available) per-strategy live PnL from execution stats.
+- (If available) summary of currently open MT5 positions.
 
 ### Usage
 
@@ -442,7 +443,8 @@ python -m autonomous_trading_ai.scripts.print_live_summary
 
 - `execution/live_state.json`.
 - `strategies/pool_state.json`.
-- `execution/strategy_live_stats.json` (if present).
+- `execution/strategy_live_stats.json` (if present, usually from `live_observer.py`).
+- `execution/open_trades.json` (if present, usually from `live_observer.py`).
 
 ### What It Writes
 
