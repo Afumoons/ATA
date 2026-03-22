@@ -11,11 +11,12 @@ This prints:
 - count of strategies by status (active / candidate / disabled)
 - top-N active strategies by backtest score
 - (if available) basic per-strategy live PnL stats from strategy_live_stats.json
+- (if available) summary of currently open MT5 positions from execution/open_trades.json
 """
 
 import json
 from pathlib import Path
-from typing import Dict
+from typing import Dict, List, Any
 
 
 BASE_DIR = Path(__file__).resolve().parents[1]
@@ -31,6 +32,14 @@ def _load_json(path: Path):
             return json.load(f)
     except Exception:
         return None
+
+
+def _fmt_money(x: float) -> str:
+    return f"{x:+.2f}"
+
+
+def _fmt_pct(x: float) -> str:
+    return f"{x:+.2f}%"
 
 
 def print_live_state() -> None:
@@ -104,8 +113,7 @@ def print_strategy_live_stats() -> None:
         print()
         return
 
-    # sort by total_pnl ascending (worst first)
-    recs = []
+    recs: List[Any] = []
     for name, rec in stats.items():
         total_pnl = float(rec.get("total_pnl", 0.0) or 0.0)
         num_trades = int(rec.get("num_trades", 0) or 0)
@@ -123,8 +131,65 @@ def print_strategy_live_stats() -> None:
     print("Worst 5 strategies by total live PnL:")
     for name, total_pnl, num_trades, recent_avg, n_recent in recs[:5]:
         print(
-            f"- {name}: total_pnl={total_pnl:.2f}, trades={num_trades}, "
-            f"recent_avg_pnl={recent_avg:.2f} over {n_recent} trades"
+            f"- {name}: total_pnl={_fmt_money(total_pnl)}, trades={num_trades}, "
+            f"recent_avg_pnl={_fmt_money(recent_avg)} over {n_recent} trades"
+        )
+
+    print()
+
+
+def print_open_trades(max_rows: int = 10) -> None:
+    path = EXECUTION_DIR / "open_trades.json"
+    data = _load_json(path)
+    print("=== Open Trades (if available) ===")
+    if not data:
+        print("open_trades.json not found or empty")
+        print()
+        return
+
+    if not isinstance(data, list) or not data:
+        print("No open positions snapshot recorded yet")
+        print()
+        return
+
+    total_pnl = 0.0
+    by_symbol: Dict[str, float] = {}
+
+    rows: List[Any] = []
+    for row in data:
+        try:
+            symbol = str(row.get("symbol", "?"))
+            direction = row.get("direction", "?")
+            volume = float(row.get("volume", 0.0) or 0.0)
+            pnl = float(row.get("floating_pnl", 0.0) or 0.0)
+            comment = str(row.get("comment", ""))
+            strategy = row.get("strategy_name") or comment or "?"
+
+            total_pnl += pnl
+            by_symbol[symbol] = by_symbol.get(symbol, 0.0) + pnl
+
+            rows.append((symbol, direction, volume, pnl, strategy))
+        except Exception:
+            continue
+
+    if not rows:
+        print("No open positions in snapshot")
+        print()
+        return
+
+    rows.sort(key=lambda r: r[3], reverse=True)
+
+    print(f"Total floating PnL : {_fmt_money(total_pnl)}")
+    print("By symbol:")
+    for sym, pnl in sorted(by_symbol.items()):
+        print(f"  - {sym}: {_fmt_money(pnl)}")
+
+    print()
+    print(f"Top {min(max_rows, len(rows))} open positions by PnL:")
+    for symbol, direction, volume, pnl, strategy in rows[:max_rows]:
+        print(
+            f"- {symbol} {direction:5s} vol={volume:.2f} "
+            f"pnl={_fmt_money(pnl)} strategy={strategy}"
         )
 
     print()
@@ -134,6 +199,7 @@ def main() -> None:
     print_live_state()
     print_pool_summary(top_n=5)
     print_strategy_live_stats()
+    print_open_trades(max_rows=10)
 
 
 if __name__ == "__main__":
