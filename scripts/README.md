@@ -608,6 +608,88 @@ The script will:
 
 ---
 
+## `scrape_news.py`
+
+### Purpose
+
+Standalone **Forex Factory news scraper** that pulls the public JSON economic
+calendar (same CDN used by common FF indicators) and normalizes it into the
+`news_events.parquet` format expected by `features.py`.
+
+Designed for:
+
+- Keeping a local **economic calendar cache** aligned with FF.
+- Marking **gold-relevant events** (based on currency + title keywords).
+- Quickly inspecting upcoming high-impact events around XAU.
+
+### Usage
+
+From workspace root:
+
+```powershell
+cd C:\Users\afusi\.openclaw\workspace
+.autonomous_trading_ai\.venv\Scripts\python.exe -m autonomous_trading_ai.scripts.scrape_news `
+  --weeks 2 `
+  --csv `
+  --min-impact 2
+```
+
+Common options:
+
+- `--weeks N` (default: `2`)
+  - `1` = this week only.
+  - `2` = this week + next week (default).
+- `--include-last`
+  - Also fetch **last week** (useful for recent backfill).
+- `--output PATH`
+  - Custom parquet output path. Default: `scripts/news_events.parquet`.
+- `--csv`
+  - Also export `PATH.csv` for manual inspection.
+- `--show`
+  - **Do not save**; only print table to terminal.
+- `--gold-only`
+  - Filter to **gold-relevant** events only (based on currency + keywords).
+- `--min-impact {0,1,2,3}`
+  - Minimum impact to keep (`0`=all, `3`=High only).
+- `--upcoming HOURS`
+  - Show summary of gold-relevant impact≥2 events in the next N hours
+    (default: 24h).
+- `--no-color`
+  - Disable ANSI colors in terminal output.
+
+### What It Reads
+
+- Forex Factory JSON CDN:
+  - `https://nfs.faireconomy.media/ff_calendar_thisweek.json`
+  - `https://nfs.faireconomy.media/ff_calendar_nextweek.json`
+  - (optionally) `https://nfs.faireconomy.media/ff_calendar_lastweek.json`
+
+### What It Writes
+
+- Default: `scripts/news_events.parquet` with columns:
+  - `datetime_utc` (UTC timestamp)
+  - `currency`
+  - `impact` (`0–3`)
+  - `impact_label` (`Holiday`, `Low`, `Medium`, `High`)
+  - `event_name`
+  - `forecast`, `previous`, `actual` (stringified)
+  - `is_gold_relevant` (bool)
+- Optional: `scripts/news_events.csv` when `--csv` is passed.
+- Console output:
+  - Fetch status per week.
+  - Summary counts (gold-relevant, high-impact, date range).
+  - Upcoming-event summary for next N hours.
+  - Full formatted table (unless filters remove all rows).
+
+### Dependencies
+
+- `requests`
+- `pandas`
+
+If missing, the script prints a clear install hint and exits cleanly.
+
+---
+
 ## Changelog (Docs)
 
 - 2026-03-21: Initial README for `scripts/` documenting
@@ -617,3 +699,4 @@ The script will:
   `inspect_research_memory`, `manual_execute_trade`, `pre_session_check`,
   `print_live_summary`, `promote_strategies`, `prune_strategies`,
   `prune_strategies_btc`, and `reset_strategy_memory`.
+- 2026-03-22: Added documentation for `scrape_news` (FF calendar scraper).
