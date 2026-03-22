@@ -121,6 +121,30 @@ def _log_trade(
         f.write(line)
     logger.info("Trade executed: %s", line.strip())
 
+def _build_comment(strategy_name: str) -> str:
+    """Build MT5 comment — alphanumeric only (Exness requirement).
+
+    Format: {prefix}{symbol_short}{uid4}
+    Example: strategy "core15_XAUUSDm_M15_9fb8" → "core15XAUUSDm9fb8"
+
+    Strategy names follow pattern: {prefix}_{symbol}_{timeframe}_{uid4}
+    We extract prefix and uid4 (last 4 hex chars after final underscore).
+    """
+    # Extract 4-char uid suffix (last segment after final underscore)
+    parts = strategy_name.split("_")
+    uid4 = parts[-1][:4] if len(parts) >= 2 else ""
+
+    # Build alphanumeric-only base
+    base = "".join(c for c in strategy_name if c.isalnum())
+
+    # Keep total under 31 chars (MT5 comment limit)
+    # Format: first 27 chars of base + uid4 (may overlap if base already ends with uid4)
+    if base.endswith(uid4):
+        comment = base[:31]
+    else:
+        comment = base[:27] + uid4
+
+    return comment[:31]
 
 def execute_trade(
     strategy_name: str,
@@ -277,7 +301,7 @@ def execute_trade(
         "tp":           round(tp_price, 5),
         "deviation":    10,
         "magic":        987654,
-        "comment":      "".join(c for c in strategy_name[:15] if c.isalnum()),
+        "comment": _build_comment(strategy_name),
         "type_filling": filling_mode,
     }
 
