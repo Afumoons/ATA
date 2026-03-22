@@ -423,7 +423,7 @@ def job_research_strategies() -> None:
                 if _memory_is_clearly_bad(strat, memory, symbol, TIMEFRAME):
                     continue
 
-                result = run_backtest(feat, strat, regime_column="regime")
+                result = run_backtest(feat, strat, regime_column="regime", risk_per_trade_pct=1.0)
                 eval_result = evaluate_strategy(result.stats)
 
                 num_trades = eval_result.get("num_trades", 0.0)
@@ -524,7 +524,7 @@ def job_execute_signals() -> None:
     """Generate and execute signals for active strategies."""
     logger.info("Scheduler: job_execute_signals start")
     pool = load_pool()
-    risk_perc = min(1.0, risk_config.max_risk_per_trade_pct)
+    risk_perc = min(2.0, risk_config.max_risk_per_trade_pct)
 
     from ..research.features import load_features
 

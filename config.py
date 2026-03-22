@@ -6,7 +6,7 @@ from dataclasses import dataclass
 @dataclass
 class RiskConfig:
     # Per-trade risk cap: percentage of current equity risked per trade
-    max_risk_per_trade_pct: float = 2.0       # 2.0% of equity (AGGRESSIVE++ profile)
+    max_risk_per_trade_pct: float = 1.0       # 1.0% of equity (AGGRESSIVE++ profile)
 
     # Portfolio-level circuit breaker
     max_portfolio_drawdown_pct: float = 25.0  # 25% DD limit

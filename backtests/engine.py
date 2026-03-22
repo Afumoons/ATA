@@ -143,7 +143,7 @@ def run_backtest(
     df: pd.DataFrame,
     strategy: StrategyDefinition,
     initial_equity: float = 10_000.0,
-    risk_per_trade_pct: float = 0.5,
+    risk_per_trade_pct: float = 1,
     pip_size: Optional[float] = None,
     max_positions_total: int = 5,
     spread: float = 0.0,
