@@ -239,23 +239,56 @@ def execute_trade(
             reason=f"computed sl/tp invalid: sl={sl_price:.5f} tp={tp_price:.5f}",
         )
 
+    # ------------------------------------------------------------------ #
+    # Detect filling mode supported by this broker/symbol                 #
+    #                                                                      #
+    # Exness Hedge accounts require an explicit type_filling in the order #
+    # request. Without it, order_send() returns None silently — no error  #
+    # code, no retcode, just None.                                        #
+    #                                                                      #
+    # filling_mode bitmask in symbol_info:                                #
+    #   1 = ORDER_FILLING_FOK  (Fill or Kill)                            #
+    #   2 = ORDER_FILLING_IOC  (Immediate or Cancel)                     #
+    # ------------------------------------------------------------------ #
+    filling_mode = mt5.ORDER_FILLING_IOC  # safe default for most brokers
+    sym_info = mt5.symbol_info(symbol)
+    if sym_info is not None:
+        fm = int(sym_info.filling_mode)
+        if fm & 1:
+            filling_mode = mt5.ORDER_FILLING_FOK
+        elif fm & 2:
+            filling_mode = mt5.ORDER_FILLING_IOC
+        else:
+            filling_mode = mt5.ORDER_FILLING_RETURN
+
     request = {
-        "action": mt5.TRADE_ACTION_DEAL,
-        "symbol": symbol,
-        "volume": float(volume),
-        "type": order_type,
-        "price": price,
-        "sl": round(sl_price, 5),
-        "tp": round(tp_price, 5),
-        "deviation": 10,
-        "magic": 987654,
-        "comment": f"clio-auto-{strategy_name[:20]}",  # MT5 comment max ~31 chars
+        "action":       mt5.TRADE_ACTION_DEAL,
+        "symbol":       symbol,
+        "volume":       float(volume),
+        "type":         order_type,
+        "price":        price,
+        "sl":           round(sl_price, 5),
+        "tp":           round(tp_price, 5),
+        "deviation":    10,
+        "magic":        987654,
+        "comment":      f"clio-auto-{strategy_name[:20]}",
+        "type_filling": filling_mode,
     }
 
     result = mt5.order_send(request)
 
     if result is None:
-        return ExecutionResult(success=False, reason="mt5.order_send() returned None")
+        last_err = mt5.last_error()
+        logger.error(
+            "order_send() returned None: strategy=%s symbol=%s dir=%s "
+            "vol=%.4f price=%.5f filling=%s last_error=%s",
+            strategy_name, symbol, direction,
+            volume, price, filling_mode, last_err,
+        )
+        return ExecutionResult(
+            success=False,
+            reason=f"mt5.order_send() returned None (last_error={last_err})",
+        )
 
     res_dict = result._asdict()
 
