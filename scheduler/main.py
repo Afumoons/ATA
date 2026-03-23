@@ -473,14 +473,17 @@ def job_research_strategies() -> None:
                     )
                     range_ret = regime.get("ranging", {}).get("return_pct", 0.0)
 
-                    # BTC range traders often have near-zero trending returns but
-                    # excellent overall robustness. For BTC symbols we therefore
-                    # relax the hard requirement on trend_ret and only enforce it
-                    # for non-BTC pairs.
+                    # Range traders (especially BTC and XAU) often have near-zero
+                    # trending returns but excellent overall robustness. For those
+                    # symbols we relax the hard requirement on trend_ret and only
+                    # enforce it for other pairs.
                     symbol = str(stats.get("symbol", "") or "").upper()
-                    is_btc = symbol.startswith("BTC")
+                    is_range_symbol = (
+                        symbol.startswith("BTC") or
+                        symbol.startswith("XAU")
+                    )
 
-                    trend_gate_ok = trend_ret > 0.0 if not is_btc else True
+                    trend_gate_ok = trend_ret > 0.0 if not is_range_symbol else True
 
                     return (
                         stats.get("num_trades", 0.0) >= 50
