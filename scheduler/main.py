@@ -28,7 +28,6 @@ logger = get_logger(__name__)
 BASE_DIR = Path(__file__).resolve().parents[1]
 
 # Symbols/timeframes to manage (can be externalized/configured later)
-# To manage both gold and BTC on M15:
 MANAGED_SYMBOLS = ["XAUUSDm", "BTCUSDm"]
 TIMEFRAME = "M15"
 
@@ -55,16 +54,9 @@ EXEC_MAX_CONSEC_LOSS = 15    # max consecutive losses — controls tail risk
 MAX_EXECUTION_POOL   = 10    # hard cap on strategies executing per cycle
 
 # Regime-adaptive sort weight (Stage 3).
-# Final sort key = wf_sharpe × (1 + clip(regime_ret / REGIME_SORT_NORM, -0.5, +0.5))
-# Default 20.0 → ±20% regime return = ±50% weight adjustment.
-# Increase to reduce regime influence; decrease to amplify.
 REGIME_SORT_NORM     = 20.0
 
 # Session-adaptive sort weight.
-# wf × regime_bonus × session_bonus applied together in Stage 3.
-# SESSION_SORT_NORM=10 → ±10% session return = ±50% weight adjustment.
-# Kept smaller than REGIME_SORT_NORM because sessions are shorter windows
-# and the signal is more immediately actionable.
 SESSION_SORT_NORM    = 10.0
 
 
@@ -84,20 +76,7 @@ def _current_session() -> str:
 # ---------------------------------------------------------------------------
 
 def _hybrid_regime_score(rec, current_regime: str, current_session: str = "") -> float:
-    """Regime- and session-adaptive sort key for execution pool selection.
-
-    hybrid = wf_sharpe × regime_bonus × session_bonus
-
-    Both bonuses are independent multipliers capped at ±50%:
-        regime_bonus  = 1 + clip(regime_ret  / REGIME_SORT_NORM,  -0.5, +0.5)
-        session_bonus = 1 + clip(session_ret / SESSION_SORT_NORM, -0.5, +0.5)
-
-    Combined effect: a strategy with +20% regime_ret and +10% session_ret
-    gets bonus 1.5 × 1.5 = 2.25× its WF Sharpe in the ranking.
-    A strategy that is bad in both regime AND session gets 0.5 × 0.5 = 0.25×.
-
-    Missing data → bonus 1.0 (falls back to pure WF Sharpe, no discrimination).
-    """
+    """Regime- and session-adaptive sort key for execution pool selection."""
     s = rec.stats or {}
     wf = float(s.get("wf_overall_sharpe", 0) or 0)
     ex = s.get("strategy_explain", {}) or {}
@@ -141,11 +120,7 @@ def job_update_data() -> None:
 # ---------------------------------------------------------------------------
 
 def job_update_news() -> None:
-    """Fetch Forex Factory calendar and save to news_events.parquet.
-
-    Runs once daily at 06:00 UTC. Also sends WhatsApp alert if any
-    high-impact gold events are within the next 8 hours.
-    """
+    """Fetch Forex Factory calendar and save to news_events.parquet."""
     logger.info("Scheduler: job_update_news start")
     try:
         from ..data.news_collector import update_news_events, get_upcoming_high_impact
@@ -179,10 +154,7 @@ def job_update_news() -> None:
 
 
 def job_news_alert() -> None:
-    """Check for upcoming high-impact events and send WhatsApp alert if within 30 min.
-
-    Runs every 5 minutes. Per-event cooldown (60 min) prevents duplicate alerts.
-    """
+    """Check for upcoming high-impact events and send WhatsApp alert if within 30 min."""
     try:
         from ..data.news_collector import get_upcoming_high_impact
         from ..notifications.whatsapp_notifier import send_news_alert
@@ -237,11 +209,9 @@ def _apply_live_degradation(pool) -> None:
         bt_ret = float(stats.get("return_pct", 0.0) or 0.0)
         bt_sharpe = float(stats.get("sharpe_ratio", 0.0) or 0.0)
 
-        # Only consider strategies that looked decent in backtest
         if bt_ret <= 0 or bt_sharpe <= 0.3:
             continue
 
-        # Require a minimum amount of live data before judging
         if rec.num_trades < max(10, MAX_RECENT_TRADES):
             continue
 
@@ -264,7 +234,6 @@ def _apply_live_degradation(pool) -> None:
                 name, bt_ret, bt_sharpe,
                 live_ret_total_pct, live_ret_recent_pct, rec.num_trades,
             )
-            # WhatsApp alert for degraded strategy
             try:
                 from ..notifications.whatsapp_notifier import send_strategy_degradation_alert
                 send_strategy_degradation_alert(
@@ -361,8 +330,6 @@ def job_research_strategies() -> None:
         except Exception as e:
             logger.exception("Failed to load features for %s: %s", symbol, e)
             continue
-
-        from ..strategies.generator import load_strategy
 
         def _memory_bonus_for_parent(rec) -> float:
             try:
@@ -544,6 +511,7 @@ def job_research_strategies() -> None:
                 logger.exception("Research error for %s: %s", strat.name, e)
 
     _apply_live_degradation(pool)
+    pool.prune(max_inactive=200)
     save_pool(pool)
     logger.info("Scheduler: job_research_strategies done")
 
@@ -571,19 +539,16 @@ def job_execute_signals() -> None:
             continue
 
         # ---- News lockout check ----
-        # Block signal generation entirely if we are within ±15 min of a
-        # high-impact gold event. This is the live equivalent of in_news_lockout.
         try:
             latest = feat.iloc[-1]
             if bool(latest.get("in_news_lockout", False)):
                 logger.warning(
-                    "News lockout active for %s %s — skipping signal generation "
-                    "(high-impact event within ±15 min)",
+                    "News lockout active for %s %s — skipping signal generation",
                     symbol, TIMEFRAME,
                 )
                 continue
         except Exception:
-            pass  # never crash execution on news check failure
+            pass
 
         active_strats = [
             rec for rec in pool.strategies.values()
@@ -676,14 +641,6 @@ def job_execute_signals() -> None:
 
         # ------------------------------------------------------------------ #
         # Stage 3 — Regime-adaptive sort + cap to MAX_EXECUTION_POOL          #
-        #                                                                      #
-        # Detect the current market regime from the latest feature bar, then  #
-        # sort quality_strats by hybrid_regime_score = wf × regime_bonus.     #
-        # This promotes strategies that historically profit in the current     #
-        # regime and suppresses those that historically lose in it, without    #
-        # discarding any strategy entirely (WF Sharpe still dominates).       #
-        #                                                                      #
-        # Fallback: if regime cannot be detected, sort by WF Sharpe alone.   #
         # ------------------------------------------------------------------ #
         current_regime = "unknown"
         current_session = _current_session()
@@ -738,8 +695,7 @@ def job_execute_signals() -> None:
             _hybrid_regime_score(final_strats[0], current_regime, current_session),
         )
 
-        # Build a temporary pool view containing only final_strats for signals
-        # (execute_signals_for_symbol filters by pool.strategies internally)
+        # Build a temporary pool view containing only final_strats
         from ..strategies.pool import StrategyPool
         filtered_pool = StrategyPool()
         filtered_pool.strategies = {r.name: r for r in final_strats}
@@ -779,7 +735,6 @@ def job_live_monitor() -> None:
     except Exception as e:
         logger.exception("job_live_monitor error: %s", e)
 
-    # Non-invasive observability: snapshot open MT5 positions for monitoring.
     try:
         from ..execution.live_observer import snapshot_open_trades
         snapshot_open_trades()
