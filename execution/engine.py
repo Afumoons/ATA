@@ -31,20 +31,16 @@ TRADES_LOG_PATH = Path(__file__).resolve().parent / "trades.log"
 # ---------------------------------------------------------------------------
 
 _DEFAULT_PIP_VALUE_PER_LOT: dict[str, float] = {
-    # Metals
-    "XAUUSDm": 1.0,   # gold: $1/pip/lot
-    "XAGUSDm": 0.5,   # silver: ~$0.50/pip/lot
+    "XAUUSDm": 1.0,
+    "XAGUSDm": 0.5,
     "XAUUSD":  1.0,
     "XAGUSD":  0.5,
-    # Major forex: 1 pip = 0.0001, 1 lot = 100k units → $10/pip/lot (for USD pairs)
-    # These are approximate; use broker contract spec for precision.
     "EURUSD": 10.0,
     "GBPUSD": 10.0,
     "USDJPY": 10.0,
     "AUDUSD": 10.0,
     "USDCAD": 10.0,
     "USDCHF": 10.0,
-    # Crypto (highly variable — use mt5 symbol_info for real values)
     "BTCUSDm": 0.1,
     "ETHUSDm": 0.1,
 }
@@ -53,28 +49,39 @@ _METALS = {"XAU", "XAG"}
 
 
 def _pip_value_for_symbol(symbol: str) -> float:
-    """Best-effort pip value per lot lookup. Falls back to $10 (forex default)."""
     if symbol in _DEFAULT_PIP_VALUE_PER_LOT:
         return _DEFAULT_PIP_VALUE_PER_LOT[symbol]
-    # Detect metals by prefix
     for prefix in _METALS:
         if symbol.startswith(prefix):
             return 1.0
-    return 10.0  # forex default
+    return 10.0
 
 
 def _clamp_volume(volume: float, symbol: str) -> float:
-    """Clamp volume to broker min/max/step from MT5 symbol info."""
     info = mt5.symbol_info(symbol)
     if info is None:
         return max(volume, 0.01)
     min_lot = float(info.volume_min)
     max_lot = float(info.volume_max)
     step = float(info.volume_step)
-    # Round to nearest step
     if step > 0:
         volume = round(round(volume / step) * step, 8)
     return float(max(min_lot, min(max_lot, volume)))
+
+
+def _build_comment(strategy_name: str, symbol: str, timeframe: str) -> str:
+    """Build MT5 comment — alphanumeric only (Exness requirement).
+
+    Format: {timeframe}{symbol}{uid4}
+    Example: M15, XAUUSDm, core15_XAUUSDm_M15_9fb8 → "M15XAUUSDm9fb8"
+
+    uid4 is the 4-char hex suffix after the last underscore in strategy_name.
+    Total kept under 31 chars (MT5 comment field limit).
+    """
+    uid4 = strategy_name.split("_")[-1][:4] if "_" in strategy_name else strategy_name[-4:]
+    tf_clean = "".join(c for c in timeframe if c.isalnum())
+    sym_clean = "".join(c for c in symbol if c.isalnum())
+    return f"{tf_clean}{sym_clean}{uid4}"[:31]
 
 
 @dataclass
@@ -91,10 +98,8 @@ def _get_account_state() -> AccountState:
     info = mt5.account_info()
     if info is None:
         raise RuntimeError("MT5 account_info() returned None — not logged in?")
-
     positions = mt5.positions_get()
     open_positions = len(positions) if positions else 0
-
     return AccountState(
         equity=float(info.equity),
         balance=float(info.balance),
@@ -121,16 +126,6 @@ def _log_trade(
         f.write(line)
     logger.info("Trade executed: %s", line.strip())
 
-def _build_comment(strategy_name: str, symbol: str, timeframe: str) -> str:
-    """Build MT5 comment — alphanumeric only (Exness requirement).
-
-    Format: {timeframe}{symbol}{uid4}
-    Example: M15, XAUUSDm, core15_XAUUSDm_M15_9fb8 → "M15XAUUSDm9fb8"
-    """
-    uid4 = strategy_name.split("_")[-1][:4] if "_" in strategy_name else strategy_name[-4:]
-    base = f"{''.join(c for c in timeframe if c.isalnum())}{''.join(c for c in symbol if c.isalnum())}{uid4}"
-    return base[:31]
-
 
 def execute_trade(
     strategy_name: str,
@@ -146,22 +141,11 @@ def execute_trade(
 ) -> ExecutionResult:
     """Validate and execute a market order via MetaTrader 5.
 
-    Volume sizing formula (fixed from original):
-        risk_amount   = equity * (risk_perc / 100)
-        volume (lots) = risk_amount / (stop_loss_pips * pip_value_per_lot)
-
-    The original formula used sl_distance * 100_000 which is the forex
-    approximation. For gold (pip_value = $1/pip/lot) this underestimated
-    volume by ~10x, forcing every trade to the 0.01 minimum lot.
-
-    Parameters
-    ----------
-    pip_size         : price distance per 1 pip (0.01 for metals, 0.0001 for forex)
-    pip_value_per_lot: monetary value of 1 pip movement per standard lot.
-                       Defaults to instrument-family lookup. Override if broker differs.
-    equity_peak      : historical equity peak for drawdown guard. Should come
-                       from live_monitor. Defaults to current equity if None
-                       (drawdown guard disabled effectively).
+    Tier 1 additions vs previous version:
+    - _build_comment(): comment now M15XAUUSDm9fb8 format for readability in MT5
+    - Filling mode retry: if order_send() returns None, retry with next filling mode
+      before giving up. Handles Exness edge cases silently returning None.
+    - timeframe param added for comment generation.
     """
     if direction not in {"long", "short"}:
         return ExecutionResult(success=False, reason=f"invalid direction: {direction}")
@@ -169,35 +153,24 @@ def execute_trade(
     if stop_loss_pips <= 0:
         return ExecutionResult(success=False, reason=f"non-positive stop_loss_pips: {stop_loss_pips}")
 
-    # ------------------------------------------------------------------ #
-    # Get live tick                                                        #
-    # ------------------------------------------------------------------ #
     tick = mt5.symbol_info_tick(symbol)
     if tick is None:
         return ExecutionResult(success=False, reason=f"no tick data for {symbol}")
 
     price = float(tick.ask if direction == "long" else tick.bid)
 
-    # ------------------------------------------------------------------ #
-    # Account state                                                        #
-    # ------------------------------------------------------------------ #
     try:
         account = _get_account_state()
     except RuntimeError as e:
         return ExecutionResult(success=False, reason=str(e))
 
     if equity_peak is None:
-        # No historical peak available — use current equity.
-        # This disables the drawdown guard. Prefer passing peak from live_monitor.
         equity_peak = account.equity
         logger.debug(
             "execute_trade: equity_peak not provided for %s — drawdown guard inactive",
             strategy_name,
         )
 
-    # ------------------------------------------------------------------ #
-    # Volume sizing                                                        #
-    # ------------------------------------------------------------------ #
     pv = pip_value_per_lot if pip_value_per_lot is not None else _pip_value_for_symbol(symbol)
     if pv <= 0:
         return ExecutionResult(success=False, reason=f"invalid pip_value_per_lot: {pv}")
@@ -213,9 +186,6 @@ def execute_trade(
         stop_loss_pips, pv, raw_volume, volume,
     )
 
-    # ------------------------------------------------------------------ #
-    # Risk validation                                                      #
-    # ------------------------------------------------------------------ #
     req = TradeRequest(
         strategy_name=strategy_name,
         symbol=symbol,
@@ -231,9 +201,6 @@ def execute_trade(
         )
         return ExecutionResult(success=False, reason=f"risk_reject: {decision.reason}")
 
-    # ------------------------------------------------------------------ #
-    # Build and send order                                                 #
-    # ------------------------------------------------------------------ #
     if direction == "long":
         sl_price = price - stop_loss_pips * pip_size
         tp_price = price + take_profit_pips * pip_size
@@ -243,7 +210,6 @@ def execute_trade(
         tp_price = price - take_profit_pips * pip_size
         order_type = mt5.ORDER_TYPE_SELL
 
-    # Sanity check SL/TP are valid (non-negative price)
     if sl_price <= 0 or tp_price <= 0:
         return ExecutionResult(
             success=False,
@@ -251,68 +217,86 @@ def execute_trade(
         )
 
     # ------------------------------------------------------------------ #
-    # Detect filling mode supported by this broker/symbol                 #
-    #                                                                      #
-    # Exness Hedge accounts require an explicit type_filling in the order #
-    # request. Without it, order_send() returns None silently — no error  #
-    # code, no retcode, just None.                                        #
-    #                                                                      #
-    # filling_mode bitmask in symbol_info:                                #
-    #   1 = ORDER_FILLING_FOK  (Fill or Kill)                            #
-    #   2 = ORDER_FILLING_IOC  (Immediate or Cancel)                     #
+    # Determine initial filling mode from broker/symbol info              #
     # ------------------------------------------------------------------ #
-    # Exness returns filling_mode=0 (not exposed via symbol_info).
-    # For Exness MT5: use ORDER_FILLING_IOC which works for all account types.
-    # If filling_mode bitmask is available, prefer FOK → IOC → RETURN.
-    filling_mode = mt5.ORDER_FILLING_IOC  # Exness default — works for Hedge accounts
+    # Exness returns filling_mode=0 — use IOC as default for Hedge accounts.
+    # If broker exposes the bitmask, prefer FOK → IOC → RETURN.
     sym_info = mt5.symbol_info(symbol)
     if sym_info is not None:
         fm = int(sym_info.filling_mode)
         if fm == 0:
-            # Broker does not expose filling mode (e.g. Exness) — use IOC
-            filling_mode = mt5.ORDER_FILLING_IOC
+            initial_filling = mt5.ORDER_FILLING_IOC
         elif fm & 1:
-            filling_mode = mt5.ORDER_FILLING_FOK
+            initial_filling = mt5.ORDER_FILLING_FOK
         elif fm & 2:
-            filling_mode = mt5.ORDER_FILLING_IOC
+            initial_filling = mt5.ORDER_FILLING_IOC
         else:
-            filling_mode = mt5.ORDER_FILLING_RETURN
+            initial_filling = mt5.ORDER_FILLING_RETURN
+    else:
+        initial_filling = mt5.ORDER_FILLING_IOC
 
-    request = {
-        "action":       mt5.TRADE_ACTION_DEAL,
-        "symbol":       symbol,
-        "volume":       float(volume),
-        "type":         order_type,
-        "price":        price,
-        "sl":           round(sl_price, 5),
-        "tp":           round(tp_price, 5),
-        "deviation":    10,
-        "magic":        987654,
-        "comment": _build_comment(strategy_name, symbol, timeframe),
-        "type_filling": filling_mode,
+    # ------------------------------------------------------------------ #
+    # Filling mode retry sequence                                         #
+    #                                                                      #
+    # Some brokers silently return None for certain filling modes even    #
+    # when the symbol is tradeable. We try up to 3 modes before giving up.#
+    # Order: start with detected mode, then try alternatives.            #
+    # ------------------------------------------------------------------ #
+    all_modes = [mt5.ORDER_FILLING_IOC, mt5.ORDER_FILLING_FOK, mt5.ORDER_FILLING_RETURN]
+    # Put detected mode first, then remaining modes in order
+    retry_modes = [initial_filling] + [m for m in all_modes if m != initial_filling]
+
+    comment = _build_comment(strategy_name, symbol, timeframe)
+
+    base_request = {
+        "action":    mt5.TRADE_ACTION_DEAL,
+        "symbol":    symbol,
+        "volume":    float(volume),
+        "type":      order_type,
+        "price":     price,
+        "sl":        round(sl_price, 5),
+        "tp":        round(tp_price, 5),
+        "deviation": 10,
+        "magic":     987654,
+        "comment":   comment,
     }
 
-    result = mt5.order_send(request)
+    result = None
+    used_filling = initial_filling
+
+    for filling_mode in retry_modes:
+        request = {**base_request, "type_filling": filling_mode}
+        result = mt5.order_send(request)
+
+        if result is not None:
+            used_filling = filling_mode
+            break
+
+        last_err = mt5.last_error()
+        logger.warning(
+            "order_send() returned None with filling=%s for %s %s — "
+            "retrying next mode (last_error=%s)",
+            filling_mode, strategy_name, symbol, last_err,
+        )
 
     if result is None:
         last_err = mt5.last_error()
         logger.error(
-            "order_send() returned None: strategy=%s symbol=%s dir=%s "
-            "vol=%.4f price=%.5f filling=%s last_error=%s",
-            strategy_name, symbol, direction,
-            volume, price, filling_mode, last_err,
+            "order_send() returned None after all filling modes: "
+            "strategy=%s symbol=%s dir=%s vol=%.4f last_error=%s",
+            strategy_name, symbol, direction, volume, last_err,
         )
         return ExecutionResult(
             success=False,
-            reason=f"mt5.order_send() returned None (last_error={last_err})",
+            reason=f"mt5.order_send() returned None after retries (last_error={last_err})",
         )
 
     res_dict = result._asdict()
 
     if result.retcode != mt5.TRADE_RETCODE_DONE:
         logger.warning(
-            "Order failed: strategy=%s symbol=%s dir=%s retcode=%s deal=%s",
-            strategy_name, symbol, direction, result.retcode, res_dict,
+            "Order failed: strategy=%s symbol=%s dir=%s retcode=%s filling=%s deal=%s",
+            strategy_name, symbol, direction, result.retcode, used_filling, res_dict,
         )
         return ExecutionResult(
             success=False,
