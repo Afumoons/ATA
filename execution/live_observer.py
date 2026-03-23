@@ -174,8 +174,8 @@ def snapshot_open_trades() -> None:
                 magic=int(pos.magic),
                 comment=str(pos.comment),
                 floating_pnl=float(pos.profit),
-                swap=float(pos.swap),
-                commission=float(pos.commission),
+                swap=float(getattr(pos, "swap", 0.0) or 0.0),
+                commission=float(getattr(pos, "commission", 0.0) or 0.0),
                 last_update=now_iso,
             )
             snapshots.append(asdict(snap))
