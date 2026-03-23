@@ -494,6 +494,19 @@ def job_research_strategies() -> None:
                 else:
                     status = "disabled"
 
+                # Persist core strategy rules into stats["strategy"] so that
+                # StrategyPool._rebuild_fp_map() can reconstruct structural
+                # fingerprints across process restarts. Without this, all
+                # records share an empty/None strategy dict and deduplication
+                # silently degrades.
+                eval_result["strategy"] = {
+                    "long_entry_rule": getattr(strat, "long_entry_rule", "") or "",
+                    "short_entry_rule": getattr(strat, "short_entry_rule", "") or "",
+                    "exit_rule": getattr(strat, "exit_rule", "") or "",
+                    "sl_atr_mult": getattr(strat, "sl_atr_mult", ""),
+                    "tp_atr_mult": getattr(strat, "tp_atr_mult", ""),
+                }
+
                 pool.upsert_strategy(
                     strategy=strat,
                     stats=eval_result,
