@@ -470,7 +470,7 @@ def job_research_strategies() -> None:
                         stats.get("num_trades", 0.0) >= 50
                         and stats.get("return_pct", 0.0) > 0.0
                         and stats.get("max_drawdown_pct", 100.0) <= 20.0
-                        and stats.get("profit_factor", 0.0) >= 1.1
+                        and stats.get("profit_factor", 0.0) >= 1.2
                         and trend_ret > 0.0
                         and range_ret > -5.0
                     )
@@ -484,9 +484,9 @@ def job_research_strategies() -> None:
                 range_ret = regime.get("ranging", {}).get("return_pct", 0.0)
                 num_trades = eval_result.get("num_trades", 0.0) or 0.0
 
-                if _should_promote(eval_result) and wf_sharpe >= 0.15:
+                if _should_promote(eval_result) and wf_sharpe >= 0.5:
                     status = "active"
-                elif eval_result.get("accepted") and wf_sharpe >= 0.08:
+                elif eval_result.get("accepted") and wf_sharpe >= 0.2:
                     if num_trades >= 20 and trend_ret > 0.0 and range_ret > -10.0:
                         status = "exploratory"
                     else:
