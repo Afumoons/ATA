@@ -22,15 +22,12 @@ EXPLORATORY_REGIME_EDGE_THRESHOLD = -10.0
 
 # ---------------------------------------------------------------------------
 # Ticket → strategy name mapping
-#
-# Exness MT5 strips special characters (-, _) from order comments, so the
-# comment field cannot be used for strategy attribution. Instead we persist
-# a side-channel mapping: ticket_id → full_strategy_name, written here
-# immediately after a successful order_send(), and read by live_monitor.py
-# when processing closed deals via history_deals_get().
+# Exness strips special chars from MT5 comments, so we maintain a
+# side-channel file: ticket_id → full_strategy_name.
+# live_monitor.py reads this for PnL attribution.
 # ---------------------------------------------------------------------------
 _TICKET_MAP_PATH = Path(__file__).resolve().parent / "ticket_strategy_map.json"
-_MAX_TICKET_MAP_SIZE = 2000  # keep last N entries; at ~10 trades/day = ~6 months
+_MAX_TICKET_MAP_SIZE = 2000
 
 
 def _load_ticket_map() -> Dict[str, str]:
@@ -48,7 +45,6 @@ def _load_ticket_map() -> Dict[str, str]:
 def _save_ticket_map(mapping: Dict[str, str]) -> None:
     try:
         if len(mapping) > _MAX_TICKET_MAP_SIZE:
-            # Keep most recent by ticket number
             keys = sorted(mapping.keys(), key=lambda k: int(k) if k.isdigit() else 0)
             mapping = {k: mapping[k] for k in keys[-_MAX_TICKET_MAP_SIZE:]}
         data = json.dumps(mapping, indent=2)
@@ -70,7 +66,6 @@ def _save_ticket_map(mapping: Dict[str, str]) -> None:
 
 
 def register_ticket(ticket: int, strategy_name: str) -> None:
-    """Persist ticket → full strategy name for later PnL attribution."""
     mapping = _load_ticket_map()
     mapping[str(ticket)] = strategy_name
     _save_ticket_map(mapping)
@@ -78,16 +73,14 @@ def register_ticket(ticket: int, strategy_name: str) -> None:
 
 
 def get_strategy_for_ticket(ticket: int) -> Optional[str]:
-    """Look up full strategy name for an MT5 ticket. Returns None if not found."""
     return _load_ticket_map().get(str(ticket))
 
 
 # ---------------------------------------------------------------------------
-# Pip params per instrument
+# Pip params
 # ---------------------------------------------------------------------------
 
 def _pip_params(symbol: str) -> tuple[float, float]:
-    """Return (pip_size, pip_value_per_lot)."""
     sym = symbol.upper()
     if "XAU" in sym or "XAG" in sym:
         return 0.01, 1.0
@@ -97,13 +90,13 @@ def _pip_params(symbol: str) -> tuple[float, float]:
 
 
 # ---------------------------------------------------------------------------
-# Signal dataclass + generation
+# Signal generation
 # ---------------------------------------------------------------------------
 
 @dataclass
 class Signal:
     strategy: StrategyDefinition
-    direction: str  # "long" or "short"
+    direction: str
 
 
 def generate_signals_for_row(
@@ -160,6 +153,7 @@ def execute_signals_for_symbol(
 ) -> Tuple[List[Tuple[Signal, str]], Dict[str, bool]]:
     summary: Dict[str, bool] = {
         "blocked_daily_limits": False,
+        "blocked_news_lockout": False,
         "no_strategies_in_pool": False,
         "no_strategies_with_edge": False,
         "no_entry_active": False,
@@ -173,6 +167,21 @@ def execute_signals_for_symbol(
 
     latest = features_df.sort_values("time").iloc[-1]
     current_regime = str(latest.get("regime", "unknown"))
+
+    # ------------------------------------------------------------------ #
+    # Tier 1: News lockout guard — inside execute_signals_for_symbol      #
+    # Protects against any caller bypassing the check in scheduler/main.  #
+    # in_news_lockout=True means a high-impact event is within ±15 min.  #
+    # ------------------------------------------------------------------ #
+    if bool(latest.get("in_news_lockout", False)):
+        logger.warning(
+            "News lockout active for %s %s at %s — skipping signal generation "
+            "(high-impact event within ±15 min)",
+            symbol, timeframe, latest.get("time", "?"),
+        )
+        summary["blocked_news_lockout"] = True
+        return [], summary
+
     logger.info("Current regime for %s %s: %s", symbol, timeframe, current_regime)
 
     from ..config import risk_config
@@ -312,13 +321,11 @@ def execute_signals_for_symbol(
                     take_profit_pips=strat.take_profit_pips,
                     pip_size=pip_size,
                     pip_value_per_lot=pip_value_per_lot,
-                    timeframe=timeframe,
+                    timeframe=timeframe,          # Tier 1: passed for comment generation
                 )
                 results.append((sig, res.reason))
 
                 if res.success:
-                    # Store ticket→strategy mapping (Exness strips special chars
-                    # from comment, so comment-based attribution is not reliable)
                     if res.ticket is not None:
                         try:
                             register_ticket(res.ticket, strat.name)
