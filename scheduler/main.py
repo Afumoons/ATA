@@ -449,6 +449,12 @@ def job_research_strategies() -> None:
                 eval_result["wf_overall_max_drawdown_pct"] = (
                     wf.get("aggregate", {}).get("overall_max_drawdown_pct", 0.0)
                 )
+
+                # Persist basic identity so promotion logic can be symbol-aware
+                # (e.g. relax trend filters for BTC range traders).
+                eval_result["symbol"] = getattr(strat, "symbol", "")
+                eval_result["timeframe"] = getattr(strat, "timeframe", "")
+
                 eval_result.update(mc)
 
                 wf_sharpe = float(eval_result.get("wf_overall_sharpe", 0.0) or 0.0)
@@ -466,12 +472,22 @@ def job_research_strategies() -> None:
                         + regime.get("trending_down", {}).get("return_pct", 0.0)
                     )
                     range_ret = regime.get("ranging", {}).get("return_pct", 0.0)
+
+                    # BTC range traders often have near-zero trending returns but
+                    # excellent overall robustness. For BTC symbols we therefore
+                    # relax the hard requirement on trend_ret and only enforce it
+                    # for non-BTC pairs.
+                    symbol = str(stats.get("symbol", "") or "").upper()
+                    is_btc = symbol.startswith("BTC")
+
+                    trend_gate_ok = trend_ret > 0.0 if not is_btc else True
+
                     return (
                         stats.get("num_trades", 0.0) >= 50
                         and stats.get("return_pct", 0.0) > 0.0
                         and stats.get("max_drawdown_pct", 100.0) <= 20.0
                         and stats.get("profit_factor", 0.0) >= 1.2
-                        and trend_ret > 0.0
+                        and trend_gate_ok
                         and range_ret > -5.0
                     )
 
