@@ -12,15 +12,12 @@ class RiskConfig:
     max_portfolio_drawdown_pct: float = 25.0  # 25% DD limit
 
     # Maximum simultaneous open positions across all strategies
-    max_open_positions: int = 8
+    max_open_positions: int = 10
 
     # Daily guardrails — enabled by default for live prop-firm style accounts.
-    max_daily_drawdown_pct: float = 5.0       # lock trading if daily DD > 5%
-    max_trades_per_day: int = 50               # lock trading after N trades/day
-    daily_limits_enabled: bool = True
-    # Portfolio-level circuit breaker: disable all active strategies if
-    # drawdown from peak exceeds this threshold
-    max_portfolio_drawdown_pct: float = 20.0  # 20%
+    max_daily_drawdown_pct: float = 25.0       # lock trading if daily DD > 5%
+    max_trades_per_day: int = 288               # lock trading after N trades/day
+    daily_limits_enabled: bool = False
 
 @dataclass
 class DataConfig:
