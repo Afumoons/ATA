@@ -3,7 +3,7 @@
     "name": "core15_BTCUSDm_M15_957a",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "candidate",
+    "status": "exploratory",
     "score": 1.8545364072379342,
     "stats": {
       "accepted": true,
@@ -1388,7 +1388,7 @@
     "name": "core15_XAUUSDm_M15_2a13",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "candidate",
+    "status": "exploratory",
     "score": 1.3507661598882428,
     "stats": {
       "accepted": true,
@@ -2084,7 +2084,7 @@
     "name": "core15_XAUUSDm_M15_4225",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "disabled",
+    "status": "exploratory",
     "score": 2.115634843052727,
     "stats": {
       "accepted": true,
@@ -2896,7 +2896,7 @@
     "name": "core15_XAUUSDm_M15_59fb",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "disabled",
+    "status": "exploratory",
     "score": 1.1816760142506375,
     "stats": {
       "accepted": true,
@@ -3244,7 +3244,7 @@
     "name": "core15_XAUUSDm_M15_615e",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "disabled",
+    "status": "exploratory",
     "score": 1.080711141646555,
     "stats": {
       "accepted": true,
@@ -4274,7 +4274,7 @@
     "name": "core15_XAUUSDm_M15_7ac7",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "candidate",
+    "status": "exploratory",
     "score": 0.9833699660477022,
     "stats": {
       "accepted": true,
@@ -6485,93 +6485,93 @@
     "name": "core15_XAUUSDm_M15_9f7e",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "active",
-    "score": 4.623136220588941,
+    "status": "disabled",
+    "score": 4.6686901249995545,
     "stats": {
       "initial_equity": 10000.0,
-      "final_equity": 17546.697721563756,
-      "net_profit": 7546.697721563756,
-      "return_pct": 75.46697721563757,
-      "sharpe_ratio": 9.512750193480235,
-      "max_drawdown_pct": -10.311801121063757,
-      "profit_factor": 1.7371805146916144,
-      "win_rate": 0.4991482112436116,
-      "num_trades": 587.0,
-      "avg_win": 60.69605109351822,
-      "avg_loss": 34.82056207087446,
-      "expectancy": 12.856384534180151,
+      "final_equity": 17654.092314950205,
+      "net_profit": 7654.092314950205,
+      "return_pct": 76.54092314950205,
+      "sharpe_ratio": 9.61431961824727,
+      "max_drawdown_pct": -10.311801121063668,
+      "profit_factor": 1.7536009630376088,
+      "win_rate": 0.4982876712328767,
+      "num_trades": 584.0,
+      "avg_win": 61.20544183894056,
+      "avg_loss": 34.66447529072185,
+      "expectancy": 13.106322457106508,
       "strategy_explain": {
         "regime_pnl": {
           "high_vol": {
-            "return_pct": 9.892566033586768,
-            "net_profit": 989.2566033586768,
-            "num_trades": 16,
-            "avg_rr": 1.6000000000000028,
-            "win_rate": 0.75
+            "return_pct": 10.003120424358436,
+            "net_profit": 1000.3120424358434,
+            "num_trades": 17,
+            "avg_rr": 1.6000000000000023,
+            "win_rate": 0.7058823529411765
           },
           "low_vol": {
-            "return_pct": 1.6035710075829368,
-            "net_profit": 160.35710075829368,
+            "return_pct": 1.6069439789573001,
+            "net_profit": 160.69439789573002,
             "num_trades": 22,
-            "avg_rr": 1.5999999999999965,
+            "avg_rr": 1.599999999999994,
             "win_rate": 0.5909090909090909
           },
           "ranging": {
-            "return_pct": 0.8454306128713724,
-            "net_profit": 84.54306128713725,
-            "num_trades": 46,
+            "return_pct": 0.9693038676702487,
+            "net_profit": 96.93038676702486,
+            "num_trades": 47,
             "avg_rr": 1.5999999999999992,
-            "win_rate": 0.43478260869565216
+            "win_rate": 0.44680851063829785
           },
           "trending_down": {
-            "return_pct": 58.469267186803684,
-            "net_profit": 5846.926718680369,
+            "return_pct": 58.59225221555734,
+            "net_profit": 5859.225221555734,
             "num_trades": 210,
-            "avg_rr": 1.5999999999999994,
+            "avg_rr": 1.6,
             "win_rate": 0.43333333333333335
           },
           "trending_up": {
-            "return_pct": 4.656142374792726,
-            "net_profit": 465.61423747927256,
-            "num_trades": 293,
-            "avg_rr": 1.6000000000000014,
-            "win_rate": 0.5358361774744027
+            "return_pct": 5.369302662958668,
+            "net_profit": 536.9302662958668,
+            "num_trades": 288,
+            "avg_rr": 1.5999999999999999,
+            "win_rate": 0.5347222222222222
           }
         },
         "session_pnl": {
           "asia": {
-            "return_pct": 17.568786146318597,
+            "return_pct": 17.605587079016203,
             "num_trades": 207
           },
           "london": {
-            "return_pct": 39.73243935678251,
+            "return_pct": 39.8159959502981,
             "num_trades": 166
           },
           "new_york": {
-            "return_pct": 18.16575171253639,
-            "num_trades": 214
+            "return_pct": 19.119340120187676,
+            "num_trades": 211
           }
         },
         "risk_behavior": {
-          "avg_rr": 1.6000000000000003,
-          "sl_hit_ratio": 0.04088586030664395,
-          "tp_hit_ratio": 0.11073253833049404,
-          "exit_rule_ratio": 0.848381601362862,
+          "avg_rr": 1.5999999999999999,
+          "sl_hit_ratio": 0.0410958904109589,
+          "tp_hit_ratio": 0.1113013698630137,
+          "exit_rule_ratio": 0.8476027397260274,
           "avg_holding_bars": 0.0,
           "max_consecutive_losses": 12
         },
         "stability": {
           "subperiod_sharpe": [
-            2.035333458346611,
-            -0.08914066254644554,
-            3.939073403974114
+            2.191478991536839,
+            0.28615254950601454,
+            3.741550827400587
           ],
           "subperiod_return_pct": [
-            12.247010877580372,
-            -0.6705766621871373,
-            63.89054300024426
+            13.152922905308396,
+            2.100308773032724,
+            61.28769147116087
           ],
-          "sharpe_std": 1.6453343002643108
+          "sharpe_std": 1.4131434151452973
         },
         "news_behavior": {
           "trades_around_high_impact": {
@@ -6588,29 +6588,20 @@
           "worst_regime": "ranging",
           "is_trend_follower": true,
           "is_range_trader": true,
-          "total_pnl": 7546.697721563749,
-          "total_return_pct": 75.46697721563748
+          "total_pnl": 7654.092314950199,
+          "total_return_pct": 76.54092314950199
         }
       },
-      "score": 4.623136220588941,
+      "score": 4.6686901249995545,
       "accepted": true,
-      "wf_overall_sharpe": 8.829033554552076,
-      "wf_overall_max_drawdown_pct": 13.805074691687114,
-      "symbol": "XAUUSDm",
-      "timeframe": "M15",
-      "mc_final_pnl_mean": 7546.697721563745,
-      "mc_final_pnl_p5": 7546.69772156374,
-      "mc_final_pnl_p95": 7546.697721563753,
-      "mc_max_dd_mean": 769.3646454595182,
-      "mc_max_dd_p5": 523.4719269204842,
-      "mc_max_dd_p95": 1086.2183397286908,
-      "strategy": {
-        "long_entry_rule": "ma_short > ma_long and trend_strength > 0.07",
-        "short_entry_rule": "ma_short < ma_long and trend_strength < -0.07",
-        "exit_rule": "rsi > 47",
-        "sl_atr_mult": 2.5,
-        "tp_atr_mult": 4.0
-      }
+      "wf_overall_sharpe": 9.459051177462097,
+      "wf_overall_max_drawdown_pct": 13.915258028370324,
+      "mc_final_pnl_mean": 7654.092314950195,
+      "mc_final_pnl_p5": 7654.092314950188,
+      "mc_final_pnl_p95": 7654.092314950201,
+      "mc_max_dd_mean": 743.0096017627811,
+      "mc_max_dd_p5": 505.1977921034683,
+      "mc_max_dd_p95": 1031.9057801311317
     }
   },
   "core15_XAUUSDm_M15_a199": {
@@ -6849,7 +6840,7 @@
     "name": "core15_XAUUSDm_M15_a93b",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "disabled",
+    "status": "exploratory",
     "score": 1.3152714310861333,
     "stats": {
       "accepted": true,
@@ -8023,7 +8014,7 @@
     "name": "core15_XAUUSDm_M15_d9e3",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "disabled",
+    "status": "exploratory",
     "score": 1.0801571595045674,
     "stats": {
       "accepted": true,
@@ -8241,7 +8232,7 @@
     "name": "core15_XAUUSDm_M15_dea5",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "candidate",
+    "status": "exploratory",
     "score": 1.1270364397494572,
     "stats": {
       "accepted": true,
@@ -10684,7 +10675,7 @@
     "name": "core15_XAUUSDm_M15_f9f9",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "candidate",
+    "status": "exploratory",
     "score": 2.1341319384974127,
     "stats": {
       "accepted": true,
@@ -11844,7 +11835,7 @@
     "name": "core15_XAUUSDm_M15_45c1",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "candidate",
+    "status": "exploratory",
     "score": 1.6006298865230422,
     "stats": {
       "initial_equity": 10000.0,
@@ -11960,7 +11951,7 @@
     "name": "core15_XAUUSDm_M15_3ef3",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "disabled",
+    "status": "exploratory",
     "score": 1.2967509872971348,
     "stats": {
       "initial_equity": 10000.0,
@@ -12083,7 +12074,7 @@
     "name": "core15_XAUUSDm_M15_ac2f",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "candidate",
+    "status": "exploratory",
     "score": 2.050367900338312,
     "stats": {
       "initial_equity": 10000.0,
@@ -12315,7 +12306,7 @@
     "name": "core15_XAUUSDm_M15_2cb8",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "disabled",
+    "status": "exploratory",
     "score": 1.5247620460676208,
     "stats": {
       "initial_equity": 10000.0,
@@ -12438,7 +12429,7 @@
     "name": "core15_XAUUSDm_M15_fd17",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "disabled",
+    "status": "exploratory",
     "score": 1.8442036321967252,
     "stats": {
       "initial_equity": 10000.0,
@@ -12554,7 +12545,7 @@
     "name": "core15_XAUUSDm_M15_4ee1",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "candidate",
+    "status": "exploratory",
     "score": 1.1067231693303172,
     "stats": {
       "initial_equity": 10000.0,
@@ -12670,7 +12661,7 @@
     "name": "core15_XAUUSDm_M15_e0fb",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "candidate",
+    "status": "exploratory",
     "score": 2.3024600887247892,
     "stats": {
       "initial_equity": 10000.0,
@@ -13134,7 +13125,7 @@
     "name": "core15_XAUUSDm_M15_dd2e",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "disabled",
+    "status": "exploratory",
     "score": 1.9562554965151342,
     "stats": {
       "initial_equity": 10000.0,
@@ -13250,7 +13241,7 @@
     "name": "core15_XAUUSDm_M15_a143",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "candidate",
+    "status": "exploratory",
     "score": 0.959439684881396,
     "stats": {
       "initial_equity": 10000.0,
@@ -13366,72 +13357,72 @@
     "name": "core15_XAUUSDm_M15_49e8",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "active",
-    "score": 4.058175854449979,
+    "status": "disabled",
+    "score": 4.082752374181471,
     "stats": {
       "initial_equity": 10000.0,
-      "final_equity": 15360.90028268474,
-      "net_profit": 5360.900282684741,
-      "return_pct": 53.60900282684741,
-      "sharpe_ratio": 8.14140983564606,
-      "max_drawdown_pct": -12.733244260250153,
-      "profit_factor": 1.7631478759801877,
-      "win_rate": 0.47058823529411764,
-      "num_trades": 391.0,
-      "avg_win": 67.31315467398194,
-      "avg_loss": 33.9358462672847,
-      "expectancy": 13.71074241095842,
+      "final_equity": 15402.09402659618,
+      "net_profit": 5402.09402659618,
+      "return_pct": 54.020940265961805,
+      "sharpe_ratio": 8.192651729108004,
+      "max_drawdown_pct": -12.733244260250187,
+      "profit_factor": 1.7767470838025694,
+      "win_rate": 0.46770025839793283,
+      "num_trades": 387.0,
+      "avg_win": 68.26994360069506,
+      "avg_loss": 33.76099885985261,
+      "expectancy": 13.958899293530148,
       "strategy_explain": {
         "regime_pnl": {
           "trending_down": {
-            "return_pct": 50.275143891454256,
-            "net_profit": 5027.514389145425,
+            "return_pct": 50.27440623893857,
+            "net_profit": 5027.440623893856,
             "num_trades": 171,
-            "avg_rr": 1.5999999999999985,
+            "avg_rr": 1.5999999999999994,
             "win_rate": 0.42105263157894735
           },
           "trending_up": {
-            "return_pct": 3.333858935393176,
-            "net_profit": 333.38589353931764,
-            "num_trades": 220,
-            "avg_rr": 1.600000000000002,
-            "win_rate": 0.509090909090909
+            "return_pct": 3.7465340270231167,
+            "net_profit": 374.65340270231167,
+            "num_trades": 216,
+            "avg_rr": 1.6,
+            "win_rate": 0.5046296296296297
           }
         },
         "session_pnl": {
           "asia": {
-            "return_pct": 10.769313497933853,
+            "return_pct": 10.769002534697142,
             "num_trades": 154
           },
           "london": {
-            "return_pct": 21.36155579651922,
+            "return_pct": 21.361225301747567,
             "num_trades": 98
           },
           "new_york": {
-            "return_pct": 21.478133532394363,
-            "num_trades": 139
+            "return_pct": 21.890712429516974,
+            "num_trades": 135
           }
         },
         "risk_behavior": {
-          "avg_rr": 1.6000000000000003,
-          "sl_hit_ratio": 0.04092071611253197,
-          "tp_hit_ratio": 0.1329923273657289,
-          "exit_rule_ratio": 0.8260869565217391,
+          "avg_rr": 1.5999999999999999,
+          "sl_hit_ratio": 0.041343669250646,
+          "tp_hit_ratio": 0.1343669250645995,
+          "exit_rule_ratio": 0.8242894056847545,
           "avg_holding_bars": 0.0,
           "max_consecutive_losses": 17
         },
         "stability": {
           "subperiod_sharpe": [
-            2.53565623763187,
-            -1.2013456344917344,
-            3.5360630122659344
+            2.4841346143295406,
+            -1.0722635984360955,
+            3.5361531751201265
           ],
           "subperiod_return_pct": [
-            13.142375875320603,
-            -6.755253730859645,
-            47.22188068238647
+            12.868091887350815,
+            -6.014135166757577,
+            47.16698354536844
           ],
-          "sharpe_std": 2.0387642606181102
+          "sharpe_std": 1.9718073057422008
         },
         "news_behavior": {
           "trades_around_high_impact": {
@@ -13448,29 +13439,20 @@
           "worst_regime": "trending_up",
           "is_trend_follower": true,
           "is_range_trader": false,
-          "total_pnl": 5360.900282684744,
-          "total_return_pct": 53.60900282684744
+          "total_pnl": 5402.094026596168,
+          "total_return_pct": 54.02094026596168
         }
       },
-      "score": 4.058175854449979,
+      "score": 4.082752374181471,
       "accepted": true,
-      "wf_overall_sharpe": 7.350639902800959,
-      "wf_overall_max_drawdown_pct": 13.312609733852677,
-      "symbol": "XAUUSDm",
-      "timeframe": "M15",
-      "mc_final_pnl_mean": 5360.900282684745,
-      "mc_final_pnl_p5": 5360.900282684741,
-      "mc_final_pnl_p95": 5360.90028268475,
-      "mc_max_dd_mean": 672.9433419627305,
-      "mc_max_dd_p5": 441.5611188649738,
-      "mc_max_dd_p95": 1043.2537656895367,
-      "strategy": {
-        "long_entry_rule": "ma_short > ma_long and trend_strength > 0.103",
-        "short_entry_rule": "ma_short < ma_long and trend_strength < -0.103",
-        "exit_rule": "rsi > 47",
-        "sl_atr_mult": 2.5,
-        "tp_atr_mult": 4.0
-      }
+      "wf_overall_sharpe": 7.905558010158159,
+      "wf_overall_max_drawdown_pct": 13.9610797949566,
+      "mc_final_pnl_mean": 5402.094026596169,
+      "mc_final_pnl_p5": 5402.0940265961635,
+      "mc_final_pnl_p95": 5402.094026596173,
+      "mc_max_dd_mean": 647.7577236496584,
+      "mc_max_dd_p5": 458.85769763134095,
+      "mc_max_dd_p95": 899.5013668777502
     }
   },
   "core15_XAUUSDm_M15_11cf": {
@@ -13825,7 +13807,7 @@
     "name": "core15_XAUUSDm_M15_f2b2",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "candidate",
+    "status": "exploratory",
     "score": 0.917383262121823,
     "stats": {
       "initial_equity": 10000.0,
@@ -13941,7 +13923,7 @@
     "name": "core15_XAUUSDm_M15_73c6",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "disabled",
+    "status": "exploratory",
     "score": 1.6654430778580716,
     "stats": {
       "initial_equity": 10000.0,
@@ -14057,7 +14039,7 @@
     "name": "core15_XAUUSDm_M15_f9db",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "disabled",
+    "status": "exploratory",
     "score": 1.6402004517435145,
     "stats": {
       "initial_equity": 10000.0,
@@ -14289,7 +14271,7 @@
     "name": "core15_XAUUSDm_M15_9d32",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "candidate",
+    "status": "exploratory",
     "score": 1.1597615958294303,
     "stats": {
       "initial_equity": 10000.0,
@@ -14753,7 +14735,7 @@
     "name": "core15_XAUUSDm_M15_bc14",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 2.8979664124124977,
     "stats": {
       "initial_equity": 10000.0,
@@ -14869,7 +14851,7 @@
     "name": "core15_BTCUSDm_M15_2789",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.2214223885980156,
     "stats": {
       "initial_equity": 10000.0,
@@ -14985,7 +14967,7 @@
     "name": "core15_XAUUSDm_M15_2038",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "candidate",
+    "status": "disabled",
     "score": 1.938831577399583,
     "stats": {
       "initial_equity": 10000.0,
@@ -15087,7 +15069,7 @@
     "name": "core15_XAUUSDm_M15_c7cf",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.6087753797888587,
     "stats": {
       "initial_equity": 10000.0,
@@ -15305,7 +15287,7 @@
     "name": "core15_XAUUSDm_M15_0004",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "candidate",
+    "status": "disabled",
     "score": 2.320773384187573,
     "stats": {
       "initial_equity": 10000.0,
@@ -15523,7 +15505,7 @@
     "name": "core15_XAUUSDm_M15_0f06",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 2.897966417092198,
     "stats": {
       "initial_equity": 10000.0,
@@ -15639,7 +15621,7 @@
     "name": "core15_XAUUSDm_M15_6558",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "candidate",
+    "status": "disabled",
     "score": 2.3207733658204854,
     "stats": {
       "initial_equity": 10000.0,
@@ -16219,7 +16201,7 @@
     "name": "core15_XAUUSDm_M15_6cce",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 2.8979664040373296,
     "stats": {
       "initial_equity": 10000.0,
@@ -16335,7 +16317,7 @@
     "name": "core15_BTCUSDm_M15_a176",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "candidate",
+    "status": "exploratory",
     "score": 1.2603274988571438,
     "stats": {
       "initial_equity": 10000.0,
@@ -16567,7 +16549,7 @@
     "name": "core15_XAUUSDm_M15_ce12",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "candidate",
+    "status": "exploratory",
     "score": 1.426922994427748,
     "stats": {
       "initial_equity": 10000.0,
@@ -16799,7 +16781,7 @@
     "name": "core15_XAUUSDm_M15_7f7a",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 2.2590487828106838,
     "stats": {
       "initial_equity": 10000.0,
@@ -17147,7 +17129,7 @@
     "name": "core15_XAUUSDm_M15_105e",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 2.8979664069434192,
     "stats": {
       "initial_equity": 10000.0,
@@ -17379,7 +17361,7 @@
     "name": "core15_XAUUSDm_M15_e284",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 2.9688490666329352,
     "stats": {
       "initial_equity": 10000.0,
@@ -17611,7 +17593,7 @@
     "name": "core15_XAUUSDm_M15_7367",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.4838928315584043,
     "stats": {
       "initial_equity": 10000.0,
@@ -17815,7 +17797,7 @@
     "name": "core15_XAUUSDm_M15_1ab1",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 2.897966387753253,
     "stats": {
       "initial_equity": 10000.0,
@@ -17931,7 +17913,7 @@
     "name": "core15_XAUUSDm_M15_bab1",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "candidate",
+    "status": "disabled",
     "score": 2.3207733429101802,
     "stats": {
       "initial_equity": 10000.0,
@@ -18279,7 +18261,7 @@
     "name": "core15_XAUUSDm_M15_c9c2",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "candidate",
+    "status": "disabled",
     "score": 2.2013313545702156,
     "stats": {
       "initial_equity": 10000.0,
@@ -18859,7 +18841,7 @@
     "name": "core15_XAUUSDm_M15_e1f8",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 2.099551017227085,
     "stats": {
       "initial_equity": 10000.0,
@@ -19077,7 +19059,7 @@
     "name": "core15_XAUUSDm_M15_883e",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 2.897966437486089,
     "stats": {
       "initial_equity": 10000.0,
@@ -19425,93 +19407,93 @@
     "name": "core15_XAUUSDm_M15_d7c7",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "active",
-    "score": 3.963414985154654,
+    "status": "disabled",
+    "score": 4.015299152257184,
     "stats": {
       "initial_equity": 10000.0,
-      "final_equity": 16518.550797821143,
-      "net_profit": 6518.550797821143,
-      "return_pct": 65.18550797821142,
-      "sharpe_ratio": 8.106881522538641,
+      "final_equity": 16645.027763045713,
+      "net_profit": 6645.027763045713,
+      "return_pct": 66.45027763045714,
+      "sharpe_ratio": 8.226819476711784,
       "max_drawdown_pct": -12.887432797494691,
-      "profit_factor": 1.4984556803804823,
-      "win_rate": 0.5014836795252225,
-      "num_trades": 674.0,
-      "avg_win": 57.97646169311931,
-      "avg_loss": 38.92111087634879,
-      "expectancy": 9.671440352850347,
+      "profit_factor": 1.5114856318247272,
+      "win_rate": 0.5007451564828614,
+      "num_trades": 671.0,
+      "avg_win": 58.44240870535856,
+      "avg_loss": 38.780959886432164,
+      "expectancy": 9.903171032854999,
       "strategy_explain": {
         "regime_pnl": {
           "high_vol": {
-            "return_pct": 7.293775317706896,
-            "net_profit": 729.3775317706895,
-            "num_trades": 23,
-            "avg_rr": 1.4999999999999982,
-            "win_rate": 0.6956521739130435
+            "return_pct": 7.424615230837755,
+            "net_profit": 742.4615230837755,
+            "num_trades": 24,
+            "avg_rr": 1.5000000000000002,
+            "win_rate": 0.6666666666666666
           },
           "low_vol": {
-            "return_pct": 0.9025788436660213,
-            "net_profit": 90.25788436660211,
+            "return_pct": 0.9049494158555311,
+            "net_profit": 90.49494158555311,
             "num_trades": 23,
-            "avg_rr": 1.4999999999999911,
+            "avg_rr": 1.4999999999999936,
             "win_rate": 0.5217391304347826
           },
           "ranging": {
-            "return_pct": 4.4475445595327345,
-            "net_profit": 444.75445595327346,
-            "num_trades": 51,
-            "avg_rr": 1.5000000000000007,
-            "win_rate": 0.45098039215686275
+            "return_pct": 4.612115943865644,
+            "net_profit": 461.21159438656434,
+            "num_trades": 52,
+            "avg_rr": 1.4999999999999987,
+            "win_rate": 0.46153846153846156
           },
           "trending_down": {
-            "return_pct": 47.415135999977196,
-            "net_profit": 4741.513599997719,
+            "return_pct": 47.539669174137366,
+            "net_profit": 4753.966917413736,
             "num_trades": 282,
-            "avg_rr": 1.5,
+            "avg_rr": 1.5000000000000009,
             "win_rate": 0.46099290780141844
           },
           "trending_up": {
-            "return_pct": 5.126473257328508,
-            "net_profit": 512.6473257328507,
-            "num_trades": 295,
-            "avg_rr": 1.500000000000001,
-            "win_rate": 0.5322033898305085
+            "return_pct": 5.968927865760711,
+            "net_profit": 596.8927865760711,
+            "num_trades": 290,
+            "avg_rr": 1.5000000000000013,
+            "win_rate": 0.5310344827586206
           }
         },
         "session_pnl": {
           "asia": {
-            "return_pct": 22.878170913617197,
+            "return_pct": 22.938072583385896,
             "num_trades": 215
           },
           "london": {
-            "return_pct": 31.499142523001012,
+            "return_pct": 31.58179312121204,
             "num_trades": 175
           },
           "new_york": {
-            "return_pct": 10.808194541593155,
-            "num_trades": 284
+            "return_pct": 11.930411925859053,
+            "num_trades": 281
           }
         },
         "risk_behavior": {
-          "avg_rr": 1.5000000000000004,
-          "sl_hit_ratio": 0.05192878338278932,
-          "tp_hit_ratio": 0.10682492581602374,
-          "exit_rule_ratio": 0.841246290801187,
+          "avg_rr": 1.5000000000000007,
+          "sl_hit_ratio": 0.05216095380029806,
+          "tp_hit_ratio": 0.10730253353204174,
+          "exit_rule_ratio": 0.8405365126676602,
           "avg_holding_bars": 0.0,
           "max_consecutive_losses": 12
         },
         "stability": {
           "subperiod_sharpe": [
-            1.8994979915309491,
-            -0.6291139854191068,
-            3.7066338654462814
+            2.1192847371045924,
+            -0.6766893416319836,
+            3.725656372414303
           ],
           "subperiod_return_pct": [
-            12.57687635268484,
-            -5.4258512415718245,
-            58.03448286709834
+            13.949430092762137,
+            -5.868626498554638,
+            58.36947403624951
           ],
-          "sharpe_std": 1.7782115866807435
+          "sharpe_std": 1.8189908272224937
         },
         "news_behavior": {
           "trades_around_high_impact": {
@@ -19528,36 +19510,27 @@
           "worst_regime": "low_vol",
           "is_trend_follower": true,
           "is_range_trader": true,
-          "total_pnl": 6518.550797821134,
-          "total_return_pct": 65.18550797821135
+          "total_pnl": 6645.027763045699,
+          "total_return_pct": 66.450277630457
         }
       },
-      "score": 3.963414985154654,
+      "score": 4.015299152257184,
       "accepted": true,
-      "wf_overall_sharpe": 7.3032883000956375,
-      "wf_overall_max_drawdown_pct": 14.035082198473802,
-      "symbol": "XAUUSDm",
-      "timeframe": "M15",
-      "mc_final_pnl_mean": 6518.550797821135,
-      "mc_final_pnl_p5": 6518.550797821129,
-      "mc_final_pnl_p95": 6518.550797821142,
-      "mc_max_dd_mean": 908.3505098822498,
-      "mc_max_dd_p5": 581.8788556812664,
-      "mc_max_dd_p95": 1362.5257143292256,
-      "strategy": {
-        "long_entry_rule": "ma_short > ma_long and trend_strength > 0.069",
-        "short_entry_rule": "ma_short < ma_long and trend_strength < -0.069",
-        "exit_rule": "rsi > 42",
-        "sl_atr_mult": 2.0,
-        "tp_atr_mult": 3.0
-      }
+      "wf_overall_sharpe": 7.922586675992994,
+      "wf_overall_max_drawdown_pct": 13.11999626865752,
+      "mc_final_pnl_mean": 6645.0277630457,
+      "mc_final_pnl_p5": 6645.027763045694,
+      "mc_final_pnl_p95": 6645.027763045708,
+      "mc_max_dd_mean": 862.5652750695552,
+      "mc_max_dd_p5": 569.5821142288023,
+      "mc_max_dd_p95": 1238.2920273752297
     }
   },
   "core15_XAUUSDm_M15_dfeb": {
     "name": "core15_XAUUSDm_M15_dfeb",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.8290073874413535,
     "stats": {
       "initial_equity": 10000.0,
@@ -19659,7 +19632,7 @@
     "name": "core15_XAUUSDm_M15_008e",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 2.570860912325432,
     "stats": {
       "initial_equity": 10000.0,
@@ -19891,61 +19864,61 @@
     "name": "core15_BTCUSDm_M15_025b",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "active",
-    "score": 5.143153716585207,
+    "status": "candidate",
+    "score": 5.143150487877474,
     "stats": {
       "initial_equity": 10000.0,
-      "final_equity": 12077.630900692362,
-      "net_profit": 2077.630900692362,
-      "return_pct": 20.776309006923622,
-      "sharpe_ratio": 9.878487878639415,
-      "max_drawdown_pct": -3.0000000000000027,
-      "profit_factor": 3.4058618837648047,
+      "final_equity": 12077.62848012047,
+      "net_profit": 2077.6284801204692,
+      "return_pct": 20.776284801204692,
+      "sharpe_ratio": 9.878481547474179,
+      "max_drawdown_pct": -2.9999999999999916,
+      "profit_factor": 3.405859562959339,
       "win_rate": 0.8518518518518519,
       "num_trades": 54.0,
-      "avg_win": 63.939156825646656,
-      "avg_loss": 107.9462891609233,
-      "expectancy": 38.47464630911777,
+      "avg_win": 63.93910044202714,
+      "avg_loss": 107.94626752659782,
+      "expectancy": 38.474601483712334,
       "strategy_explain": {
         "regime_pnl": {
           "high_vol": {
-            "return_pct": 7.314998305542064,
-            "net_profit": 731.4998305542064,
+            "return_pct": 7.314976797788037,
+            "net_profit": 731.4976797788038,
             "num_trades": 12,
-            "avg_rr": 1.1999999999999997,
+            "avg_rr": 1.1999999999999986,
             "win_rate": 0.9166666666666666
           },
           "low_vol": {
-            "return_pct": -0.019942097183500235,
-            "net_profit": -1.9942097183500236,
+            "return_pct": -0.019942093186750175,
+            "net_profit": -1.9942093186750176,
             "num_trades": 6,
             "avg_rr": 1.1999999999999948,
             "win_rate": 0.6666666666666666
           },
           "ranging": {
-            "return_pct": 13.481252798565032,
-            "net_profit": 1348.1252798565033,
+            "return_pct": 13.481250096603375,
+            "net_profit": 1348.1250096603376,
             "num_trades": 36,
-            "avg_rr": 1.2000000000000017,
+            "avg_rr": 1.200000000000002,
             "win_rate": 0.8611111111111112
           }
         },
         "session_pnl": {
           "asia": {
-            "return_pct": 6.154852299382686,
+            "return_pct": 6.154851065840891,
             "num_trades": 16
           },
           "london": {
-            "return_pct": 6.825819766092088,
+            "return_pct": 6.825818397997499,
             "num_trades": 19
           },
           "new_york": {
-            "return_pct": 7.795636941448825,
+            "return_pct": 7.795615337366273,
             "num_trades": 19
           }
         },
         "risk_behavior": {
-          "avg_rr": 1.2000000000000008,
+          "avg_rr": 1.2000000000000004,
           "sl_hit_ratio": 0.14814814814814814,
           "tp_hit_ratio": 0.05555555555555555,
           "exit_rule_ratio": 0.7962962962962963,
@@ -19954,16 +19927,16 @@
         },
         "stability": {
           "subperiod_sharpe": [
-            2.41060231002972,
-            2.8711697457502634,
+            2.4105973983019866,
+            2.871169745750264,
             2.1072742334377903
           ],
           "subperiod_return_pct": [
-            6.984756197457639,
-            6.781961711202995,
-            7.009591098262962
+            6.98473475581101,
+            6.7819603519773315,
+            7.009589693416322
           ],
-          "sharpe_std": 0.31405354083982634
+          "sharpe_std": 0.3140538140914327
         },
         "news_behavior": {
           "trades_around_high_impact": {
@@ -19980,90 +19953,81 @@
           "worst_regime": "low_vol",
           "is_trend_follower": false,
           "is_range_trader": true,
-          "total_pnl": 2077.6309006923593,
-          "total_return_pct": 20.776309006923594
+          "total_pnl": 2077.6284801204665,
+          "total_return_pct": 20.776284801204664
         }
       },
-      "score": 5.143153716585207,
+      "score": 5.143150487877474,
       "accepted": true,
-      "wf_overall_sharpe": 13.604764571771419,
-      "wf_overall_max_drawdown_pct": 1.000000000000012,
-      "symbol": "BTCUSDm",
-      "timeframe": "M15",
-      "mc_final_pnl_mean": 2077.6309006923593,
-      "mc_final_pnl_p5": 2077.630900692359,
-      "mc_final_pnl_p95": 2077.6309006923602,
-      "mc_max_dd_mean": 226.49757010918466,
-      "mc_max_dd_p5": 113.76671790866112,
-      "mc_max_dd_p95": 372.14121168578004,
-      "strategy": {
-        "long_entry_rule": "ma_short > ma_long and trend_strength > 0.273",
-        "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
-        "exit_rule": "rsi < 56",
-        "sl_atr_mult": 2.5,
-        "tp_atr_mult": 3.0
-      }
+      "wf_overall_sharpe": 11.52341185248785,
+      "wf_overall_max_drawdown_pct": 2.000000000000013,
+      "mc_final_pnl_mean": 2077.628480120466,
+      "mc_final_pnl_p5": 2077.6284801204656,
+      "mc_final_pnl_p95": 2077.6284801204665,
+      "mc_max_dd_mean": 219.2670047438206,
+      "mc_max_dd_p5": 118.97756924167538,
+      "mc_max_dd_p95": 349.3287621905204
     }
   },
   "core15_BTCUSDm_M15_f099": {
     "name": "core15_BTCUSDm_M15_f099",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "active",
-    "score": 5.143153716585207,
+    "status": "candidate",
+    "score": 5.143150487877474,
     "stats": {
       "initial_equity": 10000.0,
-      "final_equity": 12077.630900692362,
-      "net_profit": 2077.630900692362,
-      "return_pct": 20.776309006923622,
-      "sharpe_ratio": 9.878487878639415,
-      "max_drawdown_pct": -3.0000000000000027,
-      "profit_factor": 3.4058618837648047,
+      "final_equity": 12077.62848012047,
+      "net_profit": 2077.6284801204692,
+      "return_pct": 20.776284801204692,
+      "sharpe_ratio": 9.878481547474179,
+      "max_drawdown_pct": -2.9999999999999916,
+      "profit_factor": 3.405859562959339,
       "win_rate": 0.8518518518518519,
       "num_trades": 54.0,
-      "avg_win": 63.939156825646656,
-      "avg_loss": 107.9462891609233,
-      "expectancy": 38.47464630911777,
+      "avg_win": 63.93910044202714,
+      "avg_loss": 107.94626752659782,
+      "expectancy": 38.474601483712334,
       "strategy_explain": {
         "regime_pnl": {
           "high_vol": {
-            "return_pct": 7.314998305542064,
-            "net_profit": 731.4998305542064,
+            "return_pct": 7.314976797788037,
+            "net_profit": 731.4976797788038,
             "num_trades": 12,
-            "avg_rr": 1.1999999999999997,
+            "avg_rr": 1.1999999999999986,
             "win_rate": 0.9166666666666666
           },
           "low_vol": {
-            "return_pct": -0.019942097183500235,
-            "net_profit": -1.9942097183500236,
+            "return_pct": -0.019942093186750175,
+            "net_profit": -1.9942093186750176,
             "num_trades": 6,
             "avg_rr": 1.1999999999999948,
             "win_rate": 0.6666666666666666
           },
           "ranging": {
-            "return_pct": 13.481252798565032,
-            "net_profit": 1348.1252798565033,
+            "return_pct": 13.481250096603375,
+            "net_profit": 1348.1250096603376,
             "num_trades": 36,
-            "avg_rr": 1.2000000000000017,
+            "avg_rr": 1.200000000000002,
             "win_rate": 0.8611111111111112
           }
         },
         "session_pnl": {
           "asia": {
-            "return_pct": 6.154852299382686,
+            "return_pct": 6.154851065840891,
             "num_trades": 16
           },
           "london": {
-            "return_pct": 6.825819766092088,
+            "return_pct": 6.825818397997499,
             "num_trades": 19
           },
           "new_york": {
-            "return_pct": 7.795636941448825,
+            "return_pct": 7.795615337366273,
             "num_trades": 19
           }
         },
         "risk_behavior": {
-          "avg_rr": 1.2000000000000008,
+          "avg_rr": 1.2000000000000004,
           "sl_hit_ratio": 0.14814814814814814,
           "tp_hit_ratio": 0.05555555555555555,
           "exit_rule_ratio": 0.7962962962962963,
@@ -20072,16 +20036,16 @@
         },
         "stability": {
           "subperiod_sharpe": [
-            2.41060231002972,
-            2.8711697457502634,
+            2.4105973983019866,
+            2.871169745750264,
             2.1072742334377903
           ],
           "subperiod_return_pct": [
-            6.984756197457639,
-            6.781961711202995,
-            7.009591098262962
+            6.98473475581101,
+            6.7819603519773315,
+            7.009589693416322
           ],
-          "sharpe_std": 0.31405354083982634
+          "sharpe_std": 0.3140538140914327
         },
         "news_behavior": {
           "trades_around_high_impact": {
@@ -20098,90 +20062,81 @@
           "worst_regime": "low_vol",
           "is_trend_follower": false,
           "is_range_trader": true,
-          "total_pnl": 2077.6309006923593,
-          "total_return_pct": 20.776309006923594
+          "total_pnl": 2077.6284801204665,
+          "total_return_pct": 20.776284801204664
         }
       },
-      "score": 5.143153716585207,
+      "score": 5.143150487877474,
       "accepted": true,
-      "wf_overall_sharpe": 13.604764571771419,
-      "wf_overall_max_drawdown_pct": 1.000000000000012,
-      "symbol": "BTCUSDm",
-      "timeframe": "M15",
-      "mc_final_pnl_mean": 2077.6309006923593,
-      "mc_final_pnl_p5": 2077.6309006923593,
-      "mc_final_pnl_p95": 2077.6309006923602,
-      "mc_max_dd_mean": 227.6387115757462,
-      "mc_max_dd_p5": 120.15892422263431,
-      "mc_max_dd_p95": 358.5058343694445,
-      "strategy": {
-        "long_entry_rule": "ma_short > ma_long and trend_strength > 0.247",
-        "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
-        "exit_rule": "rsi < 56",
-        "sl_atr_mult": 2.5,
-        "tp_atr_mult": 3.0
-      }
+      "wf_overall_sharpe": 11.52341185248785,
+      "wf_overall_max_drawdown_pct": 2.000000000000013,
+      "mc_final_pnl_mean": 2077.628480120466,
+      "mc_final_pnl_p5": 2077.6284801204656,
+      "mc_final_pnl_p95": 2077.6284801204665,
+      "mc_max_dd_mean": 228.07029511230002,
+      "mc_max_dd_p5": 113.7666951077889,
+      "mc_max_dd_p95": 341.94838761235576
     }
   },
   "core15_BTCUSDm_M15_b3b4": {
     "name": "core15_BTCUSDm_M15_b3b4",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "active",
-    "score": 5.0694970864232305,
+    "status": "candidate",
+    "score": 5.069493819714072,
     "stats": {
       "initial_equity": 10000.0,
-      "final_equity": 12015.345922460372,
-      "net_profit": 2015.345922460372,
-      "return_pct": 20.153459224603722,
-      "sharpe_ratio": 9.741285776590567,
-      "max_drawdown_pct": -3.0000000000000027,
-      "profit_factor": 3.3432759192900128,
+      "final_equity": 12015.343514371498,
+      "net_profit": 2015.3435143714978,
+      "return_pct": 20.15343514371498,
+      "sharpe_ratio": 9.741279357536364,
+      "max_drawdown_pct": -2.9999999999999916,
+      "profit_factor": 3.3432735889984215,
       "win_rate": 0.8490566037735849,
       "num_trades": 53.0,
-      "avg_win": 63.89779592209377,
-      "avg_loss": 107.50686175423058,
-      "expectancy": 38.02539476340331,
+      "avg_win": 63.89773857856205,
+      "avg_loss": 107.50684020797416,
+      "expectancy": 38.02534932776413,
       "strategy_explain": {
         "regime_pnl": {
           "high_vol": {
-            "return_pct": 7.3113000673084665,
-            "net_profit": 731.1300067308466,
+            "return_pct": 7.31127856029563,
+            "net_profit": 731.127856029563,
             "num_trades": 12,
-            "avg_rr": 1.1999999999999997,
+            "avg_rr": 1.1999999999999986,
             "win_rate": 0.9166666666666666
           },
           "low_vol": {
-            "return_pct": -0.005808941956373851,
-            "net_profit": -0.5808941956373852,
+            "return_pct": -0.005808940792160051,
+            "net_profit": -0.5808940792160051,
             "num_trades": 6,
             "avg_rr": 1.1999999999999948,
             "win_rate": 0.6666666666666666
           },
           "ranging": {
-            "return_pct": 12.84796809925166,
-            "net_profit": 1284.796809925166,
+            "return_pct": 12.847965524211514,
+            "net_profit": 1284.7965524211513,
             "num_trades": 35,
-            "avg_rr": 1.2000000000000015,
+            "avg_rr": 1.2000000000000017,
             "win_rate": 0.8571428571428571
           }
         },
         "session_pnl": {
           "asia": {
-            "return_pct": 6.459107771441754,
+            "return_pct": 6.459106476921758,
             "num_trades": 16
           },
           "london": {
-            "return_pct": 5.671459028738573,
+            "return_pct": 5.671457891998394,
             "num_trades": 18
           },
           "new_york": {
-            "return_pct": 8.022892424423421,
+            "return_pct": 8.022870774794832,
             "num_trades": 19
           }
         },
         "risk_behavior": {
-          "avg_rr": 1.2000000000000002,
+          "avg_rr": 1.2,
           "sl_hit_ratio": 0.1509433962264151,
           "tp_hit_ratio": 0.05660377358490566,
           "exit_rule_ratio": 0.7924528301886793,
@@ -20190,16 +20145,16 @@
         },
         "stability": {
           "subperiod_sharpe": [
-            2.1957550194189053,
+            2.1957499994088154,
             2.6979853152075424,
-            2.2903765521975123
+            2.290376552197512
           ],
           "subperiod_return_pct": [
-            6.27901642836697,
-            6.337583137143883,
-            7.536859659092899
+            6.278995128163133,
+            6.337581866979584,
+            7.53685814857227
           ],
-          "sharpe_std": 0.21790247771674826
+          "sharpe_std": 0.21790400552401412
         },
         "news_behavior": {
           "trades_around_high_impact": {
@@ -20216,90 +20171,81 @@
           "worst_regime": "low_vol",
           "is_trend_follower": false,
           "is_range_trader": true,
-          "total_pnl": 2015.345922460375,
-          "total_return_pct": 20.15345922460375
+          "total_pnl": 2015.343514371499,
+          "total_return_pct": 20.15343514371499
         }
       },
-      "score": 5.0694970864232305,
+      "score": 5.069493819714072,
       "accepted": true,
-      "wf_overall_sharpe": 13.509168479131228,
-      "wf_overall_max_drawdown_pct": 1.0000000000000009,
-      "symbol": "BTCUSDm",
-      "timeframe": "M15",
-      "mc_final_pnl_mean": 2015.3459224603755,
-      "mc_final_pnl_p5": 2015.3459224603748,
-      "mc_final_pnl_p95": 2015.3459224603757,
-      "mc_max_dd_mean": 231.27106039869176,
-      "mc_max_dd_p5": 112.92046553219927,
-      "mc_max_dd_p95": 358.3724523572412,
-      "strategy": {
-        "long_entry_rule": "ma_short > ma_long and trend_strength > 0.273",
-        "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
-        "exit_rule": "rsi < 55",
-        "sl_atr_mult": 2.5,
-        "tp_atr_mult": 3.0
-      }
+      "wf_overall_sharpe": 11.390900000904274,
+      "wf_overall_max_drawdown_pct": 2.000000000000013,
+      "mc_final_pnl_mean": 2015.3435143714987,
+      "mc_final_pnl_p5": 2015.343514371498,
+      "mc_final_pnl_p95": 2015.343514371499,
+      "mc_max_dd_mean": 235.66599756696525,
+      "mc_max_dd_p5": 119.23350856115248,
+      "mc_max_dd_p95": 370.8827345900352
     }
   },
   "core15_BTCUSDm_M15_63b6": {
     "name": "core15_BTCUSDm_M15_63b6",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "active",
-    "score": 5.0694970864232305,
+    "status": "candidate",
+    "score": 5.069493819714072,
     "stats": {
       "initial_equity": 10000.0,
-      "final_equity": 12015.345922460372,
-      "net_profit": 2015.345922460372,
-      "return_pct": 20.153459224603722,
-      "sharpe_ratio": 9.741285776590567,
-      "max_drawdown_pct": -3.0000000000000027,
-      "profit_factor": 3.3432759192900128,
+      "final_equity": 12015.343514371498,
+      "net_profit": 2015.3435143714978,
+      "return_pct": 20.15343514371498,
+      "sharpe_ratio": 9.741279357536364,
+      "max_drawdown_pct": -2.9999999999999916,
+      "profit_factor": 3.3432735889984215,
       "win_rate": 0.8490566037735849,
       "num_trades": 53.0,
-      "avg_win": 63.89779592209377,
-      "avg_loss": 107.50686175423058,
-      "expectancy": 38.02539476340331,
+      "avg_win": 63.89773857856205,
+      "avg_loss": 107.50684020797416,
+      "expectancy": 38.02534932776413,
       "strategy_explain": {
         "regime_pnl": {
           "high_vol": {
-            "return_pct": 7.3113000673084665,
-            "net_profit": 731.1300067308466,
+            "return_pct": 7.31127856029563,
+            "net_profit": 731.127856029563,
             "num_trades": 12,
-            "avg_rr": 1.1999999999999997,
+            "avg_rr": 1.1999999999999986,
             "win_rate": 0.9166666666666666
           },
           "low_vol": {
-            "return_pct": -0.005808941956373851,
-            "net_profit": -0.5808941956373852,
+            "return_pct": -0.005808940792160051,
+            "net_profit": -0.5808940792160051,
             "num_trades": 6,
             "avg_rr": 1.1999999999999948,
             "win_rate": 0.6666666666666666
           },
           "ranging": {
-            "return_pct": 12.84796809925166,
-            "net_profit": 1284.796809925166,
+            "return_pct": 12.847965524211514,
+            "net_profit": 1284.7965524211513,
             "num_trades": 35,
-            "avg_rr": 1.2000000000000015,
+            "avg_rr": 1.2000000000000017,
             "win_rate": 0.8571428571428571
           }
         },
         "session_pnl": {
           "asia": {
-            "return_pct": 6.459107771441754,
+            "return_pct": 6.459106476921758,
             "num_trades": 16
           },
           "london": {
-            "return_pct": 5.671459028738573,
+            "return_pct": 5.671457891998394,
             "num_trades": 18
           },
           "new_york": {
-            "return_pct": 8.022892424423421,
+            "return_pct": 8.022870774794832,
             "num_trades": 19
           }
         },
         "risk_behavior": {
-          "avg_rr": 1.2000000000000002,
+          "avg_rr": 1.2,
           "sl_hit_ratio": 0.1509433962264151,
           "tp_hit_ratio": 0.05660377358490566,
           "exit_rule_ratio": 0.7924528301886793,
@@ -20308,16 +20254,16 @@
         },
         "stability": {
           "subperiod_sharpe": [
-            2.1957550194189053,
+            2.1957499994088154,
             2.6979853152075424,
-            2.2903765521975123
+            2.290376552197512
           ],
           "subperiod_return_pct": [
-            6.27901642836697,
-            6.337583137143883,
-            7.536859659092899
+            6.278995128163133,
+            6.337581866979584,
+            7.53685814857227
           ],
-          "sharpe_std": 0.21790247771674826
+          "sharpe_std": 0.21790400552401412
         },
         "news_behavior": {
           "trades_around_high_impact": {
@@ -20334,29 +20280,20 @@
           "worst_regime": "low_vol",
           "is_trend_follower": false,
           "is_range_trader": true,
-          "total_pnl": 2015.345922460375,
-          "total_return_pct": 20.15345922460375
+          "total_pnl": 2015.343514371499,
+          "total_return_pct": 20.15343514371499
         }
       },
-      "score": 5.0694970864232305,
+      "score": 5.069493819714072,
       "accepted": true,
-      "wf_overall_sharpe": 13.509168479131228,
-      "wf_overall_max_drawdown_pct": 1.0000000000000009,
-      "symbol": "BTCUSDm",
-      "timeframe": "M15",
-      "mc_final_pnl_mean": 2015.3459224603755,
-      "mc_final_pnl_p5": 2015.3459224603748,
-      "mc_final_pnl_p95": 2015.3459224603757,
-      "mc_max_dd_mean": 223.53005821797532,
-      "mc_max_dd_p5": 112.92046553219927,
-      "mc_max_dd_p95": 337.35412771778334,
-      "strategy": {
-        "long_entry_rule": "ma_short > ma_long and trend_strength > 0.3",
-        "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
-        "exit_rule": "rsi < 55",
-        "sl_atr_mult": 2.5,
-        "tp_atr_mult": 3.0
-      }
+      "wf_overall_sharpe": 11.390900000904274,
+      "wf_overall_max_drawdown_pct": 2.000000000000013,
+      "mc_final_pnl_mean": 2015.343514371499,
+      "mc_final_pnl_p5": 2015.343514371498,
+      "mc_final_pnl_p95": 2015.343514371499,
+      "mc_max_dd_mean": 223.47562491860515,
+      "mc_max_dd_p5": 112.920442900931,
+      "mc_max_dd_p95": 348.58204697683766
     }
   },
   "core15_BTCUSDm_M15_32ce": {
@@ -21017,7 +20954,7 @@
     "name": "core15_BTCUSDm_M15_563b",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "candidate",
     "score": 4.6057686322450655,
     "stats": {
       "initial_equity": 10000.0,
@@ -21126,7 +21063,7 @@
     "name": "core15_BTCUSDm_M15_d840",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "candidate",
     "score": 4.605439032568474,
     "stats": {
       "initial_equity": 10000.0,
@@ -21235,7 +21172,7 @@
     "name": "core15_BTCUSDm_M15_e311",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "candidate",
     "score": 4.580773470881938,
     "stats": {
       "initial_equity": 10000.0,
@@ -21344,7 +21281,7 @@
     "name": "core15_BTCUSDm_M15_2c64",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "candidate",
     "score": 4.58044308103852,
     "stats": {
       "initial_equity": 10000.0,
@@ -21453,7 +21390,7 @@
     "name": "core15_BTCUSDm_M15_c51a",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "candidate",
     "score": 4.580426161828577,
     "stats": {
       "initial_equity": 10000.0,
@@ -21562,7 +21499,7 @@
     "name": "core15_BTCUSDm_M15_9a6d",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "candidate",
     "score": 4.5803695068910875,
     "stats": {
       "initial_equity": 10000.0,
@@ -21671,7 +21608,7 @@
     "name": "core15_BTCUSDm_M15_1347",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "candidate",
     "score": 4.537575699020378,
     "stats": {
       "initial_equity": 10000.0,
@@ -21780,7 +21717,7 @@
     "name": "core15_BTCUSDm_M15_05e1",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "candidate",
     "score": 4.537307797399591,
     "stats": {
       "initial_equity": 10000.0,
@@ -21889,7 +21826,7 @@
     "name": "core15_BTCUSDm_M15_dd79",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "candidate",
     "score": 4.53728049889968,
     "stats": {
       "initial_equity": 10000.0,
@@ -21998,7 +21935,7 @@
     "name": "core15_BTCUSDm_M15_9d27",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "candidate",
     "score": 4.537111301737887,
     "stats": {
       "initial_equity": 10000.0,
@@ -22107,7 +22044,7 @@
     "name": "core15_BTCUSDm_M15_4acc",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "candidate",
     "score": 4.537055278993938,
     "stats": {
       "initial_equity": 10000.0,
@@ -22216,7 +22153,7 @@
     "name": "core15_BTCUSDm_M15_5cb2",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "candidate",
     "score": 4.480708595170762,
     "stats": {
       "initial_equity": 10000.0,
@@ -22325,7 +22262,7 @@
     "name": "core15_BTCUSDm_M15_ebea",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "candidate",
     "score": 4.480280661477203,
     "stats": {
       "initial_equity": 10000.0,
@@ -22543,7 +22480,7 @@
     "name": "core15_BTCUSDm_M15_8ab9",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "candidate",
     "score": 4.420457710802422,
     "stats": {
       "initial_equity": 10000.0,
@@ -22761,7 +22698,7 @@
     "name": "core15_BTCUSDm_M15_579e",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "candidate",
     "score": 4.1860836508147035,
     "stats": {
       "initial_equity": 10000.0,
@@ -22870,7 +22807,7 @@
     "name": "core15_BTCUSDm_M15_5365",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "candidate",
     "score": 4.171075262588899,
     "stats": {
       "initial_equity": 10000.0,
@@ -23095,7 +23032,7 @@
     "name": "core15_BTCUSDm_M15_6052",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "candidate",
     "score": 4.11271526237823,
     "stats": {
       "initial_equity": 10000.0,
@@ -23204,7 +23141,7 @@
     "name": "core15_BTCUSDm_M15_296c",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "candidate",
     "score": 4.069288998584998,
     "stats": {
       "initial_equity": 10000.0,
@@ -23531,7 +23468,7 @@
     "name": "core15_BTCUSDm_M15_27f9",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "candidate",
     "score": 4.012591218603489,
     "stats": {
       "accepted": true,
@@ -23640,7 +23577,7 @@
     "name": "core15_BTCUSDm_M15_ed48",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "candidate",
     "score": 3.959406674529948,
     "stats": {
       "initial_equity": 10000.0,
@@ -23967,7 +23904,7 @@
     "name": "core15_XAUUSDm_M15_26dc",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.9083342464643147,
     "stats": {
       "accepted": true,
@@ -24090,7 +24027,7 @@
     "name": "core15_XAUUSDm_M15_5acc",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.9083342464643147,
     "stats": {
       "accepted": true,
@@ -24213,7 +24150,7 @@
     "name": "core15_XAUUSDm_M15_7f37",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.9083342464643147,
     "stats": {
       "accepted": true,
@@ -24336,7 +24273,7 @@
     "name": "core15_XAUUSDm_M15_b731",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.9083342464643147,
     "stats": {
       "accepted": true,
@@ -24459,7 +24396,7 @@
     "name": "core15_XAUUSDm_M15_c5c9",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.9083342464643147,
     "stats": {
       "accepted": true,
@@ -24582,7 +24519,7 @@
     "name": "core15_XAUUSDm_M15_d309",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.9083342464643147,
     "stats": {
       "accepted": true,
@@ -24705,7 +24642,7 @@
     "name": "core15_XAUUSDm_M15_e971",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.9083342464643147,
     "stats": {
       "accepted": true,
@@ -24937,7 +24874,7 @@
     "name": "core15_XAUUSDm_M15_e8b5",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.8971380441720003,
     "stats": {
       "accepted": true,
@@ -25060,7 +24997,7 @@
     "name": "core15_BTCUSDm_M15_7ca1",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "candidate",
     "score": 3.8948336824373397,
     "stats": {
       "accepted": true,
@@ -25169,7 +25106,7 @@
     "name": "core15_BTCUSDm_M15_de4f",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "candidate",
     "score": 3.886170424532743,
     "stats": {
       "initial_equity": 10000.0,
@@ -25278,7 +25215,7 @@
     "name": "core15_BTCUSDm_M15_753f",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "candidate",
     "score": 3.8729982866610495,
     "stats": {
       "initial_equity": 10000.0,
@@ -25387,7 +25324,7 @@
     "name": "core15_XAUUSDm_M15_c35b",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.8510229006969023,
     "stats": {
       "initial_equity": 10000.0,
@@ -25503,7 +25440,7 @@
     "name": "core15_BTCUSDm_M15_c79b",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "candidate",
     "score": 3.8356810958525633,
     "stats": {
       "accepted": true,
@@ -25612,7 +25549,7 @@
     "name": "core15_BTCUSDm_M15_b11e",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "candidate",
     "score": 3.8356754468646805,
     "stats": {
       "accepted": true,
@@ -25721,7 +25658,7 @@
     "name": "core15_BTCUSDm_M15_bdb3",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "candidate",
     "score": 3.833554741625253,
     "stats": {
       "accepted": true,
@@ -25830,7 +25767,7 @@
     "name": "core15_XAUUSDm_M15_66b4",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.8329737248756865,
     "stats": {
       "initial_equity": 10000.0,
@@ -25932,7 +25869,7 @@
     "name": "core15_XAUUSDm_M15_1786",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "candidate",
+    "status": "disabled",
     "score": 3.8310247156391863,
     "stats": {
       "initial_equity": 10000.0,
@@ -26048,7 +25985,7 @@
     "name": "core15_XAUUSDm_M15_21e9",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.824537306419388,
     "stats": {
       "initial_equity": 10000.0,
@@ -26150,7 +26087,7 @@
     "name": "core15_BTCUSDm_M15_4494",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "candidate",
     "score": 3.8095734235590815,
     "stats": {
       "accepted": true,
@@ -26259,7 +26196,7 @@
     "name": "core15_XAUUSDm_M15_4190",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.787567731096427,
     "stats": {
       "initial_equity": 10000.0,
@@ -26361,7 +26298,7 @@
     "name": "core15_BTCUSDm_M15_9572",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "candidate",
     "score": 3.7771747505534146,
     "stats": {
       "accepted": true,
@@ -26470,7 +26407,7 @@
     "name": "core15_BTCUSDm_M15_ae0d",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "candidate",
     "score": 3.7416965783480762,
     "stats": {
       "accepted": true,
@@ -26688,7 +26625,7 @@
     "name": "core15_XAUUSDm_M15_51de",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.70334200387364,
     "stats": {
       "initial_equity": 10000.0,
@@ -27029,7 +26966,7 @@
     "name": "core15_BTCUSDm_M15_31c0",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "candidate",
     "score": 3.6817333266916608,
     "stats": {
       "accepted": true,
@@ -27465,7 +27402,7 @@
     "name": "core15_BTCUSDm_M15_ce45",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "candidate",
     "score": 3.677625982134926,
     "stats": {
       "accepted": true,
@@ -27574,7 +27511,7 @@
     "name": "core15_XAUUSDm_M15_b7e1",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.675923972469966,
     "stats": {
       "initial_equity": 10000.0,
@@ -27676,7 +27613,7 @@
     "name": "core15_XAUUSDm_M15_939e",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.6755443475303373,
     "stats": {
       "initial_equity": 10000.0,
@@ -27887,7 +27824,7 @@
     "name": "core15_XAUUSDm_M15_2567",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.6585697615874464,
     "stats": {
       "initial_equity": 10000.0,
@@ -27989,7 +27926,7 @@
     "name": "core15_BTCUSDm_M15_ec2e",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "candidate",
     "score": 3.655676523262491,
     "stats": {
       "accepted": true,
@@ -28098,7 +28035,7 @@
     "name": "core15_BTCUSDm_M15_3e57",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "candidate",
     "score": 3.6344236431913686,
     "stats": {
       "accepted": true,
@@ -28207,7 +28144,7 @@
     "name": "core15_BTCUSDm_M15_18b8",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "candidate",
     "score": 3.625642868039235,
     "stats": {
       "accepted": true,
@@ -28316,7 +28253,7 @@
     "name": "core15_XAUUSDm_M15_67c7",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.6020247508368355,
     "stats": {
       "accepted": true,
@@ -28439,7 +28376,7 @@
     "name": "core15_XAUUSDm_M15_e8ea",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.6020247508368355,
     "stats": {
       "accepted": true,
@@ -28562,7 +28499,7 @@
     "name": "core15_BTCUSDm_M15_f2b6",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "candidate",
     "score": 3.59886408052347,
     "stats": {
       "accepted": true,
@@ -28889,7 +28826,7 @@
     "name": "core15_BTCUSDm_M15_22f4",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "candidate",
     "score": 3.5760838951368,
     "stats": {
       "initial_equity": 10000.0,
@@ -28998,7 +28935,7 @@
     "name": "core15_XAUUSDm_M15_a96a",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.5726195726035233,
     "stats": {
       "initial_equity": 10000.0,
@@ -29121,7 +29058,7 @@
     "name": "core15_XAUUSDm_M15_d464",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.561995558361626,
     "stats": {
       "initial_equity": 10000.0,
@@ -29332,7 +29269,7 @@
     "name": "core15_XAUUSDm_M15_07ec",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.5515278601225333,
     "stats": {
       "accepted": true,
@@ -29761,7 +29698,7 @@
     "name": "core15_BTCUSDm_M15_32f5",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "candidate",
     "score": 3.5376420620581603,
     "stats": {
       "accepted": true,
@@ -29870,7 +29807,7 @@
     "name": "core15_BTCUSDm_M15_0a8e",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "candidate",
     "score": 3.5046271508059506,
     "stats": {
       "accepted": true,
@@ -29979,7 +29916,7 @@
     "name": "core15_XAUUSDm_M15_b36d",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.498690302464846,
     "stats": {
       "initial_equity": 10000.0,
@@ -30102,7 +30039,7 @@
     "name": "core15_BTCUSDm_M15_c97f",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.4919730464771446,
     "stats": {
       "accepted": true,
@@ -30218,7 +30155,7 @@
     "name": "core15_XAUUSDm_M15_0ed5",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.488136371108645,
     "stats": {
       "accepted": true,
@@ -30341,7 +30278,7 @@
     "name": "core15_XAUUSDm_M15_1c0f",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.488136371108645,
     "stats": {
       "accepted": true,
@@ -30464,7 +30401,7 @@
     "name": "core15_XAUUSDm_M15_2eb6",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.488136371108645,
     "stats": {
       "accepted": true,
@@ -30587,7 +30524,7 @@
     "name": "core15_XAUUSDm_M15_2fc9",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.488136371108645,
     "stats": {
       "accepted": true,
@@ -30710,7 +30647,7 @@
     "name": "core15_XAUUSDm_M15_3e0f",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.488136371108645,
     "stats": {
       "accepted": true,
@@ -30833,7 +30770,7 @@
     "name": "core15_XAUUSDm_M15_4d53",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.488136371108645,
     "stats": {
       "accepted": true,
@@ -30956,7 +30893,7 @@
     "name": "core15_XAUUSDm_M15_5745",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.488136371108645,
     "stats": {
       "accepted": true,
@@ -31079,7 +31016,7 @@
     "name": "core15_XAUUSDm_M15_6060",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.488136371108645,
     "stats": {
       "accepted": true,
@@ -31202,7 +31139,7 @@
     "name": "core15_XAUUSDm_M15_8476",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.488136371108645,
     "stats": {
       "accepted": true,
@@ -31325,7 +31262,7 @@
     "name": "core15_XAUUSDm_M15_91dd",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.488136371108645,
     "stats": {
       "accepted": true,
@@ -31448,7 +31385,7 @@
     "name": "core15_XAUUSDm_M15_92e2",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.488136371108645,
     "stats": {
       "accepted": true,
@@ -31571,7 +31508,7 @@
     "name": "core15_XAUUSDm_M15_9e84",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.488136371108645,
     "stats": {
       "accepted": true,
@@ -31694,7 +31631,7 @@
     "name": "core15_XAUUSDm_M15_ebdf",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.488136371108645,
     "stats": {
       "accepted": true,
@@ -31817,7 +31754,7 @@
     "name": "core15_XAUUSDm_M15_fe73",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.488136371108645,
     "stats": {
       "accepted": true,
@@ -31940,7 +31877,7 @@
     "name": "core15_XAUUSDm_M15_feeb",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.488136371108645,
     "stats": {
       "accepted": true,
@@ -32063,7 +32000,7 @@
     "name": "core15_BTCUSDm_M15_60b2",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "candidate",
     "score": 3.4875394607529606,
     "stats": {
       "accepted": true,
@@ -32172,7 +32109,7 @@
     "name": "core15_XAUUSDm_M15_3dcd",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.4740740843678184,
     "stats": {
       "accepted": true,
@@ -32731,7 +32668,7 @@
     "name": "core15_BTCUSDm_M15_fed9",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "candidate",
     "score": 3.3961421516275747,
     "stats": {
       "accepted": true,
@@ -32840,7 +32777,7 @@
     "name": "core15_XAUUSDm_M15_951c",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.3922364966233776,
     "stats": {
       "initial_equity": 10000.0,
@@ -32956,7 +32893,7 @@
     "name": "core15_XAUUSDm_M15_7ace",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.382893739394966,
     "stats": {
       "accepted": true,
@@ -33079,7 +33016,7 @@
     "name": "core15_BTCUSDm_M15_5158",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "candidate",
     "score": 3.3758521808846695,
     "stats": {
       "accepted": true,
@@ -33188,7 +33125,7 @@
     "name": "core15_BTCUSDm_M15_0bd9",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "candidate",
     "score": 3.3593246862094963,
     "stats": {
       "accepted": true,
@@ -33297,7 +33234,7 @@
     "name": "core15_XAUUSDm_M15_7646",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.3526587016435574,
     "stats": {
       "initial_equity": 10000.0,
@@ -33413,7 +33350,7 @@
     "name": "core15_XAUUSDm_M15_3327",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.347041709037602,
     "stats": {
       "accepted": true,
@@ -33536,7 +33473,7 @@
     "name": "core15_BTCUSDm_M15_bd4a",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "candidate",
     "score": 3.3354709922528367,
     "stats": {
       "accepted": true,
@@ -33754,7 +33691,7 @@
     "name": "core15_XAUUSDm_M15_4f8e",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.325532792599666,
     "stats": {
       "initial_equity": 10000.0,
@@ -33972,7 +33909,7 @@
     "name": "core15_XAUUSDm_M15_425c",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.316681749067458,
     "stats": {
       "initial_equity": 10000.0,
@@ -34088,7 +34025,7 @@
     "name": "core15_XAUUSDm_M15_5b0d",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.309754225309322,
     "stats": {
       "accepted": true,
@@ -34211,7 +34148,7 @@
     "name": "core15_BTCUSDm_M15_ccd0",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "candidate",
     "score": 3.307402024542915,
     "stats": {
       "initial_equity": 10000.0,
@@ -34320,7 +34257,7 @@
     "name": "core15_BTCUSDm_M15_d8f9",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "candidate",
     "score": 3.2784282521119863,
     "stats": {
       "initial_equity": 10000.0,
@@ -34545,7 +34482,7 @@
     "name": "core15_XAUUSDm_M15_677e",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.2774343055802335,
     "stats": {
       "accepted": true,
@@ -34668,7 +34605,7 @@
     "name": "core15_XAUUSDm_M15_07de",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.2684378364451927,
     "stats": {
       "accepted": true,
@@ -34791,7 +34728,7 @@
     "name": "core15_XAUUSDm_M15_c834",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.2637542396737365,
     "stats": {
       "accepted": true,
@@ -34893,7 +34830,7 @@
     "name": "core15_BTCUSDm_M15_fccd",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "candidate",
     "score": 3.262290517626362,
     "stats": {
       "initial_equity": 10000.0,
@@ -35002,7 +34939,7 @@
     "name": "core15_BTCUSDm_M15_7212",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.2594779994545675,
     "stats": {
       "accepted": true,
@@ -35118,7 +35055,7 @@
     "name": "core15_XAUUSDm_M15_a8cb",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.258692805279268,
     "stats": {
       "initial_equity": 10000.0,
@@ -35234,7 +35171,7 @@
     "name": "core15_XAUUSDm_M15_4a4b",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.2557841242338084,
     "stats": {
       "accepted": true,
@@ -35336,7 +35273,7 @@
     "name": "core15_XAUUSDm_M15_0f7b",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.253449132051181,
     "stats": {
       "initial_equity": 10000.0,
@@ -35452,7 +35389,7 @@
     "name": "core15_XAUUSDm_M15_a8b9",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.2534036330242397,
     "stats": {
       "accepted": true,
@@ -35575,7 +35512,7 @@
     "name": "core15_BTCUSDm_M15_ca25",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "candidate",
     "score": 3.2506325045265374,
     "stats": {
       "initial_equity": 10000.0,
@@ -35684,7 +35621,7 @@
     "name": "core15_XAUUSDm_M15_e1b8",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.2462504330074493,
     "stats": {
       "accepted": true,
@@ -35807,7 +35744,7 @@
     "name": "core15_XAUUSDm_M15_572b",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.2400123171314767,
     "stats": {
       "accepted": true,
@@ -35930,7 +35867,7 @@
     "name": "core15_XAUUSDm_M15_b818",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.2393279666050674,
     "stats": {
       "initial_equity": 10000.0,
@@ -36046,7 +35983,7 @@
     "name": "core15_XAUUSDm_M15_ea3b",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.2178935766172554,
     "stats": {
       "accepted": true,
@@ -36148,7 +36085,7 @@
     "name": "core15_XAUUSDm_M15_6428",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.217560039108121,
     "stats": {
       "accepted": true,
@@ -36271,7 +36208,7 @@
     "name": "core15_BTCUSDm_M15_7708",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "candidate",
     "score": 3.2074282737196547,
     "stats": {
       "initial_equity": 10000.0,
@@ -36380,7 +36317,7 @@
     "name": "core15_BTCUSDm_M15_2e2f",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "candidate",
     "score": 3.2072330333336203,
     "stats": {
       "initial_equity": 10000.0,
@@ -36489,7 +36426,7 @@
     "name": "core15_XAUUSDm_M15_18ef",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.1982417631234297,
     "stats": {
       "accepted": true,
@@ -36591,7 +36528,7 @@
     "name": "core15_XAUUSDm_M15_358f",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.1982417631234297,
     "stats": {
       "accepted": true,
@@ -36693,7 +36630,7 @@
     "name": "core15_XAUUSDm_M15_3ee5",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.1980141058485736,
     "stats": {
       "initial_equity": 10000.0,
@@ -36809,7 +36746,7 @@
     "name": "core15_XAUUSDm_M15_89fe",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.1804133008097244,
     "stats": {
       "initial_equity": 10000.0,
@@ -37020,7 +36957,7 @@
     "name": "core15_BTCUSDm_M15_dadc",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "candidate",
+    "status": "disabled",
     "score": 3.166180662763531,
     "stats": {
       "accepted": true,
@@ -37136,7 +37073,7 @@
     "name": "core15_XAUUSDm_M15_c90e",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.158874080672537,
     "stats": {
       "accepted": true,
@@ -37361,7 +37298,7 @@
     "name": "core15_XAUUSDm_M15_87d0",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.135705094178615,
     "stats": {
       "accepted": true,
@@ -37477,7 +37414,7 @@
     "name": "core15_BTCUSDm_M15_9b73",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "candidate",
     "score": 3.121487165658145,
     "stats": {
       "accepted": true,
@@ -37586,7 +37523,7 @@
     "name": "core15_BTCUSDm_M15_709f",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "candidate",
     "score": 3.1204520031533782,
     "stats": {
       "accepted": true,
@@ -37695,7 +37632,7 @@
     "name": "core15_XAUUSDm_M15_059a",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.117980329778529,
     "stats": {
       "initial_equity": 10000.0,
@@ -37797,7 +37734,7 @@
     "name": "core15_XAUUSDm_M15_972f",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "candidate",
+    "status": "disabled",
     "score": 3.1058308720543106,
     "stats": {
       "accepted": true,
@@ -38022,7 +37959,7 @@
     "name": "core15_BTCUSDm_M15_a93e",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "candidate",
     "score": 3.0958556528542136,
     "stats": {
       "accepted": true,
@@ -38131,7 +38068,7 @@
     "name": "core15_XAUUSDm_M15_57f0",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.0930995358598645,
     "stats": {
       "accepted": true,
@@ -38233,7 +38170,7 @@
     "name": "core15_BTCUSDm_M15_f6ee",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "candidate",
     "score": 3.0896772028059143,
     "stats": {
       "initial_equity": 10000.0,
@@ -38342,7 +38279,7 @@
     "name": "core15_BTCUSDm_M15_75f2",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "candidate",
     "score": 3.0873413420971287,
     "stats": {
       "accepted": true,
@@ -38451,7 +38388,7 @@
     "name": "core15_XAUUSDm_M15_ad0a",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.0810150598722403,
     "stats": {
       "accepted": true,
@@ -38553,7 +38490,7 @@
     "name": "core15_BTCUSDm_M15_ba6f",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "candidate",
     "score": 3.0659965285779873,
     "stats": {
       "accepted": true,
@@ -38778,7 +38715,7 @@
     "name": "core15_BTCUSDm_M15_f34d",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "candidate",
     "score": 3.051240871975854,
     "stats": {
       "initial_equity": 10000.0,
@@ -38887,7 +38824,7 @@
     "name": "core15_BTCUSDm_M15_8107",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "candidate",
     "score": 3.049319745869873,
     "stats": {
       "accepted": true,
@@ -39112,7 +39049,7 @@
     "name": "core15_BTCUSDm_M15_c0ef",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "candidate",
+    "status": "disabled",
     "score": 3.045400687330017,
     "stats": {
       "accepted": true,
@@ -39228,7 +39165,7 @@
     "name": "core15_BTCUSDm_M15_83f0",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.035583703262141,
     "stats": {
       "accepted": true,
@@ -39344,7 +39281,7 @@
     "name": "core15_XAUUSDm_M15_b989",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.027869594520989,
     "stats": {
       "accepted": true,
@@ -39460,7 +39397,7 @@
     "name": "core15_XAUUSDm_M15_f493",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.015158822644737,
     "stats": {
       "initial_equity": 10000.0,
@@ -39583,7 +39520,7 @@
     "name": "core15_BTCUSDm_M15_fd4f",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.013762148756073,
     "stats": {
       "accepted": true,
@@ -39808,7 +39745,7 @@
     "name": "core15_XAUUSDm_M15_aeb6",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.010746876826877,
     "stats": {
       "accepted": true,
@@ -40033,7 +39970,7 @@
     "name": "core15_XAUUSDm_M15_ff21",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.0006445711982135,
     "stats": {
       "accepted": true,
@@ -40135,7 +40072,7 @@
     "name": "core15_XAUUSDm_M15_d343",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 2.9989180387881333,
     "stats": {
       "accepted": true,
@@ -40237,7 +40174,7 @@
     "name": "core15_XAUUSDm_M15_9357",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 2.9929967377881903,
     "stats": {
       "accepted": true,
@@ -40564,7 +40501,7 @@
     "name": "core15_XAUUSDm_M15_2a1b",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 2.9791784674906268,
     "stats": {
       "accepted": true,
@@ -40680,7 +40617,7 @@
     "name": "core15_XAUUSDm_M15_5438",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 2.9791784674906268,
     "stats": {
       "accepted": true,
@@ -40796,7 +40733,7 @@
     "name": "core15_XAUUSDm_M15_94bf",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 2.9791784674906268,
     "stats": {
       "accepted": true,
@@ -40912,7 +40849,7 @@
     "name": "core15_XAUUSDm_M15_995d",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 2.9791784674906268,
     "stats": {
       "accepted": true,
@@ -41028,7 +40965,7 @@
     "name": "core15_XAUUSDm_M15_e739",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 2.9791784674906268,
     "stats": {
       "accepted": true,
@@ -41144,7 +41081,7 @@
     "name": "core15_XAUUSDm_M15_eb46",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 2.9791784674906268,
     "stats": {
       "accepted": true,
@@ -41587,7 +41524,7 @@
     "name": "core15_BTCUSDm_M15_aa4a",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "candidate",
     "score": 2.946297774593614,
     "stats": {
       "accepted": true,
@@ -41696,7 +41633,7 @@
     "name": "core15_BTCUSDm_M15_24d5",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 2.942162058941375,
     "stats": {
       "accepted": true,
@@ -41935,7 +41872,7 @@
     "name": "core15_XAUUSDm_M15_b600",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 2.904543941198031,
     "stats": {
       "accepted": true,
@@ -42051,7 +41988,7 @@
     "name": "core15_XAUUSDm_M15_95e0",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 2.897966425647199,
     "stats": {
       "initial_equity": 10000.0,
@@ -42167,7 +42104,7 @@
     "name": "core15_XAUUSDm_M15_70f7",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 2.889124407019122,
     "stats": {
       "accepted": true,
@@ -42290,7 +42227,7 @@
     "name": "core15_XAUUSDm_M15_6def",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 2.8844391130924842,
     "stats": {
       "accepted": true,
@@ -42400,1103 +42337,6 @@
       "wf_overall_max_drawdown_pct": 10.287666845308364,
       "wf_overall_sharpe": 5.058544889820598,
       "win_rate": 0.49148418491484186
-    }
-  },
-  "core15_XAUUSDm_M15_239e": {
-    "name": "core15_XAUUSDm_M15_239e",
-    "symbol": "XAUUSDm",
-    "timeframe": "M15",
-    "status": "candidate",
-    "score": 0.8966102150706838,
-    "stats": {
-      "initial_equity": 10000.0,
-      "final_equity": 10289.252239116386,
-      "net_profit": 289.2522391163857,
-      "return_pct": 2.8925223911638565,
-      "sharpe_ratio": 1.138974204592207,
-      "max_drawdown_pct": -8.981762168361962,
-      "profit_factor": 1.1027938497247352,
-      "win_rate": 0.6515151515151515,
-      "num_trades": 132.0,
-      "avg_win": 36.08323631271193,
-      "avg_loss": 61.171871386453226,
-      "expectancy": 2.191304841790739,
-      "strategy_explain": {
-        "regime_pnl": {
-          "high_vol": {
-            "return_pct": -4.234648384447624,
-            "net_profit": -423.4648384447624,
-            "num_trades": 45,
-            "avg_rr": 1.5999999999999996,
-            "win_rate": 0.5777777777777777
-          },
-          "low_vol": {
-            "return_pct": 2.954280013050901,
-            "net_profit": 295.4280013050901,
-            "num_trades": 35,
-            "avg_rr": 1.5999999999999979,
-            "win_rate": 0.7142857142857143
-          },
-          "ranging": {
-            "return_pct": 4.172890762560506,
-            "net_profit": 417.28907625605063,
-            "num_trades": 52,
-            "avg_rr": 1.6000000000000003,
-            "win_rate": 0.6730769230769231
-          }
-        },
-        "session_pnl": {
-          "asia": {
-            "return_pct": 10.84410681370803,
-            "num_trades": 37
-          },
-          "london": {
-            "return_pct": 4.581875493477834,
-            "num_trades": 28
-          },
-          "new_york": {
-            "return_pct": -12.533459916022084,
-            "num_trades": 67
-          }
-        },
-        "risk_behavior": {
-          "avg_rr": 1.5999999999999994,
-          "sl_hit_ratio": 0.17424242424242425,
-          "tp_hit_ratio": 0.007575757575757576,
-          "exit_rule_ratio": 0.8181818181818182,
-          "avg_holding_bars": 0.0,
-          "max_consecutive_losses": 7
-        },
-        "stability": {
-          "subperiod_sharpe": [
-            -2.2219900042406326,
-            0.879121919042512,
-            2.4643945585751665
-          ],
-          "subperiod_return_pct": [
-            -8.54040718042512,
-            3.456469385290172,
-            7.97646018629873
-          ],
-          "sharpe_std": 1.9462837743584265
-        },
-        "news_behavior": {
-          "trades_around_high_impact": {
-            "num_trades": 0,
-            "return_pct": 0.0,
-            "avg_rr": 0.0
-          },
-          "avoidance_rate": 0.0,
-          "pre_news_return_pct": 0.0,
-          "post_news_return_pct": 0.0
-        },
-        "meta": {
-          "best_regime": "ranging",
-          "worst_regime": "high_vol",
-          "is_trend_follower": false,
-          "is_range_trader": true,
-          "total_pnl": 289.252239116378,
-          "total_return_pct": 2.89252239116378
-        }
-      },
-      "score": 0.8966102150706838,
-      "accepted": true,
-      "wf_overall_sharpe": 3.0286674318976696,
-      "wf_overall_max_drawdown_pct": 6.180512149947681,
-      "symbol": "XAUUSDm",
-      "timeframe": "M15",
-      "mc_final_pnl_mean": 289.25223911637823,
-      "mc_final_pnl_p5": 289.252239116378,
-      "mc_final_pnl_p95": 289.2522391163785,
-      "mc_max_dd_mean": 607.1195101669001,
-      "mc_max_dd_p5": 393.11004214936395,
-      "mc_max_dd_p95": 878.8348535647184,
-      "strategy": {
-        "long_entry_rule": "rsi < 35 and trend_strength > -0.08 and trend_strength < 0.08",
-        "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
-        "exit_rule": "rsi < 47",
-        "sl_atr_mult": 2.5,
-        "tp_atr_mult": 4.0
-      }
-    }
-  },
-  "core15_XAUUSDm_M15_f476": {
-    "name": "core15_XAUUSDm_M15_f476",
-    "symbol": "XAUUSDm",
-    "timeframe": "M15",
-    "status": "active",
-    "score": 4.227084591327151,
-    "stats": {
-      "initial_equity": 10000.0,
-      "final_equity": 16283.370959105076,
-      "net_profit": 6283.370959105076,
-      "return_pct": 62.833709591050756,
-      "sharpe_ratio": 8.645272327930664,
-      "max_drawdown_pct": -9.59841230548244,
-      "profit_factor": 1.5498659440323679,
-      "win_rate": 0.5098039215686274,
-      "num_trades": 765.0,
-      "avg_win": 45.411453878927915,
-      "avg_loss": 30.47225614313813,
-      "expectancy": 8.213556809287693,
-      "strategy_explain": {
-        "regime_pnl": {
-          "high_vol": {
-            "return_pct": 11.808965766375149,
-            "net_profit": 1180.896576637515,
-            "num_trades": 50,
-            "avg_rr": 1.2000000000000006,
-            "win_rate": 0.64
-          },
-          "low_vol": {
-            "return_pct": -0.2898196231547966,
-            "net_profit": -28.98196231547966,
-            "num_trades": 44,
-            "avg_rr": 1.1999999999999966,
-            "win_rate": 0.5
-          },
-          "ranging": {
-            "return_pct": 3.5716376419574027,
-            "net_profit": 357.16376419574027,
-            "num_trades": 96,
-            "avg_rr": 1.1999999999999995,
-            "win_rate": 0.4791666666666667
-          },
-          "trending_down": {
-            "return_pct": 44.187049359777866,
-            "net_profit": 4418.704935977787,
-            "num_trades": 280,
-            "avg_rr": 1.1999999999999993,
-            "win_rate": 0.475
-          },
-          "trending_up": {
-            "return_pct": 3.555876446095251,
-            "net_profit": 355.58764460952506,
-            "num_trades": 295,
-            "avg_rr": 1.200000000000001,
-            "win_rate": 0.5322033898305085
-          }
-        },
-        "session_pnl": {
-          "asia": {
-            "return_pct": 15.1368720013971,
-            "num_trades": 239
-          },
-          "london": {
-            "return_pct": 28.38446407285017,
-            "num_trades": 201
-          },
-          "new_york": {
-            "return_pct": 19.3123735168036,
-            "num_trades": 325
-          }
-        },
-        "risk_behavior": {
-          "avg_rr": 1.2,
-          "sl_hit_ratio": 0.02483660130718954,
-          "tp_hit_ratio": 0.10457516339869281,
-          "exit_rule_ratio": 0.8705882352941177,
-          "avg_holding_bars": 0.0,
-          "max_consecutive_losses": 8
-        },
-        "stability": {
-          "subperiod_sharpe": [
-            1.8021226027809387,
-            0.5284470116369983,
-            3.7159060138487585
-          ],
-          "subperiod_return_pct": [
-            9.840774591733028,
-            4.261115338781481,
-            48.73181966053637
-          ],
-          "sharpe_std": 1.3099919994130174
-        },
-        "news_behavior": {
-          "trades_around_high_impact": {
-            "num_trades": 0,
-            "return_pct": 0.0,
-            "avg_rr": 0.0
-          },
-          "avoidance_rate": 0.0,
-          "pre_news_return_pct": 0.0,
-          "post_news_return_pct": 0.0
-        },
-        "meta": {
-          "best_regime": "trending_down",
-          "worst_regime": "low_vol",
-          "is_trend_follower": true,
-          "is_range_trader": true,
-          "total_pnl": 6283.370959105088,
-          "total_return_pct": 62.83370959105089
-        }
-      },
-      "score": 4.227084591327151,
-      "accepted": true,
-      "wf_overall_sharpe": 7.9499871167646115,
-      "wf_overall_max_drawdown_pct": 9.90074696531532,
-      "symbol": "XAUUSDm",
-      "timeframe": "M15",
-      "mc_final_pnl_mean": 6283.370959105091,
-      "mc_final_pnl_p5": 6283.370959105085,
-      "mc_final_pnl_p95": 6283.370959105097,
-      "mc_max_dd_mean": 724.9300123953509,
-      "mc_max_dd_p5": 492.1004669797699,
-      "mc_max_dd_p95": 1069.316382193975,
-      "strategy": {
-        "long_entry_rule": "ma_short > ma_long and trend_strength > 0.061",
-        "short_entry_rule": "ma_short < ma_long and trend_strength < -0.061",
-        "exit_rule": "rsi > 41",
-        "sl_atr_mult": 2.5,
-        "tp_atr_mult": 3.0
-      }
-    }
-  },
-  "core15_XAUUSDm_M15_fd8f": {
-    "name": "core15_XAUUSDm_M15_fd8f",
-    "symbol": "XAUUSDm",
-    "timeframe": "M15",
-    "status": "candidate",
-    "score": 1.1524821890885977,
-    "stats": {
-      "initial_equity": 10000.0,
-      "final_equity": 10884.082876288727,
-      "net_profit": 884.0828762887268,
-      "return_pct": 8.840828762887268,
-      "sharpe_ratio": 1.843645740311551,
-      "max_drawdown_pct": -13.814281463253819,
-      "profit_factor": 1.1772223586550514,
-      "win_rate": 0.5132743362831859,
-      "num_trades": 113.0,
-      "avg_win": 101.25231811532349,
-      "avg_loss": 90.70093771636435,
-      "expectancy": 7.823742268041798,
-      "strategy_explain": {
-        "regime_pnl": {
-          "high_vol": {
-            "return_pct": -2.067216899436829,
-            "net_profit": -206.7216899436829,
-            "num_trades": 10,
-            "avg_rr": 1.2000000000000057,
-            "win_rate": 0.4
-          },
-          "low_vol": {
-            "return_pct": 8.505751929566726,
-            "net_profit": 850.5751929566726,
-            "num_trades": 17,
-            "avg_rr": 1.2000000000000024,
-            "win_rate": 0.7647058823529411
-          },
-          "ranging": {
-            "return_pct": 5.282842314136997,
-            "net_profit": 528.2842314136997,
-            "num_trades": 22,
-            "avg_rr": 1.199999999999999,
-            "win_rate": 0.6818181818181818
-          },
-          "trending_up": {
-            "return_pct": -2.880548581379667,
-            "net_profit": -288.05485813796673,
-            "num_trades": 64,
-            "avg_rr": 1.2000000000000004,
-            "win_rate": 0.40625
-          }
-        },
-        "session_pnl": {
-          "asia": {
-            "return_pct": 15.053644562626868,
-            "num_trades": 45
-          },
-          "london": {
-            "return_pct": 3.3558314903670556,
-            "num_trades": 20
-          },
-          "new_york": {
-            "return_pct": -9.568647290106696,
-            "num_trades": 48
-          }
-        },
-        "risk_behavior": {
-          "avg_rr": 1.200000000000001,
-          "sl_hit_ratio": 0.3893805309734513,
-          "tp_hit_ratio": 0.2831858407079646,
-          "exit_rule_ratio": 0.3274336283185841,
-          "avg_holding_bars": 0.0,
-          "max_consecutive_losses": 12
-        },
-        "stability": {
-          "subperiod_sharpe": [
-            -0.47795372891845234,
-            -0.3217848249129259,
-            2.188414653605416
-          ],
-          "subperiod_return_pct": [
-            -2.789015857367725,
-            -1.9761012617426197,
-            13.605945881997572
-          ],
-          "sharpe_std": 1.2217933313078495
-        },
-        "news_behavior": {
-          "trades_around_high_impact": {
-            "num_trades": 0,
-            "return_pct": 0.0,
-            "avg_rr": 0.0
-          },
-          "avoidance_rate": 0.0,
-          "pre_news_return_pct": 0.0,
-          "post_news_return_pct": 0.0
-        },
-        "meta": {
-          "best_regime": "low_vol",
-          "worst_regime": "trending_up",
-          "is_trend_follower": false,
-          "is_range_trader": true,
-          "total_pnl": 884.0828762887228,
-          "total_return_pct": 8.840828762887227
-        }
-      },
-      "score": 1.1524821890885977,
-      "accepted": true,
-      "wf_overall_sharpe": 2.8509734868421974,
-      "wf_overall_max_drawdown_pct": 6.2107945540132,
-      "symbol": "XAUUSDm",
-      "timeframe": "M15",
-      "mc_final_pnl_mean": 884.0828762887228,
-      "mc_final_pnl_p5": 884.0828762887222,
-      "mc_final_pnl_p95": 884.082876288723,
-      "mc_max_dd_mean": 859.6533496513365,
-      "mc_max_dd_p5": 543.0676002793697,
-      "mc_max_dd_p95": 1293.876960629573,
-      "strategy": {
-        "long_entry_rule": "ma_short > ma_long and trend_strength > 0.126",
-        "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
-        "exit_rule": "rsi < 43",
-        "sl_atr_mult": 2.5,
-        "tp_atr_mult": 3.0
-      }
-    }
-  },
-  "core15_XAUUSDm_M15_dfc4": {
-    "name": "core15_XAUUSDm_M15_dfc4",
-    "symbol": "XAUUSDm",
-    "timeframe": "M15",
-    "status": "active",
-    "score": 1.8350442755503178,
-    "stats": {
-      "initial_equity": 10000.0,
-      "final_equity": 12216.11218212256,
-      "net_profit": 2216.1121821225606,
-      "return_pct": 22.161121821225606,
-      "sharpe_ratio": 3.503599234582022,
-      "max_drawdown_pct": -17.337932206557294,
-      "profit_factor": 1.3566130126102736,
-      "win_rate": 0.4864864864864865,
-      "num_trades": 111.0,
-      "avg_win": 156.1193640330741,
-      "avg_loss": 109.02339430988482,
-      "expectancy": 19.964974613716826,
-      "strategy_explain": {
-        "regime_pnl": {
-          "high_vol": {
-            "return_pct": 0.4908848215494782,
-            "net_profit": 49.088482154947826,
-            "num_trades": 11,
-            "avg_rr": 1.599999999999998,
-            "win_rate": 0.45454545454545453
-          },
-          "low_vol": {
-            "return_pct": 18.068339295317976,
-            "net_profit": 1806.8339295317976,
-            "num_trades": 17,
-            "avg_rr": 1.5999999999999956,
-            "win_rate": 0.7647058823529411
-          },
-          "ranging": {
-            "return_pct": 9.652228303291169,
-            "net_profit": 965.222830329117,
-            "num_trades": 19,
-            "avg_rr": 1.5999999999999983,
-            "win_rate": 0.631578947368421
-          },
-          "trending_up": {
-            "return_pct": -6.050330598932948,
-            "net_profit": -605.0330598932949,
-            "num_trades": 64,
-            "avg_rr": 1.5999999999999974,
-            "win_rate": 0.375
-          }
-        },
-        "session_pnl": {
-          "asia": {
-            "return_pct": 26.995756471150834,
-            "num_trades": 46
-          },
-          "london": {
-            "return_pct": 4.671176903866071,
-            "num_trades": 16
-          },
-          "new_york": {
-            "return_pct": -9.505811553791236,
-            "num_trades": 49
-          }
-        },
-        "risk_behavior": {
-          "avg_rr": 1.5999999999999972,
-          "sl_hit_ratio": 0.5135135135135135,
-          "tp_hit_ratio": 0.3963963963963964,
-          "exit_rule_ratio": 0.09009009009009009,
-          "avg_holding_bars": 0.0,
-          "max_consecutive_losses": 12
-        },
-        "stability": {
-          "subperiod_sharpe": [
-            -0.39562626572539705,
-            2.3734344138048478,
-            0.7814003566220202
-          ],
-          "subperiod_return_pct": [
-            -3.094134578608383,
-            18.31696078690471,
-            6.938295612929344
-          ],
-          "sharpe_std": 1.1346884621812419
-        },
-        "news_behavior": {
-          "trades_around_high_impact": {
-            "num_trades": 0,
-            "return_pct": 0.0,
-            "avg_rr": 0.0
-          },
-          "avoidance_rate": 0.0,
-          "pre_news_return_pct": 0.0,
-          "post_news_return_pct": 0.0
-        },
-        "meta": {
-          "best_regime": "low_vol",
-          "worst_regime": "trending_up",
-          "is_trend_follower": false,
-          "is_range_trader": true,
-          "total_pnl": 2216.1121821225674,
-          "total_return_pct": 22.161121821225674
-        }
-      },
-      "score": 1.8350442755503178,
-      "accepted": true,
-      "wf_overall_sharpe": 4.450207291061482,
-      "wf_overall_max_drawdown_pct": 9.121538796494622,
-      "symbol": "XAUUSDm",
-      "timeframe": "M15",
-      "mc_final_pnl_mean": 2216.1121821225674,
-      "mc_final_pnl_p5": 2216.112182122566,
-      "mc_final_pnl_p95": 2216.112182122569,
-      "mc_max_dd_mean": 940.8125704954696,
-      "mc_max_dd_p5": 617.933918223291,
-      "mc_max_dd_p95": 1375.6213694889389,
-      "strategy": {
-        "long_entry_rule": "ma_short > ma_long and trend_strength > 0.103",
-        "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
-        "exit_rule": "trend_strength < -0.049",
-        "sl_atr_mult": 2.5,
-        "tp_atr_mult": 4.0
-      }
-    }
-  },
-  "core15_XAUUSDm_M15_5114": {
-    "name": "core15_XAUUSDm_M15_5114",
-    "symbol": "XAUUSDm",
-    "timeframe": "M15",
-    "status": "active",
-    "score": 2.3207734257252675,
-    "stats": {
-      "initial_equity": 10000.0,
-      "final_equity": 12925.0129946685,
-      "net_profit": 2925.0129946684992,
-      "return_pct": 29.250129946684993,
-      "sharpe_ratio": 4.573112438924932,
-      "max_drawdown_pct": -22.267045511706783,
-      "profit_factor": 1.3806630175745407,
-      "win_rate": 0.44583333333333336,
-      "num_trades": 240.0,
-      "avg_win": 99.14961407874019,
-      "avg_loss": 57.77440384779465,
-      "expectancy": 12.187554144452129,
-      "strategy_explain": {
-        "regime_pnl": {
-          "high_vol": {
-            "return_pct": -8.85801199230957,
-            "net_profit": -885.8011992309571,
-            "num_trades": 28,
-            "avg_rr": 1.6000000000000012,
-            "win_rate": 0.5
-          },
-          "low_vol": {
-            "return_pct": 0.06036563598707587,
-            "net_profit": 6.036563598707588,
-            "num_trades": 18,
-            "avg_rr": 1.6000000000000003,
-            "win_rate": 0.6111111111111112
-          },
-          "ranging": {
-            "return_pct": -4.491125792227064,
-            "net_profit": -449.1125792227064,
-            "num_trades": 23,
-            "avg_rr": 1.6000000000000016,
-            "win_rate": 0.43478260869565216
-          },
-          "trending_down": {
-            "return_pct": 42.5389020952347,
-            "net_profit": 4253.89020952347,
-            "num_trades": 171,
-            "avg_rr": 1.5999999999999988,
-            "win_rate": 0.42105263157894735
-          }
-        },
-        "session_pnl": {
-          "asia": {
-            "return_pct": 11.942561212877093,
-            "num_trades": 59
-          },
-          "london": {
-            "return_pct": 17.771378104766924,
-            "num_trades": 68
-          },
-          "new_york": {
-            "return_pct": -0.4638093709588836,
-            "num_trades": 113
-          }
-        },
-        "risk_behavior": {
-          "avg_rr": 1.5999999999999994,
-          "sl_hit_ratio": 0.19583333333333333,
-          "tp_hit_ratio": 0.20833333333333334,
-          "exit_rule_ratio": 0.5958333333333333,
-          "avg_holding_bars": 0.0,
-          "max_consecutive_losses": 17
-        },
-        "stability": {
-          "subperiod_sharpe": [
-            0.26047429065650135,
-            -1.727383534701405,
-            3.5413255689999623
-          ],
-          "subperiod_return_pct": [
-            2.0035955947486186,
-            -10.166616533182168,
-            37.41315088511868
-          ],
-          "sharpe_std": 2.1724246429551743
-        },
-        "news_behavior": {
-          "trades_around_high_impact": {
-            "num_trades": 0,
-            "return_pct": 0.0,
-            "avg_rr": 0.0
-          },
-          "avoidance_rate": 0.0,
-          "pre_news_return_pct": 0.0,
-          "post_news_return_pct": 0.0
-        },
-        "meta": {
-          "best_regime": "trending_down",
-          "worst_regime": "high_vol",
-          "is_trend_follower": true,
-          "is_range_trader": false,
-          "total_pnl": 2925.012994668513,
-          "total_return_pct": 29.250129946685128
-        }
-      },
-      "score": 2.3207734257252675,
-      "accepted": true,
-      "wf_overall_sharpe": 3.1311189701525075,
-      "wf_overall_max_drawdown_pct": 22.599208535502015,
-      "symbol": "XAUUSDm",
-      "timeframe": "M15",
-      "mc_final_pnl_mean": 2925.012994668513,
-      "mc_final_pnl_p5": 2925.012994668511,
-      "mc_final_pnl_p95": 2925.0129946685142,
-      "mc_max_dd_mean": 896.8523523761288,
-      "mc_max_dd_p5": 577.4203964432879,
-      "mc_max_dd_p95": 1384.0997081655194,
-      "strategy": {
-        "long_entry_rule": "rsi < 35 and trend_strength > -0.08 and trend_strength < 0.08",
-        "short_entry_rule": "ma_short < ma_long and trend_strength < -0.103",
-        "exit_rule": "rsi > 47",
-        "sl_atr_mult": 2.5,
-        "tp_atr_mult": 4.0
-      }
-    }
-  },
-  "core15_XAUUSDm_M15_c7a7": {
-    "name": "core15_XAUUSDm_M15_c7a7",
-    "symbol": "XAUUSDm",
-    "timeframe": "M15",
-    "status": "active",
-    "score": 1.4156395798079222,
-    "stats": {
-      "initial_equity": 10000.0,
-      "final_equity": 11084.548897259221,
-      "net_profit": 1084.5488972592211,
-      "return_pct": 10.84548897259221,
-      "sharpe_ratio": 2.4022155633545665,
-      "max_drawdown_pct": -10.942659021267298,
-      "profit_factor": 1.213933148929228,
-      "win_rate": 0.45132743362831856,
-      "num_trades": 113.0,
-      "avg_win": 120.66898180311209,
-      "avg_loss": 81.76724475321761,
-      "expectancy": 9.597777851851546,
-      "strategy_explain": {
-        "regime_pnl": {
-          "high_vol": {
-            "return_pct": -6.765170310002648,
-            "net_profit": -676.5170310002649,
-            "num_trades": 38,
-            "avg_rr": 1.6000000000000008,
-            "win_rate": 0.3684210526315789
-          },
-          "low_vol": {
-            "return_pct": 11.868490570965632,
-            "net_profit": 1186.8490570965632,
-            "num_trades": 30,
-            "avg_rr": 1.5999999999999965,
-            "win_rate": 0.5333333333333333
-          },
-          "ranging": {
-            "return_pct": 5.742168711629263,
-            "net_profit": 574.2168711629263,
-            "num_trades": 45,
-            "avg_rr": 1.6000000000000005,
-            "win_rate": 0.4666666666666667
-          }
-        },
-        "session_pnl": {
-          "asia": {
-            "return_pct": 22.606746296669797,
-            "num_trades": 31
-          },
-          "london": {
-            "return_pct": 6.744037477653905,
-            "num_trades": 25
-          },
-          "new_york": {
-            "return_pct": -18.505294801731456,
-            "num_trades": 57
-          }
-        },
-        "risk_behavior": {
-          "avg_rr": 1.5999999999999996,
-          "sl_hit_ratio": 0.36283185840707965,
-          "tp_hit_ratio": 0.2920353982300885,
-          "exit_rule_ratio": 0.34513274336283184,
-          "avg_holding_bars": 0.0,
-          "max_consecutive_losses": 11
-        },
-        "stability": {
-          "subperiod_sharpe": [
-            -1.354712314585727,
-            1.803620908893148,
-            0.8626514998075763
-          ],
-          "subperiod_return_pct": [
-            -7.770398990411224,
-            12.031964626666271,
-            6.583923336337199
-          ],
-          "sharpe_std": 1.3240172231485565
-        },
-        "news_behavior": {
-          "trades_around_high_impact": {
-            "num_trades": 0,
-            "return_pct": 0.0,
-            "avg_rr": 0.0
-          },
-          "avoidance_rate": 0.0,
-          "pre_news_return_pct": 0.0,
-          "post_news_return_pct": 0.0
-        },
-        "meta": {
-          "best_regime": "low_vol",
-          "worst_regime": "high_vol",
-          "is_trend_follower": false,
-          "is_range_trader": true,
-          "total_pnl": 1084.5488972592248,
-          "total_return_pct": 10.845488972592248
-        }
-      },
-      "score": 1.4156395798079222,
-      "accepted": true,
-      "wf_overall_sharpe": 3.3103287747378727,
-      "wf_overall_max_drawdown_pct": 11.513338535233808,
-      "symbol": "XAUUSDm",
-      "timeframe": "M15",
-      "mc_final_pnl_mean": 1084.5488972592248,
-      "mc_final_pnl_p5": 1084.5488972592243,
-      "mc_final_pnl_p95": 1084.5488972592254,
-      "mc_max_dd_mean": 896.1913383680283,
-      "mc_max_dd_p5": 570.794634646172,
-      "mc_max_dd_p95": 1369.6464810687355,
-      "strategy": {
-        "long_entry_rule": "rsi < 35 and trend_strength > -0.08 and trend_strength < 0.08",
-        "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
-        "exit_rule": "trend_strength < -0.07",
-        "sl_atr_mult": 2.5,
-        "tp_atr_mult": 4.0
-      }
-    }
-  },
-  "core15_BTCUSDm_M15_a1c5": {
-    "name": "core15_BTCUSDm_M15_a1c5",
-    "symbol": "BTCUSDm",
-    "timeframe": "M15",
-    "status": "active",
-    "score": 4.537288744548869,
-    "stats": {
-      "initial_equity": 10000.0,
-      "final_equity": 11979.196488530548,
-      "net_profit": 1979.1964885305479,
-      "return_pct": 19.79196488530548,
-      "sharpe_ratio": 9.211070058438725,
-      "max_drawdown_pct": -3.0000000000000027,
-      "profit_factor": 2.276202403911266,
-      "win_rate": 0.6893203883495146,
-      "num_trades": 103.0,
-      "avg_win": 49.71894244896217,
-      "avg_loss": 48.464013292055235,
-      "expectancy": 19.21549988864608,
-      "strategy_explain": {
-        "regime_pnl": {
-          "high_vol": {
-            "return_pct": 8.299272980080799,
-            "net_profit": 829.92729800808,
-            "num_trades": 15,
-            "avg_rr": 1.2,
-            "win_rate": 0.9333333333333333
-          },
-          "low_vol": {
-            "return_pct": -1.874862188089218,
-            "net_profit": -187.4862188089218,
-            "num_trades": 22,
-            "avg_rr": 1.2,
-            "win_rate": 0.5
-          },
-          "ranging": {
-            "return_pct": 13.367554093313878,
-            "net_profit": 1336.755409331388,
-            "num_trades": 66,
-            "avg_rr": 1.200000000000001,
-            "win_rate": 0.696969696969697
-          }
-        },
-        "session_pnl": {
-          "asia": {
-            "return_pct": 6.290000206586796,
-            "num_trades": 28
-          },
-          "london": {
-            "return_pct": 4.552621201234675,
-            "num_trades": 25
-          },
-          "new_york": {
-            "return_pct": 8.94934347748399,
-            "num_trades": 50
-          }
-        },
-        "risk_behavior": {
-          "avg_rr": 1.2000000000000006,
-          "sl_hit_ratio": 0.0970873786407767,
-          "tp_hit_ratio": 0.02912621359223301,
-          "exit_rule_ratio": 0.8737864077669902,
-          "avg_holding_bars": 0.0,
-          "max_consecutive_losses": 5
-        },
-        "stability": {
-          "subperiod_sharpe": [
-            1.320259037955791,
-            3.2215347679616886,
-            1.570441120135435
-          ],
-          "subperiod_return_pct": [
-            4.2115003223122605,
-            9.301487870306753,
-            6.278976692686449
-          ],
-          "sharpe_std": 0.8435079338127444
-        },
-        "news_behavior": {
-          "trades_around_high_impact": {
-            "num_trades": 0,
-            "return_pct": 0.0,
-            "avg_rr": 0.0
-          },
-          "avoidance_rate": 0.0,
-          "pre_news_return_pct": 0.0,
-          "post_news_return_pct": 0.0
-        },
-        "meta": {
-          "best_regime": "ranging",
-          "worst_regime": "low_vol",
-          "is_trend_follower": false,
-          "is_range_trader": true,
-          "total_pnl": 1979.1964885305465,
-          "total_return_pct": 19.791964885305465
-        }
-      },
-      "score": 4.537288744548869,
-      "accepted": true,
-      "wf_overall_sharpe": 11.830733697223625,
-      "wf_overall_max_drawdown_pct": 2.321077873664945,
-      "symbol": "BTCUSDm",
-      "timeframe": "M15",
-      "mc_final_pnl_mean": 1979.1964885305465,
-      "mc_final_pnl_p5": 1979.1964885305456,
-      "mc_final_pnl_p95": 1979.1964885305472,
-      "mc_max_dd_mean": 286.2127273786511,
-      "mc_max_dd_p5": 198.28710716131434,
-      "mc_max_dd_p95": 441.5081525818346,
-      "strategy": {
-        "long_entry_rule": "rsi < 35 and trend_strength > -0.08 and trend_strength < 0.08",
-        "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
-        "exit_rule": "rsi < 55",
-        "sl_atr_mult": 2.5,
-        "tp_atr_mult": 3.0
-      }
-    }
-  },
-  "core15_BTCUSDm_M15_6893": {
-    "name": "core15_BTCUSDm_M15_6893",
-    "symbol": "BTCUSDm",
-    "timeframe": "M15",
-    "status": "candidate",
-    "score": 0.8889944559257839,
-    "stats": {
-      "initial_equity": 10000.0,
-      "final_equity": 10097.218280008194,
-      "net_profit": 97.21828000819369,
-      "return_pct": 0.9721828000819369,
-      "sharpe_ratio": 1.0340617686730924,
-      "max_drawdown_pct": -4.841666357113816,
-      "profit_factor": 1.079288040092283,
-      "win_rate": 0.5892857142857143,
-      "num_trades": 56.0,
-      "avg_win": 40.10178231473597,
-      "avg_loss": 53.31045810339515,
-      "expectancy": 1.7360407144321215,
-      "strategy_explain": {
-        "regime_pnl": {
-          "high_vol": {
-            "return_pct": 2.228909570857002,
-            "net_profit": 222.8909570857002,
-            "num_trades": 12,
-            "avg_rr": 1.33333333333333,
-            "win_rate": 0.75
-          },
-          "low_vol": {
-            "return_pct": -1.9545138003807454,
-            "net_profit": -195.45138003807455,
-            "num_trades": 7,
-            "avg_rr": 1.3333333333333155,
-            "win_rate": 0.42857142857142855
-          },
-          "ranging": {
-            "return_pct": 0.697787029605732,
-            "net_profit": 69.7787029605732,
-            "num_trades": 37,
-            "avg_rr": 1.3333333333333337,
-            "win_rate": 0.5675675675675675
-          }
-        },
-        "session_pnl": {
-          "asia": {
-            "return_pct": -0.4362674654565674,
-            "num_trades": 17
-          },
-          "london": {
-            "return_pct": -0.6971298287902897,
-            "num_trades": 20
-          },
-          "new_york": {
-            "return_pct": 2.1055800943288454,
-            "num_trades": 19
-          }
-        },
-        "risk_behavior": {
-          "avg_rr": 1.3333333333333306,
-          "sl_hit_ratio": 0.16071428571428573,
-          "tp_hit_ratio": 0.017857142857142856,
-          "exit_rule_ratio": 0.8214285714285714,
-          "avg_holding_bars": 0.0,
-          "max_consecutive_losses": 4
-        },
-        "stability": {
-          "subperiod_sharpe": [
-            -0.06932621502657237,
-            -0.24782173884674993,
-            0.6615565637153663
-          ],
-          "subperiod_return_pct": [
-            -0.17349424734690083,
-            -0.6210648894555895,
-            1.7667419368844781
-          ],
-          "sharpe_std": 0.39342077918575413
-        },
-        "news_behavior": {
-          "trades_around_high_impact": {
-            "num_trades": 0,
-            "return_pct": 0.0,
-            "avg_rr": 0.0
-          },
-          "avoidance_rate": 0.0,
-          "pre_news_return_pct": 0.0,
-          "post_news_return_pct": 0.0
-        },
-        "meta": {
-          "best_regime": "high_vol",
-          "worst_regime": "low_vol",
-          "is_trend_follower": false,
-          "is_range_trader": true,
-          "total_pnl": 97.21828000819886,
-          "total_return_pct": 0.9721828000819885
-        }
-      },
-      "score": 0.8889944559257839,
-      "accepted": true,
-      "wf_overall_sharpe": 1.5364253245858404,
-      "wf_overall_max_drawdown_pct": 4.265101721881481,
-      "symbol": "BTCUSDm",
-      "timeframe": "M15",
-      "mc_final_pnl_mean": 97.21828000819882,
-      "mc_final_pnl_p5": 97.21828000819872,
-      "mc_final_pnl_p95": 97.21828000819892,
-      "mc_max_dd_mean": 407.52488444772183,
-      "mc_max_dd_p5": 267.4752398684343,
-      "mc_max_dd_p95": 642.9551532176813,
-      "strategy": {
-        "long_entry_rule": "ma_short > ma_long and trend_strength > 0.311",
-        "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
-        "exit_rule": "rsi > 53",
-        "sl_atr_mult": 1.5,
-        "tp_atr_mult": 2.0
-      }
-    }
-  },
-  "core15_BTCUSDm_M15_18e1": {
-    "name": "core15_BTCUSDm_M15_18e1",
-    "symbol": "BTCUSDm",
-    "timeframe": "M15",
-    "status": "candidate",
-    "score": 1.3647132019320731,
-    "stats": {
-      "initial_equity": 10000.0,
-      "final_equity": 10155.725280920738,
-      "net_profit": 155.72528092073844,
-      "return_pct": 1.5572528092073843,
-      "sharpe_ratio": 2.0990500747201515,
-      "max_drawdown_pct": -3.0333917609301264,
-      "profit_factor": 1.1847569655110457,
-      "win_rate": 0.5892857142857143,
-      "num_trades": 56.0,
-      "avg_win": 30.260328138824246,
-      "avg_loss": 36.64632815915055,
-      "expectancy": 2.780808587870313,
-      "strategy_explain": {
-        "regime_pnl": {
-          "high_vol": {
-            "return_pct": 1.7377323936059275,
-            "net_profit": 173.77323936059275,
-            "num_trades": 12,
-            "avg_rr": 1.0,
-            "win_rate": 0.75
-          },
-          "low_vol": {
-            "return_pct": -1.0697156473333067,
-            "net_profit": -106.97156473333067,
-            "num_trades": 7,
-            "avg_rr": 1.0,
-            "win_rate": 0.42857142857142855
-          },
-          "ranging": {
-            "return_pct": 0.8892360629347533,
-            "net_profit": 88.92360629347533,
-            "num_trades": 37,
-            "avg_rr": 1.0,
-            "win_rate": 0.5675675675675675
-          }
-        },
-        "session_pnl": {
-          "asia": {
-            "return_pct": 0.14335729527244104,
-            "num_trades": 17
-          },
-          "london": {
-            "return_pct": -0.09657785725908859,
-            "num_trades": 20
-          },
-          "new_york": {
-            "return_pct": 1.5104733711940213,
-            "num_trades": 19
-          }
-        },
-        "risk_behavior": {
-          "avg_rr": 1.0,
-          "sl_hit_ratio": 0.05357142857142857,
-          "tp_hit_ratio": 0.017857142857142856,
-          "exit_rule_ratio": 0.9285714285714286,
-          "avg_holding_bars": 0.0,
-          "max_consecutive_losses": 4
-        },
-        "stability": {
-          "subperiod_sharpe": [
-            0.17059674036434885,
-            -0.1260506578411756,
-            0.7550704674200213
-          ],
-          "subperiod_return_pct": [
-            0.2949094902943944,
-            -0.24875855220349963,
-            1.5111018711164794
-          ],
-          "sharpe_std": 0.3660576235546064
-        },
-        "news_behavior": {
-          "trades_around_high_impact": {
-            "num_trades": 0,
-            "return_pct": 0.0,
-            "avg_rr": 0.0
-          },
-          "avoidance_rate": 0.0,
-          "pre_news_return_pct": 0.0,
-          "post_news_return_pct": 0.0
-        },
-        "meta": {
-          "best_regime": "high_vol",
-          "worst_regime": "low_vol",
-          "is_trend_follower": false,
-          "is_range_trader": true,
-          "total_pnl": 155.72528092073742,
-          "total_return_pct": 1.5572528092073743
-        }
-      },
-      "score": 1.3647132019320731,
-      "accepted": true,
-      "wf_overall_sharpe": 2.956850966402961,
-      "wf_overall_max_drawdown_pct": 2.5934174798943777,
-      "symbol": "BTCUSDm",
-      "timeframe": "M15",
-      "mc_final_pnl_mean": 155.72528092073745,
-      "mc_final_pnl_p5": 155.72528092073736,
-      "mc_final_pnl_p95": 155.7252809207375,
-      "mc_max_dd_mean": 274.1445802859145,
-      "mc_max_dd_p5": 166.79479748776754,
-      "mc_max_dd_p95": 400.5429611593527,
-      "strategy": {
-        "long_entry_rule": "ma_short > ma_long and trend_strength > 0.49",
-        "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
-        "exit_rule": "rsi > 41",
-        "sl_atr_mult": 2.0,
-        "tp_atr_mult": 2.0
-      }
     }
   }
 }
