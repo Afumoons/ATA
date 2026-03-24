@@ -297,9 +297,6 @@ def execute_signals_for_symbol(
     risk_perc_active = risk_perc
     risk_perc_exploratory = min(risk_perc * 0.25, 0.1)
 
-    # Latest ATR for adaptive SL sizing (if available)
-    atr_value = float(latest.get("atr", 0.0) or 0.0)
-
     def _execute_batch(strategies: List[StrategyDefinition], rp: float, tier: str) -> None:
         sigs = generate_signals_for_row(latest, strategies)
         if not sigs:
@@ -315,55 +312,13 @@ def execute_signals_for_symbol(
         for sig in sigs:
             strat = sig.strategy
             try:
-                # ------------------------------------------------------------------ #
-                # Adaptive SL sizing                                                  #
-                #                                                                      #
-                # 1) If ATR + sl_atr_mult are available, base stop_loss_pips on ATR.  #
-                # 2) Enforce a hard minimum SL distance for highly volatile symbols    #
-                #    (XAU, BTC) so SL is not placed inside spread/noise.              #
-                # ------------------------------------------------------------------ #
-                stop_loss_pips = float(getattr(strat, "stop_loss_pips", 0.0) or 0.0)
-                take_profit_pips = float(getattr(strat, "take_profit_pips", 0.0) or 0.0)
-
-                sl_mult = getattr(strat, "sl_atr_mult", None)
-                if atr_value > 0.0 and sl_mult not in (None, 0, 0.0):
-                    sl_price_dist = float(sl_mult) * atr_value
-                    sl_pips_from_atr = sl_price_dist / max(pip_size, 1e-9)
-                    if sl_pips_from_atr > 0:
-                        if stop_loss_pips > 0:
-                            logger.debug(
-                                "Adaptive SL: strategy=%s symbol=%s old_sl_pips=%.1f atr=%.3f mult=%.2f new_sl_pips=%.1f",
-                                strat.name, symbol, stop_loss_pips, atr_value, sl_mult, sl_pips_from_atr,
-                            )
-                        stop_loss_pips = max(stop_loss_pips, sl_pips_from_atr)
-
-                # Symbol-specific minimum SL distance (price-based), to avoid
-                # 1-tick SL hits in volatile conditions.
-                sym_u = symbol.upper()
-                min_sl_pips = 0.0
-                if "XAU" in sym_u:
-                    # Minimum ~$2 distance in price
-                    min_sl_price = 2.0
-                    min_sl_pips = min_sl_price / max(pip_size, 1e-9)
-                elif "BTC" in sym_u:
-                    # Minimum ~$200 distance in price
-                    min_sl_price = 200.0
-                    min_sl_pips = min_sl_price / max(pip_size, 1e-9)
-
-                if min_sl_pips > 0.0 and stop_loss_pips > 0.0 and stop_loss_pips < min_sl_pips:
-                    logger.info(
-                        "SL too tight for %s %s: %.1f pips < min %.1f pips (atr=%.3f) — clamping",
-                        symbol, strat.name, stop_loss_pips, min_sl_pips, atr_value,
-                    )
-                    stop_loss_pips = min_sl_pips
-
                 res = execute_trade(
                     strategy_name=strat.name,
                     symbol=symbol,
                     direction=sig.direction,
                     risk_perc=rp,
-                    stop_loss_pips=stop_loss_pips,
-                    take_profit_pips=take_profit_pips,
+                    stop_loss_pips=strat.stop_loss_pips,
+                    take_profit_pips=strat.take_profit_pips,
                     pip_size=pip_size,
                     pip_value_per_lot=pip_value_per_lot,
                     timeframe=timeframe,          # Tier 1: passed for comment generation
