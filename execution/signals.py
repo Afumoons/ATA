@@ -316,29 +316,48 @@ def execute_signals_for_symbol(
             strat = sig.strategy
             try:
                 # ------------------------------------------------------------------ #
-                # Adaptive SL sizing                                                  #
+                # SL/TP sizing                                                        #
                 #                                                                      #
-                # 1) If ATR + sl_atr_mult are available, base stop_loss_pips on ATR.  #
-                # 2) Enforce a hard minimum SL distance for highly volatile symbols    #
-                #    (XAU, BTC) so SL is not placed inside spread/noise.              #
+                # Mirror backtests.engine behaviour:                                   #
+                # - If ATR + sl_atr_mult + tp_atr_mult are available, derive BOTH     #
+                #   stop_loss_pips and take_profit_pips from ATR (pure ATR mode).     #
+                # - Otherwise fall back to static stop_loss_pips / take_profit_pips.  #
+                # Optionally we still enforce a symbol-specific *minimum* SL distance  #
+                # for very volatile symbols (XAU, BTC) to avoid 1-tick stop-outs.     #
                 # ------------------------------------------------------------------ #
                 stop_loss_pips = float(getattr(strat, "stop_loss_pips", 0.0) or 0.0)
                 take_profit_pips = float(getattr(strat, "take_profit_pips", 0.0) or 0.0)
 
                 sl_mult = getattr(strat, "sl_atr_mult", None)
-                if atr_value > 0.0 and sl_mult not in (None, 0, 0.0):
+                tp_mult = getattr(strat, "tp_atr_mult", None)
+
+                # Pure ATR mode (matches backtests.engine): use ATR for both SL & TP
+                if (
+                    atr_value > 0.0
+                    and sl_mult not in (None, 0, 0.0)
+                    and tp_mult not in (None, 0, 0.0)
+                ):
                     sl_price_dist = float(sl_mult) * atr_value
-                    sl_pips_from_atr = sl_price_dist / max(pip_size, 1e-9)
-                    if sl_pips_from_atr > 0:
-                        if stop_loss_pips > 0:
-                            logger.debug(
-                                "Adaptive SL: strategy=%s symbol=%s old_sl_pips=%.1f atr=%.3f mult=%.2f new_sl_pips=%.1f",
-                                strat.name, symbol, stop_loss_pips, atr_value, sl_mult, sl_pips_from_atr,
-                            )
-                        stop_loss_pips = max(stop_loss_pips, sl_pips_from_atr)
+                    tp_price_dist = float(tp_mult) * atr_value
+
+                    stop_loss_pips = sl_price_dist / max(pip_size, 1e-9)
+                    take_profit_pips = tp_price_dist / max(pip_size, 1e-9)
+
+                    logger.debug(
+                        "ATR SL/TP: strategy=%s symbol=%s atr=%.3f sl_mult=%.2f tp_mult=%.2f sl_pips=%.1f tp_pips=%.1f",
+                        strat.name,
+                        symbol,
+                        atr_value,
+                        sl_mult,
+                        tp_mult,
+                        stop_loss_pips,
+                        take_profit_pips,
+                    )
+                # Else: leave stop_loss_pips / take_profit_pips as configured (static mode)
 
                 # Symbol-specific minimum SL distance (price-based), to avoid
-                # 1-tick SL hits in volatile conditions.
+                # 1-tick SL hits in volatile conditions. This is an additional
+                # guard on top of the ATR sizing above.
                 sym_u = symbol.upper()
                 min_sl_pips = 0.0
                 if "XAU" in sym_u:
