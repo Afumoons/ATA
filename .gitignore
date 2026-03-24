@@ -61,6 +61,7 @@ strategies/generated/
 execution/live_state.json
 execution/equity_history.json
 execution/closed_trades_state.json
+execution/open_trades.json
 execution/strategy_live_stats.json
 execution/trades.log
 
