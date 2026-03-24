@@ -80,6 +80,87 @@ def get_strategy_for_ticket(ticket: int) -> Optional[str]:
 # Pip params
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# Volatility-aware SL calculation
+# ---------------------------------------------------------------------------
+
+# ATR multiplier base — SL = ATR * this value
+ATR_SL_MULTIPLIER = 1.5
+
+# Extra multiplier applied on top when regime == high_vol
+HIGH_VOL_REGIME_MULTIPLIER = 1.4
+
+# Minimum SL = spread * this value (spread guard)
+MIN_SL_SPREAD_FACTOR = 3.0
+
+# Fallback multiplier applied to strat.stop_loss_pips when ATR is unavailable
+FALLBACK_VOLATILITY_MULTIPLIER = 1.5
+FALLBACK_HIGH_VOL_MULTIPLIER = 2.0
+
+
+def _compute_dynamic_sl(
+    strat_sl_pips: float,
+    pip_size: float,
+    latest: pd.Series,
+    current_regime: str,
+) -> float:
+    """
+    Returns adjusted stop_loss_pips for current market conditions.
+
+    Priority:
+      1. ATR-based SL  (if 'atr' column present and valid)
+      2. Fallback: strat_sl_pips * volatility multiplier
+
+    Both paths apply:
+      - HIGH_VOL_REGIME_MULTIPLIER when regime == 'high_vol'
+      - Spread guard: SL >= spread * MIN_SL_SPREAD_FACTOR
+    """
+    is_high_vol = current_regime == "high_vol"
+
+    # ── 1. ATR path ──────────────────────────────────────────────────────── #
+    atr_raw = latest.get("atr", None)
+    try:
+        atr_val = float(atr_raw) if atr_raw is not None else float("nan")
+    except (TypeError, ValueError):
+        atr_val = float("nan")
+
+    if atr_val > 0 and not pd.isna(atr_val) and pip_size > 0:
+        multiplier = ATR_SL_MULTIPLIER
+        if is_high_vol:
+            multiplier *= HIGH_VOL_REGIME_MULTIPLIER
+
+        sl_pips = (atr_val / pip_size) * multiplier
+
+        # Spread guard
+        spread_raw = latest.get("spread", None)
+        try:
+            spread_val = float(spread_raw) if spread_raw is not None else 0.0
+        except (TypeError, ValueError):
+            spread_val = 0.0
+
+        if spread_val > 0 and pip_size > 0:
+            min_sl_from_spread = (spread_val / pip_size) * MIN_SL_SPREAD_FACTOR
+            sl_pips = max(sl_pips, min_sl_from_spread)
+
+        logger.debug(
+            "Dynamic SL (ATR path): regime=%s atr=%.5f multiplier=%.2f sl_pips=%.1f "
+            "(original=%.1f)",
+            current_regime, atr_val, multiplier, sl_pips, strat_sl_pips,
+        )
+        return sl_pips
+
+    # ── 2. Fallback path ─────────────────────────────────────────────────── #
+    multiplier = FALLBACK_HIGH_VOL_MULTIPLIER if is_high_vol else FALLBACK_VOLATILITY_MULTIPLIER
+    sl_pips = strat_sl_pips * multiplier
+
+    logger.debug(
+        "Dynamic SL (fallback path): regime=%s multiplier=%.2f sl_pips=%.1f "
+        "(original=%.1f)",
+        current_regime, multiplier, sl_pips, strat_sl_pips,
+    )
+    return sl_pips
+
+
 def _pip_params(symbol: str) -> tuple[float, float]:
     sym = symbol.upper()
     if "XAU" in sym or "XAG" in sym:
@@ -312,12 +393,24 @@ def execute_signals_for_symbol(
         for sig in sigs:
             strat = sig.strategy
             try:
+                dynamic_sl_pips = _compute_dynamic_sl(
+                    strat_sl_pips=strat.stop_loss_pips,
+                    pip_size=pip_size,
+                    latest=latest,
+                    current_regime=current_regime,
+                )
+                logger.info(
+                    "SL adjustment (%s): strategy=%s regime=%s "
+                    "original_sl=%.1f dynamic_sl=%.1f",
+                    tier, strat.name, current_regime,
+                    strat.stop_loss_pips, dynamic_sl_pips,
+                )
                 res = execute_trade(
                     strategy_name=strat.name,
                     symbol=symbol,
                     direction=sig.direction,
                     risk_perc=rp,
-                    stop_loss_pips=strat.stop_loss_pips,
+                    stop_loss_pips=dynamic_sl_pips,
                     take_profit_pips=strat.take_profit_pips,
                     pip_size=pip_size,
                     pip_value_per_lot=pip_value_per_lot,
