@@ -64,6 +64,7 @@ execution/closed_trades_state.json
 execution/open_trades.json
 execution/strategy_live_stats.json
 execution/trades.log
+execution/ticket_strategy_map.json
 
 # --- ChromaDB vector store (large, rebuilt from research cycles) ---
 chroma_data/
