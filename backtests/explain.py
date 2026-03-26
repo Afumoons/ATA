@@ -67,6 +67,54 @@ def _compute_sharpe(returns: np.ndarray) -> float:
     return float(mu / sigma * np.sqrt(returns.size))
 
 
+def _derive_allowed_blocked_labels(
+    perf_map: Dict[str, Dict[str, float]],
+    min_allowed_ret: float = 0.0,
+    blocked_ret: float = -5.0,
+    min_trades: int = 5,
+) -> tuple[list[str], list[str]]:
+    """Derive allowed/blocked labels from a regime/session performance map.
+
+    Conservative v1 heuristic:
+    - allowed: enough trades and non-negative return_pct
+    - blocked: enough trades and materially negative return_pct
+    Items with too few trades remain unclassified.
+    """
+    allowed: list[str] = []
+    blocked: list[str] = []
+    for label, stats in (perf_map or {}).items():
+        try:
+            ret = float((stats or {}).get("return_pct", 0.0) or 0.0)
+            trades = int((stats or {}).get("num_trades", 0) or 0)
+        except Exception:
+            continue
+        if trades < min_trades:
+            continue
+        if ret >= min_allowed_ret:
+            allowed.append(str(label))
+        elif ret <= blocked_ret:
+            blocked.append(str(label))
+    return sorted(set(allowed)), sorted(set(blocked))
+
+
+def _derive_routing_confidence(
+    best_ret: float,
+    worst_ret: float,
+    total_trades: int,
+) -> float:
+    """Return a simple 0..1 routing confidence score.
+
+    Signal sources:
+    - evidence count (trade count)
+    - separation between best and worst context returns
+    Higher means the strategy looks more like a legible specialist.
+    """
+    trade_score = min(1.0, max(0.0, total_trades / 50.0))
+    spread = max(0.0, best_ret - worst_ret)
+    separation_score = min(1.0, spread / 20.0)
+    return round((0.6 * trade_score) + (0.4 * separation_score), 4)
+
+
 def _nearest_feat_idx(feat_index: pd.DatetimeIndex, t: pd.Timestamp) -> int:
     """Return index of the last feature bar at or before time t.
 
@@ -356,10 +404,25 @@ def build_strategy_explain(
     # ------------------------------------------------------------------ #
     best_regime = None
     worst_regime = None
+    best_regime_ret = 0.0
+    worst_regime_ret = 0.0
     if regime_pnl:
         sorted_reg = sorted(regime_pnl.items(), key=lambda kv: kv[1]["return_pct"])
         worst_regime = sorted_reg[0][0]
         best_regime = sorted_reg[-1][0]
+        worst_regime_ret = float((sorted_reg[0][1] or {}).get("return_pct", 0.0) or 0.0)
+        best_regime_ret = float((sorted_reg[-1][1] or {}).get("return_pct", 0.0) or 0.0)
+
+    best_session = None
+    worst_session = None
+    best_session_ret = 0.0
+    worst_session_ret = 0.0
+    if session_pnl:
+        sorted_sess = sorted(session_pnl.items(), key=lambda kv: kv[1]["return_pct"])
+        worst_session = sorted_sess[0][0]
+        best_session = sorted_sess[-1][0]
+        worst_session_ret = float((sorted_sess[0][1] or {}).get("return_pct", 0.0) or 0.0)
+        best_session_ret = float((sorted_sess[-1][1] or {}).get("return_pct", 0.0) or 0.0)
 
     trend_ret = (
         (regime_pnl.get("trending_up", {}) or {}).get("return_pct", 0.0)
@@ -367,9 +430,32 @@ def build_strategy_explain(
     )
     range_ret = float((regime_pnl.get("ranging", {}) or {}).get("return_pct", 0.0))
 
+    allowed_regimes, blocked_regimes = _derive_allowed_blocked_labels(
+        regime_pnl, min_allowed_ret=0.0, blocked_ret=-5.0, min_trades=5
+    )
+    allowed_sessions, blocked_sessions = _derive_allowed_blocked_labels(
+        session_pnl, min_allowed_ret=0.0, blocked_ret=-3.0, min_trades=5
+    )
+    routing_confidence = _derive_routing_confidence(
+        best_ret=best_regime_ret,
+        worst_ret=worst_regime_ret,
+        total_trades=n_trades,
+    )
+
     meta = {
         "best_regime": best_regime,
         "worst_regime": worst_regime,
+        "best_session": best_session,
+        "worst_session": worst_session,
+        "best_regime_return_pct": best_regime_ret,
+        "worst_regime_return_pct": worst_regime_ret,
+        "best_session_return_pct": best_session_ret,
+        "worst_session_return_pct": worst_session_ret,
+        "allowed_regimes": allowed_regimes,
+        "blocked_regimes": blocked_regimes,
+        "allowed_sessions": allowed_sessions,
+        "blocked_sessions": blocked_sessions,
+        "routing_confidence": routing_confidence,
         "is_trend_follower": bool(trend_ret > 0),
         "is_range_trader": bool(range_ret > 0),
         "total_pnl": float(pnl_col.sum()),
