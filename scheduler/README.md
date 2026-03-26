@@ -30,20 +30,18 @@ It is effectively the "brainstem" that wires together `data/`, `research/`,
 - `MANAGED_SYMBOLS` (currently):
 
   ```python
-  MANAGED_SYMBOLS = ["XAUUSDm"]
+  MANAGED_SYMBOLS = ["XAUUSDm", "BTCUSDm"]
   TIMEFRAME = "M15"
   ```
-
-  BTC was removed from the default loop for now; add it back here if you want
-  to trade it.
 
 - Per-trade risk in live execution is computed as:
 
   ```python
-  risk_perc = min(1.0, risk_config.max_risk_per_trade_pct)
+  risk_perc = min(2.0, risk_config.max_risk_per_trade_pct)
   ```
 
-  With the default `RiskConfig`, this caps risk at **1% per trade**.
+  This leaves the effective cap controlled by `RiskConfig`, but the scheduler
+  itself will not size above **2% per trade**.
 
 ## Core Jobs
 
@@ -146,7 +144,7 @@ Workflow:
 
 1. Load the latest `StrategyPool` via `load_pool()`.
 2. Compute per-trade risk percentage as
-   `risk_perc = min(1.0, risk_config.max_risk_per_trade_pct)`.
+   `risk_perc = min(2.0, risk_config.max_risk_per_trade_pct)`.
 3. For each managed symbol:
    - Load features with `load_features(symbol, TIMEFRAME)`.
    - Check **news lockout**: if the most recent feature row has
@@ -168,15 +166,20 @@ Within `execute_signals_for_symbol` (documented in `execution/README.md`):
   `risk_config.max_trades_per_day`, and `risk_config.daily_limits_enabled`.
 - Strategies with status `active` and `exploratory` for the given symbol/timeframe
   are considered.
-- The latest feature row’s `regime` label is used to compute regime-specific edge
-  from `strategy_explain.regime_pnl`, filter out poor performers in the current
-  regime, and cap how many strategies per tier are allowed to fire.
+- The latest feature row’s routing context combines the legacy `regime` label
+  with structured fields from the saved feature pipeline (`regime_class`,
+  `regime_type`, `regime_confidence`, `vol_regime`) so high-vol trend bars can
+  still evaluate trend specialists rather than collapsing into a coarse generic
+  fallback.
 - Before regime ranking, live routing now also applies a **session hard gate**
   using `strategy_explain.meta.allowed_sessions` / `blocked_sessions`.
 - Live routing also applies:
-  - a regime policy gate using `allowed_regimes` / `blocked_regimes`,
+  - a regime policy gate using `allowed_regimes` / `blocked_regimes` against
+    the active structured candidate labels,
+  - a dedicated volatility mismatch gate for obvious quiet-range vs spike-state
+    conflicts,
   - confidence-aware gating from structured regime fields,
-  - explicit no-eligible-specialist reporting.
+  - explicit no-eligible-specialist reporting distinct from no-entry outcomes.
 - `active` strategies trade at the normal risk tier, while `exploratory` strategies
   trade at a significantly reduced per-trade risk.
 

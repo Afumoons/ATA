@@ -426,4 +426,5 @@ Implemented so far:
 - 2026-03-26: Reframed the roadmap around specialist strategies + routing-layer discipline.
 - 2026-03-26: Updated roadmap status after A1/A2 implementation progress and linked the routing-layer audit/tasklist.
 - 2026-03-27: Updated roadmap status after A3–A7 v1 implementation progress.
+- 2026-03-27: Validated saved feature pipeline fields (`regime`, `regime_class`, `regime_type`, `regime_confidence`, `vol_regime`) and tightened A3 routing to use structured candidate labels plus explicit volatility mismatch handling.
 

@@ -7,6 +7,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Tuple, Any, Dict, Optional
 
+from collections import Counter
+
 import pandas as pd
 
 from ..logging_utils import get_logger
@@ -101,6 +103,18 @@ class Signal:
     direction: str
 
 
+@dataclass
+class RoutingContext:
+    regime_label: str
+    candidate_regime_labels: List[str]
+    regime_class: str
+    regime_type: str
+    regime_confidence: float
+    vol_regime: str
+    session: str
+    trend_strength: float
+
+
 def generate_signals_for_row(
     row: pd.Series,
     strategies: List[StrategyDefinition],
@@ -122,22 +136,24 @@ def generate_signals_for_row(
     return signals
 
 
-def _regime_edge(stats: Dict[str, Any], regime_label: str) -> float:
+def _regime_edge(stats: Dict[str, Any], regime_labels: List[str]) -> tuple[float, str]:
     if not stats:
-        return -999.0
+        return -999.0, "unknown"
     ex = stats.get("strategy_explain", {}) or {}
     rp = ex.get("regime_pnl", {}) or {}
-    regime_stats = rp.get(regime_label, {}) or {}
-    try:
-        return float(regime_stats.get("return_pct", -999.0) or -999.0)
-    except Exception:
-        return -999.0
 
-
-def _map_current_to_regime_pnl_label(current_regime: str) -> str:
-    if current_regime in {"trending_up", "trending_down", "ranging", "high_vol", "low_vol"}:
-        return current_regime
-    return "unknown"
+    best_edge = -999.0
+    best_label = "unknown"
+    for regime_label in regime_labels:
+        regime_stats = rp.get(regime_label, {}) or {}
+        try:
+            edge = float(regime_stats.get("return_pct", -999.0) or -999.0)
+        except Exception:
+            edge = -999.0
+        if edge > best_edge:
+            best_edge = edge
+            best_label = regime_label
+    return best_edge, best_label
 
 
 def _current_session_from_row(row: pd.Series) -> str:
@@ -150,6 +166,40 @@ def _current_session_from_row(row: pd.Series) -> str:
     if 7 <= hour < 13:
         return "london"
     return "new_york"
+
+
+def _build_routing_context(row: pd.Series) -> RoutingContext:
+    regime_label = str(row.get("regime", "unknown") or "unknown")
+    regime_class = str(row.get("regime_class", "unknown") or "unknown")
+    regime_type = str(row.get("regime_type", "unknown") or "unknown")
+    vol_regime = str(row.get("vol_regime", "unknown") or "unknown")
+    regime_confidence = float(row.get("regime_confidence", 0.0) or 0.0)
+    trend_strength = float(row.get("trend_strength", 0.0) or 0.0)
+    session = _current_session_from_row(row)
+
+    candidate_labels: List[str] = []
+    if regime_label in {"trending_up", "trending_down", "ranging", "high_vol", "low_vol"}:
+        candidate_labels.append(regime_label)
+
+    if regime_label == "high_vol":
+        if regime_class == "trend":
+            candidate_labels.append("trending_up" if trend_strength >= 0 else "trending_down")
+        elif regime_class == "range":
+            candidate_labels.append("ranging")
+    elif regime_label == "low_vol" and regime_class == "range":
+        candidate_labels.append("ranging")
+
+    candidate_labels = list(dict.fromkeys([label for label in candidate_labels if label])) or ["unknown"]
+    return RoutingContext(
+        regime_label=regime_label,
+        candidate_regime_labels=candidate_labels,
+        regime_class=regime_class,
+        regime_type=regime_type,
+        regime_confidence=regime_confidence,
+        vol_regime=vol_regime,
+        session=session,
+        trend_strength=trend_strength,
+    )
 
 
 def _passes_session_gate(stats: Dict[str, Any], current_session: str) -> tuple[bool, str]:
@@ -165,31 +215,54 @@ def _passes_session_gate(stats: Dict[str, Any], current_session: str) -> tuple[b
     return True, "ok"
 
 
-def _passes_regime_gate(stats: Dict[str, Any], current_regime: str) -> tuple[bool, str]:
+def _passes_regime_gate(stats: Dict[str, Any], context: RoutingContext) -> tuple[bool, str, str]:
     ex = stats.get("strategy_explain", {}) or {}
     meta = ex.get("meta", {}) or {}
     allowed = [str(x) for x in (meta.get("allowed_regimes", []) or [])]
     blocked = [str(x) for x in (meta.get("blocked_regimes", []) or [])]
 
-    if current_regime in blocked:
-        return False, f"regime_blocked:{current_regime}"
-    if allowed and current_regime not in allowed:
-        return False, f"regime_not_allowed:{current_regime}"
-    return True, "ok"
+    candidate_labels = context.candidate_regime_labels
+    blocked_hits = [label for label in candidate_labels if label in blocked]
+    if blocked_hits:
+        return False, f"regime_blocked:{','.join(blocked_hits)}", blocked_hits[0]
+
+    if allowed:
+        allowed_hits = [label for label in candidate_labels if label in allowed]
+        if not allowed_hits:
+            return False, f"regime_not_allowed:{','.join(candidate_labels)}", candidate_labels[0]
+        return True, "ok", allowed_hits[0]
+
+    return True, "ok", candidate_labels[0]
 
 
-def _passes_regime_confidence_gate(current_regime: str, row: pd.Series, tier: str) -> tuple[bool, str]:
-    confidence = float(row.get("regime_confidence", 0.0) or 0.0)
-    regime_class = str(row.get("regime_class", "unknown") or "unknown")
-    regime_type = str(row.get("regime_type", "unknown") or "unknown")
-    vol_regime = str(row.get("vol_regime", "unknown") or "unknown")
+def _passes_regime_confidence_gate(context: RoutingContext, tier: str) -> tuple[bool, str]:
+    confidence = context.regime_confidence
     min_conf = MIN_REGIME_CONFIDENCE_ACTIVE if tier == "active" else MIN_REGIME_CONFIDENCE_EXPLORATORY
 
     if confidence < min_conf:
         return False, (
             f"low_routing_confidence:{confidence:.2f}"
-            f":class={regime_class}:type={regime_type}:vol={vol_regime}"
+            f":class={context.regime_class}:type={context.regime_type}:vol={context.vol_regime}"
         )
+    return True, "ok"
+
+
+def _passes_volatility_gate(stats: Dict[str, Any], context: RoutingContext) -> tuple[bool, str]:
+    ex = stats.get("strategy_explain", {}) or {}
+    meta = ex.get("meta", {}) or {}
+    allowed = [str(x) for x in (meta.get("allowed_regimes", []) or [])]
+    blocked = [str(x) for x in (meta.get("blocked_regimes", []) or [])]
+    best_regime = str(meta.get("best_regime", "") or "")
+
+    if context.regime_label == "high_vol" and context.regime_class in {"volatility_spike", "event_driven"}:
+        if "high_vol" in blocked or best_regime in {"ranging", "low_vol"}:
+            return False, f"volatility_mismatch:high_vol:{context.regime_class}:{best_regime or 'unknown'}"
+        if allowed and all(label not in {"high_vol", "trending_up", "trending_down"} for label in allowed):
+            return False, f"volatility_mismatch:high_vol:{context.regime_class}:allowed={','.join(allowed)}"
+
+    if context.regime_label == "low_vol" and "low_vol" in blocked:
+        return False, f"volatility_mismatch:low_vol:{best_regime or 'unknown'}"
+
     return True, "ok"
 
 
@@ -225,8 +298,9 @@ def execute_signals_for_symbol(
         return [], summary
 
     latest = features_df.sort_values("time").iloc[-1]
-    current_regime = str(latest.get("regime", "unknown"))
-    current_session = _current_session_from_row(latest)
+    context = _build_routing_context(latest)
+    current_regime = context.regime_label
+    current_session = context.session
 
     # ------------------------------------------------------------------ #
     # Tier 1: News lockout guard — inside execute_signals_for_symbol      #
@@ -243,8 +317,16 @@ def execute_signals_for_symbol(
         return [], summary
 
     logger.info(
-        "Current routing context for %s %s: regime=%s session=%s",
-        symbol, timeframe, current_regime, current_session,
+        "Current routing context for %s %s: regime=%s candidates=%s class=%s type=%s conf=%.2f vol=%s session=%s",
+        symbol,
+        timeframe,
+        current_regime,
+        context.candidate_regime_labels,
+        context.regime_class,
+        context.regime_type,
+        context.regime_confidence,
+        context.vol_regime,
+        current_session,
     )
 
     from ..config import risk_config
@@ -279,8 +361,6 @@ def execute_signals_for_symbol(
         summary["no_strategies_in_pool"] = True
         return [], summary
 
-    regime_label = _map_current_to_regime_pnl_label(current_regime)
-
     def _filter_and_rank(records, tier: str) -> List[Any]:
         if not records:
             return []
@@ -297,8 +377,15 @@ def execute_signals_for_symbol(
         if session_blocked:
             summary["blocked_session_gate"] = True
             logger.info(
-                "Session gate %s %s (%s) [%s]: %d → %d passed | blocked: %s",
-                symbol, timeframe, current_session, tier, len(records), len(session_eligible), session_blocked,
+                "Session gate %s %s (%s) [%s]: %d → %d passed | blocked=%s sample=%s",
+                symbol,
+                timeframe,
+                current_session,
+                tier,
+                len(records),
+                len(session_eligible),
+                dict(Counter(item.split(":", 1)[1] for item in session_blocked)),
+                session_blocked[:5],
             )
 
         if not session_eligible:
@@ -307,7 +394,7 @@ def execute_signals_for_symbol(
         confidence_eligible: List[Any] = []
         confidence_blocked: List[str] = []
         for rec in session_eligible:
-            ok, reason = _passes_regime_confidence_gate(current_regime, latest, tier)
+            ok, reason = _passes_regime_confidence_gate(context, tier)
             if ok:
                 confidence_eligible.append(rec)
             else:
@@ -316,36 +403,80 @@ def execute_signals_for_symbol(
         if confidence_blocked:
             summary["blocked_routing_confidence"] = True
             logger.info(
-                "Routing confidence gate %s %s (%s/%s) [%s]: %d → %d passed | blocked: %s",
-                symbol, timeframe, current_regime, current_session, tier,
-                len(session_eligible), len(confidence_eligible), confidence_blocked,
+                "Routing confidence gate %s %s (%s/%s) [%s]: %d → %d passed | blocked=%s sample=%s",
+                symbol,
+                timeframe,
+                current_regime,
+                current_session,
+                tier,
+                len(session_eligible),
+                len(confidence_eligible),
+                dict(Counter(item.split(":", 1)[1] for item in confidence_blocked)),
+                confidence_blocked[:5],
             )
 
         if not confidence_eligible:
             return []
 
-        if regime_label == "unknown":
+        volatility_eligible: List[Any] = []
+        volatility_blocked: List[str] = []
+        for rec in confidence_eligible:
+            ok, reason = _passes_volatility_gate(rec.stats or {}, context)
+            if ok:
+                volatility_eligible.append(rec)
+            else:
+                volatility_blocked.append(f"{rec.name}:{reason}")
+
+        if volatility_blocked:
+            summary["blocked_volatility_gate"] = True
+            logger.info(
+                "Volatility gate %s %s (%s/%s/%s) [%s]: %d → %d passed | blocked=%s sample=%s",
+                symbol,
+                timeframe,
+                current_regime,
+                context.regime_class,
+                context.vol_regime,
+                tier,
+                len(confidence_eligible),
+                len(volatility_eligible),
+                dict(Counter(item.split(":", 1)[1] for item in volatility_blocked)),
+                volatility_blocked[:5],
+            )
+
+        if not volatility_eligible:
+            return []
+
+        if current_regime == "unknown":
             logger.warning(
                 "Unknown regime for %s %s — passing all %d eligible %s strategies",
-                symbol, timeframe, len(confidence_eligible), tier,
+                symbol, timeframe, len(volatility_eligible), tier,
             )
-            return confidence_eligible
+            return volatility_eligible
 
         regime_eligible: List[Any] = []
         regime_policy_blocked: List[str] = []
-        for rec in confidence_eligible:
-            ok, reason = _passes_regime_gate(rec.stats or {}, regime_label)
+        selected_regime_labels: Dict[str, str] = {}
+        for rec in volatility_eligible:
+            ok, reason, selected_label = _passes_regime_gate(rec.stats or {}, context)
             if ok:
                 regime_eligible.append(rec)
+                selected_regime_labels[rec.name] = selected_label
             else:
                 regime_policy_blocked.append(f"{rec.name}:{reason}")
 
         if regime_policy_blocked:
             summary["blocked_regime_gate"] = True
             logger.info(
-                "Regime policy gate %s %s (%s/%s) [%s]: %d → %d passed | blocked: %s",
-                symbol, timeframe, regime_label, current_session, tier,
-                len(confidence_eligible), len(regime_eligible), regime_policy_blocked,
+                "Regime policy gate %s %s (%s/%s) [%s]: %d → %d passed | blocked=%s sample=%s",
+                symbol,
+                timeframe,
+                context.candidate_regime_labels,
+                current_session,
+                tier,
+                len(volatility_eligible),
+                len(regime_eligible),
+                dict(Counter(item.split(":", 1)[1] for item in regime_policy_blocked)),
+                regime_policy_blocked[:5],
             )
 
         if not regime_eligible:
@@ -354,16 +485,24 @@ def execute_signals_for_symbol(
         threshold = ACTIVE_REGIME_EDGE_THRESHOLD if tier == "active" else EXPLORATORY_REGIME_EDGE_THRESHOLD
         scored: List[Tuple[float, Any]] = []
         for rec in regime_eligible:
-            edge = _regime_edge(rec.stats or {}, regime_label)
+            edge, edge_label = _regime_edge(rec.stats or {}, context.candidate_regime_labels)
             scored.append((edge, rec))
             logger.info(
-                "Regime edge: symbol=%s timeframe=%s regime=%s class=%s type=%s conf=%.2f vol=%s session=%s strategy=%s tier=%s edge=%.3f threshold=%.1f",
-                symbol, timeframe, regime_label,
-                str(latest.get("regime_class", "unknown")),
-                str(latest.get("regime_type", "unknown")),
-                float(latest.get("regime_confidence", 0.0) or 0.0),
-                str(latest.get("vol_regime", "unknown")),
-                current_session, rec.name, tier, edge, threshold,
+                "Regime edge: symbol=%s timeframe=%s regime=%s candidates=%s selected=%s class=%s type=%s conf=%.2f vol=%s session=%s strategy=%s tier=%s edge=%.3f threshold=%.1f",
+                symbol,
+                timeframe,
+                current_regime,
+                context.candidate_regime_labels,
+                edge_label or selected_regime_labels.get(rec.name, "unknown"),
+                context.regime_class,
+                context.regime_type,
+                context.regime_confidence,
+                context.vol_regime,
+                current_session,
+                rec.name,
+                tier,
+                edge,
+                threshold,
             )
 
         kept = sorted([(e, r) for e, r in scored if e > threshold], key=lambda x: x[0], reverse=True)

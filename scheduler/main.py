@@ -821,12 +821,14 @@ def job_execute_signals() -> None:
             elif summary.get("no_eligible_specialists"):
                 logger.info(
                     "No signals for %s %s — no eligible specialists survived routing gates"
-                    " (session_gate=%s regime_gate=%s routing_conf=%s vol_gate=%s)",
+                    " (session_gate=%s regime_gate=%s routing_conf=%s vol_gate=%s active_no_entry=%s exploratory_no_entry=%s)",
                     symbol, TIMEFRAME,
                     summary.get("blocked_session_gate"),
                     summary.get("blocked_regime_gate"),
                     summary.get("blocked_routing_confidence"),
                     summary.get("blocked_volatility_gate"),
+                    summary.get("no_entry_active"),
+                    summary.get("no_entry_exploratory"),
                 )
             elif summary.get("blocked_session_gate"):
                 logger.info("No signals for %s %s — all candidate strategies blocked by session gate", symbol, TIMEFRAME)

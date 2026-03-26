@@ -47,14 +47,23 @@ and for **tracking live account state** used by risk controls:
       - if `blocked_sessions` contains the current session → reject,
       - if `allowed_sessions` exists and the current session is not included → reject.
     - Applies a **regime policy gate** using explicit routing metadata from
-      `strategy_explain.meta`:
-      - if `blocked_regimes` contains the current legacy regime label → reject,
-      - if `allowed_regimes` exists and the current legacy regime label is not included → reject.
+      `strategy_explain.meta` against a structured routing context:
+      - starts from the latest legacy regime label,
+      - expands it into candidate labels when structured context implies a better
+        specialist proxy (for example: `high_vol` + trend class can evaluate
+        `trending_up`/`trending_down` specialists before falling back to raw
+        `high_vol` behavior),
+      - rejects strategies when `blocked_regimes` matches any active candidate,
+      - rejects strategies when `allowed_regimes` exists and none of the active
+        candidate labels are allowed.
     - Uses structured regime context already present in features (`regime_class`,
-      `regime_type`, `regime_confidence`, `vol_regime`) for logging and
-      conservative confidence gating.
-    - Computes a regime-specific edge for each strategy using
-      `strategy_explain.regime_pnl[regime_label].return_pct` (via `_regime_edge`).
+      `regime_type`, `regime_confidence`, `vol_regime`) for:
+      - routing-context logging,
+      - conservative confidence gating,
+      - a dedicated volatility mismatch gate that blocks obvious quiet-range
+        specialists during `high_vol` spike / event-driven conditions.
+    - Computes a regime-specific edge for each strategy using the best matching
+      candidate label from `strategy_explain.regime_pnl` (via `_regime_edge`).
     - Applies regime-based thresholds:
       - `ACTIVE_REGIME_EDGE_THRESHOLD = 0.0` → active strategies only trade in
         regimes that were historically profitable (edge > 0) for that strategy.

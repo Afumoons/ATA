@@ -436,15 +436,16 @@ Reason:
 
 Use these as validation targets after implementation:
 
-- [ ] Logs clearly show why a strategy was eligible or rejected.
-- [ ] Session-specialist strategies stop trading in known bad sessions.
-- [ ] High-vol conditions no longer collapse into overly generic routing.
-- [ ] Exploratory specialists can participate in routing coherently.
-- [ ] “No valid specialist” appears as a normal, explainable outcome.
-- [ ] Pool statuses reflect specialist quality, not broadness bias.
+- [x] Logs clearly show why a strategy was eligible or rejected.
+- [x] Session-specialist strategies stop trading in known bad sessions.
+- [x] High-vol conditions no longer collapse into overly generic routing.
+- [x] Exploratory specialists can participate in routing coherently.
+- [x] “No valid specialist” appears as a normal, explainable outcome.
+- [x] Pool statuses reflect specialist quality, not broadness bias.
 
 ---
 
 ## Changelog (Docs)
 
 - 2026-03-26: Added routing-layer audit summary and Phase A specialist-router implementation tasklist.
+- 2026-03-27: Marked A1–A7 validation targets complete after implementation review, structured-routing verification, and doc alignment.
