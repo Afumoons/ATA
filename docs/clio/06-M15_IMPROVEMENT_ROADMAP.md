@@ -404,4 +404,19 @@ This roadmap is succeeding when:
 
 ---
 
+## Related technical follow-up
 
+For the detailed routing-layer audit and implementation checklist, see:
+- `07-ROUTING_LAYER_AUDIT_AND_TASKLIST.md`
+
+Implemented so far:
+- **A1 v1** – explicit routing metadata derived into `strategy_explain.meta`
+- **A2 v1** – session hard gate in live routing using `allowed_sessions` / `blocked_sessions`
+
+---
+
+## Changelog (Docs)
+
+- 2026-03-26: Added a dedicated M15 improvement roadmap focused on regime robustness, session filtering, stricter selection pressure, backtest realism, playbook diversity, and exit design.
+- 2026-03-26: Reframed the roadmap around specialist strategies + routing-layer discipline.
+- 2026-03-26: Updated roadmap status after A1/A2 implementation progress and linked the routing-layer audit/tasklist.

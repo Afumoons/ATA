@@ -25,9 +25,9 @@ and for **tracking live account state** used by risk controls:
 
 - `signals.py`
   - Bridges **backtested strategies** into **live execution** with
-    regime-aware filtering, per-tier risk control, and daily guardrails.
+    regime-aware filtering, session-aware eligibility gating, per-tier risk control, and daily guardrails.
   - For the latest feature row per symbol/timeframe:
-    - Reads the current `regime` label from features and logs it per symbol/timeframe.
+    - Reads the current routing context from features and logs it per symbol/timeframe (`regime` + derived `session`).
     - Logs a feature snapshot (time, regime, key indicators like MA short/long,
       trend strength, RSI) to aid post-mortem analysis.
     - Pulls `risk_config` and uses `can_open_new_trade(...)` from
@@ -42,6 +42,10 @@ and for **tracking live account state** used by risk controls:
       still open.
     - Loads `active` and `exploratory` strategies from the strategy pool for the
       given symbol/timeframe.
+    - Applies a **session hard gate** using explicit routing metadata from
+      `strategy_explain.meta`:
+      - if `blocked_sessions` contains the current session → reject,
+      - if `allowed_sessions` exists and the current session is not included → reject.
     - Computes a regime-specific edge for each strategy using
       `strategy_explain.regime_pnl[regime_label].return_pct` (via `_regime_edge`).
     - Applies regime-based thresholds:
@@ -60,8 +64,8 @@ and for **tracking live account state** used by risk controls:
         risk (`min(risk_perc * 0.25, 0.1)`), keeping exploratory exposure small.
     - Returns a list of `(Signal, reason)` tuples plus a summary dict so
       callers (e.g. `scheduler.job_execute_signals`) can log exactly why each
-      trade was accepted, rejected, or blocked by guards (daily limits, regime
-      filter, no entries).
+      trade was accepted, rejected, or blocked by guards (daily limits, session
+      gate, regime filter, no entries).
 
 - `live_state_utils.py`
   - Defines `DailyState` structure stored in `live_state.json`.

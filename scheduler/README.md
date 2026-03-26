@@ -112,6 +112,10 @@ Per symbol:
                         enough for `active`.
      - `candidate`    → accepted but weaker strategies.
      - `disabled`     → otherwise.
+   - Persist and log explicit routing metadata from
+     `strategy_explain.meta` (best/worst regime/session, allowed/blocked
+     regimes/sessions, routing confidence) so later routing stages can use a
+     durable specialist policy surface rather than re-inferring everything.
    - Call `pool.upsert_strategy(...)` to update `StrategyPool`.
    - Store evaluation in `ResearchMemory` (Chroma-backed) via
      `memory.store_strategy_result(...)`.
@@ -160,6 +164,8 @@ Within `execute_signals_for_symbol` (documented in `execution/README.md`):
 - The latest feature row’s `regime` label is used to compute regime-specific edge
   from `strategy_explain.regime_pnl`, filter out poor performers in the current
   regime, and cap how many strategies per tier are allowed to fire.
+- Before regime ranking, live routing now also applies a **session hard gate**
+  using `strategy_explain.meta.allowed_sessions` / `blocked_sessions`.
 - `active` strategies trade at the normal risk tier, while `exploratory` strategies
   trade at a significantly reduced per-trade risk.
 

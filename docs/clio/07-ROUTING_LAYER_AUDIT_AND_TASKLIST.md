@@ -32,6 +32,9 @@ Current code already does all of the following:
 - Uses `strategy_explain.regime_pnl` to compute a regime-specific edge.
 - Filters `active` and `exploratory` strategies by regime edge.
 - Applies different risk tiers for `active` vs `exploratory`.
+- As of the latest Phase A work, strategies also carry explicit routing metadata in
+  `strategy_explain.meta` (best/worst regime/session, allowed/blocked regimes,
+  allowed/blocked sessions, routing confidence).
 
 Implication:
 - The system is not blind to regime.
@@ -115,20 +118,25 @@ Desired direction:
 
 ---
 
-### 3. Session handling is still mostly soft ranking, not hard gating
+### 3. Session handling is transitioning from soft ranking to hard gating
 
-Current problem:
-- Session performance influences ranking, but does not strongly enforce:
+Previous problem:
+- Session performance influenced ranking, but did not strongly enforce:
   - only trade in London,
   - avoid New York,
   - block Asia, etc.
 
-Why it matters:
-- A specialist strategy can still bleed in the wrong session even if the score system "knows" that session is weaker.
+Current status:
+- Phase A2 v1 is now implemented in live routing.
+- `execution/signals.py` now applies a session hard gate using:
+  - `blocked_sessions`
+  - `allowed_sessions`
+- If current session is blocked, or not in the allowed set when one exists,
+  the strategy is rejected before live execution.
 
-Desired direction:
-- Session should be able to become a first-class eligibility gate.
-- Strategies should support optional hard deployment rules by session.
+Remaining gap:
+- Session gating now exists, but wider orchestration and documentation still need
+  to be fully aligned around it.
 
 ---
 
@@ -227,19 +235,19 @@ Make routing intent durable and machine-readable.
 - optionally strategy JSON/stats persistence paths
 
 ### Tasks
-- [ ] Extend `strategy_explain.meta` with clearer routing fields:
-  - [ ] `best_session`
-  - [ ] `worst_session`
-  - [ ] `allowed_regimes` (derived, heuristic v1)
-  - [ ] `blocked_regimes` (derived, heuristic v1)
-  - [ ] `allowed_sessions` (derived, heuristic v1)
-  - [ ] `blocked_sessions` (derived, heuristic v1)
-  - [ ] `routing_confidence`
-- [ ] Define simple heuristic rules for v1 derivation, for example:
-  - [ ] best regime/session must be meaningfully positive,
-  - [ ] blocked regime/session when return is materially negative,
-  - [ ] confidence based on trade count + edge separation.
-- [ ] Persist these fields into pool stats so the router can consume them directly.
+- [x] Extend `strategy_explain.meta` with clearer routing fields:
+  - [x] `best_session`
+  - [x] `worst_session`
+  - [x] `allowed_regimes` (derived, heuristic v1)
+  - [x] `blocked_regimes` (derived, heuristic v1)
+  - [x] `allowed_sessions` (derived, heuristic v1)
+  - [x] `blocked_sessions` (derived, heuristic v1)
+  - [x] `routing_confidence`
+- [x] Define simple heuristic rules for v1 derivation, for example:
+  - [x] best regime/session must be meaningfully positive,
+  - [x] blocked regime/session when return is materially negative,
+  - [x] confidence based on trade count + edge separation.
+- [x] Persist these fields into pool stats so the router can consume them directly.
 
 ### Output
 - Strategies carry explicit routing hints, not just raw PnL tables.
@@ -257,15 +265,18 @@ Allow strategies to be hard-blocked outside their intended session.
 - `backtests/explain.py`
 
 ### Tasks
-- [ ] Add a session eligibility helper used during live routing.
-- [ ] Enforce optional hard session gate before ranking/execution.
-- [ ] Start with conservative rules, for example:
-  - [ ] if `blocked_sessions` contains current session → reject
-  - [ ] if `allowed_sessions` exists and current session not in it → reject
-- [ ] Log session-based rejections clearly.
+- [x] Add a session eligibility helper used during live routing.
+- [x] Enforce optional hard session gate before ranking/execution.
+- [x] Start with conservative rules, for example:
+  - [x] if `blocked_sessions` contains current session → reject
+  - [x] if `allowed_sessions` exists and current session not in it → reject
+- [x] Log session-based rejections clearly.
 
 ### Output
 - Session stops being only a soft bonus and becomes optional hard deployment policy.
+
+Status:
+- **Implemented (v1)** in `execution/signals.py` and reflected in scheduler logging.
 
 ---
 
