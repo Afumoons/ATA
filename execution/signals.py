@@ -140,6 +140,31 @@ def _map_current_to_regime_pnl_label(current_regime: str) -> str:
     return "unknown"
 
 
+def _current_session_from_row(row: pd.Series) -> str:
+    ts = pd.to_datetime(row.get("time"))
+    if getattr(ts, "tzinfo", None) is not None:
+        ts = ts.tz_convert("UTC")
+    hour = int(ts.hour)
+    if 0 <= hour < 7:
+        return "asia"
+    if 7 <= hour < 13:
+        return "london"
+    return "new_york"
+
+
+def _passes_session_gate(stats: Dict[str, Any], current_session: str) -> tuple[bool, str]:
+    ex = stats.get("strategy_explain", {}) or {}
+    meta = ex.get("meta", {}) or {}
+    allowed = [str(x) for x in (meta.get("allowed_sessions", []) or [])]
+    blocked = [str(x) for x in (meta.get("blocked_sessions", []) or [])]
+
+    if current_session in blocked:
+        return False, f"session_blocked:{current_session}"
+    if allowed and current_session not in allowed:
+        return False, f"session_not_allowed:{current_session}"
+    return True, "ok"
+
+
 # ---------------------------------------------------------------------------
 # Main execution
 # ---------------------------------------------------------------------------
@@ -155,6 +180,7 @@ def execute_signals_for_symbol(
         "blocked_daily_limits": False,
         "blocked_news_lockout": False,
         "blocked_existing_position": False,
+        "blocked_session_gate": False,
         "no_strategies_in_pool": False,
         "no_strategies_with_edge": False,
         "no_entry_active": False,
@@ -168,6 +194,7 @@ def execute_signals_for_symbol(
 
     latest = features_df.sort_values("time").iloc[-1]
     current_regime = str(latest.get("regime", "unknown"))
+    current_session = _current_session_from_row(latest)
 
     # ------------------------------------------------------------------ #
     # Tier 1: News lockout guard — inside execute_signals_for_symbol      #
@@ -183,7 +210,10 @@ def execute_signals_for_symbol(
         summary["blocked_news_lockout"] = True
         return [], summary
 
-    logger.info("Current regime for %s %s: %s", symbol, timeframe, current_regime)
+    logger.info(
+        "Current routing context for %s %s: regime=%s session=%s",
+        symbol, timeframe, current_regime, current_session,
+    )
 
     from ..config import risk_config
     from ..execution.live_monitor import _get_account_equity
@@ -222,31 +252,51 @@ def execute_signals_for_symbol(
     def _filter_and_rank(records, tier: str) -> List[Any]:
         if not records:
             return []
+
+        session_eligible: List[Any] = []
+        session_blocked: List[str] = []
+        for rec in records:
+            ok, reason = _passes_session_gate(rec.stats or {}, current_session)
+            if ok:
+                session_eligible.append(rec)
+            else:
+                session_blocked.append(f"{rec.name}:{reason}")
+
+        if session_blocked:
+            summary["blocked_session_gate"] = True
+            logger.info(
+                "Session gate %s %s (%s) [%s]: %d → %d passed | blocked: %s",
+                symbol, timeframe, current_session, tier, len(records), len(session_eligible), session_blocked,
+            )
+
+        if not session_eligible:
+            return []
+
         if regime_label == "unknown":
             logger.warning(
-                "Unknown regime for %s %s — passing all %d %s strategies",
-                symbol, timeframe, len(records), tier,
+                "Unknown regime for %s %s — passing all %d session-eligible %s strategies",
+                symbol, timeframe, len(session_eligible), tier,
             )
-            return records
+            return session_eligible
 
         threshold = ACTIVE_REGIME_EDGE_THRESHOLD if tier == "active" else EXPLORATORY_REGIME_EDGE_THRESHOLD
         scored: List[Tuple[float, Any]] = []
-        for rec in records:
+        for rec in session_eligible:
             edge = _regime_edge(rec.stats or {}, regime_label)
             scored.append((edge, rec))
             logger.info(
-                "Regime edge: symbol=%s timeframe=%s regime=%s strategy=%s tier=%s edge=%.3f threshold=%.1f",
-                symbol, timeframe, regime_label, rec.name, tier, edge, threshold,
+                "Regime edge: symbol=%s timeframe=%s regime=%s session=%s strategy=%s tier=%s edge=%.3f threshold=%.1f",
+                symbol, timeframe, regime_label, current_session, rec.name, tier, edge, threshold,
             )
 
         kept = sorted([(e, r) for e, r in scored if e > threshold], key=lambda x: x[0], reverse=True)
         filtered = [r for _, r in kept]
 
-        if len(filtered) != len(records):
+        if len(filtered) != len(session_eligible):
             blocked = [r.name for e, r in scored if e <= threshold]
             logger.info(
-                "Regime filter %s %s (%s) [%s]: %d → %d passed | blocked: %s",
-                symbol, timeframe, regime_label, tier, len(records), len(filtered), blocked,
+                "Regime filter %s %s (%s/%s) [%s]: %d → %d passed | blocked: %s",
+                symbol, timeframe, regime_label, current_session, tier, len(session_eligible), len(filtered), blocked,
             )
 
         if not filtered and scored and tier == "exploratory":
@@ -254,7 +304,7 @@ def execute_signals_for_symbol(
             best_edge, best_rec = scored[0]
             filtered = [best_rec]
             logger.info(
-                "Regime fallback %s %s: keeping best exploratory edge=%.2f",
+                "Regime fallback %s %s: keeping best exploratory edge=%.2f after session gate",
                 symbol, timeframe, best_edge,
             )
 

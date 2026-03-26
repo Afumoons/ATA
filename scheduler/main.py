@@ -761,6 +761,8 @@ def job_execute_signals() -> None:
         else:
             if summary.get("blocked_daily_limits"):
                 logger.info("No signals for %s %s — blocked by daily limits", symbol, TIMEFRAME)
+            elif summary.get("blocked_session_gate"):
+                logger.info("No signals for %s %s — all candidate strategies blocked by session gate", symbol, TIMEFRAME)
             elif summary.get("no_strategies_in_pool"):
                 logger.info("No signals for %s %s — no active/exploratory strategies", symbol, TIMEFRAME)
             elif summary.get("no_strategies_with_edge"):
