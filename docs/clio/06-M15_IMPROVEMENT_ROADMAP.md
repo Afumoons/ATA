@@ -410,8 +410,13 @@ For the detailed routing-layer audit and implementation checklist, see:
 - `07-ROUTING_LAYER_AUDIT_AND_TASKLIST.md`
 
 Implemented so far:
-- **A1 v1** – explicit routing metadata derived into `strategy_explain.meta`
-- **A2 v1** – session hard gate in live routing using `allowed_sessions` / `blocked_sessions`
+- **A1 v1** ï¿½ explicit routing metadata derived into strategy_explain.meta`r
+- **A2 v1** ï¿½ session hard gate in live routing using llowed_sessions / locked_sessions`r
+- **A3 v1** ï¿½ structured regime routing and confidence-aware gating in live execution`r
+- **A4 v1** ï¿½ unified scheduler orchestration for ctive + exploratory`
+- **A5 v1** ï¿½ explicit no-eligible-specialist vs no-entry reporting`r
+- **A6 v1** ï¿½ specialist-aware promotion logic`r
+- **A7 v1** ï¿½ specialist-aware execution quality-gate review
 
 ---
 
@@ -420,3 +425,5 @@ Implemented so far:
 - 2026-03-26: Added a dedicated M15 improvement roadmap focused on regime robustness, session filtering, stricter selection pressure, backtest realism, playbook diversity, and exit design.
 - 2026-03-26: Reframed the roadmap around specialist strategies + routing-layer discipline.
 - 2026-03-26: Updated roadmap status after A1/A2 implementation progress and linked the routing-layer audit/tasklist.
+- 2026-03-27: Updated roadmap status after A3â€“A7 v1 implementation progress.
+

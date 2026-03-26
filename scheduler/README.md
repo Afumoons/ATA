@@ -131,6 +131,13 @@ Finally, `pool.prune(...)` (invoked from `StrategyPool` usage) keeps the number
 of inactive strategies bounded so `pool_state.json` does not grow without
 limit, and `save_pool(pool)` persists the updated pool to disk.
 
+Recent routing-governance updates:
+- Promotion logic now considers bounded specialist roles and `routing_confidence`
+  rather than leaning only toward semi-generalist behavior.
+- Scheduler-side quality gates remain hard on WF Sharpe / DD / consecutive-loss
+  control, but can conservatively relax the minimum trade-count threshold for
+  bounded specialists with stronger routing confidence.
+
 ### `job_execute_signals()`
 
 **Goal:** Turn the latest features + regime-aware strategy pool into **live MT5 trades**.
@@ -145,9 +152,9 @@ Workflow:
    - Check **news lockout**: if the most recent feature row has
      `in_news_lockout=True`, skip signal generation entirely for this symbol to
      avoid trading during the highest-impact macro events.
-   - If there are no `active` strategies for this symbol/timeframe, log and
-     skip.
-   - Warn if any `active` strategies have edge scores below
+   - Build the scheduler-side execution pool from both `active` and
+     `exploratory` strategies for this symbol/timeframe.
+   - Warn if any selected live-tier strategies have edge scores below
      `MINIMUM_EDGE_FOR_EXECUTION`.
    - Call `execute_signals_for_symbol(symbol, TIMEFRAME, feat, pool, risk_perc)`
      from `execution.signals`.
@@ -166,6 +173,10 @@ Within `execute_signals_for_symbol` (documented in `execution/README.md`):
   regime, and cap how many strategies per tier are allowed to fire.
 - Before regime ranking, live routing now also applies a **session hard gate**
   using `strategy_explain.meta.allowed_sessions` / `blocked_sessions`.
+- Live routing also applies:
+  - a regime policy gate using `allowed_regimes` / `blocked_regimes`,
+  - confidence-aware gating from structured regime fields,
+  - explicit no-eligible-specialist reporting.
 - `active` strategies trade at the normal risk tier, while `exploratory` strategies
   trade at a significantly reduced per-trade risk.
 

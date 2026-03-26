@@ -291,17 +291,21 @@ Stop flattening important context too early.
 - `scheduler/main.py`
 
 ### Tasks
-- [ ] Audit which structured regime columns are already available in saved features.
-- [ ] Update live routing to consume:
-  - [ ] `regime_class`
-  - [ ] `regime_type`
-  - [ ] `regime_confidence`
-  - [ ] `vol_regime`
-- [ ] Replace or reduce the coarse fallback where `high_vol` / `low_vol` route as `ranging`.
-- [ ] Add confidence-aware eligibility rules.
+- [x] Audit which structured regime columns are already available in saved features.
+- [x] Update live routing to consume:
+  - [x] `regime_class`
+  - [x] `regime_type`
+  - [x] `regime_confidence`
+  - [x] `vol_regime`
+- [x] Replace or reduce the coarse fallback where `high_vol` / `low_vol` route as `ranging`.
+- [x] Add confidence-aware eligibility rules.
 
 ### Output
 - Specialist deployment reflects richer market context.
+
+Status:
+- **Implemented (v1)** in `execution/signals.py` using structured regime context,
+  direct `high_vol` / `low_vol` routing labels, and conservative confidence gating.
 
 ---
 
@@ -315,13 +319,17 @@ Make the routing path consistent across both live tiers.
 - `execution/signals.py`
 
 ### Tasks
-- [ ] Include both `active` and `exploratory` in scheduler-level routing pool construction.
-- [ ] Apply the same eligibility logic to both.
-- [ ] Preserve different risk tiers after routing passes.
-- [ ] Review deduplication behavior so cross-tier clones do not create weird routing artifacts.
+- [x] Include both `active` and `exploratory` in scheduler-level routing pool construction.
+- [x] Apply the same eligibility logic to both.
+- [x] Preserve different risk tiers after routing passes.
+- [x] Review deduplication behavior so cross-tier clones do not create weird routing artifacts.
 
 ### Output
 - A coherent specialist portfolio view reaches the router.
+
+Status:
+- **Implemented (v1)** in `scheduler/main.py` by building the execution pool from
+  both `active` and `exploratory` strategies, while keeping downstream risk tiers separate.
 
 ---
 
@@ -336,16 +344,20 @@ Make inaction a first-class routing outcome.
 - logs / runbook docs if needed
 
 ### Tasks
-- [ ] Introduce a clear eligibility summary structure, such as:
-  - [ ] blocked by session mismatch
-  - [ ] blocked by regime mismatch
-  - [ ] blocked by low routing confidence
-  - [ ] blocked by volatility mismatch
-- [ ] If no eligible specialists survive, exit cleanly and log why.
-- [ ] Distinguish “no entry signal” from “no eligible specialist”.
+- [x] Introduce a clear eligibility summary structure, such as:
+  - [x] blocked by session mismatch
+  - [x] blocked by regime mismatch
+  - [x] blocked by low routing confidence
+  - [x] blocked by volatility mismatch
+- [x] If no eligible specialists survive, exit cleanly and log why.
+- [x] Distinguish “no entry signal” from “no eligible specialist”.
 
 ### Output
 - The system explicitly knows when flat is the correct action.
+
+Status:
+- **Implemented (v1)** through richer summary flags and scheduler logging that
+  distinguishes no eligible specialist from no entry trigger.
 
 ---
 
@@ -359,16 +371,20 @@ Stop implicitly favoring semi-generalists over valid specialists.
 - possibly `backtests/evaluation.py`
 
 ### Tasks
-- [ ] Review `_should_promote()` logic under the specialist design philosophy.
-- [ ] Reduce accidental bias toward broad-average behavior.
-- [ ] Define what makes a specialist eligible for:
-  - [ ] `active`
-  - [ ] `exploratory`
-  - [ ] `candidate`
-- [ ] Prefer bounded-role credibility over generic broadness.
+- [x] Review `_should_promote()` logic under the specialist design philosophy.
+- [x] Reduce accidental bias toward broad-average behavior.
+- [x] Define what makes a specialist eligible for:
+  - [x] `active`
+  - [x] `exploratory`
+  - [x] `candidate`
+- [x] Prefer bounded-role credibility over generic broadness.
 
 ### Output
 - Promotion rules better match the intended architecture.
+
+Status:
+- **Implemented (v1)** in `scheduler/main.py` with bounded-role specialist checks,
+  routing-confidence usage, and softer bias against narrow-but-credible specialists.
 
 ---
 
@@ -382,16 +398,21 @@ Keep anti-noise discipline without wrongly filtering useful specialists.
 - maybe docs after tuning
 
 ### Tasks
-- [ ] Audit current thresholds:
-  - [ ] WF Sharpe
-  - [ ] max drawdown
-  - [ ] min trades
-  - [ ] max consecutive losses
-- [ ] Decide which thresholds should remain global vs which should become specialist-aware.
-- [ ] Keep this conservative; avoid loosening gates blindly.
+- [x] Audit current thresholds:
+  - [x] WF Sharpe
+  - [x] max drawdown
+  - [x] min trades
+  - [x] max consecutive losses
+- [x] Decide which thresholds should remain global vs which should become specialist-aware.
+- [x] Keep this conservative; avoid loosening gates blindly.
 
 ### Output
 - Quality filters stay hard, but become more aligned with specialist deployment.
+
+Status:
+- **Implemented (v1)** in `scheduler/main.py` by keeping hard WF/DD/consecutive-loss gates,
+  while allowing a conservative trade-count relaxation only for bounded specialists
+  with stronger routing confidence.
 
 ---
 

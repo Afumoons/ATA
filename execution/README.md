@@ -46,6 +46,13 @@ and for **tracking live account state** used by risk controls:
       `strategy_explain.meta`:
       - if `blocked_sessions` contains the current session → reject,
       - if `allowed_sessions` exists and the current session is not included → reject.
+    - Applies a **regime policy gate** using explicit routing metadata from
+      `strategy_explain.meta`:
+      - if `blocked_regimes` contains the current legacy regime label → reject,
+      - if `allowed_regimes` exists and the current legacy regime label is not included → reject.
+    - Uses structured regime context already present in features (`regime_class`,
+      `regime_type`, `regime_confidence`, `vol_regime`) for logging and
+      conservative confidence gating.
     - Computes a regime-specific edge for each strategy using
       `strategy_explain.regime_pnl[regime_label].return_pct` (via `_regime_edge`).
     - Applies regime-based thresholds:
@@ -54,8 +61,16 @@ and for **tracking live account state** used by risk controls:
       - `EXPLORATORY_REGIME_EDGE_THRESHOLD = -10.0` → exploratory tier is looser
         to allow data gathering, with a fallback that keeps the best strategy
         even if none pass the threshold.
+    - Uses confidence-aware routing gates before edge ranking:
+      - `MIN_REGIME_CONFIDENCE_ACTIVE = 0.35`
+      - `MIN_REGIME_CONFIDENCE_EXPLORATORY = 0.20`
+      Low-confidence contexts are treated as ineligible for the relevant tier.
     - Ranks strategies by edge and caps how many are allowed to fire per run
       (e.g. top 5 active, top 3 exploratory).
+    - Distinguishes:
+      - no eligible specialists after routing gates,
+      - no strategies with acceptable edge,
+      - no entry trigger on otherwise eligible strategies.
     - Uses **two risk tiers** when executing via `engine.execute_trade()`:
       - `active` strategies trade at the normal configured per-trade risk
         (`risk_perc`, typically up to 1% of equity based on

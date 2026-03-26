@@ -26,18 +26,31 @@ Cek cepat:
    - Kalau kosong:
      - jalankan manual: `job_update_data()` dari `scheduler.main`.
 
-4. Pool punya strategi `active`?
+4. Pool punya strategi `active` / `exploratory`?
    - Jalankan:
      ```powershell
      python -m autonomous_trading_ai.scripts.print_top_strategies --symbol XAUUSDm --timeframe M15 --status active --limit 5
+     python -m autonomous_trading_ai.scripts.print_top_strategies --symbol XAUUSDm --timeframe M15 --status exploratory --limit 5
      ```
-   - Kalau tidak ada strategi `active`, wajar kalau tidak ada trade.
+   - Kalau tidak ada strategi live-tier yang layak, wajar kalau tidak ada trade.
    - Jalankan `job_research_strategies()` dan lihat apakah ada strategi yang dipromote.
 
 5. Daily lockout aktif?
    - Lihat `execution/live_state.json`:
      - `locked_for_day` bisa `true` kalau DD/trade cap tercapai.
    - Kalau `true`, sistem memang tidak akan buka trade baru sampai hari reset.
+
+6. Tidak ada specialist yang eligible?
+   - Sekarang sistem bisa sengaja **flat** kalau:
+     - session tidak cocok,
+     - regime policy tidak cocok,
+     - confidence routing terlalu rendah,
+     - atau tidak ada strategy live-tier yang lolos gate.
+   - Cek log scheduler / execution untuk alasan seperti:
+     - `blocked by session gate`
+     - `blocked by regime policy`
+     - `routing confidence too low`
+     - `no eligible specialists survived routing gates`
 
 ---
 

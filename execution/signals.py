@@ -19,6 +19,8 @@ logger = get_logger(__name__)
 
 ACTIVE_REGIME_EDGE_THRESHOLD = 0.0
 EXPLORATORY_REGIME_EDGE_THRESHOLD = -10.0
+MIN_REGIME_CONFIDENCE_ACTIVE = 0.35
+MIN_REGIME_CONFIDENCE_EXPLORATORY = 0.20
 
 # ---------------------------------------------------------------------------
 # Ticket → strategy name mapping
@@ -133,10 +135,8 @@ def _regime_edge(stats: Dict[str, Any], regime_label: str) -> float:
 
 
 def _map_current_to_regime_pnl_label(current_regime: str) -> str:
-    if current_regime in {"trending_up", "trending_down", "ranging"}:
+    if current_regime in {"trending_up", "trending_down", "ranging", "high_vol", "low_vol"}:
         return current_regime
-    if current_regime in {"high_vol", "low_vol"}:
-        return "ranging"
     return "unknown"
 
 
@@ -165,6 +165,34 @@ def _passes_session_gate(stats: Dict[str, Any], current_session: str) -> tuple[b
     return True, "ok"
 
 
+def _passes_regime_gate(stats: Dict[str, Any], current_regime: str) -> tuple[bool, str]:
+    ex = stats.get("strategy_explain", {}) or {}
+    meta = ex.get("meta", {}) or {}
+    allowed = [str(x) for x in (meta.get("allowed_regimes", []) or [])]
+    blocked = [str(x) for x in (meta.get("blocked_regimes", []) or [])]
+
+    if current_regime in blocked:
+        return False, f"regime_blocked:{current_regime}"
+    if allowed and current_regime not in allowed:
+        return False, f"regime_not_allowed:{current_regime}"
+    return True, "ok"
+
+
+def _passes_regime_confidence_gate(current_regime: str, row: pd.Series, tier: str) -> tuple[bool, str]:
+    confidence = float(row.get("regime_confidence", 0.0) or 0.0)
+    regime_class = str(row.get("regime_class", "unknown") or "unknown")
+    regime_type = str(row.get("regime_type", "unknown") or "unknown")
+    vol_regime = str(row.get("vol_regime", "unknown") or "unknown")
+    min_conf = MIN_REGIME_CONFIDENCE_ACTIVE if tier == "active" else MIN_REGIME_CONFIDENCE_EXPLORATORY
+
+    if confidence < min_conf:
+        return False, (
+            f"low_routing_confidence:{confidence:.2f}"
+            f":class={regime_class}:type={regime_type}:vol={vol_regime}"
+        )
+    return True, "ok"
+
+
 # ---------------------------------------------------------------------------
 # Main execution
 # ---------------------------------------------------------------------------
@@ -181,8 +209,12 @@ def execute_signals_for_symbol(
         "blocked_news_lockout": False,
         "blocked_existing_position": False,
         "blocked_session_gate": False,
+        "blocked_regime_gate": False,
+        "blocked_routing_confidence": False,
+        "blocked_volatility_gate": False,
         "no_strategies_in_pool": False,
         "no_strategies_with_edge": False,
+        "no_eligible_specialists": False,
         "no_entry_active": False,
         "no_entry_exploratory": False,
     }
@@ -272,31 +304,77 @@ def execute_signals_for_symbol(
         if not session_eligible:
             return []
 
+        confidence_eligible: List[Any] = []
+        confidence_blocked: List[str] = []
+        for rec in session_eligible:
+            ok, reason = _passes_regime_confidence_gate(current_regime, latest, tier)
+            if ok:
+                confidence_eligible.append(rec)
+            else:
+                confidence_blocked.append(f"{rec.name}:{reason}")
+
+        if confidence_blocked:
+            summary["blocked_routing_confidence"] = True
+            logger.info(
+                "Routing confidence gate %s %s (%s/%s) [%s]: %d → %d passed | blocked: %s",
+                symbol, timeframe, current_regime, current_session, tier,
+                len(session_eligible), len(confidence_eligible), confidence_blocked,
+            )
+
+        if not confidence_eligible:
+            return []
+
         if regime_label == "unknown":
             logger.warning(
-                "Unknown regime for %s %s — passing all %d session-eligible %s strategies",
-                symbol, timeframe, len(session_eligible), tier,
+                "Unknown regime for %s %s — passing all %d eligible %s strategies",
+                symbol, timeframe, len(confidence_eligible), tier,
             )
-            return session_eligible
+            return confidence_eligible
+
+        regime_eligible: List[Any] = []
+        regime_policy_blocked: List[str] = []
+        for rec in confidence_eligible:
+            ok, reason = _passes_regime_gate(rec.stats or {}, regime_label)
+            if ok:
+                regime_eligible.append(rec)
+            else:
+                regime_policy_blocked.append(f"{rec.name}:{reason}")
+
+        if regime_policy_blocked:
+            summary["blocked_regime_gate"] = True
+            logger.info(
+                "Regime policy gate %s %s (%s/%s) [%s]: %d → %d passed | blocked: %s",
+                symbol, timeframe, regime_label, current_session, tier,
+                len(confidence_eligible), len(regime_eligible), regime_policy_blocked,
+            )
+
+        if not regime_eligible:
+            return []
 
         threshold = ACTIVE_REGIME_EDGE_THRESHOLD if tier == "active" else EXPLORATORY_REGIME_EDGE_THRESHOLD
         scored: List[Tuple[float, Any]] = []
-        for rec in session_eligible:
+        for rec in regime_eligible:
             edge = _regime_edge(rec.stats or {}, regime_label)
             scored.append((edge, rec))
             logger.info(
-                "Regime edge: symbol=%s timeframe=%s regime=%s session=%s strategy=%s tier=%s edge=%.3f threshold=%.1f",
-                symbol, timeframe, regime_label, current_session, rec.name, tier, edge, threshold,
+                "Regime edge: symbol=%s timeframe=%s regime=%s class=%s type=%s conf=%.2f vol=%s session=%s strategy=%s tier=%s edge=%.3f threshold=%.1f",
+                symbol, timeframe, regime_label,
+                str(latest.get("regime_class", "unknown")),
+                str(latest.get("regime_type", "unknown")),
+                float(latest.get("regime_confidence", 0.0) or 0.0),
+                str(latest.get("vol_regime", "unknown")),
+                current_session, rec.name, tier, edge, threshold,
             )
 
         kept = sorted([(e, r) for e, r in scored if e > threshold], key=lambda x: x[0], reverse=True)
         filtered = [r for _, r in kept]
 
-        if len(filtered) != len(session_eligible):
+        if len(filtered) != len(regime_eligible):
             blocked = [r.name for e, r in scored if e <= threshold]
+            summary["blocked_regime_gate"] = True
             logger.info(
-                "Regime filter %s %s (%s/%s) [%s]: %d → %d passed | blocked: %s",
-                symbol, timeframe, regime_label, current_session, tier, len(session_eligible), len(filtered), blocked,
+                "Regime edge filter %s %s (%s/%s) [%s]: %d → %d passed | blocked: %s",
+                symbol, timeframe, regime_label, current_session, tier, len(regime_eligible), len(filtered), blocked,
             )
 
         if not filtered and scored and tier == "exploratory":
@@ -304,7 +382,7 @@ def execute_signals_for_symbol(
             best_edge, best_rec = scored[0]
             filtered = [best_rec]
             logger.info(
-                "Regime fallback %s %s: keeping best exploratory edge=%.2f after session gate",
+                "Regime fallback %s %s: keeping best exploratory edge=%.2f after eligibility gates",
                 symbol, timeframe, best_edge,
             )
 
@@ -314,8 +392,12 @@ def execute_signals_for_symbol(
     exploratory_records = _filter_and_rank(exploratory_records, "exploratory")[:3]
 
     if not active_records and not exploratory_records:
-        logger.info("No strategies with acceptable edge for %s %s", symbol, timeframe)
-        summary["no_strategies_with_edge"] = True
+        if summary.get("blocked_session_gate") or summary.get("blocked_regime_gate") or summary.get("blocked_routing_confidence"):
+            logger.info("No eligible specialists for %s %s after routing gates", symbol, timeframe)
+            summary["no_eligible_specialists"] = True
+        else:
+            logger.info("No strategies with acceptable edge for %s %s", symbol, timeframe)
+            summary["no_strategies_with_edge"] = True
         return [], summary
 
     from ..strategies.generator import load_strategy

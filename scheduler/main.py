@@ -59,6 +59,13 @@ REGIME_SORT_NORM     = 20.0
 # Session-adaptive sort weight.
 SESSION_SORT_NORM    = 10.0
 
+_STATUS_SORT_BONUS = {
+    "active": 1.15,
+    "exploratory": 0.95,
+    "candidate": 0.75,
+    "disabled": 0.50,
+}
+
 
 def _current_session() -> str:
     """Return current trading session based on UTC hour."""
@@ -97,7 +104,8 @@ def _hybrid_regime_score(rec, current_regime: str, current_session: str = "") ->
         )
         session_bonus = 1.0 + max(-0.5, min(0.5, session_ret / SESSION_SORT_NORM))
 
-    return wf * regime_bonus * session_bonus
+    status_bonus = _STATUS_SORT_BONUS.get(getattr(rec, "status", "candidate"), 0.75)
+    return wf * regime_bonus * session_bonus * status_bonus
 
 
 def job_update_data() -> None:
@@ -464,49 +472,83 @@ def job_research_strategies() -> None:
                     )
                     continue
 
-                def _should_promote(stats: dict) -> bool:
+                def _specialist_profile(stats: dict) -> dict:
                     ex = stats.get("strategy_explain", {}) or {}
                     regime = ex.get("regime_pnl", {}) or {}
+                    meta = ex.get("meta", {}) or {}
                     trend_ret = (
                         regime.get("trending_up", {}).get("return_pct", 0.0)
                         + regime.get("trending_down", {}).get("return_pct", 0.0)
                     )
                     range_ret = regime.get("ranging", {}).get("return_pct", 0.0)
+                    allowed_regimes = list(meta.get("allowed_regimes", []) or [])
+                    allowed_sessions = list(meta.get("allowed_sessions", []) or [])
+                    blocked_regimes = list(meta.get("blocked_regimes", []) or [])
+                    blocked_sessions = list(meta.get("blocked_sessions", []) or [])
+                    routing_conf = float(meta.get("routing_confidence", 0.0) or 0.0)
+                    bounded_role = bool(allowed_regimes or allowed_sessions or blocked_regimes or blocked_sessions)
+                    return {
+                        "trend_ret": float(trend_ret),
+                        "range_ret": float(range_ret),
+                        "allowed_regimes": allowed_regimes,
+                        "allowed_sessions": allowed_sessions,
+                        "blocked_regimes": blocked_regimes,
+                        "blocked_sessions": blocked_sessions,
+                        "routing_confidence": routing_conf,
+                        "bounded_role": bounded_role,
+                    }
 
-                    # Range traders (especially BTC and XAU) often have near-zero
-                    # trending returns but excellent overall robustness. For those
-                    # symbols we relax the hard requirement on trend_ret and only
-                    # enforce it for other pairs.
-                    symbol = str(stats.get("symbol", "") or "").upper()
-                    is_range_symbol = (
-                        symbol.startswith("BTC") or
-                        symbol.startswith("XAU")
+                def _should_promote(stats: dict) -> bool:
+                    profile = _specialist_profile(stats)
+                    routing_conf = profile["routing_confidence"]
+                    bounded_role = profile["bounded_role"]
+                    range_ret = profile["range_ret"]
+                    trend_ret = profile["trend_ret"]
+                    dd_abs = abs(float(stats.get("max_drawdown_pct", 100.0) or 100.0))
+                    pf_val = float(stats.get("profit_factor", 0.0) or 0.0)
+                    ret_val = float(stats.get("return_pct", 0.0) or 0.0)
+                    num_tr = float(stats.get("num_trades", 0.0) or 0.0)
+
+                    specialist_edge_ok = (
+                        max(trend_ret, range_ret, ret_val) > 0.0
+                        and min(trend_ret, range_ret) > -10.0
                     )
 
-                    trend_gate_ok = trend_ret > 0.0 if not is_range_symbol else True
+                    if bounded_role:
+                        return (
+                            num_tr >= 50
+                            and ret_val > 0.0
+                            and dd_abs <= 20.0
+                            and pf_val >= 1.15
+                            and routing_conf >= 0.55
+                            and specialist_edge_ok
+                        )
 
                     return (
-                        stats.get("num_trades", 0.0) >= 50
-                        and stats.get("return_pct", 0.0) > 0.0
-                        and stats.get("max_drawdown_pct", 100.0) <= 20.0
-                        and stats.get("profit_factor", 0.0) >= 1.2
-                        and trend_gate_ok
+                        num_tr >= 50
+                        and ret_val > 0.0
+                        and dd_abs <= 20.0
+                        and pf_val >= 1.2
+                        and trend_ret > 0.0
                         and range_ret > -5.0
                     )
 
-                ex = eval_result.get("strategy_explain", {}) or {}
-                regime = ex.get("regime_pnl", {}) or {}
-                trend_ret = (
-                    regime.get("trending_up", {}).get("return_pct", 0.0)
-                    + regime.get("trending_down", {}).get("return_pct", 0.0)
-                )
-                range_ret = regime.get("ranging", {}).get("return_pct", 0.0)
+                profile = _specialist_profile(eval_result)
+                trend_ret = profile["trend_ret"]
+                range_ret = profile["range_ret"]
+                routing_conf = profile["routing_confidence"]
+                bounded_role = profile["bounded_role"]
                 num_trades = eval_result.get("num_trades", 0.0) or 0.0
 
                 if _should_promote(eval_result) and wf_sharpe >= 0.5:
                     status = "active"
                 elif eval_result.get("accepted") and wf_sharpe >= 0.2:
-                    if num_trades >= 20 and trend_ret > 0.0 and range_ret > -10.0:
+                    exploratory_ok = (
+                        num_trades >= 20
+                        and routing_conf >= 0.35
+                        and (bounded_role or trend_ret > 0.0 or range_ret > -10.0)
+                    )
+                    if exploratory_ok:
                         status = "exploratory"
                     else:
                         status = "candidate"
@@ -598,16 +640,16 @@ def job_execute_signals() -> None:
         except Exception:
             pass
 
-        active_strats = [
+        live_tier_strats = [
             rec for rec in pool.strategies.values()
             if rec.symbol == symbol
             and rec.timeframe == TIMEFRAME
-            and rec.status == "active"
+            and rec.status in {"active", "exploratory"}
         ]
 
-        if not active_strats:
+        if not live_tier_strats:
             logger.warning(
-                "No active strategies in pool for %s %s — skipping execution",
+                "No active/exploratory strategies in pool for %s %s — skipping execution",
                 symbol, TIMEFRAME,
             )
             continue
@@ -629,8 +671,11 @@ def job_execute_signals() -> None:
         # loaded (e.g. file deleted after pool upsert).                       #
         # ------------------------------------------------------------------ #
         strats_by_wf = sorted(
-            active_strats,
-            key=lambda r: float((r.stats or {}).get("wf_overall_sharpe", 0) or 0),
+            live_tier_strats,
+            key=lambda r: (
+                _STATUS_SORT_BONUS.get(getattr(r, "status", "candidate"), 0.75),
+                float((r.stats or {}).get("wf_overall_sharpe", 0) or 0),
+            ),
             reverse=True,
         )
 
@@ -674,14 +719,26 @@ def job_execute_signals() -> None:
             s = rec.stats or {}
             ex = s.get("strategy_explain", {}) or {}
             risk_beh = ex.get("risk_behavior", {}) or {}
+            meta = ex.get("meta", {}) or {}
             wf  = float(s.get("wf_overall_sharpe", 0) or 0)
             dd  = abs(float(s.get("max_drawdown_pct", 0) or 0))
             tr  = int(s.get("num_trades", 0) or 0)
             cls = int(risk_beh.get("max_consecutive_losses", 0) or 0)
+            routing_conf = float(meta.get("routing_confidence", 0.0) or 0.0)
+            allowed_regimes = list(meta.get("allowed_regimes", []) or [])
+            allowed_sessions = list(meta.get("allowed_sessions", []) or [])
+            bounded_specialist = bool(allowed_regimes or allowed_sessions)
+
+            min_trades = EXEC_MIN_TRADES
+            if bounded_specialist and routing_conf >= 0.60:
+                min_trades = 125
+            if getattr(rec, "status", "candidate") == "exploratory" and bounded_specialist and routing_conf >= 0.70:
+                min_trades = 100
+
             return (
                 wf  >= EXEC_MIN_WF_SHARPE
                 and dd  <= EXEC_MAX_DD_PCT
-                and tr  >= EXEC_MIN_TRADES
+                and tr  >= min_trades
                 and cls <= EXEC_MAX_CONSEC_LOSS
             )
 
@@ -703,16 +760,16 @@ def job_execute_signals() -> None:
             reverse=True,
         )[:MAX_EXECUTION_POOL]
 
-        if len(active_strats) != len(final_strats):
-            n_dupes = len(active_strats) - len(unique_strats)
+        if len(live_tier_strats) != len(final_strats):
+            n_dupes = len(live_tier_strats) - len(unique_strats)
             n_filtered = len(unique_strats) - len(quality_strats)
             n_capped = max(0, len(quality_strats) - len(final_strats))
             logger.info(
                 "Execution pool %s %s [regime=%s session=%s]: "
-                "%d active → %d unique (-%d clones) "
+                "%d live-tier → %d unique (-%d clones) "
                 "→ %d quality (-%d threshold) → %d final (-%d capped)",
                 symbol, TIMEFRAME, current_regime, current_session,
-                len(active_strats), len(unique_strats), n_dupes,
+                len(live_tier_strats), len(unique_strats), n_dupes,
                 len(quality_strats), n_filtered,
                 len(final_strats), n_capped,
             )
@@ -720,10 +777,10 @@ def job_execute_signals() -> None:
         if not final_strats:
             logger.warning(
                 "No strategies passed execution filter for %s %s "
-                "(active=%d unique=%d quality=%d) — "
+                "(live_tier=%d unique=%d quality=%d) — "
                 "consider relaxing EXEC_MIN_WF_SHARPE or EXEC_MAX_DD_PCT",
                 symbol, TIMEFRAME,
-                len(active_strats), len(unique_strats), len(quality_strats),
+                len(live_tier_strats), len(unique_strats), len(quality_strats),
             )
             continue
 
@@ -761,8 +818,22 @@ def job_execute_signals() -> None:
         else:
             if summary.get("blocked_daily_limits"):
                 logger.info("No signals for %s %s — blocked by daily limits", symbol, TIMEFRAME)
+            elif summary.get("no_eligible_specialists"):
+                logger.info(
+                    "No signals for %s %s — no eligible specialists survived routing gates"
+                    " (session_gate=%s regime_gate=%s routing_conf=%s vol_gate=%s)",
+                    symbol, TIMEFRAME,
+                    summary.get("blocked_session_gate"),
+                    summary.get("blocked_regime_gate"),
+                    summary.get("blocked_routing_confidence"),
+                    summary.get("blocked_volatility_gate"),
+                )
             elif summary.get("blocked_session_gate"):
                 logger.info("No signals for %s %s — all candidate strategies blocked by session gate", symbol, TIMEFRAME)
+            elif summary.get("blocked_regime_gate"):
+                logger.info("No signals for %s %s — strategies blocked by regime policy/edge filters", symbol, TIMEFRAME)
+            elif summary.get("blocked_routing_confidence"):
+                logger.info("No signals for %s %s — routing confidence too low for current context", symbol, TIMEFRAME)
             elif summary.get("no_strategies_in_pool"):
                 logger.info("No signals for %s %s — no active/exploratory strategies", symbol, TIMEFRAME)
             elif summary.get("no_strategies_with_edge"):
