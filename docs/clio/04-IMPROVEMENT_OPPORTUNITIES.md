@@ -2,6 +2,12 @@
 
 Snapshot as of 2026-03-12 – potential future upgrades we discussed.
 
+For the **current M15-focused hardening roadmap**, see:
+- `06-M15_IMPROVEMENT_ROADMAP.md`
+
+This file should remain a parking lot for broader/future opportunities rather
+than the canonical near-term execution plan.
+
 ## 1. Daily PnL wiring (live MT5 → DailyState) **[IMPLEMENTED 2026-03-12]**
 
 **Goal:** Make `daily_pnl`, `daily_return_pct`, and `trades_today` reflect *real* closed PnL from MT5, so daily limits (if enabled) are meaningful.

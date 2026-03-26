@@ -2,6 +2,11 @@
 
 This document describes how the system is structured at a high level. It should be kept in sync with the actual code as the project evolves.
 
+Important framing:
+- The current implementation is **not** a generic multi-broker execution platform.
+- The current codebase is best understood as an **MT5-centric research + live execution stack**, with the strongest present operating alignment around **`XAUUSDm M15`**.
+- When this doc uses conceptual terms, prefer interpreting them through the actual implemented modules (`data`, `research`, `strategies`, `backtests`, `execution`, `scheduler`, `risk`) rather than as future-platform promises.
+
 ## 1. High‑Level Diagram (Conceptual)
 
 A typical end‑to‑end flow looks like this:

@@ -13,6 +13,12 @@ Build an autonomous trading system that:
 This plan is the high-level roadmap. Detailed per-file instructions for
 individual phases live under `dev_notes/`.
 
+For the **current near-term production hardening focus on `XAUUSDm M15`**, see:
+- `06-M15_IMPROVEMENT_ROADMAP.md`
+
+Treat this file as the broad historical / structural roadmap, and the M15 file
+as the current execution-priority roadmap.
+
 ---
 
 ## Principles

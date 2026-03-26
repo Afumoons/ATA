@@ -15,16 +15,19 @@ Non‑goals (for now):
 
 ## 2. Scope
 
-Current intended scope:
-- Markets: crypto + FX (primarily via Binance/Bybit/Exness APIs).
-- Styles: scalp + intraday, with aggressive risk profile but explicit caps.
-- Instruments: spot + perp futures.
+Current implemented scope in the codebase:
+- Broker/data/execution path: **MetaTrader 5 centric**.
+- Primary live symbol focus: **`XAUUSDm`**.
+- Current operating timeframe bias: **`M15`**.
+- Research can also include other MT5 symbols/timeframes, but the strongest current alignment is with **M15 intraday / semi-scalp behavior**, not true sub-5-minute scalping.
 
-Out of scope (current design):
-- Options/derivatives beyond perps.
+Out of scope (current implemented design):
+- A broad multi-broker production engine across Binance/Bybit/Exness APIs.
+- Options/derivatives beyond the currently implemented MT5-oriented flow.
 - Long‑horizon portfolio optimization.
+- Claiming the system is already optimized for `M5` / `M1`.
 
-> NOTE: Update this section as markets/instruments actually supported by the code evolve.
+> NOTE: Keep this section grounded in the actual code, not aspirational market coverage.
 
 ## 3. Core Concepts
 
