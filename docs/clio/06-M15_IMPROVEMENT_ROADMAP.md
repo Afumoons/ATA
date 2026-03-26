@@ -404,6 +404,4 @@ This roadmap is succeeding when:
 
 ---
 
-## Changelog (Docs)
 
-- 2026-03-26: Added a dedicated M15 improvement roadmap focused on regime robustness, session filtering, stricter selection pressure, backtest realism, playbook diversity, and exit design.
