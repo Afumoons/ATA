@@ -513,7 +513,7 @@ def execute_signals_for_symbol(
             summary["blocked_regime_gate"] = True
             logger.info(
                 "Regime edge filter %s %s (%s/%s) [%s]: %d → %d passed | blocked: %s",
-                symbol, timeframe, regime_label, current_session, tier, len(regime_eligible), len(filtered), blocked,
+                symbol, timeframe, current_regime, current_session, tier, len(regime_eligible), len(filtered), blocked,
             )
 
         if not filtered and scored and tier == "exploratory":
