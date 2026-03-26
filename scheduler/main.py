@@ -3,6 +3,7 @@ from __future__ import annotations
 import time as _time
 from datetime import datetime
 from pathlib import Path
+from collections import Counter
 
 from apscheduler.schedulers.background import BackgroundScheduler
 
@@ -27,48 +28,36 @@ from ..vector_memory.research_memory import ResearchMemory
 logger = get_logger(__name__)
 BASE_DIR = Path(__file__).resolve().parents[1]
 
-# Symbols/timeframes to manage (can be externalized/configured later)
 MANAGED_SYMBOLS = ["XAUUSDm", "BTCUSDm"]
 TIMEFRAME = "M15"
-
-# Minimum edge score for a strategy to be allowed to execute live signals.
 MINIMUM_EDGE_FOR_EXECUTION = 0.0
 
-# ---------------------------------------------------------------------------
-# Execution pool filtering
-#
-# Three-stage filter:
-#   Stage 1 - Deduplicate: drop clones with identical RULE STRINGS,
-#             keeping only the one with the highest WF Sharpe per cluster.
-#             Previously used backtest stats as fingerprint - this allowed
-#             strategies with identical long/short rules but different names
-#             to all fire simultaneously (concentration blast).
-#   Stage 2 - Quality gate: enforce minimum robustness thresholds.
-#   Stage 3 - Cap: limit final pool to MAX_EXECUTION_POOL.
-# ---------------------------------------------------------------------------
+EXEC_MIN_WF_SHARPE = 2.0
+EXEC_MAX_DD_PCT = 12.0
+EXEC_MIN_TRADES = 200
+EXEC_MAX_CONSEC_LOSS = 15
+MAX_EXECUTION_POOL = 10
 
-EXEC_MIN_WF_SHARPE   = 2.2   # walk-forward Sharpe - primary robustness gate
-EXEC_MAX_DD_PCT      = 10.0  # max drawdown ceiling (absolute %)
-EXEC_MIN_TRADES      = 240   # minimum trades for statistical significance
-EXEC_MAX_CONSEC_LOSS = 12    # max consecutive losses - controls tail risk
-MAX_EXECUTION_POOL   = 8     # hard cap on strategies executing per cycle
+REGIME_SORT_NORM = 20.0
+SESSION_SORT_NORM = 10.0
 
-# Regime-adaptive sort weight (Stage 3).
-REGIME_SORT_NORM     = 20.0
-
-# Session-adaptive sort weight.
-SESSION_SORT_NORM    = 10.0
-
-_STATUS_SORT_BONUS = {
+STATUS_SORT_BONUS = {
     "active": 1.15,
     "exploratory": 0.95,
     "candidate": 0.75,
     "disabled": 0.50,
 }
 
+DEFAULT_BACKTEST_KWARGS = {
+    "spread": 0.35,
+    "commission_per_lot": 7.0,
+    "slippage_pips": 2.0,
+    "max_positions_total": 1,
+    "max_positions_per_strategy": 1,
+}
+
 
 def _current_session() -> str:
-    """Return current trading session based on UTC hour."""
     from datetime import datetime, timezone
     hour = datetime.now(timezone.utc).hour
     if 0 <= hour < 7:
@@ -78,38 +67,38 @@ def _current_session() -> str:
     return "new_york"
 
 
-# ---------------------------------------------------------------------------
-# Regime-adaptive execution scoring
-# ---------------------------------------------------------------------------
-
 def _hybrid_regime_score(rec, current_regime: str, current_session: str = "") -> float:
-    """Regime- and session-adaptive sort key for execution pool selection."""
     s = rec.stats or {}
     wf = float(s.get("wf_overall_sharpe", 0) or 0)
     ex = s.get("strategy_explain", {}) or {}
+    meta = ex.get("meta", {}) or {}
 
-    # Regime component
     regime_pnl = ex.get("regime_pnl", {}) or {}
-    regime_ret = float(
-        (regime_pnl.get(current_regime, {}) or {}).get("return_pct", 0)
-    )
+    regime_ret = float((regime_pnl.get(current_regime, {}) or {}).get("return_pct", 0))
     regime_bonus = 1.0 + max(-0.5, min(0.5, regime_ret / REGIME_SORT_NORM))
 
-    # Session component
     session_bonus = 1.0
     if current_session:
         session_pnl = ex.get("session_pnl", {}) or {}
-        session_ret = float(
-            (session_pnl.get(current_session, {}) or {}).get("return_pct", 0)
-        )
+        session_ret = float((session_pnl.get(current_session, {}) or {}).get("return_pct", 0))
         session_bonus = 1.0 + max(-0.5, min(0.5, session_ret / SESSION_SORT_NORM))
 
-    status_bonus = _STATUS_SORT_BONUS.get(getattr(rec, "status", "candidate"), 0.75)
-    return wf * regime_bonus * session_bonus * status_bonus
+    status_bonus = STATUS_SORT_BONUS.get(getattr(rec, "status", "candidate"), 0.75)
+    specialist_bonus = 1.0 + 0.20 * float(meta.get("specialist_score", 0.0) or 0.0)
+    routing_bonus = 1.0 + 0.15 * float(meta.get("routing_confidence", 0.0) or 0.0)
+    return wf * regime_bonus * session_bonus * status_bonus * specialist_bonus * routing_bonus
+
+
+def _research_backtest_kwargs(symbol: str) -> dict:
+    params = dict(DEFAULT_BACKTEST_KWARGS)
+    if "BTC" in symbol.upper():
+        params["spread"] = 8.0
+        params["commission_per_lot"] = 0.0
+        params["slippage_pips"] = 12.0
+    return params
 
 
 def job_update_data() -> None:
-    """Fetch latest OHLC, compute features + regimes for managed symbols."""
     logger.info("Scheduler: job_update_data start")
     for symbol in MANAGED_SYMBOLS:
         try:
@@ -123,12 +112,7 @@ def job_update_data() -> None:
     logger.info("Scheduler: job_update_data done")
 
 
-# ---------------------------------------------------------------------------
-# News jobs
-# ---------------------------------------------------------------------------
-
 def job_update_news() -> None:
-    """Fetch Forex Factory calendar and save to news_events.parquet."""
     logger.info("Scheduler: job_update_news start")
     try:
         from ..data.news_collector import update_news_events, get_upcoming_high_impact
@@ -136,43 +120,29 @@ def job_update_news() -> None:
         import MetaTrader5 as mt5
 
         update_news_events()
-
-        upcoming = get_upcoming_high_impact(
-            hours_ahead=8.0,
-            min_impact=3,
-            gold_relevant_only=True,
-        )
+        upcoming = get_upcoming_high_impact(hours_ahead=8.0, min_impact=3, gold_relevant_only=True)
         if not upcoming.empty:
             account_info = None
             try:
                 from ..execution.live_monitor import get_equity_peak
                 info = mt5.account_info()
                 if info:
-                    account_info = {
-                        "equity": float(info.equity),
-                        "peak": get_equity_peak(),
-                    }
+                    account_info = {"equity": float(info.equity), "peak": get_equity_peak()}
             except Exception:
                 pass
             send_news_alert(upcoming, account_info=account_info)
-
     except Exception:
         logger.exception("job_update_news failed")
     logger.info("Scheduler: job_update_news done")
 
 
 def job_news_alert() -> None:
-    """Check for upcoming high-impact events and send WhatsApp alert if within 30 min."""
     try:
         from ..data.news_collector import get_upcoming_high_impact
         from ..notifications.whatsapp_notifier import send_news_alert
         import MetaTrader5 as mt5
 
-        upcoming = get_upcoming_high_impact(
-            hours_ahead=1.0,
-            min_impact=3,
-            gold_relevant_only=True,
-        )
+        upcoming = get_upcoming_high_impact(hours_ahead=1.0, min_impact=3, gold_relevant_only=True)
         if upcoming.empty:
             return
 
@@ -181,29 +151,18 @@ def job_news_alert() -> None:
             from ..execution.live_monitor import get_equity_peak
             info = mt5.account_info()
             if info:
-                account_info = {
-                    "equity": float(info.equity),
-                    "peak": get_equity_peak(),
-                }
+                account_info = {"equity": float(info.equity), "peak": get_equity_peak()}
         except Exception:
             pass
 
         sent = send_news_alert(upcoming, account_info=account_info)
         if sent:
-            logger.info(
-                "WhatsApp news alert sent: %d upcoming high-impact events", len(upcoming)
-            )
-
+            logger.info("WhatsApp news alert sent: %d upcoming high-impact events", len(upcoming))
     except Exception:
         logger.exception("job_news_alert failed")
 
 
-# ---------------------------------------------------------------------------
-# Strategy degradation
-# ---------------------------------------------------------------------------
-
 def _apply_live_degradation(pool) -> None:
-    """Demote clearly underperforming active strategies based on live PnL."""
     live_stats = load_all_strategy_stats()
     if not live_stats:
         return
@@ -216,57 +175,36 @@ def _apply_live_degradation(pool) -> None:
         stats = pool_rec.stats or {}
         bt_ret = float(stats.get("return_pct", 0.0) or 0.0)
         bt_sharpe = float(stats.get("sharpe_ratio", 0.0) or 0.0)
-
         if bt_ret <= 0 or bt_sharpe <= 0.3:
             continue
-
         if rec.num_trades < max(10, MAX_RECENT_TRADES):
             continue
 
         initial_eq = float(stats.get("initial_equity", 1.0) or 1.0)
         live_ret_total_pct = rec.total_pnl / max(initial_eq, 1.0) * 100.0
-        live_ret_recent_pct = (
-            sum(rec.recent_pnls) / max(initial_eq, 1.0) * 100.0
-            if rec.recent_pnls else 0.0
-        )
+        live_ret_recent_pct = sum(rec.recent_pnls) / max(initial_eq, 1.0) * 100.0 if rec.recent_pnls else 0.0
 
-        if (
-            live_ret_recent_pct < -3.0
-            or live_ret_recent_pct < 0.25 * bt_ret
-        ):
+        if live_ret_recent_pct < -3.0 or live_ret_recent_pct < 0.25 * bt_ret:
             pool_rec.status = "candidate"
             logger.warning(
-                "Degradation: demoting %s to candidate "
-                "(bt_ret=%.2f%% bt_sharpe=%.2f "
-                "live_total=%.2f%% live_recent=%.2f%% trades=%d)",
-                name, bt_ret, bt_sharpe,
-                live_ret_total_pct, live_ret_recent_pct, rec.num_trades,
+                "Degradation: demoting %s to candidate (bt_ret=%.2f%% bt_sharpe=%.2f live_total=%.2f%% live_recent=%.2f%% trades=%d)",
+                name, bt_ret, bt_sharpe, live_ret_total_pct, live_ret_recent_pct, rec.num_trades,
             )
             try:
                 from ..notifications.whatsapp_notifier import send_strategy_degradation_alert
-                send_strategy_degradation_alert(
-                    strategy_name=name,
-                    recent_avg_pnl=rec.recent_avg_pnl,
-                    total_pnl=rec.total_pnl,
-                    new_status="candidate",
-                )
+                send_strategy_degradation_alert(strategy_name=name, recent_avg_pnl=rec.recent_avg_pnl, total_pnl=rec.total_pnl, new_status="candidate")
             except Exception:
                 logger.exception("Failed to send strategy degradation WhatsApp alert")
 
 
-# ---------------------------------------------------------------------------
-# Memory helpers
-# ---------------------------------------------------------------------------
-
-def _memory_is_clearly_bad(
-    candidate, memory: ResearchMemory, symbol: str, timeframe: str
-) -> bool:
-    """Veto only obviously bad pattern families using ResearchMemory."""
+def _memory_is_clearly_bad(candidate, memory: ResearchMemory, symbol: str, timeframe: str) -> bool:
     try:
         params = getattr(candidate, "params", {}) or {}
         query_text = "\n".join([
             f"symbol={symbol}",
             f"timeframe={timeframe}",
+            f"family={params.get('family', '')}",
+            f"playbook={params.get('playbook_type', '')}",
             f"long_entry={getattr(candidate, 'long_entry_rule', '')}",
             f"short_entry={getattr(candidate, 'short_entry_rule', '')}",
             f"exit={getattr(candidate, 'exit_rule', '')}",
@@ -274,20 +212,12 @@ def _memory_is_clearly_bad(
             f"tp_atr={getattr(candidate, 'tp_atr_mult', '')}",
             f"regime={params.get('regime_type', '')}",
         ])
-        neighbors = memory.query_similar_strategies(
-            symbol=symbol, timeframe=timeframe,
-            text=query_text, n_results=10,
-        )
+        neighbors = memory.query_similar_strategies(symbol=symbol, timeframe=timeframe, text=query_text, n_results=10)
     except Exception as e:
-        logger.exception("ResearchMemory veto query failed for %s: %s",
-                         getattr(candidate, "name", "?"), e)
+        logger.exception("ResearchMemory veto query failed for %s: %s", getattr(candidate, "name", "?"), e)
         return False
 
-    if not neighbors:
-        return False
-
-    total = len(neighbors)
-    if total < 5:
+    if not neighbors or len(neighbors) < 5:
         return False
 
     bad = 0
@@ -296,7 +226,6 @@ def _memory_is_clearly_bad(
         pf = nb.get("stat_profit_factor")
         ret_pct = nb.get("stat_return_pct")
         wf_sharpe = nb.get("stat_wf_overall_sharpe")
-
         is_bad = False
         if sharpe is not None and sharpe < 0.0:
             is_bad = True
@@ -309,22 +238,13 @@ def _memory_is_clearly_bad(
         if is_bad:
             bad += 1
 
-    if bad >= 5 and bad / float(total) >= 0.7:
-        logger.info(
-            "Memory veto: skipping candidate %s (bad_neighbors=%d/%d)",
-            getattr(candidate, "name", "<unnamed>"), bad, total,
-        )
+    if bad >= 5 and bad / float(len(neighbors)) >= 0.7:
+        logger.info("Memory veto: skipping candidate %s (bad_neighbors=%d/%d)", getattr(candidate, "name", "<unnamed>"), bad, len(neighbors))
         return True
-
     return False
 
 
-# ---------------------------------------------------------------------------
-# Research job
-# ---------------------------------------------------------------------------
-
 def job_research_strategies() -> None:
-    """Generate/evolve strategies, backtest, evaluate, update pool + memory."""
     logger.info("Scheduler: job_research_strategies start")
     pool = load_pool()
     memory = ResearchMemory()
@@ -339,6 +259,8 @@ def job_research_strategies() -> None:
             logger.exception("Failed to load features for %s: %s", symbol, e)
             continue
 
+        bt_kwargs = _research_backtest_kwargs(symbol)
+
         def _memory_bonus_for_parent(rec) -> float:
             try:
                 strat_text = f"symbol={rec.symbol}\ntimeframe={rec.timeframe}"
@@ -349,6 +271,8 @@ def job_research_strategies() -> None:
                     strat_text = "\n".join([
                         f"symbol={rec.symbol}",
                         f"timeframe={rec.timeframe}",
+                        f"family={params.get('family', '')}",
+                        f"playbook={params.get('playbook_type', '')}",
                         f"long_entry={getattr(strat_obj, 'long_entry_rule', '')}",
                         f"short_entry={getattr(strat_obj, 'short_entry_rule', '')}",
                         f"exit={getattr(strat_obj, 'exit_rule', '')}",
@@ -358,11 +282,7 @@ def job_research_strategies() -> None:
                     ])
                 except Exception:
                     pass
-
-                neighbors = memory.query_similar_strategies(
-                    symbol=rec.symbol, timeframe=rec.timeframe,
-                    text=strat_text, n_results=10,
-                )
+                neighbors = memory.query_similar_strategies(symbol=rec.symbol, timeframe=rec.timeframe, text=strat_text, n_results=10)
             except Exception as e:
                 logger.error("Memory bonus query failed for %s: %s", rec.name, e)
                 return 0.0
@@ -379,33 +299,33 @@ def job_research_strategies() -> None:
                     continue
                 is_good = is_bad = False
                 if sharpe is not None:
-                    if sharpe > 0.3: is_good = True
-                    elif sharpe < 0.0: is_bad = True
+                    if sharpe > 0.3:
+                        is_good = True
+                    elif sharpe < 0.0:
+                        is_bad = True
                 if pf is not None:
-                    if pf > 1.1: is_good = True
-                    elif pf < 1.0: is_bad = True
+                    if pf > 1.1:
+                        is_good = True
+                    elif pf < 1.0:
+                        is_bad = True
                 if ret_pct is not None:
-                    if ret_pct > 0.0: is_good = True
-                    elif ret_pct < -5.0: is_bad = True
-                if is_good: good += 1
-                if is_bad: bad += 1
+                    if ret_pct > 0.0:
+                        is_good = True
+                    elif ret_pct < -5.0:
+                        is_bad = True
+                if is_good:
+                    good += 1
+                if is_bad:
+                    bad += 1
 
             total = good + bad
             if total == 0:
                 return 0.0
             balance = (good - bad) / float(total)
             bonus = max(-0.2, min(0.2, balance * 0.2))
-            if bonus != 0.0:
-                logger.info(
-                    "Memory bonus for %s: score=%.3f good=%d bad=%d bonus=%.3f",
-                    rec.name, rec.score, good, bad, bonus,
-                )
             return bonus
 
-        parent_candidates = [
-            rec for rec in pool.strategies.values()
-            if rec.symbol == symbol and rec.timeframe == TIMEFRAME
-        ]
+        parent_candidates = [rec for rec in pool.strategies.values() if rec.symbol == symbol and rec.timeframe == TIMEFRAME]
         scored_parents = []
         for rec in parent_candidates:
             bonus = _memory_bonus_for_parent(rec)
@@ -425,186 +345,111 @@ def job_research_strategies() -> None:
         new_population = evolve_population(symbol, TIMEFRAME, existing_strats)
         save_population(new_population)
 
+        family_mix = Counter(str((getattr(s, 'params', {}) or {}).get('family', 'unknown')) for s in new_population)
+        logger.info("Research family mix for %s %s: %s", symbol, TIMEFRAME, dict(family_mix))
+
         for strat in new_population:
             try:
                 if _memory_is_clearly_bad(strat, memory, symbol, TIMEFRAME):
                     continue
 
-                result = run_backtest(feat, strat, regime_column="regime")
+                feat.attrs["strategy_params"] = getattr(strat, "params", {}) or {}
+                result = run_backtest(feat, strat, regime_column="regime", **bt_kwargs)
                 eval_result = evaluate_strategy(result.stats)
 
-                num_trades = eval_result.get("num_trades", 0.0)
-                if num_trades < 80:
-                    logger.info(
-                        "Skipping %s - low trade count (%.0f < 80)", strat.name, num_trades
-                    )
+                num_trades = float(eval_result.get("num_trades", 0.0) or 0.0)
+                if num_trades < 60:
+                    logger.info("Skipping %s — low trade count (%.0f < 60)", strat.name, num_trades)
                     continue
 
                 pf = float(eval_result.get("profit_factor", 0.0) or 0.0)
                 sharpe = float(eval_result.get("sharpe_ratio", 0.0) or 0.0)
-                dd_abs_pre = abs(float(eval_result.get("max_drawdown_pct", 0.0) or 0.0))
-                if pf < 1.15 or sharpe < 0.25 or dd_abs_pre > 18.0:
-                    logger.info(
-                        "Skipping %s - weak perf (pf=%.2f sharpe=%.2f dd=%.2f)", strat.name, pf, sharpe, dd_abs_pre
-                    )
+                if pf < 1.10 or sharpe < 0.20:
+                    logger.info("Skipping %s — weak perf (pf=%.2f sharpe=%.2f)", strat.name, pf, sharpe)
                     continue
 
-                wf = walk_forward_test(feat, strat)
-                mc = monte_carlo_pnl(result.trades, n_runs=200)
+                wf = walk_forward_test(feat, strat, **bt_kwargs)
+                mc = monte_carlo_pnl(result.trades, n_runs=300, slippage_std_pips=max(0.5, bt_kwargs["slippage_pips"] * 0.5), pip_size=0.01 if "XAU" in symbol else 1.0)
 
-                eval_result["wf_overall_sharpe"] = (
-                    wf.get("aggregate", {}).get("overall_sharpe", 0.0)
-                )
-                eval_result["wf_overall_max_drawdown_pct"] = (
-                    wf.get("aggregate", {}).get("overall_max_drawdown_pct", 0.0)
-                )
-
-                # Persist basic identity so promotion logic can be symbol-aware
-                # (e.g. relax trend filters for BTC range traders).
+                eval_result["wf_overall_sharpe"] = wf.get("aggregate", {}).get("overall_sharpe", 0.0)
+                eval_result["wf_overall_max_drawdown_pct"] = wf.get("aggregate", {}).get("overall_max_drawdown_pct", 0.0)
                 eval_result["symbol"] = getattr(strat, "symbol", "")
                 eval_result["timeframe"] = getattr(strat, "timeframe", "")
-
+                eval_result["family"] = str((getattr(strat, "params", {}) or {}).get("family", "unknown"))
+                eval_result["playbook_type"] = str((getattr(strat, "params", {}) or {}).get("playbook_type", "unknown"))
                 eval_result.update(mc)
 
+                mc_p5 = float(eval_result.get("mc_final_pnl_p5", 0.0) or 0.0)
+                mc_dd_p95 = float(eval_result.get("mc_max_dd_p95", 0.0) or 0.0)
                 wf_sharpe = float(eval_result.get("wf_overall_sharpe", 0.0) or 0.0)
-                wf_dd = abs(float(eval_result.get("wf_overall_max_drawdown_pct", 0.0) or 0.0))
-                mc_dd_mean = float(eval_result.get("mc_max_dd_mean", 0.0) or 0.0)
-                if wf_sharpe < 0.20 or wf_dd > 20.0 or mc_dd_mean > 2500.0:
-                    logger.info(
-                        "Skipping %s - weak WF/MC robustness (wf_sharpe=%.3f wf_dd=%.2f mc_dd_mean=%.2f)", strat.name, wf_sharpe, wf_dd, mc_dd_mean
-                    )
+                dd_abs = abs(float(eval_result.get("max_drawdown_pct", 100.0) or 100.0))
+                explain = eval_result.get("strategy_explain", {}) or {}
+                meta = explain.get("meta", {}) or {}
+                risk_behavior = explain.get("risk_behavior", {}) or {}
+
+                if wf_sharpe < 0.20:
+                    logger.info("Skipping %s — weak WF sharpe (%.3f < 0.20)", strat.name, wf_sharpe)
+                    continue
+                if mc_p5 <= 0.0:
+                    logger.info("Skipping %s — MC p5 terminal pnl not positive (%.2f)", strat.name, mc_p5)
+                    continue
+                if mc_dd_p95 > 2500.0:
+                    logger.info("Skipping %s — MC p95 drawdown too high (%.2f)", strat.name, mc_dd_p95)
+                    continue
+                if float(risk_behavior.get("exit_rule_ratio", 0.0) or 0.0) > 0.85:
+                    logger.info("Skipping %s — too dependent on exit_rule", strat.name)
+                    continue
+                if float(risk_behavior.get("avg_holding_bars", 0.0) or 0.0) < 1.0:
+                    logger.info("Skipping %s — holding period too short/noisy", strat.name)
                     continue
 
-                def _specialist_profile(stats: dict) -> dict:
-                    ex = stats.get("strategy_explain", {}) or {}
-                    regime = ex.get("regime_pnl", {}) or {}
-                    meta = ex.get("meta", {}) or {}
-                    trend_ret = (
-                        regime.get("trending_up", {}).get("return_pct", 0.0)
-                        + regime.get("trending_down", {}).get("return_pct", 0.0)
-                    )
-                    range_ret = regime.get("ranging", {}).get("return_pct", 0.0)
-                    allowed_regimes = list(meta.get("allowed_regimes", []) or [])
-                    allowed_sessions = list(meta.get("allowed_sessions", []) or [])
-                    blocked_regimes = list(meta.get("blocked_regimes", []) or [])
-                    blocked_sessions = list(meta.get("blocked_sessions", []) or [])
-                    routing_conf = float(meta.get("routing_confidence", 0.0) or 0.0)
-                    bounded_role = bool(allowed_regimes or allowed_sessions or blocked_regimes or blocked_sessions)
-                    return {
-                        "trend_ret": float(trend_ret),
-                        "range_ret": float(range_ret),
-                        "allowed_regimes": allowed_regimes,
-                        "allowed_sessions": allowed_sessions,
-                        "blocked_regimes": blocked_regimes,
-                        "blocked_sessions": blocked_sessions,
-                        "routing_confidence": routing_conf,
-                        "bounded_role": bounded_role,
-                    }
+                trend_ret = (
+                    (explain.get("regime_pnl", {}).get("trending_up", {}) or {}).get("return_pct", 0.0)
+                    + (explain.get("regime_pnl", {}).get("trending_down", {}) or {}).get("return_pct", 0.0)
+                )
+                range_ret = float((explain.get("regime_pnl", {}).get("ranging", {}) or {}).get("return_pct", 0.0))
+                routing_conf = float(meta.get("routing_confidence", 0.0) or 0.0)
+                specialist_score = float(meta.get("specialist_score", 0.0) or 0.0)
+                bounded_role = bool(meta.get("allowed_regimes") or meta.get("allowed_sessions") or meta.get("blocked_regimes") or meta.get("blocked_sessions"))
+                ret_val = float(eval_result.get("return_pct", 0.0) or 0.0)
 
-                def _should_promote(stats: dict) -> bool:
-                    profile = _specialist_profile(stats)
-                    routing_conf = profile["routing_confidence"]
-                    bounded_role = profile["bounded_role"]
-                    range_ret = profile["range_ret"]
-                    trend_ret = profile["trend_ret"]
-                    dd_abs = abs(float(stats.get("max_drawdown_pct", 100.0) or 100.0))
-                    pf_val = float(stats.get("profit_factor", 0.0) or 0.0)
-                    ret_val = float(stats.get("return_pct", 0.0) or 0.0)
-                    num_tr = float(stats.get("num_trades", 0.0) or 0.0)
-
-                    wf_sh = float(stats.get("wf_overall_sharpe", 0.0) or 0.0)
-                    specialist_edge_ok = (
-                        max(trend_ret, range_ret, ret_val) > 1.0
-                        and min(trend_ret, range_ret) > -4.0
-                    )
-
-                    if bounded_role:
-                        return (
-                            num_tr >= 90
-                            and ret_val > 1.0
-                            and dd_abs <= 16.0
-                            and pf_val >= 1.20
-                            and wf_sh >= 0.40
-                            and routing_conf >= 0.70
-                            and specialist_edge_ok
-                        )
-
-                    return (
-                        num_tr >= 100
-                        and ret_val > 1.0
-                        and dd_abs <= 15.0
-                        and pf_val >= 1.25
-                        and wf_sh >= 0.45
-                        and trend_ret > 1.0
-                        and range_ret > -3.0
-                    )
-
-                profile = _specialist_profile(eval_result)
-                trend_ret = profile["trend_ret"]
-                range_ret = profile["range_ret"]
-                routing_conf = profile["routing_confidence"]
-                bounded_role = profile["bounded_role"]
-                num_trades = eval_result.get("num_trades", 0.0) or 0.0
-
-                if _should_promote(eval_result) and wf_sharpe >= 0.5:
+                if (
+                    num_trades >= 100
+                    and ret_val > 0.0
+                    and dd_abs <= 15.0
+                    and pf >= 1.18
+                    and wf_sharpe >= 0.75
+                    and mc_p5 > 25.0
+                    and specialist_score >= 0.60
+                    and routing_conf >= 0.60
+                    and bounded_role
+                    and max(trend_ret, range_ret, ret_val) > 0.0
+                ):
                     status = "active"
-                elif eval_result.get("accepted") and wf_sharpe >= 0.30:
-                    exploratory_ok = (
-                        num_trades >= 60
-                        and routing_conf >= 0.60
-                        and abs(float(eval_result.get("max_drawdown_pct", 0.0) or 0.0)) <= 18.0
-                        and float(eval_result.get("profit_factor", 0.0) or 0.0) >= 1.15
-                        and (bounded_role or trend_ret > 0.5 or range_ret > -4.0)
-                    )
-                    if exploratory_ok:
-                        status = "exploratory"
-                    else:
-                        status = "candidate"
+                elif (
+                    eval_result.get("accepted")
+                    and wf_sharpe >= 0.30
+                    and mc_p5 > 0.0
+                    and specialist_score >= 0.40
+                    and routing_conf >= 0.40
+                    and num_trades >= 40
+                ):
+                    status = "exploratory"
                 else:
                     status = "disabled"
 
-                # Persist core strategy rules into stats["strategy"] so that
-                # StrategyPool._rebuild_fp_map() can reconstruct structural
-                # fingerprints across process restarts. Without this, all
-                # records share an empty/None strategy dict and deduplication
-                # silently degrades.
                 eval_result["strategy"] = {
                     "long_entry_rule": getattr(strat, "long_entry_rule", "") or "",
                     "short_entry_rule": getattr(strat, "short_entry_rule", "") or "",
                     "exit_rule": getattr(strat, "exit_rule", "") or "",
                     "sl_atr_mult": getattr(strat, "sl_atr_mult", ""),
                     "tp_atr_mult": getattr(strat, "tp_atr_mult", ""),
+                    "family": str((getattr(strat, "params", {}) or {}).get("family", "unknown")),
+                    "playbook_type": str((getattr(strat, "params", {}) or {}).get("playbook_type", "unknown")),
                 }
 
-                routing_meta = ((eval_result.get("strategy_explain", {}) or {}).get("meta", {}) or {})
-                if routing_meta:
-                    logger.info(
-                        "Routing meta for %s: best_regime=%s worst_regime=%s best_session=%s worst_session=%s allowed_regimes=%s blocked_regimes=%s allowed_sessions=%s blocked_sessions=%s confidence=%.3f",
-                        strat.name,
-                        routing_meta.get("best_regime"),
-                        routing_meta.get("worst_regime"),
-                        routing_meta.get("best_session"),
-                        routing_meta.get("worst_session"),
-                        routing_meta.get("allowed_regimes", []),
-                        routing_meta.get("blocked_regimes", []),
-                        routing_meta.get("allowed_sessions", []),
-                        routing_meta.get("blocked_sessions", []),
-                        float(routing_meta.get("routing_confidence", 0.0) or 0.0),
-                    )
-
-                pool.upsert_strategy(
-                    strategy=strat,
-                    stats=eval_result,
-                    score=eval_result.get("score", 0.0),
-                    status=status,
-                )
-                memory.store_strategy_result(
-                    strategy_name=strat.name,
-                    symbol=strat.symbol,
-                    timeframe=strat.timeframe,
-                    stats=eval_result,
-                )
-
+                pool.upsert_strategy(strategy=strat, stats=eval_result, score=eval_result.get("score", 0.0), status=status)
+                memory.store_strategy_result(strategy_name=strat.name, symbol=strat.symbol, timeframe=strat.timeframe, stats=eval_result)
             except Exception as e:
                 logger.exception("Research error for %s: %s", strat.name, e)
 
@@ -614,17 +459,10 @@ def job_research_strategies() -> None:
     logger.info("Scheduler: job_research_strategies done")
 
 
-# ---------------------------------------------------------------------------
-# Signal execution
-# ---------------------------------------------------------------------------
-
 def job_execute_signals() -> None:
-    """Generate and execute signals for active strategies."""
     logger.info("Scheduler: job_execute_signals start")
     pool = load_pool()
     risk_perc = min(2.0, risk_config.max_risk_per_trade_pct)
-
-    from ..research.features import load_features
 
     for symbol in MANAGED_SYMBOLS:
         try:
@@ -636,125 +474,100 @@ def job_execute_signals() -> None:
             logger.exception("Failed to load features for %s: %s", symbol, e)
             continue
 
-        # ---- News lockout check ----
         try:
             latest = feat.iloc[-1]
             if bool(latest.get("in_news_lockout", False)):
-                logger.warning(
-                    "News lockout active for %s %s - skipping signal generation",
-                    symbol, TIMEFRAME,
-                )
+                logger.warning("News lockout active for %s %s — skipping signal generation", symbol, TIMEFRAME)
                 continue
         except Exception:
             pass
 
         live_tier_strats = [
             rec for rec in pool.strategies.values()
-            if rec.symbol == symbol
-            and rec.timeframe == TIMEFRAME
-            and rec.status in {"active", "exploratory"}
+            if rec.symbol == symbol and rec.timeframe == TIMEFRAME and rec.status in {"active", "exploratory"}
         ]
-
         if not live_tier_strats:
-            logger.warning(
-                "No active/exploratory strategies in pool for %s %s - skipping execution",
-                symbol, TIMEFRAME,
-            )
+            logger.warning("No active/exploratory strategies in pool for %s %s — skipping execution", symbol, TIMEFRAME)
             continue
 
-        # ------------------------------------------------------------------ #
-        # Stage 1 - Deduplicate clones by RULE STRINGS                        #
-        #                                                                      #
-        # FIX: Previously fingerprinted by backtest stats (sharpe, pf, etc.)  #
-        # which allowed strategies with identical entry/exit rules but         #
-        # different names to all fire the same signal simultaneously,          #
-        # creating a concentration blast (e.g. 5 identical shorts in 1 bar).  #
-        #                                                                      #
-        # New fingerprint: (long_entry_rule, short_entry_rule, exit_rule,      #
-        # stop_loss_pips) - two strategies are clones if they fire the same    #
-        # signal under the same conditions with the same SL.                  #
-        #                                                                      #
-        # Keep the one with the highest WF Sharpe per clone cluster.          #
-        # Fall back to stats-based fingerprint if strategy JSON cannot be     #
-        # loaded (e.g. file deleted after pool upsert).                       #
-        # ------------------------------------------------------------------ #
         strats_by_wf = sorted(
             live_tier_strats,
             key=lambda r: (
-                _STATUS_SORT_BONUS.get(getattr(r, "status", "candidate"), 0.75),
+                STATUS_SORT_BONUS.get(getattr(r, "status", "candidate"), 0.75),
                 float((r.stats or {}).get("wf_overall_sharpe", 0) or 0),
+                float((((r.stats or {}).get("strategy_explain", {}) or {}).get("meta", {}) or {}).get("specialist_score", 0.0) or 0.0),
             ),
             reverse=True,
         )
 
         seen_fps: set = set()
         unique_strats = []
-        _strat_base_dir = BASE_DIR / "strategies" / "generated"
-        _rule_cache: dict = {}  # name → fingerprint tuple, avoid re-loading same file
+        rule_cache: dict = {}
+        strat_base_dir = BASE_DIR / "strategies" / "generated"
 
         for rec in strats_by_wf:
-            if rec.name in _rule_cache:
-                fp = _rule_cache[rec.name]
+            if rec.name in rule_cache:
+                fp = rule_cache[rec.name]
             else:
                 try:
-                    _path = _strat_base_dir / f"{rec.name}.json"
-                    _s = load_strategy(_path)
+                    path = strat_base_dir / f"{rec.name}.json"
+                    s = load_strategy(path)
+                    params = getattr(s, "params", {}) or {}
                     fp = (
-                        str(getattr(_s, "long_entry_rule", "") or ""),
-                        str(getattr(_s, "short_entry_rule", "") or ""),
-                        str(getattr(_s, "exit_rule", "") or ""),
-                        round(float(getattr(_s, "stop_loss_pips", 0) or 0), 0),
+                        str(params.get("family", "")),
+                        str(getattr(s, "long_entry_rule", "") or ""),
+                        str(getattr(s, "short_entry_rule", "") or ""),
+                        str(getattr(s, "exit_rule", "") or ""),
+                        round(float(getattr(s, "stop_loss_pips", 0) or 0), 0),
                     )
                 except Exception:
-                    # Fallback: stats-based fingerprint if file not loadable
-                    s = rec.stats or {}
+                    st = rec.stats or {}
                     fp = (
-                        round(float(s.get("sharpe_ratio", 0) or 0), 4),
-                        round(float(s.get("profit_factor", 0) or 0), 4),
-                        round(float(s.get("return_pct", 0) or 0), 4),
-                        int(s.get("num_trades", 0) or 0),
+                        st.get("family", ""),
+                        round(float(st.get("sharpe_ratio", 0) or 0), 4),
+                        round(float(st.get("profit_factor", 0) or 0), 4),
+                        round(float(st.get("return_pct", 0) or 0), 4),
+                        int(st.get("num_trades", 0) or 0),
                     )
-                _rule_cache[rec.name] = fp
+                rule_cache[rec.name] = fp
 
             if fp not in seen_fps:
                 seen_fps.add(fp)
                 unique_strats.append(rec)
 
-        # ------------------------------------------------------------------ #
-        # Stage 2 - Quality gate                                              #
-        # ------------------------------------------------------------------ #
         def _passes_quality(rec) -> bool:
             s = rec.stats or {}
             ex = s.get("strategy_explain", {}) or {}
             risk_beh = ex.get("risk_behavior", {}) or {}
             meta = ex.get("meta", {}) or {}
-            wf  = float(s.get("wf_overall_sharpe", 0) or 0)
-            dd  = abs(float(s.get("max_drawdown_pct", 0) or 0))
-            tr  = int(s.get("num_trades", 0) or 0)
+            wf = float(s.get("wf_overall_sharpe", 0) or 0)
+            dd = abs(float(s.get("max_drawdown_pct", 0) or 0))
+            tr = int(s.get("num_trades", 0) or 0)
             cls = int(risk_beh.get("max_consecutive_losses", 0) or 0)
             routing_conf = float(meta.get("routing_confidence", 0.0) or 0.0)
+            specialist_score = float(meta.get("specialist_score", 0.0) or 0.0)
             allowed_regimes = list(meta.get("allowed_regimes", []) or [])
             allowed_sessions = list(meta.get("allowed_sessions", []) or [])
             bounded_specialist = bool(allowed_regimes or allowed_sessions)
+            mc_p5 = float(s.get("mc_final_pnl_p5", 0.0) or 0.0)
 
             min_trades = EXEC_MIN_TRADES
-            if bounded_specialist and routing_conf >= 0.60:
-                min_trades = 125
+            if bounded_specialist and routing_conf >= 0.65 and specialist_score >= 0.60:
+                min_trades = 120
             if getattr(rec, "status", "candidate") == "exploratory" and bounded_specialist and routing_conf >= 0.70:
                 min_trades = 100
 
             return (
-                wf  >= EXEC_MIN_WF_SHARPE
-                and dd  <= EXEC_MAX_DD_PCT
-                and tr  >= min_trades
+                wf >= EXEC_MIN_WF_SHARPE
+                and dd <= EXEC_MAX_DD_PCT
+                and tr >= min_trades
                 and cls <= EXEC_MAX_CONSEC_LOSS
+                and mc_p5 > 0.0
+                and specialist_score >= 0.45
             )
 
         quality_strats = [r for r in unique_strats if _passes_quality(r)]
 
-        # ------------------------------------------------------------------ #
-        # Stage 3 - Regime-adaptive sort + cap to MAX_EXECUTION_POOL          #
-        # ------------------------------------------------------------------ #
         current_regime = "unknown"
         current_session = _current_session()
         try:
@@ -762,104 +575,39 @@ def job_execute_signals() -> None:
         except Exception:
             pass
 
-        final_strats = sorted(
-            quality_strats,
-            key=lambda r: _hybrid_regime_score(r, current_regime, current_session),
-            reverse=True,
-        )[:MAX_EXECUTION_POOL]
+        final_strats = sorted(quality_strats, key=lambda r: _hybrid_regime_score(r, current_regime, current_session), reverse=True)[:MAX_EXECUTION_POOL]
 
         if len(live_tier_strats) != len(final_strats):
             n_dupes = len(live_tier_strats) - len(unique_strats)
             n_filtered = len(unique_strats) - len(quality_strats)
             n_capped = max(0, len(quality_strats) - len(final_strats))
             logger.info(
-                "Execution pool %s %s [regime=%s session=%s]: "
-                "%d live-tier → %d unique (-%d clones) "
-                "→ %d quality (-%d threshold) → %d final (-%d capped)",
+                "Execution pool %s %s [regime=%s session=%s]: %d live-tier → %d unique (-%d clones) → %d quality (-%d threshold) → %d final (-%d capped)",
                 symbol, TIMEFRAME, current_regime, current_session,
                 len(live_tier_strats), len(unique_strats), n_dupes,
-                len(quality_strats), n_filtered,
-                len(final_strats), n_capped,
+                len(quality_strats), n_filtered, len(final_strats), n_capped,
             )
 
         if not final_strats:
-            logger.warning(
-                "No strategies passed execution filter for %s %s "
-                "(live_tier=%d unique=%d quality=%d) - "
-                "consider relaxing EXEC_MIN_WF_SHARPE or EXEC_MAX_DD_PCT",
-                symbol, TIMEFRAME,
-                len(live_tier_strats), len(unique_strats), len(quality_strats),
-            )
+            logger.warning("No strategies passed execution filter for %s %s", symbol, TIMEFRAME)
             continue
 
-        low_edge = [r for r in final_strats if r.score <= MINIMUM_EDGE_FOR_EXECUTION]
-        if low_edge:
-            logger.warning(
-                "Low/negative edge strategies in execution pool for %s %s: %s",
-                symbol, TIMEFRAME,
-                {r.name: round(r.score, 3) for r in low_edge},
-            )
-
-        logger.info(
-            "Executing signals for %s %s [regime=%s session=%s] - %d strategies "
-            "(hybrid_score range: %.2f - %.2f)",
-            symbol, TIMEFRAME, current_regime, current_session, len(final_strats),
-            _hybrid_regime_score(final_strats[-1], current_regime, current_session),
-            _hybrid_regime_score(final_strats[0], current_regime, current_session),
-        )
-
-        # Build a temporary pool view containing only final_strats
         from ..strategies.pool import StrategyPool
         filtered_pool = StrategyPool()
         filtered_pool.strategies = {r.name: r for r in final_strats}
 
-        results, summary = execute_signals_for_symbol(
-            symbol, TIMEFRAME, feat, filtered_pool, risk_perc=risk_perc
-        )
+        results, summary = execute_signals_for_symbol(symbol, TIMEFRAME, feat, filtered_pool, risk_perc=risk_perc)
 
         if results:
             for sig, reason in results:
-                logger.info(
-                    "Signal result: strategy=%s symbol=%s dir=%s reason=%s",
-                    sig.strategy.name, symbol, sig.direction, reason,
-                )
+                logger.info("Signal result: strategy=%s symbol=%s dir=%s reason=%s", sig.strategy.name, symbol, sig.direction, reason)
         else:
-            if summary.get("blocked_daily_limits"):
-                logger.info("No signals for %s %s - blocked by daily limits", symbol, TIMEFRAME)
-            elif summary.get("no_eligible_specialists"):
-                logger.info(
-                    "No signals for %s %s - no eligible specialists survived routing gates"
-                    " (session_gate=%s regime_gate=%s routing_conf=%s vol_gate=%s active_no_entry=%s exploratory_no_entry=%s)",
-                    symbol, TIMEFRAME,
-                    summary.get("blocked_session_gate"),
-                    summary.get("blocked_regime_gate"),
-                    summary.get("blocked_routing_confidence"),
-                    summary.get("blocked_volatility_gate"),
-                    summary.get("no_entry_active"),
-                    summary.get("no_entry_exploratory"),
-                )
-            elif summary.get("blocked_session_gate"):
-                logger.info("No signals for %s %s - all candidate strategies blocked by session gate", symbol, TIMEFRAME)
-            elif summary.get("blocked_regime_gate"):
-                logger.info("No signals for %s %s - strategies blocked by regime policy/edge filters", symbol, TIMEFRAME)
-            elif summary.get("blocked_routing_confidence"):
-                logger.info("No signals for %s %s - routing confidence too low for current context", symbol, TIMEFRAME)
-            elif summary.get("no_strategies_in_pool"):
-                logger.info("No signals for %s %s - no active/exploratory strategies", symbol, TIMEFRAME)
-            elif summary.get("no_strategies_with_edge"):
-                logger.info("No signals for %s %s - no strategies passed regime/edge filters", symbol, TIMEFRAME)
-            else:
-                logger.info("No signals for %s %s - entry conditions not met", symbol, TIMEFRAME)
+            logger.info("No signals for %s %s — summary=%s", symbol, TIMEFRAME, summary)
 
     logger.info("Scheduler: job_execute_signals done")
 
 
-# ---------------------------------------------------------------------------
-# Live monitor
-# ---------------------------------------------------------------------------
-
 def job_live_monitor() -> None:
-    """Update live stats, enforce portfolio-level safety, and snapshot open trades."""
     logger.info("Scheduler: job_live_monitor start")
     try:
         update_live_stats()
@@ -875,10 +623,6 @@ def job_live_monitor() -> None:
     logger.info("Scheduler: job_live_monitor done")
 
 
-# ---------------------------------------------------------------------------
-# Scheduler lifecycle
-# ---------------------------------------------------------------------------
-
 def start_scheduler() -> BackgroundScheduler:
     if not scheduler_config.enable_scheduler:
         logger.warning("Scheduler is disabled via config")
@@ -888,23 +632,11 @@ def start_scheduler() -> BackgroundScheduler:
     initialize_mt5()
 
     sched = BackgroundScheduler(timezone="UTC")
-
-    # Every 5 min: OHLC + features + regimes
     sched.add_job(job_update_data, "interval", minutes=5, id="update_data")
-
-    # Every 30 min: research / evolve / backtest
     sched.add_job(job_research_strategies, "interval", minutes=30, id="research_strategies")
-
-    # Every 5 min: live signal execution (with news lockout)
     sched.add_job(job_execute_signals, "interval", minutes=5, id="execute_signals")
-
-    # Every 5 min: equity monitor + circuit breaker
     sched.add_job(job_live_monitor, "interval", minutes=5, id="live_monitor")
-
-    # Daily 06:00 UTC: fetch Forex Factory calendar
     sched.add_job(job_update_news, "cron", hour=6, minute=0, id="update_news")
-
-    # Every 5 min: WhatsApp alert check for upcoming high-impact events
     sched.add_job(job_news_alert, "interval", minutes=5, id="news_alert")
 
     sched.start()
