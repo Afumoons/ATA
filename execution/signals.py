@@ -19,10 +19,10 @@ from ..execution.live_state_utils import can_open_new_trade, strategy_has_open_p
 
 logger = get_logger(__name__)
 
-ACTIVE_REGIME_EDGE_THRESHOLD = 0.0
-EXPLORATORY_REGIME_EDGE_THRESHOLD = -10.0
-MIN_REGIME_CONFIDENCE_ACTIVE = 0.35
-MIN_REGIME_CONFIDENCE_EXPLORATORY = 0.20
+ACTIVE_REGIME_EDGE_THRESHOLD = 1.0
+EXPLORATORY_REGIME_EDGE_THRESHOLD = 0.25
+MIN_REGIME_CONFIDENCE_ACTIVE = 0.60
+MIN_REGIME_CONFIDENCE_EXPLORATORY = 0.45
 
 # ---------------------------------------------------------------------------
 # Ticket → strategy name mapping

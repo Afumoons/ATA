@@ -69,17 +69,10 @@ def _compute_sharpe(returns: np.ndarray) -> float:
 
 def _derive_allowed_blocked_labels(
     perf_map: Dict[str, Dict[str, float]],
-    min_allowed_ret: float = 0.0,
-    blocked_ret: float = -5.0,
-    min_trades: int = 5,
+    min_allowed_ret: float = 1.5,
+    blocked_ret: float = -4.0,
+    min_trades: int = 8,
 ) -> tuple[list[str], list[str]]:
-    """Derive allowed/blocked labels from a regime/session performance map.
-
-    Conservative v1 heuristic:
-    - allowed: enough trades and non-negative return_pct
-    - blocked: enough trades and materially negative return_pct
-    Items with too few trades remain unclassified.
-    """
     allowed: list[str] = []
     blocked: list[str] = []
     for label, stats in (perf_map or {}).items():
@@ -101,27 +94,23 @@ def _derive_routing_confidence(
     best_ret: float,
     worst_ret: float,
     total_trades: int,
+    num_allowed: int = 0,
+    num_blocked: int = 0,
 ) -> float:
-    """Return a simple 0..1 routing confidence score.
-
-    Signal sources:
-    - evidence count (trade count)
-    - separation between best and worst context returns
-    Higher means the strategy looks more like a legible specialist.
-    """
-    trade_score = min(1.0, max(0.0, total_trades / 50.0))
+    trade_score = min(1.0, max(0.0, total_trades / 80.0))
     spread = max(0.0, best_ret - worst_ret)
-    separation_score = min(1.0, spread / 20.0)
-    return round((0.6 * trade_score) + (0.4 * separation_score), 4)
+    separation_score = min(1.0, spread / 25.0)
+    specialization_score = min(1.0, (num_allowed + num_blocked) / 4.0)
+    leakage_penalty = 0.0
+    if worst_ret <= -8.0:
+        leakage_penalty += 0.20
+    elif worst_ret <= -4.0:
+        leakage_penalty += 0.10
+    raw = (0.45 * trade_score) + (0.35 * separation_score) + (0.20 * specialization_score)
+    return round(max(0.0, min(1.0, raw - leakage_penalty)), 4)
 
 
 def _nearest_feat_idx(feat_index: pd.DatetimeIndex, t: pd.Timestamp) -> int:
-    """Return index of the last feature bar at or before time t.
-
-    Replaces feat_index.get_loc(t, method='pad') which was deprecated in
-    pandas 1.5 and removed in pandas 2.0. Uses get_indexer which is the
-    supported replacement.
-    """
     pos = feat_index.get_indexer([t], method="pad")[0]
     return int(pos)
 
@@ -137,21 +126,11 @@ def build_strategy_explain(
     initial_equity: Optional[float] = None,
     symbol: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Construct structured explanation of a strategy's backtest behavior.
-
-    Expected columns in `trades`:
-        entry_time, exit_time          – datetime
-        entry_price, exit_price        – float
-        stop_loss (or sl), take_profit (or tp) – float
-        pnl                            – float
-        regime (optional)              – str
-
-    Expected columns in `features`:
-        time, regime_column            – required
-        news_impact_level, news_time_delta_min, has_news_window – optional
-    """
     _empty = {
         "regime_pnl": {},
+        "regime_class_pnl": {},
+        "regime_type_pnl": {},
+        "vol_regime_pnl": {},
         "session_pnl": {},
         "risk_behavior": {},
         "stability": {},
@@ -183,40 +162,41 @@ def build_strategy_explain(
     )
     has_news_window_col = "has_news_window" in feat.columns
 
-    # ------------------------------------------------------------------ #
-    # Single pass: map each trade to its nearest feature row.             #
-    # Compute all per-trade derived values in one loop — avoids iterating  #
-    # trades multiple times and avoids storing pd.Series objects inside a  #
-    # DataFrame column (which can cause subtle dtype/alignment issues).    #
-    # ------------------------------------------------------------------ #
     regimes: List[str] = []
     sessions: List[str] = []
+    entry_regime_classes: List[str] = []
+    entry_regime_types: List[str] = []
+    vol_regimes: List[str] = []
+    regime_confidences: List[float] = []
     exit_types: List[str] = []
     rr_values: List[Optional[float]] = []
-
-    # News columns (filled only if news data available)
     news_impacts: List[float] = []
     news_deltas: List[float] = []
 
     pnl_col = trades["pnl"].values if "pnl" in trades.columns else np.zeros(len(trades))
 
-    for i, row in trades.iterrows():
+    for _, row in trades.iterrows():
         et: pd.Timestamp = row["entry_time"]
-
-        # Feature row at entry — use get_indexer (pandas 2.0-safe)
         feat_pos = _nearest_feat_idx(feat_index, et)
-        if feat_pos < 0:
-            feat_row = None
-        else:
-            feat_row = feat.iloc[feat_pos]
+        feat_row = None if feat_pos < 0 else feat.iloc[feat_pos]
 
-        # Regime
         if feat_row is not None and has_regime_col:
             regimes.append(str(feat_row[regime_column]))
         elif "regime" in row.index:
             regimes.append(str(row["regime"]))
         else:
             regimes.append("unknown")
+
+        if feat_row is not None:
+            entry_regime_classes.append(str(feat_row.get("regime_class", "unknown")))
+            entry_regime_types.append(str(feat_row.get("regime_type", "unknown")))
+            vol_regimes.append(str(feat_row.get("vol_regime", "unknown")))
+            regime_confidences.append(float(feat_row.get("regime_confidence", 0.0) or 0.0))
+        else:
+            entry_regime_classes.append("unknown")
+            entry_regime_types.append("unknown")
+            vol_regimes.append("unknown")
+            regime_confidences.append(0.0)
 
         sessions.append(_session_from_time(et))
         exit_types.append(_infer_exit_type(row, pip_size))
@@ -231,14 +211,15 @@ def build_strategy_explain(
 
     trades["_regime"] = regimes
     trades["_session"] = sessions
+    trades["_entry_regime_class"] = entry_regime_classes
+    trades["_entry_regime_type"] = entry_regime_types
+    trades["_vol_regime"] = vol_regimes
+    trades["_regime_confidence"] = regime_confidences
     trades["_exit_type"] = exit_types
     trades["_rr"] = rr_values
     trades["_news_impact"] = news_impacts
     trades["_news_delta"] = news_deltas
 
-    # ------------------------------------------------------------------ #
-    # 1) Regime PnL                                                       #
-    # ------------------------------------------------------------------ #
     regime_pnl: Dict[str, Dict[str, float]] = {}
     for regime_label, grp in trades.groupby("_regime"):
         pnl_vals = grp["pnl"].values.astype(float) if "pnl" in grp.columns else np.zeros(len(grp))
@@ -246,7 +227,6 @@ def build_strategy_explain(
         num = int(len(grp))
         wins = int((pnl_vals > 0).sum())
         win_rate = wins / num if num > 0 else 0.0
-        # Bug fix: was calling _compute_rr twice per row (once for filter, once for value)
         rr_valid = [rr for rr in grp["_rr"].values if rr is not None]
         avg_rr = float(np.mean(rr_valid)) if rr_valid else 0.0
         regime_pnl[str(regime_label)] = {
@@ -257,9 +237,30 @@ def build_strategy_explain(
             "win_rate": win_rate,
         }
 
-    # ------------------------------------------------------------------ #
-    # 2) Session PnL                                                      #
-    # ------------------------------------------------------------------ #
+    regime_class_pnl: Dict[str, Dict[str, float]] = {}
+    for label, grp in trades.groupby("_entry_regime_class"):
+        pnl_vals = grp["pnl"].values.astype(float) if "pnl" in grp.columns else np.zeros(len(grp))
+        regime_class_pnl[str(label)] = {
+            "return_pct": _safe_return_pct(float(pnl_vals.sum()), initial_equity),
+            "num_trades": int(len(grp)),
+        }
+
+    regime_type_pnl: Dict[str, Dict[str, float]] = {}
+    for label, grp in trades.groupby("_entry_regime_type"):
+        pnl_vals = grp["pnl"].values.astype(float) if "pnl" in grp.columns else np.zeros(len(grp))
+        regime_type_pnl[str(label)] = {
+            "return_pct": _safe_return_pct(float(pnl_vals.sum()), initial_equity),
+            "num_trades": int(len(grp)),
+        }
+
+    vol_regime_pnl: Dict[str, Dict[str, float]] = {}
+    for label, grp in trades.groupby("_vol_regime"):
+        pnl_vals = grp["pnl"].values.astype(float) if "pnl" in grp.columns else np.zeros(len(grp))
+        vol_regime_pnl[str(label)] = {
+            "return_pct": _safe_return_pct(float(pnl_vals.sum()), initial_equity),
+            "num_trades": int(len(grp)),
+        }
+
     session_pnl: Dict[str, Dict[str, float]] = {}
     for sess_label, grp in trades.groupby("_session"):
         pnl_vals = grp["pnl"].values.astype(float) if "pnl" in grp.columns else np.zeros(len(grp))
@@ -268,19 +269,14 @@ def build_strategy_explain(
             "num_trades": int(len(grp)),
         }
 
-    # ------------------------------------------------------------------ #
-    # 3) Risk behavior                                                    #
-    # ------------------------------------------------------------------ #
     n_trades = len(trades)
     sl_hits = int((trades["_exit_type"] == "SL").sum())
     tp_hits = int((trades["_exit_type"] == "TP").sum())
     rule_exits = int((trades["_exit_type"] == "RULE").sum())
-
     rr_all = [rr for rr in trades["_rr"].values if rr is not None]
 
-    # Holding bars: use searchsorted — O(log N) per trade, not O(N)
     holding_bars: List[int] = []
-    feat_index_np = feat_index.view(np.int64)  # nanoseconds for fast comparison
+    feat_index_np = feat_index.view(np.int64)
     for _, row in trades.iterrows():
         et_ns = row["entry_time"].value
         xt_ns = row["exit_time"].value
@@ -289,7 +285,6 @@ def build_strategy_explain(
         if epos >= 0 and xpos >= 0:
             holding_bars.append(max(0, xpos - epos))
 
-    # Max consecutive losses
     max_consec = 0
     cur = 0
     pnl_sorted = trades["pnl"].values if "pnl" in trades.columns else np.zeros(n_trades)
@@ -306,19 +301,14 @@ def build_strategy_explain(
         "tp_hit_ratio": float(tp_hits / n_trades) if n_trades else 0.0,
         "exit_rule_ratio": float(rule_exits / n_trades) if n_trades else 0.0,
         "avg_holding_bars": float(np.mean(holding_bars)) if holding_bars else 0.0,
+        "median_holding_bars": float(np.median(holding_bars)) if holding_bars else 0.0,
+        "max_holding_bars": int(max(holding_bars)) if holding_bars else 0,
         "max_consecutive_losses": int(max_consec),
     }
 
-    # ------------------------------------------------------------------ #
-    # 4) Stability (subperiod Sharpe)                                     #
-    # ------------------------------------------------------------------ #
     n = len(trades)
     thirds = max(1, n // 3)
-    segments = [
-        trades.iloc[0:thirds],
-        trades.iloc[thirds: 2 * thirds],
-        trades.iloc[2 * thirds:],
-    ]
+    segments = [trades.iloc[0:thirds], trades.iloc[thirds:2 * thirds], trades.iloc[2 * thirds:]]
     sub_sharpes: List[float] = []
     sub_returns: List[float] = []
     for seg in segments:
@@ -336,72 +326,24 @@ def build_strategy_explain(
         "sharpe_std": float(np.std(sub_sharpes)) if len(sub_sharpes) > 1 else 0.0,
     }
 
-    # ------------------------------------------------------------------ #
-    # 5) News behavior                                                    #
-    # ------------------------------------------------------------------ #
-    news_behavior: Dict[str, Any] = {
-        "trades_around_high_impact": {"num_trades": 0, "return_pct": 0.0, "avg_rr": 0.0},
-        "avoidance_rate": 0.0,
-        "pre_news_return_pct": 0.0,
-        "post_news_return_pct": 0.0,
+    around_high = trades[(trades["_news_impact"] >= 3) & (np.abs(trades["_news_delta"]) <= 30)]
+    high_trades = int(len(around_high))
+    high_ret = float(around_high["pnl"].sum()) if high_trades else 0.0
+
+    if has_news_window_col:
+        window_rate = float(feat["has_news_window"].astype(bool).mean()) if len(feat) else 0.0
+    else:
+        window_rate = 0.0
+    observed_high_rate = high_trades / max(1, n_trades)
+
+    news_behavior = {
+        "trades_around_high_impact": {
+            "num_trades": high_trades,
+            "return_pct": _safe_return_pct(high_ret, initial_equity),
+        },
+        "avoidance_rate": float(max(0.0, 1.0 - observed_high_rate / max(window_rate, 1e-6))) if window_rate > 0 else 0.0,
     }
 
-    if has_news_cols:
-        high_window = 30.0
-        impact_arr = trades["_news_impact"].values.astype(float)
-        delta_arr = trades["_news_delta"].values.astype(float)
-        pnl_arr = trades["pnl"].values.astype(float) if "pnl" in trades.columns else np.zeros(n_trades)
-
-        hi_mask = (impact_arr >= 3) & (np.abs(delta_arr) <= high_window)
-        pre_mask = (impact_arr >= 2) & (delta_arr >= -60.0) & (delta_arr < 0.0)
-        post_mask = (impact_arr >= 2) & (delta_arr >= 0.0) & (delta_arr <= 60.0)
-
-        hi_pnl = float(pnl_arr[hi_mask].sum())
-        hi_rr_vals = [rr for rr, flag in zip(trades["_rr"].values, hi_mask) if flag and rr is not None]
-
-        news_behavior["trades_around_high_impact"] = {
-            "num_trades": int(hi_mask.sum()),
-            "return_pct": _safe_return_pct(hi_pnl, initial_equity),
-            "avg_rr": float(np.mean(hi_rr_vals)) if hi_rr_vals else 0.0,
-        }
-        news_behavior["pre_news_return_pct"] = _safe_return_pct(
-            float(pnl_arr[pre_mask].sum()), initial_equity
-        )
-        news_behavior["post_news_return_pct"] = _safe_return_pct(
-            float(pnl_arr[post_mask].sum()), initial_equity
-        )
-
-        # Avoidance rate — vectorized, was O(high_bars * trades)
-        # Bug fix: feat.get("col", default) on DataFrame returns Series or
-        # scalar default — comparing scalar False with & operator on Series
-        # would raise or produce wrong result. Use explicit column check.
-        if has_news_window_col:
-            high_bar_mask = (feat["news_impact_level"] >= 3) & feat["has_news_window"].astype(bool)
-        else:
-            high_bar_mask = feat["news_impact_level"] >= 3
-
-        high_bar_times = feat.index[high_bar_mask]
-        total_high_bars = len(high_bar_times)
-
-        if total_high_bars > 0:
-            trade_times_ns = trades["entry_time"].values.astype(np.int64)
-            bar_times_ns = high_bar_times.view(np.int64)
-            # One-hour tolerance in nanoseconds
-            tol_ns = int(3_600 * 1e9)
-            bars_with_trade = int(
-                sum(
-                    1
-                    for bt_ns in bar_times_ns
-                    if np.any(np.abs(trade_times_ns - bt_ns) <= tol_ns)
-                )
-            )
-            news_behavior["avoidance_rate"] = float(
-                max(0.0, min(1.0, 1.0 - bars_with_trade / total_high_bars))
-            )
-
-    # ------------------------------------------------------------------ #
-    # 6) Meta summary                                                     #
-    # ------------------------------------------------------------------ #
     best_regime = None
     worst_regime = None
     best_regime_ret = 0.0
@@ -430,17 +372,21 @@ def build_strategy_explain(
     )
     range_ret = float((regime_pnl.get("ranging", {}) or {}).get("return_pct", 0.0))
 
+    avg_regime_confidence = float(np.mean(regime_confidences)) if regime_confidences else 0.0
     allowed_regimes, blocked_regimes = _derive_allowed_blocked_labels(
-        regime_pnl, min_allowed_ret=0.0, blocked_ret=-5.0, min_trades=5
+        regime_pnl, min_allowed_ret=1.5, blocked_ret=-4.0, min_trades=8
     )
     allowed_sessions, blocked_sessions = _derive_allowed_blocked_labels(
-        session_pnl, min_allowed_ret=0.0, blocked_ret=-3.0, min_trades=5
+        session_pnl, min_allowed_ret=0.75, blocked_ret=-2.0, min_trades=8
     )
     routing_confidence = _derive_routing_confidence(
         best_ret=best_regime_ret,
         worst_ret=worst_regime_ret,
         total_trades=n_trades,
+        num_allowed=len(allowed_regimes) + len(allowed_sessions),
+        num_blocked=len(blocked_regimes) + len(blocked_sessions),
     )
+    specialist_score = round(min(1.0, max(0.0, 0.55 * routing_confidence + 0.45 * avg_regime_confidence)), 4)
 
     meta = {
         "best_regime": best_regime,
@@ -456,6 +402,8 @@ def build_strategy_explain(
         "allowed_sessions": allowed_sessions,
         "blocked_sessions": blocked_sessions,
         "routing_confidence": routing_confidence,
+        "avg_regime_confidence": avg_regime_confidence,
+        "specialist_score": specialist_score,
         "is_trend_follower": bool(trend_ret > 0),
         "is_range_trader": bool(range_ret > 0),
         "total_pnl": float(pnl_col.sum()),
@@ -464,6 +412,9 @@ def build_strategy_explain(
 
     return {
         "regime_pnl": regime_pnl,
+        "regime_class_pnl": regime_class_pnl,
+        "regime_type_pnl": regime_type_pnl,
+        "vol_regime_pnl": vol_regime_pnl,
         "session_pnl": session_pnl,
         "risk_behavior": risk_behavior,
         "stability": stability,

@@ -38,20 +38,20 @@ MINIMUM_EDGE_FOR_EXECUTION = 0.0
 # Execution pool filtering
 #
 # Three-stage filter:
-#   Stage 1 — Deduplicate: drop clones with identical RULE STRINGS,
+#   Stage 1 - Deduplicate: drop clones with identical RULE STRINGS,
 #             keeping only the one with the highest WF Sharpe per cluster.
-#             Previously used backtest stats as fingerprint — this allowed
+#             Previously used backtest stats as fingerprint - this allowed
 #             strategies with identical long/short rules but different names
 #             to all fire simultaneously (concentration blast).
-#   Stage 2 — Quality gate: enforce minimum robustness thresholds.
-#   Stage 3 — Cap: limit final pool to MAX_EXECUTION_POOL.
+#   Stage 2 - Quality gate: enforce minimum robustness thresholds.
+#   Stage 3 - Cap: limit final pool to MAX_EXECUTION_POOL.
 # ---------------------------------------------------------------------------
 
-EXEC_MIN_WF_SHARPE   = 2.0   # walk-forward Sharpe — primary robustness gate
-EXEC_MAX_DD_PCT      = 12.0  # max drawdown ceiling (absolute %)
-EXEC_MIN_TRADES      = 200   # minimum trades for statistical significance
-EXEC_MAX_CONSEC_LOSS = 15    # max consecutive losses — controls tail risk
-MAX_EXECUTION_POOL   = 10    # hard cap on strategies executing per cycle
+EXEC_MIN_WF_SHARPE   = 2.2   # walk-forward Sharpe - primary robustness gate
+EXEC_MAX_DD_PCT      = 10.0  # max drawdown ceiling (absolute %)
+EXEC_MIN_TRADES      = 240   # minimum trades for statistical significance
+EXEC_MAX_CONSEC_LOSS = 12    # max consecutive losses - controls tail risk
+MAX_EXECUTION_POOL   = 8     # hard cap on strategies executing per cycle
 
 # Regime-adaptive sort weight (Stage 3).
 REGIME_SORT_NORM     = 20.0
@@ -434,17 +434,18 @@ def job_research_strategies() -> None:
                 eval_result = evaluate_strategy(result.stats)
 
                 num_trades = eval_result.get("num_trades", 0.0)
-                if num_trades < 50:
+                if num_trades < 80:
                     logger.info(
-                        "Skipping %s — low trade count (%.0f < 50)", strat.name, num_trades
+                        "Skipping %s - low trade count (%.0f < 80)", strat.name, num_trades
                     )
                     continue
 
                 pf = float(eval_result.get("profit_factor", 0.0) or 0.0)
                 sharpe = float(eval_result.get("sharpe_ratio", 0.0) or 0.0)
-                if pf < 1.05 or sharpe < 0.15:
+                dd_abs_pre = abs(float(eval_result.get("max_drawdown_pct", 0.0) or 0.0))
+                if pf < 1.15 or sharpe < 0.25 or dd_abs_pre > 18.0:
                     logger.info(
-                        "Skipping %s — weak perf (pf=%.2f sharpe=%.2f)", strat.name, pf, sharpe
+                        "Skipping %s - weak perf (pf=%.2f sharpe=%.2f dd=%.2f)", strat.name, pf, sharpe, dd_abs_pre
                     )
                     continue
 
@@ -466,9 +467,11 @@ def job_research_strategies() -> None:
                 eval_result.update(mc)
 
                 wf_sharpe = float(eval_result.get("wf_overall_sharpe", 0.0) or 0.0)
-                if wf_sharpe < 0.05:
+                wf_dd = abs(float(eval_result.get("wf_overall_max_drawdown_pct", 0.0) or 0.0))
+                mc_dd_mean = float(eval_result.get("mc_max_dd_mean", 0.0) or 0.0)
+                if wf_sharpe < 0.20 or wf_dd > 20.0 or mc_dd_mean > 2500.0:
                     logger.info(
-                        "Skipping %s — weak WF sharpe (%.3f < 0.05)", strat.name, wf_sharpe
+                        "Skipping %s - weak WF/MC robustness (wf_sharpe=%.3f wf_dd=%.2f mc_dd_mean=%.2f)", strat.name, wf_sharpe, wf_dd, mc_dd_mean
                     )
                     continue
 
@@ -509,28 +512,31 @@ def job_research_strategies() -> None:
                     ret_val = float(stats.get("return_pct", 0.0) or 0.0)
                     num_tr = float(stats.get("num_trades", 0.0) or 0.0)
 
+                    wf_sh = float(stats.get("wf_overall_sharpe", 0.0) or 0.0)
                     specialist_edge_ok = (
-                        max(trend_ret, range_ret, ret_val) > 0.0
-                        and min(trend_ret, range_ret) > -10.0
+                        max(trend_ret, range_ret, ret_val) > 1.0
+                        and min(trend_ret, range_ret) > -4.0
                     )
 
                     if bounded_role:
                         return (
-                            num_tr >= 50
-                            and ret_val > 0.0
-                            and dd_abs <= 20.0
-                            and pf_val >= 1.15
-                            and routing_conf >= 0.55
+                            num_tr >= 90
+                            and ret_val > 1.0
+                            and dd_abs <= 16.0
+                            and pf_val >= 1.20
+                            and wf_sh >= 0.40
+                            and routing_conf >= 0.70
                             and specialist_edge_ok
                         )
 
                     return (
-                        num_tr >= 50
-                        and ret_val > 0.0
-                        and dd_abs <= 20.0
-                        and pf_val >= 1.2
-                        and trend_ret > 0.0
-                        and range_ret > -5.0
+                        num_tr >= 100
+                        and ret_val > 1.0
+                        and dd_abs <= 15.0
+                        and pf_val >= 1.25
+                        and wf_sh >= 0.45
+                        and trend_ret > 1.0
+                        and range_ret > -3.0
                     )
 
                 profile = _specialist_profile(eval_result)
@@ -542,11 +548,13 @@ def job_research_strategies() -> None:
 
                 if _should_promote(eval_result) and wf_sharpe >= 0.5:
                     status = "active"
-                elif eval_result.get("accepted") and wf_sharpe >= 0.2:
+                elif eval_result.get("accepted") and wf_sharpe >= 0.30:
                     exploratory_ok = (
-                        num_trades >= 20
-                        and routing_conf >= 0.35
-                        and (bounded_role or trend_ret > 0.0 or range_ret > -10.0)
+                        num_trades >= 60
+                        and routing_conf >= 0.60
+                        and abs(float(eval_result.get("max_drawdown_pct", 0.0) or 0.0)) <= 18.0
+                        and float(eval_result.get("profit_factor", 0.0) or 0.0) >= 1.15
+                        and (bounded_role or trend_ret > 0.5 or range_ret > -4.0)
                     )
                     if exploratory_ok:
                         status = "exploratory"
@@ -633,7 +641,7 @@ def job_execute_signals() -> None:
             latest = feat.iloc[-1]
             if bool(latest.get("in_news_lockout", False)):
                 logger.warning(
-                    "News lockout active for %s %s — skipping signal generation",
+                    "News lockout active for %s %s - skipping signal generation",
                     symbol, TIMEFRAME,
                 )
                 continue
@@ -649,13 +657,13 @@ def job_execute_signals() -> None:
 
         if not live_tier_strats:
             logger.warning(
-                "No active/exploratory strategies in pool for %s %s — skipping execution",
+                "No active/exploratory strategies in pool for %s %s - skipping execution",
                 symbol, TIMEFRAME,
             )
             continue
 
         # ------------------------------------------------------------------ #
-        # Stage 1 — Deduplicate clones by RULE STRINGS                        #
+        # Stage 1 - Deduplicate clones by RULE STRINGS                        #
         #                                                                      #
         # FIX: Previously fingerprinted by backtest stats (sharpe, pf, etc.)  #
         # which allowed strategies with identical entry/exit rules but         #
@@ -663,7 +671,7 @@ def job_execute_signals() -> None:
         # creating a concentration blast (e.g. 5 identical shorts in 1 bar).  #
         #                                                                      #
         # New fingerprint: (long_entry_rule, short_entry_rule, exit_rule,      #
-        # stop_loss_pips) — two strategies are clones if they fire the same    #
+        # stop_loss_pips) - two strategies are clones if they fire the same    #
         # signal under the same conditions with the same SL.                  #
         #                                                                      #
         # Keep the one with the highest WF Sharpe per clone cluster.          #
@@ -713,7 +721,7 @@ def job_execute_signals() -> None:
                 unique_strats.append(rec)
 
         # ------------------------------------------------------------------ #
-        # Stage 2 — Quality gate                                              #
+        # Stage 2 - Quality gate                                              #
         # ------------------------------------------------------------------ #
         def _passes_quality(rec) -> bool:
             s = rec.stats or {}
@@ -745,7 +753,7 @@ def job_execute_signals() -> None:
         quality_strats = [r for r in unique_strats if _passes_quality(r)]
 
         # ------------------------------------------------------------------ #
-        # Stage 3 — Regime-adaptive sort + cap to MAX_EXECUTION_POOL          #
+        # Stage 3 - Regime-adaptive sort + cap to MAX_EXECUTION_POOL          #
         # ------------------------------------------------------------------ #
         current_regime = "unknown"
         current_session = _current_session()
@@ -777,7 +785,7 @@ def job_execute_signals() -> None:
         if not final_strats:
             logger.warning(
                 "No strategies passed execution filter for %s %s "
-                "(live_tier=%d unique=%d quality=%d) — "
+                "(live_tier=%d unique=%d quality=%d) - "
                 "consider relaxing EXEC_MIN_WF_SHARPE or EXEC_MAX_DD_PCT",
                 symbol, TIMEFRAME,
                 len(live_tier_strats), len(unique_strats), len(quality_strats),
@@ -793,8 +801,8 @@ def job_execute_signals() -> None:
             )
 
         logger.info(
-            "Executing signals for %s %s [regime=%s session=%s] — %d strategies "
-            "(hybrid_score range: %.2f – %.2f)",
+            "Executing signals for %s %s [regime=%s session=%s] - %d strategies "
+            "(hybrid_score range: %.2f - %.2f)",
             symbol, TIMEFRAME, current_regime, current_session, len(final_strats),
             _hybrid_regime_score(final_strats[-1], current_regime, current_session),
             _hybrid_regime_score(final_strats[0], current_regime, current_session),
@@ -817,10 +825,10 @@ def job_execute_signals() -> None:
                 )
         else:
             if summary.get("blocked_daily_limits"):
-                logger.info("No signals for %s %s — blocked by daily limits", symbol, TIMEFRAME)
+                logger.info("No signals for %s %s - blocked by daily limits", symbol, TIMEFRAME)
             elif summary.get("no_eligible_specialists"):
                 logger.info(
-                    "No signals for %s %s — no eligible specialists survived routing gates"
+                    "No signals for %s %s - no eligible specialists survived routing gates"
                     " (session_gate=%s regime_gate=%s routing_conf=%s vol_gate=%s active_no_entry=%s exploratory_no_entry=%s)",
                     symbol, TIMEFRAME,
                     summary.get("blocked_session_gate"),
@@ -831,17 +839,17 @@ def job_execute_signals() -> None:
                     summary.get("no_entry_exploratory"),
                 )
             elif summary.get("blocked_session_gate"):
-                logger.info("No signals for %s %s — all candidate strategies blocked by session gate", symbol, TIMEFRAME)
+                logger.info("No signals for %s %s - all candidate strategies blocked by session gate", symbol, TIMEFRAME)
             elif summary.get("blocked_regime_gate"):
-                logger.info("No signals for %s %s — strategies blocked by regime policy/edge filters", symbol, TIMEFRAME)
+                logger.info("No signals for %s %s - strategies blocked by regime policy/edge filters", symbol, TIMEFRAME)
             elif summary.get("blocked_routing_confidence"):
-                logger.info("No signals for %s %s — routing confidence too low for current context", symbol, TIMEFRAME)
+                logger.info("No signals for %s %s - routing confidence too low for current context", symbol, TIMEFRAME)
             elif summary.get("no_strategies_in_pool"):
-                logger.info("No signals for %s %s — no active/exploratory strategies", symbol, TIMEFRAME)
+                logger.info("No signals for %s %s - no active/exploratory strategies", symbol, TIMEFRAME)
             elif summary.get("no_strategies_with_edge"):
-                logger.info("No signals for %s %s — no strategies passed regime/edge filters", symbol, TIMEFRAME)
+                logger.info("No signals for %s %s - no strategies passed regime/edge filters", symbol, TIMEFRAME)
             else:
-                logger.info("No signals for %s %s — entry conditions not met", symbol, TIMEFRAME)
+                logger.info("No signals for %s %s - entry conditions not met", symbol, TIMEFRAME)
 
     logger.info("Scheduler: job_execute_signals done")
 

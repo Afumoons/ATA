@@ -11,10 +11,10 @@ logger = get_logger(__name__)
 @dataclass
 class EvaluationConfig:
     # Minimum quality gates for pool admission
-    min_trades: int = 15
-    min_sharpe: float = 0.1
-    max_drawdown_pct: float = 30.0   # positive value, e.g. 30 = 30% max DD
-    min_profit_factor: float = 1.05
+    min_trades: int = 30
+    min_sharpe: float = 0.2
+    max_drawdown_pct: float = 22.0   # positive value, e.g. 22 = 22% max DD
+    min_profit_factor: float = 1.12
 
     # Score weights
     weight_sharpe: float = 0.4
@@ -67,10 +67,15 @@ def compute_score(stats: Dict, cfg: EvaluationConfig = DEFAULT_EVAL_CONFIG) -> f
     range_ret = float((regime_pnl.get("ranging", {}) or {}).get("return_pct", 0.0))
 
     regime_bonus = 0.0
-    if trend_ret > 0:
-        regime_bonus += 0.2
-    if range_ret > -3.0:
-        regime_bonus += 0.1
+    regime_penalty = 0.0
+    if trend_ret > 1.0:
+        regime_bonus += 0.15
+    if range_ret > -2.0:
+        regime_bonus += 0.05
+    if min(trend_ret, range_ret) < -6.0:
+        regime_penalty += 0.25
+    elif min(trend_ret, range_ret) < -3.0:
+        regime_penalty += 0.12
 
     # Stability — penalize highly unstable Sharpe across subperiods
     stability = explain.get("stability", {}) or {}
@@ -91,7 +96,31 @@ def compute_score(stats: Dict, cfg: EvaluationConfig = DEFAULT_EVAL_CONFIG) -> f
     if avoidance_rate > 0.7 and hi_ret >= 0.0:
         news_bonus = 0.1
 
-    score = base_score + regime_bonus + news_bonus - stability_penalty - news_penalty
+    meta = explain.get("meta", {}) or {}
+    routing_conf = float(meta.get("routing_confidence", 0.0) or 0.0)
+    blocked_regimes = list(meta.get("blocked_regimes", []) or [])
+    blocked_sessions = list(meta.get("blocked_sessions", []) or [])
+    routing_bonus = 0.0
+    routing_penalty = 0.0
+    if routing_conf >= 0.75:
+        routing_bonus += 0.15
+    elif routing_conf < 0.45:
+        routing_penalty += 0.20
+    if blocked_regimes:
+        routing_penalty += min(0.15, 0.05 * len(blocked_regimes))
+    if blocked_sessions:
+        routing_penalty += min(0.10, 0.05 * len(blocked_sessions))
+
+    score = (
+        base_score
+        + regime_bonus
+        + news_bonus
+        + routing_bonus
+        - regime_penalty
+        - stability_penalty
+        - news_penalty
+        - routing_penalty
+    )
 
     # Clamp to a reasonable range — avoids extreme values confusing memory bonuses
     return float(max(-2.0, min(10.0, score)))
