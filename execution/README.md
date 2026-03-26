@@ -36,6 +36,10 @@ and for **tracking live account state** used by risk controls:
       and `risk_config.daily_limits_enabled` (enabled by default for live
       accounts). When these limits are hit, **no new trades are opened** for
       the rest of the day.
+    - Uses `strategy_has_open_position(...)` to enforce the current live policy:
+      **one open MT5 position per strategy + symbol + timeframe slot**.
+      This blocks accidental pyramiding/re-entry while the prior position is
+      still open.
     - Loads `active` and `exploratory` strategies from the strategy pool for the
       given symbol/timeframe.
     - Computes a regime-specific edge for each strategy using
@@ -64,6 +68,7 @@ and for **tracking live account state** used by risk controls:
   - Functions:
     - `load_daily_state(...)` / `save_daily_state(...)` – read/write daily snapshot.
     - `register_trade_pnl(pnl, current_equity)` – update `daily_pnl`, `daily_return_pct`, `trades_today`.
+    - `strategy_has_open_position(strategy_name, symbol, timeframe)` – MT5 open-position guard for the current single-position mode.
     - `can_open_new_trade(current_equity, max_dd_pct, max_trades, enabled)` – gate for daily DD/trade caps.
 
 - `live_monitor.py`

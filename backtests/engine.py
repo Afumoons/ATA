@@ -146,13 +146,18 @@ def run_backtest(
     risk_per_trade_pct: float = 1,
     pip_size: Optional[float] = None,
     max_positions_total: int = 5,
+    max_positions_per_strategy: int = 1,
     spread: float = 0.0,
     commission_per_lot: float = 0.0,
     slippage_pips: float = 0.0,
     regime_column: Optional[str] = None,
     periods_per_year: Optional[float] = None,
 ) -> BacktestResult:
-    """Bar-by-bar backtest for a single strategy with multi-position support.
+    """Bar-by-bar backtest for a single strategy.
+
+    Default mode is now one-open-position-per-strategy (`max_positions_per_strategy=1`).
+    For legacy research/backfills that intentionally used multi-position behaviour,
+    pass a larger `max_positions_per_strategy` explicitly.
 
     Optimisation notes vs v1:
     - itertuples() replaces iterrows() — ~5x faster for large DataFrames.
@@ -289,13 +294,22 @@ def run_backtest(
         positions = remaining
 
         # ---- New entries ----
-        if len(positions) < max_positions_total:
+        strategy_open_positions = len(positions)
+        can_open_for_strategy = strategy_open_positions < max_positions_per_strategy
+        can_open_total = len(positions) < max_positions_total
+
+        if can_open_total and can_open_for_strategy:
             # Compute ATR once if needed
             atr_value = float(row["atr"]) if use_atr and has_atr_col else None
             regime_label = str(row[regime_column]) if has_regime_col else None
 
-            def _try_open(direction: str) -> None:
+            def _try_open(direction: str) -> bool:
                 nonlocal equity
+                if len(positions) >= max_positions_total:
+                    return False
+                if len(positions) >= max_positions_per_strategy:
+                    return False
+
                 if use_atr and atr_value is not None:
                     sl_dist = sl_atr_mult * atr_value
                     tp_dist = tp_atr_mult * atr_value
@@ -304,7 +318,7 @@ def run_backtest(
                     tp_dist = strategy.take_profit_pips * pip_size
 
                 if sl_dist <= 0:
-                    return
+                    return False
 
                 risk_amount = equity * (risk_per_trade_pct / 100.0)
                 size = risk_amount / sl_dist
@@ -325,14 +339,16 @@ def run_backtest(
                     "take_profit": tp,
                     "regime": regime_label,
                 })
+                return True
 
+            opened_position = False
             try:
                 if strategy.long_entry_rule and bool(eval(strategy.long_entry_rule, {"__builtins__": {}}, local_vars)):
-                    _try_open("long")
+                    opened_position = _try_open("long")
             except Exception:
                 pass
 
-            if len(positions) < max_positions_total:
+            if not opened_position and len(positions) < max_positions_total and len(positions) < max_positions_per_strategy:
                 try:
                     if strategy.short_entry_rule and bool(eval(strategy.short_entry_rule, {"__builtins__": {}}, local_vars)):
                         _try_open("short")

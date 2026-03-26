@@ -13,7 +13,7 @@ from ..logging_utils import get_logger
 from ..strategies.base import StrategyDefinition
 from ..strategies.pool import StrategyPool
 from ..execution.engine import execute_trade
-from ..execution.live_state_utils import can_open_new_trade
+from ..execution.live_state_utils import can_open_new_trade, strategy_has_open_position
 
 logger = get_logger(__name__)
 
@@ -154,6 +154,7 @@ def execute_signals_for_symbol(
     summary: Dict[str, bool] = {
         "blocked_daily_limits": False,
         "blocked_news_lockout": False,
+        "blocked_existing_position": False,
         "no_strategies_in_pool": False,
         "no_strategies_with_edge": False,
         "no_entry_active": False,
@@ -315,6 +316,23 @@ def execute_signals_for_symbol(
         for sig in sigs:
             strat = sig.strategy
             try:
+                if strategy_has_open_position(
+                    strategy_name=strat.name,
+                    symbol=symbol,
+                    timeframe=timeframe,
+                ):
+                    reason = "blocked_existing_position"
+                    logger.info(
+                        "Trade blocked (%s): strategy=%s symbol=%s timeframe=%s already has an open position",
+                        tier,
+                        strat.name,
+                        symbol,
+                        timeframe,
+                    )
+                    summary["blocked_existing_position"] = True
+                    results.append((sig, reason))
+                    continue
+
                 # ------------------------------------------------------------------ #
                 # SL/TP sizing                                                        #
                 #                                                                      #

@@ -153,6 +153,25 @@ def execute_trade(
     if stop_loss_pips <= 0:
         return ExecutionResult(success=False, reason=f"non-positive stop_loss_pips: {stop_loss_pips}")
 
+    try:
+        from .live_state_utils import strategy_has_open_position
+    except Exception:
+        logger.exception("execute_trade: failed to import strategy_has_open_position")
+        strategy_has_open_position = None
+
+    if strategy_has_open_position is not None and strategy_has_open_position(
+        strategy_name=strategy_name,
+        symbol=symbol,
+        timeframe=timeframe,
+    ):
+        return ExecutionResult(
+            success=False,
+            reason=(
+                "existing_open_position: "
+                f"strategy={strategy_name} symbol={symbol} timeframe={timeframe}"
+            ),
+        )
+
     tick = mt5.symbol_info_tick(symbol)
     if tick is None:
         return ExecutionResult(success=False, reason=f"no tick data for {symbol}")

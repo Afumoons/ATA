@@ -8,6 +8,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
+import MetaTrader5 as mt5
+
 from ..logging_utils import get_logger
 
 logger = get_logger(__name__)
@@ -104,6 +106,63 @@ def register_trade_pnl(pnl: float, current_equity: float) -> DailyState:
         state.daily_return_pct,
     )
     return state
+
+
+def strategy_has_open_position(
+    strategy_name: str,
+    symbol: str,
+    timeframe: str,
+) -> bool:
+    """Return True when MT5 already has an open position for this strategy slot.
+
+    Slot identity is strategy + symbol + timeframe. We prefer the persisted
+    ticket→strategy map (exact match), and fall back to parsing the MT5 comment
+    format used by execution.engine (`{timeframe}{symbol}{uid4}`) so the guard
+    still works across process restarts when possible.
+    """
+    try:
+        positions = mt5.positions_get(symbol=symbol)
+    except Exception:
+        logger.exception(
+            "strategy_has_open_position: mt5.positions_get failed for %s %s %s",
+            strategy_name,
+            symbol,
+            timeframe,
+        )
+        return False
+
+    if positions is None:
+        logger.warning(
+            "strategy_has_open_position: positions_get returned None for %s %s",
+            symbol,
+            timeframe,
+        )
+        return False
+
+    try:
+        from .signals import get_strategy_for_ticket  # avoid circular import
+    except Exception:
+        logger.exception("strategy_has_open_position: failed to import ticket map helper")
+        get_strategy_for_ticket = None
+
+    uid4 = strategy_name.split("_")[-1][:4] if "_" in strategy_name else strategy_name[-4:]
+    tf_prefix = "".join(c for c in timeframe if c.isalnum())
+    sym_prefix = "".join(c for c in symbol if c.isalnum())
+    comment_prefix = f"{tf_prefix}{sym_prefix}{uid4}"
+
+    for pos in positions:
+        ticket = getattr(pos, "ticket", None)
+        if get_strategy_for_ticket is not None and ticket is not None:
+            mapped = get_strategy_for_ticket(int(ticket))
+            if mapped == strategy_name:
+                return True
+
+        comment = str(getattr(pos, "comment", "") or "")
+        pos_symbol = str(getattr(pos, "symbol", "") or "")
+        if pos_symbol == symbol and comment.startswith(comment_prefix):
+            return True
+
+    return False
 
 
 def can_open_new_trade(

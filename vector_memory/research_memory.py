@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
 from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 from chromadb import PersistentClient
 
@@ -44,12 +44,33 @@ _SKIP_IN_DOCUMENT = {
     "mc_final_equity_mean", "mc_final_equity_p5", "mc_final_equity_p95",
 }
 
+POSITION_MODE_SINGLE = "single_position"
+POSITION_MODE_MULTI = "multi_position"
+POSITION_MODE_LEGACY = "legacy_multi_position"
+
 
 def _safe_scalar(v: Any) -> Optional[Any]:
     """Return v if ChromaDB-compatible scalar, else None."""
     if isinstance(v, (str, int, float, bool)):
         return v
     return None
+
+
+def _normalise_position_mode(value: Optional[Any]) -> str:
+    text = str(value or "").strip().lower()
+    if text in {
+        POSITION_MODE_SINGLE,
+        "single",
+        "single_open_position",
+        "one_position",
+        "one_strategy_one_open_position",
+    }:
+        return POSITION_MODE_SINGLE
+    if text in {POSITION_MODE_MULTI, "multi", "multi_position_legacy"}:
+        return POSITION_MODE_MULTI
+    if text in {POSITION_MODE_LEGACY, "legacy", "unknown", ""}:
+        return POSITION_MODE_LEGACY
+    return POSITION_MODE_SINGLE if "single" in text else POSITION_MODE_MULTI
 
 
 class ResearchMemory:
@@ -82,14 +103,25 @@ class ResearchMemory:
           similarity search quality.
         - Metadata values filtered to scalars — ChromaDB rejects nested
           dicts/lists in metadata fields.
+
+        Position-mode note:
+        - New research runs default to `single_position` mode.
+        - Legacy records can still be tagged explicitly as `multi_position`
+          or `legacy_multi_position` for backward compatibility.
         """
         doc_id = f"{strategy_name}:{symbol}:{timeframe}"
+        position_mode = _normalise_position_mode(
+            (extra or {}).get("position_mode")
+            or stats.get("position_mode")
+            or POSITION_MODE_SINGLE
+        )
 
         # Document text — scalar stats only, no nested dicts
         text_lines = [
             f"strategy={strategy_name}",
             f"symbol={symbol}",
             f"timeframe={timeframe}",
+            f"position_mode={position_mode}",
         ]
         for k, v in stats.items():
             if k in _SKIP_IN_DOCUMENT:
@@ -111,6 +143,8 @@ class ResearchMemory:
             "strategy_name": strategy_name,
             "symbol": symbol,
             "timeframe": timeframe,
+            "position_mode": position_mode,
+            "position_mode_rank": 0 if position_mode == POSITION_MODE_SINGLE else 1,
         }
         for k in _KEY_STATS:
             if k in stats:
@@ -126,7 +160,11 @@ class ResearchMemory:
 
         # upsert — idempotent, safe for repeated research cycles
         self.collection.upsert(ids=[doc_id], documents=[document], metadatas=[metadata])
-        logger.info("ResearchMemory: upserted result for %s", doc_id)
+        logger.info(
+            "ResearchMemory: upserted result for %s (position_mode=%s)",
+            doc_id,
+            position_mode,
+        )
 
     def query_similar(
         self,
@@ -184,6 +222,7 @@ class ResearchMemory:
         strategy: Optional[Dict[str, Any]] = None,
         text: Optional[str] = None,
         n_results: int = 10,
+        preferred_position_mode: str = POSITION_MODE_SINGLE,
     ) -> List[Dict[str, Any]]:
         """Convenience helper for candidate filtering and parent scoring.
 
@@ -191,6 +230,9 @@ class ResearchMemory:
         1. Explicit `text` argument
         2. `strategy` dict — builds rich query from entry/exit rules
         3. Fallback: minimal symbol/timeframe string
+
+        New runs default to preferring `single_position` neighbors. Legacy
+        neighbors are still returned, but sorted after preferred-mode results.
         """
         if text:
             query_text = text
@@ -218,24 +260,44 @@ class ResearchMemory:
         metadatas = res.get("metadatas", [[]])[0] or []
         distances = res.get("distances", [[]])[0] or []
 
+        preferred_mode = _normalise_position_mode(preferred_position_mode)
         neighbors: List[Dict[str, Any]] = []
         for i, meta in enumerate(metadatas):
+            raw_mode = meta.get("position_mode")
+            position_mode = _normalise_position_mode(raw_mode)
+            if raw_mode is None:
+                position_mode = POSITION_MODE_LEGACY
+
             neighbor: Dict[str, Any] = {
                 "id": ids[i] if i < len(ids) else None,
                 "distance": distances[i] if i < len(distances) else None,
                 "strategy_name": meta.get("strategy_name"),
                 "symbol": meta.get("symbol"),
                 "timeframe": meta.get("timeframe"),
+                "position_mode": position_mode,
+                "position_mode_preferred": position_mode == preferred_mode,
             }
             for k, v in meta.items():
                 if k.startswith("stat_"):
                     neighbor[k] = v
             neighbors.append(neighbor)
 
+        def _neighbor_sort_key(item: Dict[str, Any]) -> tuple[int, float]:
+            mode_rank = 0 if item.get("position_mode") == preferred_mode else 1
+            distance = item.get("distance")
+            try:
+                distance_value = float(distance)
+            except (TypeError, ValueError):
+                distance_value = float("inf")
+            return (mode_rank, distance_value)
+
+        neighbors.sort(key=_neighbor_sort_key)
+
         logger.info(
-            "ResearchMemory: query_similar_strategies %s/%s -> %d neighbors",
+            "ResearchMemory: query_similar_strategies %s/%s -> %d neighbors (preferred_mode=%s)",
             symbol,
             timeframe,
             len(neighbors),
+            preferred_mode,
         )
         return neighbors

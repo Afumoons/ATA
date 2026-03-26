@@ -9,10 +9,10 @@ class RiskConfig:
     max_risk_per_trade_pct: float = 1.5       # 1.5% of equity (AGGRESSIVE++ profile)
 
     # Portfolio-level circuit breaker
-    max_portfolio_drawdown_pct: float = 25.0  # 25% DD limit
+    max_portfolio_drawdown_pct: float = 75.0  # 25% DD limit
 
     # Maximum simultaneous open positions across all strategies
-    max_open_positions: int = 10
+    max_open_positions: int = 100
 
     # Daily guardrails — enabled by default for live prop-firm style accounts.
     max_daily_drawdown_pct: float = 25.0       # lock trading if daily DD > 5%

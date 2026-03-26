@@ -55,7 +55,9 @@ This README gives the high-level map. Each submodule has its own
 
 4. **Backtesting, Evaluation & Explainability (`backtests/`)**
    - `engine.py` runs bar-by-bar backtests, applying risk-based sizing and
-     trading costs, producing `BacktestResult` objects.
+     trading costs, producing `BacktestResult` objects. The default mode is now
+     **single-open-position per strategy** (`max_positions_per_strategy=1`),
+     with an explicit override available for legacy multi-position studies.
    - `explain.py` builds `strategy_explain` structures describing behaviour by
      regime, session, risk characteristics, stability, and news context.
    - `evaluation.py` turns stats + explain into a numeric score and
@@ -80,7 +82,8 @@ This README gives the high-level map. Each submodule has its own
      risk manager, and logs to `execution/trades.log`.
    - `signals.py` turns the latest features + active/exploratory strategies into
      live signals and calls `engine.execute_trade(...)` (subject to daily
-     limits and regime filters). It:
+     limits, regime filters, and the live **1-strategy-1-open-position** gate).
+     It:
      - enforces daily loss / trade-count caps via
        `live_state_utils.can_open_new_trade(...)`,
      - uses regime-specific edge (from `strategy_explain.regime_pnl`) to
@@ -131,10 +134,13 @@ This README gives the high-level map. Each submodule has its own
 8. **Research Memory (`vector_memory/`)**
    - `research_memory.py` wraps a Chroma `PersistentClient`.
    - `ResearchMemory.store_strategy_result(...)` stores evaluation outputs as
-     text + metadata for later semantic search.
+     text + metadata for later semantic search, including the research
+     `position_mode` so legacy multi-position results can be separated from the
+     newer single-position mode.
    - `ResearchMemory.query_similar(...)` and
      `query_similar_strategies(...)` power the parent bonus and candidate
-     veto logic in the research job.
+     veto logic in the research job, with new runs preferring
+     `single_position` neighbors when both modes exist.
 
 9. **Notifications & Webhook (`notifications/` & `webhook_server.py`)**
    - `notifications/whatsapp_notifier.py` builds WhatsApp messages (news
