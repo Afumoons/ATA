@@ -4,6 +4,7 @@ import json
 from dataclasses import dataclass, asdict, field
 from pathlib import Path
 from typing import Dict, List, Optional, Any
+from collections import Counter, defaultdict
 
 from ..logging_utils import get_logger
 from .base import StrategyDefinition
@@ -26,6 +27,16 @@ _STATUS_RANK = {
 }
 
 
+def _family_from_stats(stats: Dict[str, Any]) -> str:
+    strategy = (stats or {}).get("strategy") or {}
+    return str(
+        (strategy.get("family") if isinstance(strategy, dict) else None)
+        or (stats or {}).get("family")
+        or (stats or {}).get("playbook_type")
+        or "unknown"
+    )
+
+
 def _structural_fingerprint(strategy: StrategyDefinition) -> str:
     """Canonical fingerprint based on trading logic only (not name/UUID).
 
@@ -34,7 +45,10 @@ def _structural_fingerprint(strategy: StrategyDefinition) -> str:
     Used to prevent pool accumulating hundreds of identically-behaving
     strategies that waste compute and create hidden concentration risk.
     """
+    params = getattr(strategy, "params", {}) or {}
+    family = str(params.get("family") or params.get("playbook_type") or "unknown")
     return "|".join([
+        family,
         str(strategy.long_entry_rule or ""),
         str(strategy.short_entry_rule or ""),
         str(strategy.exit_rule or ""),
@@ -82,6 +96,7 @@ class StrategyPool:
             strat_dict = (rec.stats or {}).get("strategy") or {}
             if strat_dict:
                 fp = "|".join([
+                    str(strat_dict.get("family", "unknown") or "unknown"),
                     str(strat_dict.get("long_entry_rule", "") or ""),
                     str(strat_dict.get("short_entry_rule", "") or ""),
                     str(strat_dict.get("exit_rule", "") or ""),
@@ -195,10 +210,12 @@ class StrategyPool:
         recs.sort(key=lambda r: r.score, reverse=True)
         return recs[:limit]
 
-    def prune(self, max_inactive: int = _MAX_INACTIVE_STRATEGIES) -> int:
+    def prune(self, max_inactive: int = _MAX_INACTIVE_STRATEGIES, min_family_keep: int = 8) -> int:
         """Remove lowest-scoring inactive strategies beyond the size cap.
 
         Active and exploratory strategies are never pruned.
+        Inactive pruning is family-aware so the pool does not collapse into a
+        narrow subset of playbooks after repeated research cycles.
         Returns the number of records removed.
         """
         live = {n: r for n, r in self.strategies.items() if r.status in _LIVE_STATUSES}
@@ -207,16 +224,38 @@ class StrategyPool:
         if len(inactive) <= max_inactive:
             return 0
 
-        sorted_inactive = sorted(inactive.items(), key=lambda kv: kv[1].score, reverse=True)
-        keep = dict(sorted_inactive[:max_inactive])
-        pruned_names = set(inactive.keys()) - set(keep.keys())
+        family_buckets: Dict[str, List[tuple[str, StrategyRecord]]] = defaultdict(list)
+        for name, rec in inactive.items():
+            family_buckets[_family_from_stats(rec.stats)].append((name, rec))
 
+        keep: Dict[str, StrategyRecord] = {}
+        for family, items in family_buckets.items():
+            ranked = sorted(items, key=lambda kv: kv[1].score, reverse=True)
+            for name, rec in ranked[:min(min_family_keep, len(ranked))]:
+                keep[name] = rec
+
+        remaining_slots = max(0, max_inactive - len(keep))
+        if remaining_slots > 0:
+            leftovers: List[tuple[str, StrategyRecord]] = []
+            for family, items in family_buckets.items():
+                ranked = sorted(items, key=lambda kv: kv[1].score, reverse=True)
+                leftovers.extend(ranked[min(min_family_keep, len(ranked)):])
+            leftovers.sort(key=lambda kv: kv[1].score, reverse=True)
+            for name, rec in leftovers[:remaining_slots]:
+                keep[name] = rec
+
+        if len(keep) > max_inactive:
+            ranked_keep = sorted(keep.items(), key=lambda kv: kv[1].score, reverse=True)[:max_inactive]
+            keep = dict(ranked_keep)
+
+        pruned_names = set(inactive.keys()) - set(keep.keys())
         self.strategies = {**live, **keep}
         self._rebuild_fp_map()
 
+        kept_family_mix = dict(Counter(_family_from_stats(rec.stats) for rec in keep.values()))
         logger.info(
-            "Pool pruned %d inactive strategies (kept %d inactive + %d live = %d total)",
-            len(pruned_names), len(keep), len(live), len(self.strategies),
+            "Pool pruned %d inactive strategies (kept %d inactive + %d live = %d total) | inactive_family_mix=%s",
+            len(pruned_names), len(keep), len(live), len(self.strategies), kept_family_mix,
         )
         return len(pruned_names)
 

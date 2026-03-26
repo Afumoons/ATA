@@ -1,6 +1,7 @@
 from autonomous_trading_ai.backtests.evaluation import evaluate_strategy
 from autonomous_trading_ai.backtests.explain import _derive_routing_confidence
 from autonomous_trading_ai.strategies.generator import random_strategy
+from autonomous_trading_ai.strategies.pool import StrategyPool
 
 
 def test_routing_confidence_penalizes_leakage():
@@ -41,3 +42,36 @@ def test_core_m15_generation_produces_broader_families():
         strat = random_strategy('BTCUSDm', 'M15')
         families.add(strat.params.get('family'))
     assert len(families) >= 4
+
+
+def test_family_aware_pool_prune_preserves_diversity_floor():
+    pool = StrategyPool()
+    families = ['ma_trend', 'rsi_range', 'pullback_trend', 'vol_breakout', 'compression_breakout', 'session_breakout']
+
+    for family in families:
+        for idx in range(5):
+            strat = random_strategy('BTCUSDm', 'M15', family=family)
+            stats = {
+                'family': family,
+                'playbook_type': family,
+                'strategy': {
+                    'family': family,
+                    'playbook_type': family,
+                    'long_entry_rule': strat.long_entry_rule,
+                    'short_entry_rule': strat.short_entry_rule,
+                    'exit_rule': strat.exit_rule,
+                    'sl_atr_mult': strat.sl_atr_mult,
+                    'tp_atr_mult': strat.tp_atr_mult,
+                },
+            }
+            pool.upsert_strategy(strat, stats=stats, score=float(100 - idx), status='candidate')
+
+    pruned = pool.prune(max_inactive=18, min_family_keep=2)
+    assert pruned > 0
+    remaining_families = {}
+    for rec in pool.strategies.values():
+        fam = (rec.stats.get('strategy', {}) or {}).get('family', 'unknown')
+        remaining_families[fam] = remaining_families.get(fam, 0) + 1
+
+    for family in families:
+        assert remaining_families.get(family, 0) >= 2

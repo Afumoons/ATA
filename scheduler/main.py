@@ -454,7 +454,7 @@ def job_research_strategies() -> None:
                 logger.exception("Research error for %s: %s", strat.name, e)
 
     _apply_live_degradation(pool)
-    pool.prune(max_inactive=200)
+    pool.prune(max_inactive=200, min_family_keep=8)
     save_pool(pool)
     logger.info("Scheduler: job_research_strategies done")
 
