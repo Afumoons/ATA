@@ -95,6 +95,13 @@ It provides:
     - `score` – numeric score (e.g. from evaluation metrics).
     - `stats` – evaluation stats dict (including `strategy_explain`), not just
       flat floats.
+      This now includes explicit routing metadata under
+      `stats["strategy_explain"]["meta"]`, such as:
+      - `best_regime` / `worst_regime`
+      - `best_session` / `worst_session`
+      - `allowed_regimes` / `blocked_regimes`
+      - `allowed_sessions` / `blocked_sessions`
+      - `routing_confidence`
   - `StrategyPool` dataclass:
     - `strategies: Dict[str, StrategyRecord]` – keyed by strategy name.
     - `to_dict()` / `from_dict()` – JSON serialization helpers with defensive

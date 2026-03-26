@@ -89,8 +89,15 @@ It provides:
       - `stability` – sub-period Sharpe & returns, plus `sharpe_std`.
       - `news_behavior` – performance around news (when news features exist):
         high-impact window PnL, pre/post news performance, avoidance rate.
-      - `meta` – high-level characterization (best/worst regime, trend follower
-        vs range trader).
+      - `meta` – high-level characterization and explicit routing hints, including:
+        - `best_regime`, `worst_regime`
+        - `best_session`, `worst_session`
+        - `best_regime_return_pct`, `worst_regime_return_pct`
+        - `best_session_return_pct`, `worst_session_return_pct`
+        - `allowed_regimes`, `blocked_regimes`
+        - `allowed_sessions`, `blocked_sessions`
+        - `routing_confidence`
+        - trend follower vs range trader flags.
 
 - `walkforward.py`
   - Implements walk-forward validation over time-series data.

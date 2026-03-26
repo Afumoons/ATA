@@ -526,6 +526,22 @@ def job_research_strategies() -> None:
                     "tp_atr_mult": getattr(strat, "tp_atr_mult", ""),
                 }
 
+                routing_meta = ((eval_result.get("strategy_explain", {}) or {}).get("meta", {}) or {})
+                if routing_meta:
+                    logger.info(
+                        "Routing meta for %s: best_regime=%s worst_regime=%s best_session=%s worst_session=%s allowed_regimes=%s blocked_regimes=%s allowed_sessions=%s blocked_sessions=%s confidence=%.3f",
+                        strat.name,
+                        routing_meta.get("best_regime"),
+                        routing_meta.get("worst_regime"),
+                        routing_meta.get("best_session"),
+                        routing_meta.get("worst_session"),
+                        routing_meta.get("allowed_regimes", []),
+                        routing_meta.get("blocked_regimes", []),
+                        routing_meta.get("allowed_sessions", []),
+                        routing_meta.get("blocked_sessions", []),
+                        float(routing_meta.get("routing_confidence", 0.0) or 0.0),
+                    )
+
                 pool.upsert_strategy(
                     strategy=strat,
                     stats=eval_result,
