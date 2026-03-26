@@ -3,7 +3,7 @@ from __future__ import annotations
 import time as _time
 from datetime import datetime
 from pathlib import Path
-from collections import Counter
+from collections import Counter, defaultdict
 
 from apscheduler.schedulers.background import BackgroundScheduler
 
@@ -13,6 +13,7 @@ from ..data.collector_mt5 import initialize_mt5, shutdown_mt5, fetch_ohlc, save_
 from ..research.features import compute_features, save_features
 from ..research.regime import add_regime_column
 from ..research.features import load_features
+from ..strategies.live_manifest import load_live_manifest, manifest_entries_for_slot, strategy_pool_from_manifest_entries
 from ..strategies.pool import load_pool, save_pool
 from ..strategies.evolution import evolve_population, load_population, save_population
 from ..strategies.generator import load_strategy
@@ -197,6 +198,20 @@ def _apply_live_degradation(pool) -> None:
                 logger.exception("Failed to send strategy degradation WhatsApp alert")
 
 
+def _log_research_skip_summary(symbol: str, timeframe: str, skip_counts: dict[str, int], skip_samples: dict[str, list[str]]) -> None:
+    if not skip_counts:
+        return
+    ordered = {key: skip_counts[key] for key in sorted(skip_counts.keys())}
+    sample = {key: skip_samples.get(key, [])[:3] for key in ordered}
+    logger.info(
+        "Research skip summary for %s %s: counts=%s samples=%s",
+        symbol,
+        timeframe,
+        ordered,
+        sample,
+    )
+
+
 def _memory_is_clearly_bad(candidate, memory: ResearchMemory, symbol: str, timeframe: str) -> bool:
     try:
         params = getattr(candidate, "params", {}) or {}
@@ -347,10 +362,15 @@ def job_research_strategies() -> None:
 
         family_mix = Counter(str((getattr(s, 'params', {}) or {}).get('family', 'unknown')) for s in new_population)
         logger.info("Research family mix for %s %s: %s", symbol, TIMEFRAME, dict(family_mix))
+        research_skip_counts: dict[str, int] = defaultdict(int)
+        research_skip_samples: dict[str, list[str]] = defaultdict(list)
 
         for strat in new_population:
             try:
                 if _memory_is_clearly_bad(strat, memory, symbol, TIMEFRAME):
+                    research_skip_counts["memory_veto"] += 1
+                    if len(research_skip_samples["memory_veto"]) < 3:
+                        research_skip_samples["memory_veto"].append(strat.name)
                     continue
 
                 feat.attrs["strategy_params"] = getattr(strat, "params", {}) or {}
@@ -359,13 +379,17 @@ def job_research_strategies() -> None:
 
                 num_trades = float(eval_result.get("num_trades", 0.0) or 0.0)
                 if num_trades < 60:
-                    logger.info("Skipping %s — low trade count (%.0f < 60)", strat.name, num_trades)
+                    research_skip_counts["low_trade_count"] += 1
+                    if len(research_skip_samples["low_trade_count"]) < 3:
+                        research_skip_samples["low_trade_count"].append(f"{strat.name}:{num_trades:.0f}")
                     continue
 
                 pf = float(eval_result.get("profit_factor", 0.0) or 0.0)
                 sharpe = float(eval_result.get("sharpe_ratio", 0.0) or 0.0)
                 if pf < 1.10 or sharpe < 0.20:
-                    logger.info("Skipping %s — weak perf (pf=%.2f sharpe=%.2f)", strat.name, pf, sharpe)
+                    research_skip_counts["weak_perf"] += 1
+                    if len(research_skip_samples["weak_perf"]) < 3:
+                        research_skip_samples["weak_perf"].append(f"{strat.name}:pf={pf:.2f},sh={sharpe:.2f}")
                     continue
 
                 wf = walk_forward_test(feat, strat, **bt_kwargs)
@@ -388,19 +412,29 @@ def job_research_strategies() -> None:
                 risk_behavior = explain.get("risk_behavior", {}) or {}
 
                 if wf_sharpe < 0.20:
-                    logger.info("Skipping %s — weak WF sharpe (%.3f < 0.20)", strat.name, wf_sharpe)
+                    research_skip_counts["weak_wf_sharpe"] += 1
+                    if len(research_skip_samples["weak_wf_sharpe"]) < 3:
+                        research_skip_samples["weak_wf_sharpe"].append(f"{strat.name}:{wf_sharpe:.3f}")
                     continue
                 if mc_p5 <= 0.0:
-                    logger.info("Skipping %s — MC p5 terminal pnl not positive (%.2f)", strat.name, mc_p5)
+                    research_skip_counts["mc_p5_non_positive"] += 1
+                    if len(research_skip_samples["mc_p5_non_positive"]) < 3:
+                        research_skip_samples["mc_p5_non_positive"].append(f"{strat.name}:{mc_p5:.2f}")
                     continue
                 if mc_dd_p95 > 2500.0:
-                    logger.info("Skipping %s — MC p95 drawdown too high (%.2f)", strat.name, mc_dd_p95)
+                    research_skip_counts["mc_dd_too_high"] += 1
+                    if len(research_skip_samples["mc_dd_too_high"]) < 3:
+                        research_skip_samples["mc_dd_too_high"].append(f"{strat.name}:{mc_dd_p95:.2f}")
                     continue
                 if float(risk_behavior.get("exit_rule_ratio", 0.0) or 0.0) > 0.85:
-                    logger.info("Skipping %s — too dependent on exit_rule", strat.name)
+                    research_skip_counts["exit_rule_dependency"] += 1
+                    if len(research_skip_samples["exit_rule_dependency"]) < 3:
+                        research_skip_samples["exit_rule_dependency"].append(strat.name)
                     continue
                 if float(risk_behavior.get("avg_holding_bars", 0.0) or 0.0) < 1.0:
-                    logger.info("Skipping %s — holding period too short/noisy", strat.name)
+                    research_skip_counts["holding_too_short"] += 1
+                    if len(research_skip_samples["holding_too_short"]) < 3:
+                        research_skip_samples["holding_too_short"].append(strat.name)
                     continue
 
                 trend_ret = (
@@ -453,6 +487,8 @@ def job_research_strategies() -> None:
             except Exception as e:
                 logger.exception("Research error for %s: %s", strat.name, e)
 
+        _log_research_skip_summary(symbol, TIMEFRAME, research_skip_counts, research_skip_samples)
+
     _apply_live_degradation(pool)
     pool.prune(max_inactive=200, min_family_keep=8)
     save_pool(pool)
@@ -462,6 +498,7 @@ def job_research_strategies() -> None:
 def job_execute_signals() -> None:
     logger.info("Scheduler: job_execute_signals start")
     pool = load_pool()
+    live_manifest = load_live_manifest()
     risk_perc = min(2.0, risk_config.max_risk_per_trade_pct)
 
     for symbol in MANAGED_SYMBOLS:
@@ -482,12 +519,26 @@ def job_execute_signals() -> None:
         except Exception:
             pass
 
-        live_tier_strats = [
-            rec for rec in pool.strategies.values()
-            if rec.symbol == symbol and rec.timeframe == TIMEFRAME and rec.status in {"active", "exploratory"}
-        ]
+        manifest_entries = manifest_entries_for_slot(live_manifest, symbol=symbol, timeframe=TIMEFRAME)
+        manifest_pool = strategy_pool_from_manifest_entries(manifest_entries)
+        live_tier_strats = list(manifest_pool.strategies.values())
+        manifest_loaded = bool(live_tier_strats)
+
         if not live_tier_strats:
-            logger.warning("No active/exploratory strategies in pool for %s %s — skipping execution", symbol, TIMEFRAME)
+            live_tier_strats = [
+                rec for rec in pool.strategies.values()
+                if rec.symbol == symbol and rec.timeframe == TIMEFRAME and rec.status in {"active", "exploratory"}
+            ]
+            if live_tier_strats:
+                logger.warning(
+                    "Live manifest missing/stale for %s %s — falling back to pool scan (%d live strategies)",
+                    symbol,
+                    TIMEFRAME,
+                    len(live_tier_strats),
+                )
+
+        if not live_tier_strats:
+            logger.warning("No active/exploratory strategies in runtime set for %s %s — skipping execution", symbol, TIMEFRAME)
             continue
 
         strats_by_wf = sorted(
@@ -595,6 +646,15 @@ def job_execute_signals() -> None:
         from ..strategies.pool import StrategyPool
         filtered_pool = StrategyPool()
         filtered_pool.strategies = {r.name: r for r in final_strats}
+
+        if manifest_loaded:
+            logger.info(
+                "Execution runtime source %s %s: manifest entries=%d final=%d",
+                symbol,
+                TIMEFRAME,
+                len(manifest_entries),
+                len(final_strats),
+            )
 
         results, summary = execute_signals_for_symbol(symbol, TIMEFRAME, feat, filtered_pool, risk_perc=risk_perc)
 

@@ -7,12 +7,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Tuple, Any, Dict, Optional
 
-from collections import Counter
+from collections import Counter, defaultdict
 
 import pandas as pd
 
 from ..logging_utils import get_logger
 from ..strategies.base import StrategyDefinition
+from ..strategies.live_manifest import strategy_definition_from_manifest_entry
 from ..strategies.pool import StrategyPool
 from ..execution.engine import execute_trade
 from ..execution.live_state_utils import can_open_new_trade, strategy_has_open_position
@@ -134,6 +135,33 @@ def generate_signals_for_row(
         if short_hit:
             signals.append(Signal(strategy=strat, direction="short"))
     return signals
+
+
+def _log_gate_summary(
+    gate_name: str,
+    symbol: str,
+    timeframe: str,
+    context_label: str,
+    tier: str,
+    before_count: int,
+    after_count: int,
+    blocked_items: List[str],
+) -> None:
+    if not blocked_items:
+        return
+    logger.info(
+        "%s %s %s [%s %s]: %d → %d passed | blocked=%s sample=%s",
+        gate_name,
+        symbol,
+        timeframe,
+        context_label,
+        tier,
+        before_count,
+        after_count,
+        dict(Counter(item.split(":", 1)[1] for item in blocked_items)),
+        blocked_items[:5],
+    )
+
 
 
 def _regime_edge(stats: Dict[str, Any], regime_labels: List[str]) -> tuple[float, str]:
@@ -376,16 +404,15 @@ def execute_signals_for_symbol(
 
         if session_blocked:
             summary["blocked_session_gate"] = True
-            logger.info(
-                "Session gate %s %s (%s) [%s]: %d → %d passed | blocked=%s sample=%s",
+            _log_gate_summary(
+                "Session gate",
                 symbol,
                 timeframe,
                 current_session,
                 tier,
                 len(records),
                 len(session_eligible),
-                dict(Counter(item.split(":", 1)[1] for item in session_blocked)),
-                session_blocked[:5],
+                session_blocked,
             )
 
         if not session_eligible:
@@ -402,17 +429,15 @@ def execute_signals_for_symbol(
 
         if confidence_blocked:
             summary["blocked_routing_confidence"] = True
-            logger.info(
-                "Routing confidence gate %s %s (%s/%s) [%s]: %d → %d passed | blocked=%s sample=%s",
+            _log_gate_summary(
+                "Routing confidence gate",
                 symbol,
                 timeframe,
-                current_regime,
-                current_session,
+                f"{current_regime}/{current_session}",
                 tier,
                 len(session_eligible),
                 len(confidence_eligible),
-                dict(Counter(item.split(":", 1)[1] for item in confidence_blocked)),
-                confidence_blocked[:5],
+                confidence_blocked,
             )
 
         if not confidence_eligible:
@@ -429,18 +454,15 @@ def execute_signals_for_symbol(
 
         if volatility_blocked:
             summary["blocked_volatility_gate"] = True
-            logger.info(
-                "Volatility gate %s %s (%s/%s/%s) [%s]: %d → %d passed | blocked=%s sample=%s",
+            _log_gate_summary(
+                "Volatility gate",
                 symbol,
                 timeframe,
-                current_regime,
-                context.regime_class,
-                context.vol_regime,
+                f"{current_regime}/{context.regime_class}/{context.vol_regime}",
                 tier,
                 len(confidence_eligible),
                 len(volatility_eligible),
-                dict(Counter(item.split(":", 1)[1] for item in volatility_blocked)),
-                volatility_blocked[:5],
+                volatility_blocked,
             )
 
         if not volatility_eligible:
@@ -466,17 +488,15 @@ def execute_signals_for_symbol(
 
         if regime_policy_blocked:
             summary["blocked_regime_gate"] = True
-            logger.info(
-                "Regime policy gate %s %s (%s/%s) [%s]: %d → %d passed | blocked=%s sample=%s",
+            _log_gate_summary(
+                "Regime policy gate",
                 symbol,
                 timeframe,
-                context.candidate_regime_labels,
-                current_session,
+                f"{context.candidate_regime_labels}/{current_session}",
                 tier,
                 len(volatility_eligible),
                 len(regime_eligible),
-                dict(Counter(item.split(":", 1)[1] for item in regime_policy_blocked)),
-                regime_policy_blocked[:5],
+                regime_policy_blocked,
             )
 
         if not regime_eligible:
@@ -484,36 +504,43 @@ def execute_signals_for_symbol(
 
         threshold = ACTIVE_REGIME_EDGE_THRESHOLD if tier == "active" else EXPLORATORY_REGIME_EDGE_THRESHOLD
         scored: List[Tuple[float, Any]] = []
+        edge_selected_labels: Dict[str, str] = {}
         for rec in regime_eligible:
             edge, edge_label = _regime_edge(rec.stats or {}, context.candidate_regime_labels)
             scored.append((edge, rec))
-            logger.info(
-                "Regime edge: symbol=%s timeframe=%s regime=%s candidates=%s selected=%s class=%s type=%s conf=%.2f vol=%s session=%s strategy=%s tier=%s edge=%.3f threshold=%.1f",
-                symbol,
-                timeframe,
-                current_regime,
-                context.candidate_regime_labels,
-                edge_label or selected_regime_labels.get(rec.name, "unknown"),
-                context.regime_class,
-                context.regime_type,
-                context.regime_confidence,
-                context.vol_regime,
-                current_session,
-                rec.name,
-                tier,
-                edge,
-                threshold,
-            )
+            edge_selected_labels[rec.name] = edge_label or selected_regime_labels.get(rec.name, "unknown")
 
         kept = sorted([(e, r) for e, r in scored if e > threshold], key=lambda x: x[0], reverse=True)
         filtered = [r for _, r in kept]
 
-        if len(filtered) != len(regime_eligible):
-            blocked = [r.name for e, r in scored if e <= threshold]
-            summary["blocked_regime_gate"] = True
+        if scored:
+            top_edges = [
+                f"{rec.name}:{edge:.3f}@{edge_selected_labels.get(rec.name, 'unknown')}"
+                for edge, rec in sorted(scored, key=lambda x: x[0], reverse=True)[:5]
+            ]
             logger.info(
-                "Regime edge filter %s %s (%s/%s) [%s]: %d → %d passed | blocked: %s",
-                symbol, timeframe, current_regime, current_session, tier, len(regime_eligible), len(filtered), blocked,
+                "Regime edge summary %s %s [%s]: threshold=%.2f eligible=%d kept=%d top=%s",
+                symbol,
+                timeframe,
+                tier,
+                threshold,
+                len(regime_eligible),
+                len(filtered),
+                top_edges,
+            )
+
+        if len(filtered) != len(regime_eligible):
+            blocked = [f"{r.name}:{e:.3f}" for e, r in scored if e <= threshold]
+            summary["blocked_regime_gate"] = True
+            _log_gate_summary(
+                "Regime edge filter",
+                symbol,
+                timeframe,
+                f"{current_regime}/{current_session}",
+                tier,
+                len(regime_eligible),
+                len(filtered),
+                blocked,
             )
 
         if not filtered and scored and tier == "exploratory":
@@ -544,11 +571,44 @@ def execute_signals_for_symbol(
 
     def _load_strats(records):
         out = []
+        fallback_count = 0
         for rec in records:
             try:
+                strategy_payload = ((rec.stats or {}).get("strategy") or {})
+                has_manifest_payload = bool(
+                    strategy_payload.get("long_entry_rule")
+                    or strategy_payload.get("short_entry_rule")
+                    or strategy_payload.get("params")
+                )
+                if has_manifest_payload:
+                    entry = {
+                        "name": rec.name,
+                        "symbol": rec.symbol,
+                        "timeframe": rec.timeframe,
+                        "long_entry_rule": strategy_payload.get("long_entry_rule"),
+                        "short_entry_rule": strategy_payload.get("short_entry_rule"),
+                        "exit_rule": strategy_payload.get("exit_rule"),
+                        "stop_loss_pips": strategy_payload.get("stop_loss_pips"),
+                        "take_profit_pips": strategy_payload.get("take_profit_pips"),
+                        "sl_atr_mult": strategy_payload.get("sl_atr_mult"),
+                        "tp_atr_mult": strategy_payload.get("tp_atr_mult"),
+                        "params": strategy_payload.get("params") or {},
+                    }
+                    out.append(strategy_definition_from_manifest_entry(entry))
+                    continue
+
                 out.append(load_strategy(base_dir / f"{rec.name}.json"))
+                fallback_count += 1
             except Exception:
                 logger.exception("Failed to load strategy %s", rec.name)
+        if fallback_count:
+            logger.info(
+                "Execution strategy payload fallback for %s %s: %d/%d loaded from generated JSON",
+                symbol,
+                timeframe,
+                fallback_count,
+                len(records),
+            )
         return out
 
     active_strategies = _load_strats(active_records)

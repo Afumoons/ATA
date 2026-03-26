@@ -282,3 +282,15 @@ def save_pool(pool: StrategyPool) -> None:
     with POOL_STATE_PATH.open("w", encoding="utf-8") as f:
         json.dump(pool.to_dict(), f, indent=2)
     logger.info("Pool saved: %d strategies", len(pool.strategies))
+
+    try:
+        from .live_manifest import rebuild_runtime_artifacts
+
+        artifacts = rebuild_runtime_artifacts(pool)
+        logger.info(
+            "Runtime artifacts rebuilt after pool save: manifest=%d index=%d",
+            int((artifacts.get("manifest") or {}).get("entry_count", 0) or 0),
+            int((artifacts.get("index") or {}).get("entry_count", 0) or 0),
+        )
+    except Exception as e:
+        logger.exception("Failed to rebuild runtime artifacts after pool save: %s", e)
