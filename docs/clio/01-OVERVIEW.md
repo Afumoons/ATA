@@ -32,6 +32,8 @@ Out of scope (current implemented design):
 ## 3. Core Concepts
 
 - **Signal** – A structured description of why a trade is considered (indicator state, pattern, context).
+- **Specialist strategy** – A strategy intended to perform best in a **specific regime / session / volatility context**, not universally.
+- **Routing layer** – The logic that decides **which specialist strategies are allowed to trade right now** based on current regime, session, volatility, and confidence.
 - **Trade plan** – A proposed order: symbol, side, size, entry, SL/TP, leverage, time‑in‑force, etc.
 - **Risk rule** – A constraint that can block or shrink a trade (max % equity per trade, max leverage, session time rules, etc.).
 - **Execution** – The concrete interaction with an exchange/broker API.

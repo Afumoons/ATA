@@ -36,29 +36,34 @@ Out of scope for this roadmap:
 
 The system does **not** primarily suffer from a lack of strategies.
 
-The main issue is:
+The intended design is also **not** to find one universal strategy that works everywhere.
 
-> The current M15 system still lacks **robust edge across regimes and sessions**.
+The correct design target is:
 
-In practice, many strategies appear good only under a subset of conditions (often specific regimes or sessions), and the current pipeline still lets too many fragile or thin-edge strategies survive into the pool.
+> Build a portfolio of **specialist strategies** that are strong in specific regimes / sessions, then use a disciplined **routing layer** to activate only the right specialists in the right context.
+
+In practice, many strategies already appear strongest only under a subset of conditions (specific regimes, sessions, or volatility states). That is **acceptable and expected**.
+
+The real problem is that the current pipeline still does not route and gate those specialists sharply enough, and it still lets too many fragile or thin-edge strategies survive into the pool.
 
 ---
 
 ## Biggest M15 Bottlenecks
 
-### 1. Regime robustness is still weak
+### 1. Regime specialist routing is still too weak
 
 Observed pattern:
 - Many strategies are strongest in `trending_down`.
 - Several degrade badly in `high_vol` and some `ranging` conditions.
-- Some strategies are only attractive because one regime dominates the sample.
+- Some strategies are clearly regime specialists, but the system does not yet fully treat them as such.
 
 Why this matters:
-- This creates conditional profitability rather than broad resilience.
-- Live performance can degrade quickly when market structure rotates.
+- Specialist behavior is expected.
+- The failure mode is not that a strategy is regime-specific; the failure mode is letting a regime-specific strategy trade outside its edge zone.
+- Live performance degrades when routing is too permissive or too coarse.
 
 Interpretation:
-- The system currently finds **regime-local edges** more easily than **regime-robust edges**.
+- The system is already discovering **regime-local specialists**, but the orchestration layer is not yet strong enough to deploy them with enough precision.
 
 ---
 
@@ -126,18 +131,19 @@ Interpretation:
 
 ---
 
-### 6. Acceptance pressure is still too permissive for thin-edge strategies
+### 6. Acceptance pressure is still too permissive for weak specialists and noisy candidates
 
 Observed pattern:
 - Many strategies in the pool still cluster around modest profit factor / moderate instability.
 - Some accepted exploratory strategies are useful for learning, but others may simply add noise.
+- Not every specialist is a good specialist; some are just overfit or too fragile.
 
 Why this matters:
-- Thin-edge strategies can consume execution bandwidth, risk budget, and operator attention.
-- They also pollute the evolutionary pool and make the system feel “busy” instead of selective.
+- Weak specialists still consume execution bandwidth, risk budget, and operator attention.
+- They also pollute the evolutionary pool and make routing less trustworthy.
 
 Interpretation:
-- Pool governance still needs to become more brutal, especially for M15 production focus.
+- Pool governance still needs to become more selective, not to force universal robustness, but to ensure each surviving specialist has a credible and well-bounded role.
 
 ---
 
@@ -159,41 +165,37 @@ Interpretation:
 
 ## Priority Roadmap
 
-## Phase A – Tighten M15 selection quality (highest priority)
+## Phase A – Build a stronger specialist routing layer (highest priority)
 
 ### Goal
-Reduce fragile strategies in the pool and make the live set more selective.
+Treat regime/session specialization as a first-class design feature, then route strategies more precisely.
 
 ### Actions
 
-1. **Raise acceptance pressure for M15-focused promotion**
-   - Keep `exploratory` for learning, but make `active` significantly harder to reach.
-   - Tighten standards around:
-     - walk-forward quality,
-     - session leakage,
-     - regime concentration,
-     - drawdown asymmetry,
-     - expectancy after costs.
+1. **Make specialist intent explicit in governance**
+   - Treat “best in one regime, weak elsewhere” as acceptable **if** the strategy has a clear bounded role.
+   - Stop implicitly rewarding only broad-average behavior.
 
-2. **Add explicit penalties for regime imbalance**
-   - Penalize strategies that are heavily dependent on a single regime while materially negative elsewhere.
-   - Example:
-     - a strategy that is strong only in `trending_down` but sharply negative in `high_vol` should be capped at `exploratory` unless filters isolate its trade context.
+2. **Add explicit specialist metadata**
+   - Promote fields such as:
+     - `best_regime`
+     - `worst_regime`
+     - `best_session`
+     - `worst_session`
+     - volatility preference
+     - routing confidence
 
-3. **Add explicit penalties for session leakage**
-   - Penalize strategies with one strong session and one deeply negative session.
-   - Make this part of evaluation, not just interpretation.
+3. **Strengthen “do not trade” behavior**
+   - If there is no clear specialist with edge in the current context, the system should stay flat.
+   - Weak or ambiguous routing should default to inaction, not forced participation.
 
 ### Deliverable
-- Fewer but stronger `active` strategies.
-- Cleaner distinction between:
-  - `active` = robust enough for normal risk,
-  - `exploratory` = interesting but conditional,
-  - `candidate/disabled` = not ready.
+- The system becomes a **specialist portfolio + routing engine**, not an accidental search for universal strategies.
+- Specialist strategies are easier to interpret, categorize, and deploy safely.
 
 ---
 
-## Phase B – Make live trading more session-aware
+## Phase B – Make live trading session-aware
 
 ### Goal
 Stop allowing weak sessions to dilute strong-session edge.
@@ -239,7 +241,11 @@ Bring live decision quality closer to the richness of the research layer.
    - Avoid flattening `high_vol` too aggressively into simple fallback logic.
    - Treat volatile trend and volatile non-trend contexts differently.
 
-3. **Apply confidence-aware throttling**
+3. **Route specialists only to their intended edge zone**
+   - A `trending_down` specialist should not be treated as generally eligible.
+   - A range specialist should not be trusted automatically during high-vol trend expansion.
+
+4. **Apply confidence-aware throttling**
    - If regime confidence is weak, either:
      - reduce execution aggressiveness,
      - or require stronger strategy edge to trade.
@@ -247,6 +253,7 @@ Bring live decision quality closer to the richness of the research layer.
 ### Deliverable
 - A live layer that uses regime context more precisely.
 - Lower mismatch between research richness and execution logic.
+- Better deployment of specialist strategies.
 
 ---
 
@@ -341,7 +348,7 @@ Reduce fragility caused by overly generic exit-rule behavior.
 
 If improvements must be done in 80/20 order, do them in this sequence:
 
-1. **Phase A – Tighten M15 selection quality**
+1. **Phase A – Build a stronger specialist routing layer**
 2. **Phase B – Session-aware live filtering**
 3. **Phase C – Sharpen regime-aware live filtering**
 4. **Phase D – Improve backtest realism / reporting**
@@ -349,8 +356,9 @@ If improvements must be done in 80/20 order, do them in this sequence:
 6. **Phase F – Improve exit design**
 
 Reason:
-- Better filtering and governance will likely create more impact, faster, than adding more strategy templates immediately.
-- The system first needs to become more selective before it becomes more expansive.
+- The highest leverage now is not searching for universal robustness.
+- The highest leverage is correctly **routing specialist strategies** to the contexts where they actually have edge.
+- Better routing and gating should come before expanding playbook count.
 
 ---
 

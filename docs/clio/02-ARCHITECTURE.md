@@ -62,6 +62,9 @@ Notes:
   execution should not pyramid the same strategy while its prior position is
   still open, unless a legacy/migration path explicitly opts back into
   multi-position behaviour.
+- Signal quality should be interpreted together with the **routing layer**:
+  the system should prefer a portfolio of specialist strategies and then decide
+  which specialists are eligible under the current regime/session context.
 
 ### 2.3 Trade Planner
 

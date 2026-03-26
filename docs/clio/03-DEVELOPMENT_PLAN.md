@@ -32,9 +32,13 @@ as the current execution-priority roadmap.
      per-trade risk, so the system can gather live data without exposing
      the account to large drawdowns.
 
-3. **Regime-aware behavior**
+3. **Regime-aware specialist behavior**
    - Use `regime` information and `strategy_explain.regime_pnl` to select
      strategies that have edge in the **current** market regime.
+   - Do not assume the goal is universal robustness across all regimes.
+   - Prefer a portfolio of **specialist strategies** plus a stricter routing
+     layer that activates them only in the contexts where they historically
+     have edge.
 
 4. **Iterative development**
    - Implement improvements in **phases**.
