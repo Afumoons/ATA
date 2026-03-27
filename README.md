@@ -1,204 +1,246 @@
 # autonomous_trading_ai – System Overview
 
-This package is a **full-stack autonomous trading agent** built around:
+`autonomous_trading_ai` is a modular autonomous trading research and execution
+system built around:
 
-- MetaTrader 5 for execution and data.
-- A research loop that evolves strategies over time.
-- Risk-aware live execution with daily guardrails and a circuit breaker.
-- Vector-backed research memory for analysis.
-- Optional **news-aware behaviour and WhatsApp alerts** via an OpenClaw
-  webhook.
+- **MT5 market data and order execution**
+- **feature engineering + structured regime detection**
+- **strategy generation, evaluation, and pool management**
+- **risk-aware live routing with daily guardrails and a portfolio circuit breaker**
+- **vector-backed research memory**
+- **optional macro-news awareness and WhatsApp alerts**
 
-This README gives the high-level map. Each submodule has its own
-`README.md` with more detail.
+This README is the **top-level map** for the project after **pass 3**. Each
+major submodule also has its own `README.md` with implementation-level detail.
 
-## High-Level Pipeline
+## Current Architecture
 
-1. **Data Ingestion & News (`data/`)**
-   - `collector_mt5.py` connects to MT5 and fetches OHLCV for configured
-     symbols/timeframes.
-   - Raw bars are saved under `data/raw/{symbol}_{timeframe}_ohlc.parquet` with
-     **UTC-aware** timestamps.
-   - `news_collector.py` fetches macro news events from Forex Factory, filters
-     for gold-relevant events, and stores them in
-     `data/raw/news_events.parquet` for use by the research and
-     notifications modules.
+The project is organized into a few core loops:
 
-2. **Feature, News Context & Regime Research (`research/`)**
-   - `features.py` turns raw OHLC into feature-rich datasets:
-     RSI, ATR, volatility, ATR-normalised trend strength, Ichimoku,
-     Fibonacci zones, and **macro news features** (impact level, time to
-     nearest event, news windows, and lockout flags).
-   - `regime.py` classifies bars into market regimes (trend/range/vol spike,
-     event-driven, etc.) using an ATR-normalised `trend_strength` scale and
-     volatility quantiles. It also labels *event-driven* regimes around
-     high-impact news.
-   - A legacy `regime` label is maintained for backwards compatibility.
-   - Feature files live under
-     `data/features/{symbol}_{timeframe}_features.parquet`.
+1. **Collect market + macro data**
+   - `data/collector_mt5.py` fetches OHLCV from MetaTrader 5.
+   - `data/news_collector.py` fetches and normalizes macro calendar events from
+     Forex Factory.
 
-3. **Strategy Generation & Pool (`strategies/`)**
-   - `base.py` defines the `StrategyDefinition` config (rules + SL/TP + params,
-     including optional ATR-based SL/TP multipliers).
-   - `generator.py` creates MA/RSI/Ichimoku/Fibonacci-biased strategies as JSON
-     files in `strategies/generated/`, with metadata describing each strategy
-     family and intended regime.
-   - `evolution.py` evolves strategies over time using an elite + mutation +
-     crossover scheme, optionally guided by **research memory**: parent scores
-     get small bonuses/penalties based on how similar strategies have behaved
-     historically on the same symbol/timeframe.
-   - `pool.py` maintains the persistent `StrategyPool` in
-     `strategies/pool_state.json`, tracking stats, scores, and statuses
-     (`active` / `exploratory` / `candidate` / `disabled` / `retired`). It is
-     updated both by research cycles and by live-performance-based degradation
-     rules, and prunes old inactive strategies to avoid unbounded growth.
+2. **Build research-grade features and regimes**
+   - `research/features.py` computes RSI, ATR, volatility, moving averages,
+     Ichimoku/cloud context, Fibonacci zones, and optional news-aware fields.
+   - `research/regime.py` adds both:
+     - a legacy `regime` label for compatibility, and
+     - structured regime metadata such as `regime_class`, `regime_type`,
+       `regime_confidence`, and `vol_regime`.
 
-4. **Backtesting, Evaluation & Explainability (`backtests/`)**
-   - `engine.py` runs bar-by-bar backtests, applying risk-based sizing and
-     trading costs, producing `BacktestResult` objects. The default mode is now
-     **single-open-position per strategy** (`max_positions_per_strategy=1`),
-     with an explicit override available for legacy multi-position studies.
-   - `explain.py` builds `strategy_explain` structures describing behaviour by
-     regime, session, risk characteristics, stability, and news context.
-   - `evaluation.py` turns stats + explain into a numeric score and
-     acceptance decision, including bonus/penalty components based on
-     regime/session/news behaviour.
-   - `walkforward.py` and `monte_carlo.py` provide robustness checks
-     (out-of-sample and PnL stress tests).
+3. **Generate, evolve, and manage strategy inventory**
+   - `strategies/generator.py` creates new strategy definitions.
+   - `strategies/evolution.py` mutates/crosses higher-scoring strategies.
+   - `strategies/pool.py` persists the long-lived strategy pool and status model.
 
-5. **Risk Management (`risk/`)**
-   - `manager.py` enforces account-level rules before any trade is sent:
-     - max risk % per trade,
-     - max concurrent open positions,
-     - max portfolio drawdown vs `equity_peak`.
-   - Daily loss / trade caps are handled separately in
-     `execution/live_state_utils.py` and enforced via
-     `execution/signals.execute_signals_for_symbol(...)` using `risk_config`.
-   - Risk thresholds live in `config.py` and are shared across backtests and
-     live execution.
+4. **Backtest and evaluate candidates**
+   - `backtests/engine.py` simulates bar-by-bar trading.
+   - `backtests/explain.py` builds structured `strategy_explain` outputs.
+   - `backtests/evaluation.py`, `walkforward.py`, and `monte_carlo.py`
+     score and stress-test candidates.
 
-6. **Live Execution, Daily State & Circuit Breaker (`execution/`)**
-   - `engine.py` is the MT5 execution layer; it sizes trades, calls the
-     risk manager, and logs to `execution/trades.log`.
-   - `signals.py` turns the latest features + active/exploratory strategies into
-     live signals and calls `engine.execute_trade(...)` (subject to daily
-     limits, regime filters, and the live **1-strategy-1-open-position** gate).
-     It:
-     - enforces daily loss / trade-count caps via
-       `live_state_utils.can_open_new_trade(...)`,
-     - uses regime-specific edge (from `strategy_explain.regime_pnl`) to
-       filter strategies per current regime,
-     - uses **two risk tiers** (normal risk for `active`, reduced risk for
-       `exploratory`).
-   - `live_state_utils.py` maintains per-day metrics in `execution/live_state.json`:
-     `daily_pnl`, `daily_return_pct`, `trades_today`, and a daily lockout flag.
-   - `live_monitor.py` tracks equity history in `execution/equity_history.json`,
-     computes drawdown, wires **real closed MT5 deals** into `DailyState` via
-     `closed_trades_state.json`, updates per-strategy live stats, and enforces
-     a portfolio-level **circuit breaker** using
-     `risk_config.max_portfolio_drawdown_pct` (disabling all `active`
-     strategies when the drawdown limit is breached).
-   - `strategy_live_stats.py` maintains aggregated **per-strategy live PnL**
-     (including a rolling window of recent PnLs) in
-     `execution/strategy_live_stats.json`, which is used for **strategy
-     degradation detection**.
+5. **Route live signals through risk controls**
+   - `execution/signals.py` turns features + pool state into live decisions.
+   - `execution/engine.py` sends validated orders to MT5.
+   - `execution/live_state_utils.py`, `live_monitor.py`, `live_observer.py`,
+     and `strategy_live_stats.py` maintain state, live PnL, open-trade views,
+     and drawdown protection.
 
-7. **Scheduler / Orchestration (`scheduler/`)**
-   - `main.py` uses APScheduler to orchestrate the whole loop:
-     - `job_update_data` (every 5 min): fetch OHLC → compute features + regimes → save.
-     - `job_research_strategies` (every 30 min): evolve strategies, backtest,
-       evaluate, run robustness checks, and update both `StrategyPool` and
-       **research memory**:
-       - Parents are scored using a hybrid of backtest score + a small
-         memory-based bonus/penalty derived from similar past strategies in
-         `ResearchMemory` for the same symbol/timeframe.
-       - New candidates can be skipped early if memory shows that their
-         pattern family has historically performed poorly.
-       - After each cycle, conservative **live-performance-based degradation
-         rules** demote clearly underperforming `active` strategies back to
-         `candidate` based on their aggregated live returns and a rolling
-         window of recent trades. Degradation events trigger WhatsApp alerts.
-     - `job_execute_signals` (every 5 min): load features + active/exploratory
-       strategies, apply **news lockout** (`in_news_lockout`) to avoid trading
-       during high-impact events, generate regime-aware signals, and execute
-       them subject to risk + daily limits.
-     - `job_live_monitor` (every 5 min): update equity history and daily state,
-       wire closed deals, enforce the portfolio-level circuit breaker, and keep
-       per-strategy live stats up-to-date for the degradation rules.
-     - `job_update_news` (daily 06:00 UTC): refresh the Forex Factory calendar
-       and summarise upcoming high-impact, gold-relevant events.
-     - `job_news_alert` (every 5 min): send near-term WhatsApp alerts for
-       imminent high-impact events, with per-event cooldown.
-   - `start_scheduler()` / `shutdown_scheduler()` manage MT5 and job lifecycle.
+6. **Orchestrate the whole system**
+   - `scheduler/main.py` runs recurring jobs for data refresh, research,
+     execution, monitoring, and news alerts.
 
-8. **Research Memory (`vector_memory/`)**
-   - `research_memory.py` wraps a Chroma `PersistentClient`.
-   - `ResearchMemory.store_strategy_result(...)` stores evaluation outputs as
-     text + metadata for later semantic search, including the research
-     `position_mode` so legacy multi-position results can be separated from the
-     newer single-position mode.
-   - `ResearchMemory.query_similar(...)` and
-     `query_similar_strategies(...)` power the parent bonus and candidate
-     veto logic in the research job, with new runs preferring
-     `single_position` neighbors when both modes exist.
+7. **Persist research memory and notifications**
+   - `vector_memory/research_memory.py` stores and queries strategy research in Chroma.
+   - `notifications/whatsapp_notifier.py` sends best-effort alerts via webhook.
+   - `webhook_server.py` provides a small FastAPI receiver for outbound alerts.
 
-9. **Notifications & Webhook (`notifications/` & `webhook_server.py`)**
-   - `notifications/whatsapp_notifier.py` builds WhatsApp messages (news
-     alerts, circuit breaker alerts, strategy degradation alerts) and sends
-     them to an OpenClaw-managed webhook.
-   - `webhook_server.py` is a small FastAPI app exposing
-     `POST /hooks/whatsapp_outbound` with a `?token=` guard. It currently logs
-     messages to stdout and is intended to be wired into the OpenClaw gateway.
-   - This path is **experimental** and should be treated as best-effort
-     alerts; core trading does not depend on it.
+## Pass 3 Highlights
 
-10. **Configuration (`config.py`)**
-    - `RiskConfig` – defines risk thresholds (per-trade, portfolio DD, daily limits).
-    - `DataConfig` – default MT5 timeframe and history length.
-    - `SchedulerConfig` – enables/disables the APScheduler loop.
+Pass 3 brings the system into a more explicit **research-to-live specialization**
+model.
 
-## Runtime Flow (Typical)
+### 1) Structured regime-aware routing
 
-1. Start MT5 and ensure the desired symbols (e.g. `XAUUSDm`) are visible.
-2. Start Chroma (Docker or direct) pointing at the workspace `chroma_data/`.
-3. (Optional) Start the FastAPI webhook server (`webhook_server.py`) and point
-   `OPENCLAW_WHATSAPP_WEBHOOK` at it.
-4. Activate the `autonomous_trading_ai` virtualenv.
-5. (Optional) Run a one-shot research cycle:
-   - `job_update_data()` then `job_research_strategies()`.
-6. Start the scheduler:
-   - `python -m autonomous_trading_ai.scheduler.main`.
+The system now relies on richer regime context rather than only a single coarse
+label. The feature pipeline carries:
 
-From there, the system loops indefinitely:
+- `regime`
+- `regime_class`
+- `regime_type`
+- `regime_confidence`
+- `vol_regime`
+- optional news-derived lockout/context flags
 
-- keeping data/features/regimes fresh,
-- evolving and re-evaluating the strategy pool,
-- executing signals from `active`/`exploratory` strategies with risk/daily guards,
-- monitoring equity/drawdown and applying a circuit breaker when needed,
-- logging research outcomes to Chroma and using them to guide future searches,
-- continuously **pruning underperforming strategies** based on live results,
-- and (optionally) sending news / degradation alerts via WhatsApp.
+This allows live execution to reason about specialist strategies more cleanly,
+including session and volatility mismatches.
 
-## Where to Look for Details
+### 2) Explicit strategy routing metadata
 
-- `data/README.md` – MT5 data ingestion and Forex Factory news.
-- `research/README.md` – features, news context & regimes.
-- `strategies/README.md` – strategy config, generation, pool & live degradation.
-- `backtests/README.md` – simulation, evaluation, explainability.
-- `risk/README.md` – risk manager, daily guardrails & circuit breaker config.
-- `execution/README.md` – live execution, news lockout & daily state.
-- `scheduler/README.md` – orchestrator, job schedule, news/alert flows.
+Backtests now feed `strategy_explain.meta`, which can persist guidance such as:
+
+- `allowed_regimes` / `blocked_regimes`
+- `allowed_sessions` / `blocked_sessions`
+- `best_regime` / `worst_regime`
+- `best_session` / `worst_session`
+- `routing_confidence`
+
+That metadata is stored in pool records and reused by live execution instead of
+being re-inferred ad hoc.
+
+### 3) Stronger live gating
+
+The live execution path now combines:
+
+- daily trade-count / daily drawdown limits
+- one-open-position-per-strategy slot enforcement
+- session hard gates
+- regime allow/block policy gates
+- volatility mismatch filtering
+- confidence-aware gating
+- edge-based ranking for `active` and `exploratory` tiers
+
+### 4) Live monitoring maturity
+
+The execution layer now has a clearer separation between:
+
+- executed trades (`trades.log`)
+- daily account state (`live_state.json`)
+- equity and drawdown history (`equity_history.json`)
+- closed deal processing (`closed_trades_state.json`)
+- per-strategy live stats (`strategy_live_stats.json`)
+- open-trade snapshots (`open_trades.json`)
+- ticket-to-strategy mapping (`ticket_strategy_map.json`)
+
+### 5) Better doc coverage for operations
+
+The module READMEs now document not just the main research loop, but also the
+live-state artifacts, helper scripts, alert paths, and the current limitations
+of the system.
+
+## End-to-End Flow
+
+### A. Data + feature preparation
+
+1. `collector_mt5.py` fetches OHLCV bars from MT5.
+2. `news_collector.py` refreshes macro events into `data/raw/news_events.parquet`.
+3. `features.py` computes indicators and optional news-aware fields.
+4. `regime.py` adds legacy and structured regime labels.
+5. Outputs are stored in:
+   - `data/raw/`
+   - `data/features/`
+
+### B. Research cycle
+
+1. The scheduler loads current features for each managed symbol/timeframe.
+2. It loads the `StrategyPool` from `strategies/pool_state.json`.
+3. Existing strategies are ranked using base evaluation stats plus small
+   memory-based bonuses/penalties from `ResearchMemory`.
+4. New candidates are generated/evolved.
+5. Each candidate is:
+   - backtested,
+   - explained,
+   - scored,
+   - checked with walk-forward and Monte Carlo,
+   - assigned a pool status (`active`, `exploratory`, `candidate`, `disabled`, `retired`).
+6. The result is stored both in the strategy pool and in Chroma-backed research memory.
+
+### C. Live execution cycle
+
+1. Latest features are loaded.
+2. If the latest row indicates `in_news_lockout=True`, execution is skipped for
+   that symbol.
+3. `execution/signals.py` filters strategies through session/regime/confidence
+   gates and ranks them by regime-specific edge.
+4. Eligible signals are sent to `execution/engine.py`.
+5. `risk/manager.py` validates each trade before order submission.
+6. Successful trades are logged and tracked for later monitoring.
+
+### D. Live monitoring cycle
+
+1. `live_monitor.py` polls account equity and closed MT5 deals.
+2. Daily PnL/trade counts are pushed into `live_state.json`.
+3. Strategy-specific live PnL is aggregated in `strategy_live_stats.json`.
+4. Open positions are snapshotted into `open_trades.json`.
+5. If portfolio drawdown breaches the configured threshold, the circuit breaker
+   disables all `active` strategies.
+
+### E. Alerting / webhook path
+
+- News alerts and degradation alerts can be sent through
+  `notifications/whatsapp_notifier.py`.
+- `webhook_server.py` exposes `POST /hooks/whatsapp_outbound` for local or
+  gateway integration.
+- This alert path is still **best-effort / experimental** and should not be
+  treated as critical trading infrastructure.
+
+## Module Map
+
+- `data/README.md` – MT5 OHLC ingestion and Forex Factory news ingestion.
+- `research/README.md` – features, news-aware context, structured regimes.
+- `strategies/README.md` – strategy definitions, generation, pool, manifests,
+  and live-aware degradation.
+- `backtests/README.md` – bar simulation, explainability, scoring, robustness.
+- `risk/README.md` – account-level risk checks and config relationships.
+- `execution/README.md` – live execution, routing, state files, monitoring.
+- `scheduler/README.md` – recurring jobs and orchestration logic.
 - `vector_memory/README.md` – Chroma-backed research memory.
-- `notifications/README.md` – WhatsApp/alert plumbing.
+- `notifications/README.md` – outbound WhatsApp/webhook alert path.
+- `scripts/README.md` – operational/debug/helper scripts.
 
-For operational runbooks (how to start everything from scratch), see:
+## Important Project Files
 
-- `user_instructions/START_AUTONOMOUS_TRADING.md`
-- `agent_instructions/SETUP_AUTONOMOUS_TRADING_ENVIRONMENT.md`
+At the top level:
+
+- `config.py`
+  - Shared runtime config for risk, data, and scheduler behavior.
+- `logging_utils.py`
+  - Logging bootstrap/helpers used across modules.
+- `webhook_server.py`
+  - FastAPI webhook receiver for outbound message handoff.
+- `.env`
+  - Environment-based local configuration.
+
+Operational folders you will likely touch:
+
+- `docs/`
+- `agent_instructions/`
+- `user_instructions/`
+- `tests/`
+- `logs/`
+- `tmp/`
+
+## Runtime Notes
+
+Typical runtime flow:
+
+1. Start MT5 and ensure the target symbols are available.
+2. Ensure the Python environment for `autonomous_trading_ai` is active.
+3. Ensure Chroma storage is available at the configured path.
+4. Optionally run one-shot preparation / inspection scripts from `scripts/`.
+5. Start the scheduler:
+
+```powershell
+python -m autonomous_trading_ai.scheduler.main
+```
+
+## Current Limitations
+
+- The system is still heavily oriented around **single-symbol / per-symbol**
+  research loops rather than full portfolio optimization.
+- Macro news handling is pragmatic and useful, but still relatively lightweight.
+- The alerting/webhook path is not yet hard-guaranteed delivery infrastructure.
+- Research memory improves selection guidance, but should be treated as a soft
+  heuristic layer, not a source of truth.
+- Backtests remain bar-based abstractions and do not model every broker/runtime
+  edge case.
 
 ## Changelog (Docs)
 
-- 2026-03-21: Updated for news ingestion (`data/news_collector.py`),
-  news-aware regimes and lockout, WhatsApp alerts via `notifications/`, live
-  strategy degradation, circuit breaker integration, and the current
-  single-symbol default (`XAUUSDm`).
+- 2026-03-21: Documented news ingestion, news-aware regimes/lockout,
+  WhatsApp alerts, strategy degradation, and the then-current architecture.
+- 2026-03-27: Updated top-level documentation for **pass 3** with structured
+  routing, explicit strategy metadata, stronger live gating, expanded execution
+  state artifacts, and refreshed module map.

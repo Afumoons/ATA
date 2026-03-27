@@ -1,195 +1,235 @@
-# strategies/ – Definitions, Generation, Pool & Live-Aware Degradation
+# strategies/ – Definitions, Generation, Pool & Routing Metadata
 
 ## Purpose
 
-This module defines **how strategies are represented**, how new ones are
-generated/evolved, and how the global strategy pool is stored and maintained.
+This module defines how strategies are represented, created, evolved, stored,
+and governed over time.
 
 It provides:
 
-- A serializable `StrategyDefinition` config object (no executable code).
-- Tools to generate and mutate strategies (MA/RSI-focused with legacy
-  Ichimoku/Fibonacci support).
-- A `StrategyPool` abstraction to track scores, statuses, stats, and (via
-  other modules) live performance.
+- a serializable strategy definition format
+- random generation and evolutionary mutation/crossover
+- persistent pool storage and status management
+- metadata surfaces that connect research outputs to live-routing behavior
+
+Pass 3 makes this module more important because the strategy pool is no longer
+just a ranked list. It is now a **specialist inventory with explicit routing
+hints and live-governance state**.
 
 ## Key Files
 
-- `base.py`
-  - Defines `StrategyDefinition` dataclass:
-    - `name`, `symbol`, `timeframe`.
-    - `long_entry_rule` / `short_entry_rule` – string expressions evaluated over
-      feature rows (via backtest engine).
-    - `exit_rule` – string expression controlling exits (used in backtests).
-    - `stop_loss_pips`, `take_profit_pips` – SL/TP distances.
-    - Optional `sl_atr_mult`, `tp_atr_mult` – ATR-based SL/TP multipliers used
-      by the backtest engine when present (with ATR column in features).
-    - `params` – free-form dict used by generator/evolution.
-  - Methods:
-    - `to_dict()` / `from_dict()` – JSON-serializable representation.
+### `base.py`
 
-- `generator.py`
-  - Focused on **initial strategy creation**.
-  - Uses a mix of rule templates:
-    - MA-based trend continuation using `ma_short` vs `ma_long`.
-    - Range/mean-reversion patterns using RSI with low `trend_strength`.
-    - Legacy Ichimoku/Fibonacci continuation patterns (still available but
-      down-weighted for most markets).
-    - `LONG_ENTRY_TEMPLATES`, `SHORT_ENTRY_TEMPLATES`, `EXIT_TEMPLATES`.
-  - `random_strategy(symbol, timeframe)`:
-    - For core 15m markets (`XAUUSDm`, `BTCUSDm`), biases strongly toward
-      simpler MA/RSI-based templates and away from heavy Ichimoku/Fibonacci
-      patterns to favor more interpretable strategies.
-    - Samples template parameters (`trend_min`, `rsi_exit`, `trend_exit`).
-    - Builds rule strings by formatting templates with these params.
-    - Picks SL/TP from a discrete set of pip values for all markets.
-    - For core 15m markets, additionally samples conservative ATR-based
-      SL/TP multiples (`sl_atr_mult`, `tp_atr_mult`) used by the backtest
-      engine while keeping pip-based distances available for live sizing.
-    - Attaches lightweight metadata into `StrategyDefinition.params` so later
-      phases can reason about each strategy family without re-parsing rule
-      strings, including:
-      - `long_family` / `short_family` (e.g. `ma_trend`, `rsi_range`, `ichifib`).
-      - `regime_type_long` / `regime_type_short` and an aggregate
-        `regime_type` (e.g. `trend`, `range`, `mixed`).
-      - `preferred_symbols` / `preferred_timeframes` indicating which
-        symbol/timeframe the strategy was generated for.
-    - Produces a `StrategyDefinition` with a name like
-      `"core15_{symbol}_{timeframe}_{rand_id}"` for core 15m markets or
-      `"ichifib_{symbol}_{timeframe}_{rand_id}"` for others.
-  - `save_strategy(strategy)` / `load_strategy(path)` – read/write strategy
-    JSON files under `strategies/generated/`.
-  - `generate_batch(...)` / `generate_and_save_batch(...)` – helpers to create
-    many strategies at once.
+Defines `StrategyDefinition`.
 
-- `evolution.py`
-  - Implements a simple evolutionary algorithm over existing strategies.
-  - `EvolutionConfig`:
-    - `population_size`, `elite_frac`, `mutation_rate`, `crossover_rate`.
-  - Mutation helpers:
-    - `_mutate_params(params)` – nudge numeric fields within safe bounds
-      (e.g. `rsi_low`, `rsi_high`, `trend_min`, `vol_max`, `rsi_exit`, `trend_exit`).
-    - `_mutate_strategy(strat)` – create a new `StrategyDefinition` by
-      combining mutated params with a fresh template from `random_strategy`.
-  - Crossover:
-    - `_crossover(a, b)` – mix parameter dictionaries from two parents, then
-      instantiate a new child strategy via `random_strategy`.
-  - `evolve_population(symbol, timeframe, scored_strategies, cfg=DEFAULT_EVOL_CONFIG)`:
-    - If no scored strategies are available, generates a fresh population of
-      random strategies.
-    - Otherwise:
-      - Sorts by score and extracts elites.
-      - Builds a new population from a mix of:
-        - elites (copied),
-        - mutated elites,
-        - crossovers between elites,
-        - fresh randoms.
-  - `save_population(strategies)` / `load_population()` – I/O helpers for the
-    generated population under `strategies/generated/`.
+Core fields include:
 
-- `pool.py`
-  - Defines the persistent **strategy pool** abstraction.
-  - `StrategyRecord` dataclass:
-    - `name`, `symbol`, `timeframe`.
-    - `status` – `"candidate"`, `"active"`, `"exploratory"`, `"disabled"`, `"retired"`.
-    - `score` – numeric score (e.g. from evaluation metrics).
-    - `stats` – evaluation stats dict (including `strategy_explain`), not just
-      flat floats.
-      This now includes explicit routing metadata under
-      `stats["strategy_explain"]["meta"]`, such as:
-      - `best_regime` / `worst_regime`
-      - `best_session` / `worst_session`
-      - `allowed_regimes` / `blocked_regimes`
-      - `allowed_sessions` / `blocked_sessions`
-      - `routing_confidence`
-  - `StrategyPool` dataclass:
-    - `strategies: Dict[str, StrategyRecord]` – keyed by strategy name.
-    - `to_dict()` / `from_dict()` – JSON serialization helpers with defensive
-      handling of corrupt/mismatched records (bad entries are skipped with a
-      warning instead of crashing the whole pool load).
-    - `upsert_strategy(strategy, stats, score, status="candidate")` – insert or
-      update a strategy in the pool.
-    - `set_status(name, status)` – manually change status.
-    - `top_strategies(status_filter="candidate", limit=10)` – convenience
-      method to fetch the highest scoring strategies.
-    - `prune(max_inactive=_MAX_INACTIVE_STRATEGIES)` – removes the lowest-scoring
-      **inactive** strategies (candidate/disabled/retired) beyond a size cap,
-      while never pruning `active` / `exploratory` entries. This prevents
-      `pool_state.json` from growing without bound.
-  - File layout:
-    - `pool_state.json` stores the serialized pool, managed via:
-      - `load_pool()` – load or create an empty pool.
-      - `save_pool(pool)` – persist pool to disk.
+- `name`
+- `symbol`
+- `timeframe`
+- `long_entry_rule`
+- `short_entry_rule`
+- `exit_rule`
+- `stop_loss_pips`
+- `take_profit_pips`
+- optional `sl_atr_mult`
+- optional `tp_atr_mult`
+- free-form `params`
 
-## Directories
+This dataclass is intentionally declarative. It stores strategy logic as data,
+not executable strategy classes.
 
-- `strategies/generated/`
-  - JSON files, one per generated strategy, named `{strategy_name}.json`.
-  - Used by:
-    - Research/evolution (`evolve_population`, `load_population`).
-    - Live execution (`execution.signals.execute_signals_for_symbol`) to
-      reconstruct `StrategyDefinition` for `active` and `exploratory` strategies.
+### `generator.py`
 
-- `strategies/pool_state.json`
-  - Serialized `StrategyPool`.
-  - Updated by `scheduler.job_research_strategies()` on each research cycle.
-  - After each cycle, additional **live performance-based degradation rules**
-    are applied using aggregated stats from
-    `execution/strategy_live_stats.json`, demoting clearly underperforming
-    `active` strategies back to `candidate`.
-  - Periodically pruned (via `StrategyPool.prune`) to keep the number of
-    inactive strategies bounded.
+Creates fresh strategy definitions.
+
+Current strategy-generation bias includes:
+
+- MA-based trend rules
+- RSI/range-style rules
+- legacy Ichimoku/Fibonacci-based templates
+
+For core 15m markets, generation is biased toward simpler, more interpretable
+families.
+
+The generator also stores lightweight family metadata in `params`, such as:
+
+- long/short family type
+- regime bias
+- preferred symbol/timeframe
+
+That makes later analysis easier without re-parsing rule strings.
+
+### `evolution.py`
+
+Handles evolutionary search.
+
+Important capabilities:
+
+- elite retention
+- parameter mutation
+- crossover between parents
+- fallback fresh-random generation
+
+Used by the scheduler’s research loop to build new candidate populations from
+higher-quality pool members.
+
+### `pool.py`
+
+Stores and manages the persistent `StrategyPool`.
+
+Important structures:
+
+- `StrategyRecord`
+- `StrategyPool`
+
+Each record includes:
+
+- identity (`name`, `symbol`, `timeframe`)
+- `status`
+- numeric `score`
+- `stats`
+
+The `stats` blob now matters a lot because it can include the full
+`strategy_explain`, including pass 3 routing metadata.
+
+Important capabilities include:
+
+- `upsert_strategy(...)`
+- `set_status(...)`
+- `top_strategies(...)`
+- `prune(...)`
+- `load_pool()` / `save_pool()`
+
+### `live_manifest.py`
+
+Provides a live-facing manifest / compact view of strategy inventory for
+execution or operator-facing inspection.
+
+This helps bridge the rich stored pool data into a more operational surface for
+live workflows.
+
+## Strategy Status Model
+
+The pool can track statuses such as:
+
+- `active`
+- `exploratory`
+- `candidate`
+- `disabled`
+- `retired`
+
+A rough interpretation:
+
+- `active` → trusted enough for normal live exposure
+- `exploratory` → allowed for limited live discovery with reduced risk
+- `candidate` → promising but not yet approved for live use
+- `disabled` → currently disallowed
+- `retired` → historical / no longer in active rotation
+
+## Pass 3 Role
+
+Pass 3 turns the strategy module into a **routing-governance layer**.
+
+A strategy record can now carry explicit specialist metadata through
+`stats["strategy_explain"]["meta"]`, such as:
+
+- `allowed_regimes`
+- `blocked_regimes`
+- `allowed_sessions`
+- `blocked_sessions`
+- `best_regime`
+- `worst_regime`
+- `best_session`
+- `worst_session`
+- `routing_confidence`
+
+That means the pool is not just answering:
+
+- “which strategies scored highly?”
+
+It is also helping answer:
+
+- “which strategies are allowed here?”
+- “which strategies are specialists vs poor fits?”
+- “which strategies should receive reduced exposure?”
+
+## Live Feedback Loop
+
+The strategy layer is also affected by live performance.
+
+After research updates, the scheduler can run a conservative degradation pass
+using `execution/strategy_live_stats.json`.
+
+This can demote underperforming `active` strategies back to `candidate` when:
+
+- enough live evidence exists
+- live returns are clearly poor
+- recent trade behavior is meaningfully weak
+
+That makes the pool a **living governance artifact**, not a static research dump.
+
+## Storage Layout
+
+### `strategies/generated/`
+
+Generated JSON strategy definitions.
+
+Used to reconstruct `StrategyDefinition` objects during research and live
+execution.
+
+### `strategies/pool_state.json`
+
+Persistent serialized strategy pool.
+
+This is the main long-lived inventory of strategy state.
+
+### `strategies/pool_state.backup-*.json`
+
+Backup snapshots of the pool state.
+
+Useful during manual maintenance or recovery.
 
 ## How It’s Used
 
-- `scheduler/job_research_strategies()`:
-  - Loads `StrategyPool` via `load_pool()`.
-  - Selects best parent strategies for a symbol/timeframe using **hybrid**
-    scores (base score + small memory-based bonus from `ResearchMemory`).
-  - Uses `evolve_population(...)` to generate new candidate strategies.
-  - Backtests and evaluates each candidate.
-  - Calls `pool.upsert_strategy(...)` with status determined by promotion logic
-    (active/candidate/exploratory/disabled).
-  - Stores evaluation results in vector memory.
-  - Finally, applies a conservative **live degradation pass** that:
-    - reads `execution/strategy_live_stats.json`,
-    - for each `active` strategy with enough live trades and good backtests,
-      demotes it to `candidate` if live returns are significantly negative or
-      far below backtest expectations.
-    - sends a WhatsApp alert via `send_strategy_degradation_alert(...)` when a
-      strategy is degraded.
-  - Calls `pool.prune(...)` to remove excess inactive strategies and then
-    `save_pool(pool)` at the end of the job.
+### In research
 
-- `execution/signals.execute_signals_for_symbol(...)`:
-  - Reads `StrategyPool` via `load_pool()`.
-  - Filters for `status in {"active", "exploratory"}` for the given symbol/timeframe.
-  - Computes a regime-specific edge per strategy from
-    `strategy_explain.regime_pnl[regime_label].return_pct` and
-    prefers strategies with better historical performance in the **current regime**.
-  - Optionally caps the number of strategies considered per run (e.g. top 5 active,
-    top 3 exploratory) to keep live behaviour focused.
-  - Loads each selected `StrategyDefinition` from `strategies/generated/`.
-  - Evaluates entry rules on the latest feature row and routes allowed signals to
-    `engine.execute_trade(...)`, using **normal risk** for `active` strategies and a
-    **reduced risk tier** for `exploratory` strategies.
+`scheduler.job_research_strategies()`:
+
+- loads the pool
+- selects parents
+- evolves/generates candidates
+- backtests and evaluates them
+- stores score, stats, and status
+- writes new research memory entries
+- applies live degradation pass
+- prunes excess inactive entries
+- saves the final pool
+
+### In live execution
+
+`execution.signals.execute_signals_for_symbol(...)`:
+
+- loads strategies from the pool
+- filters to `active` / `exploratory`
+- reads routing metadata and edge behavior
+- loads definition JSONs from `generated/`
+- evaluates entries on the latest feature row
 
 ## Gotchas / Notes
 
-- `strategies/generated/` is intended for **generated artifacts**, not
-  hand-crafted configs; it is ignored in Git to avoid noise and bloat.
-- If a strategy in the pool cannot be loaded from disk (e.g. missing JSON
-  file), it is skipped and an exception is logged.
-- Strategy names are used as IDs and must be unique; collisions will overwrite
-  previous records in the pool.
-- Live degradation rules are intentionally conservative and one-sided: they
-  only downgrade strategies that are clearly failing; they do not auto-upgrade
-  based on live performance alone.
-- `StrategyPool.from_dict(...)` is defensive: a single corrupt record in
-  `pool_state.json` no longer crashes the whole scheduler; the bad record is
-  skipped with a warning.
+- Strategy names are IDs; collisions overwrite existing records.
+- Missing generated JSON files will cause a pool record to be skipped by live execution.
+- Generated artifacts should stay machine-friendly and reproducible.
+- Pool loading is intentionally defensive so one corrupt record does not kill the
+  whole system.
+- Live degradation is intentionally one-sided and conservative; it removes trust
+  more readily than it grants it.
 
 ## Changelog (Docs)
 
 - 2026-03-21: Documented ATR-based SL/TP support, defensive pool loading,
-  pool pruning, and the live degradation + WhatsApp alert integration.
+  pruning, and live degradation integration.
+- 2026-03-27: Updated for pass 3 with explicit routing-metadata framing,
+  `live_manifest.py`, specialist inventory language, and stronger explanation of
+  the strategy pool as a governance surface.

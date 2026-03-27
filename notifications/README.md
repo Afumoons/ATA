@@ -1,131 +1,135 @@
-# notifications/ – Outbound Alerts (Experimental)
+# notifications/ – Outbound Alerts (Best-Effort)
 
 ## Purpose
 
-This module is intended for **outbound notifications** from the autonomous trading
-system, currently focused on WhatsApp alerts via an OpenClaw-managed webhook.
+This module provides **outbound alerting** for the autonomous trading system.
 
-> Status (2026-03-21):
-> - The plumbing from `autonomous_trading_ai` → HTTP webhook is implemented.
-> - The webhook receiver (`webhook_server.py`) logs payloads to stdout.
-> - The final hop from OpenClaw to WhatsApp via that webhook is **still
->   experimental** and not yet fully wired into the gateway. Treat this as a
->   best-effort alert channel, not guaranteed delivery.
+Right now it is focused on **WhatsApp-style alerts via webhook handoff**.
+It is intentionally treated as:
+
+- useful
+- operationally valuable
+- non-critical to trading correctness
+
+Core trading must continue even if notifications fail.
 
 ## Current Scope
 
-- `whatsapp_notifier.py`
-  - Builds structured WhatsApp messages for:
-    - Upcoming high-impact macro news events (gold-relevant by default).
-    - Circuit breaker triggers (portfolio DD limit breached).
-    - Strategy degradation events (live performance downgrades).
-    - Raw manual alerts (free-text messages).
-  - Sends messages to an **OpenClaw-managed outbound webhook**, which is
-    expected to forward them to WhatsApp.
+This module currently covers:
 
-- `webhook_server.py`
-  - A small FastAPI app that exposes `POST /hooks/whatsapp_outbound`.
-  - Validates a `?token=` query parameter against the shared `WEBHOOK_TOKEN`.
-  - Expects a JSON body of the form `{"to": "628170090022", "message": "..."}`.
-  - Currently just prints messages to stdout as a placeholder for the real
-    OpenClaw/WhatsApp integration.
+- formatted news alerts for upcoming macro events
+- strategy degradation alerts
+- manual/raw text alerts
+- webhook delivery plumbing for outbound handoff
 
-## Key File: `whatsapp_notifier.py`
+It does **not** own the final message transport network by itself; instead, it
+hands messages off to a webhook receiver / gateway path.
 
-### Config
+## Key Files
 
-All configuration is via environment variables, wrapped in `NotifierConfig`:
+### `whatsapp_notifier.py`
+
+Main notification builder + sender.
+
+Responsibilities:
+
+- build formatted outbound messages
+- attach recipient and tokenized webhook target
+- POST payloads to the configured outbound webhook
+- retry transient failures conservatively
+- keep failures isolated from core trading logic
+
+Supported alert patterns include:
+
+- upcoming high-impact macro news
+- strategy degradation / demotion events
+- circuit-breaker-related alert helpers
+- free-text manual alerts
+
+### `webhook_server.py` (project root)
+
+Not inside this folder, but part of the same outbound-alert story.
+
+This FastAPI app exposes:
+
+- `POST /hooks/whatsapp_outbound`
+
+It validates a shared token and currently acts as a lightweight receiver /
+placeholder integration point.
+
+## Delivery Model
+
+Current intended path:
+
+1. trading module decides an alert should be sent
+2. `notifications.whatsapp_notifier` formats the message
+3. notifier POSTs JSON to the configured webhook URL
+4. webhook receiver / gateway handles the final handoff to messaging infra
+
+This is why the module should be viewed as **best-effort** rather than a
+hard-guaranteed delivery layer.
+
+## Configuration
+
+The notifier is configured via environment variables wrapped by
+`NotifierConfig`.
+
+Important inputs include:
 
 - `OPENCLAW_WHATSAPP_WEBHOOK`
-  - Base URL for the OpenClaw outbound WhatsApp webhook.
-  - Example (local FastAPI receiver):
-    - `http://localhost:8001/hooks/whatsapp_outbound`
-
 - `WEBHOOK_TOKEN`
-  - Shared-secret token used to secure the webhook.
-  - Default: `"clio-autotrading-hooks"`.
-  - The notifier automatically appends `?token=WEBHOOK_TOKEN` to the webhook
-    URL if `token=` is not already present.
-
 - `OPENCLAW_WHATSAPP_RECIPIENT`
-  - WhatsApp recipient number in international format, **without** `+`.
-  - Default for this deployment: `"628170090022"`.
 
-`NotifierConfig` fields:
+Typical knobs also include:
 
-```python
-@dataclass
-class NotifierConfig:
-    webhook_url: str  # from OPENCLAW_WHATSAPP_WEBHOOK
-    webhook_token: str  # from WEBHOOK_TOKEN, default "clio-autotrading-hooks"
-    recipient: str  # from OPENCLAW_WHATSAPP_RECIPIENT
-    min_impact_for_alert: int = 3
-    alert_cooldown_minutes: int = 60
-    alert_before_minutes: int = 30
-    request_timeout: int = 10
-    retry_attempts: int = 2
-```
+- minimum impact for alerts
+- cooldown minutes
+- lead time before event alerts
+- request timeout
+- retry count
 
-### Core Helpers
+## Pass 3 Relevance
 
-- `_build_webhook_url(cfg)`
-  - Returns `cfg.webhook_url` with `?token=...` (or `&token=...`) appended when
-    `cfg.webhook_token` is set and not already present in the URL.
+Pass 3 increases the operational value of alerts because the system now has
+more meaningful live-state transitions worth surfacing, especially:
 
-- `_send_openclaw_webhook(message, cfg)`
-  - POSTs `{"to": cfg.recipient, "message": message}` as JSON to the built
-    webhook URL.
-  - Retries up to `cfg.retry_attempts` times on network/HTTP errors.
+- imminent macro events affecting execution lockout
+- live degradation events when an `active` strategy is demoted
+- potential circuit-breaker events or related operator-facing warnings
 
-### Public Functions
+This module is still intentionally separated from core execution so alert
+failures do not interfere with safety or order routing.
 
-- `send_whatsapp_alert(message: str, cfg=DEFAULT_CONFIG) -> bool`
-  - Sends a raw text message via the configured OpenClaw webhook.
+## How It’s Used
 
-- `send_news_alert(upcoming_events: pd.DataFrame, account_info: Optional[dict], cfg) -> bool`
-  - Filters upcoming macro events by `impact >= min_impact_for_alert`.
-  - Applies a cooldown per event (`alert_cooldown_minutes`).
-  - Only alerts events within `alert_before_minutes` of their start time.
-  - Builds a formatted WhatsApp message including:
-    - Event name, time, currency, forecast vs previous.
-    - Optional account snapshot (`equity`, `peak`, drawdown).
-  - Sends the message via `_send_openclaw_webhook`.
+### News flow
 
-- `send_circuit_breaker_alert(dd_pct, equity, peak, disabled_strategies, cfg) -> bool`
-  - Intended to alert when a portfolio-level circuit breaker fires.
-  - Helper is implemented but **not yet wired** into `live_monitor`; currently
-    circuit breaker events only disable strategies in the pool and are logged.
+- `scheduler.job_update_news()` and `job_news_alert()` may call
+  `send_news_alert(...)`
+- the notifier filters to relevant/high-impact events and applies cooldowns
 
-- `send_strategy_degradation_alert(strategy_name, recent_avg_pnl, total_pnl, new_status, cfg) -> bool`
-  - Alerts when a strategy is demoted due to poor live performance.
-  - Called from `_apply_live_degradation(...)` in `scheduler.main` when an
-    `active` strategy is demoted to `candidate`.
+### Strategy degradation flow
 
-## Integration Path (Current)
+- scheduler degradation logic calls `send_strategy_degradation_alert(...)`
+  when a strategy is explicitly downgraded due to poor live performance
 
-For this deployment, alerts are designed to flow as:
+### Manual/raw alerts
 
-1. `autonomous_trading_ai` → `notifications.whatsapp_notifier`.
-2. `whatsapp_notifier` → HTTP POST to `OPENCLAW_WHATSAPP_WEBHOOK` with `?token=WEBHOOK_TOKEN`.
-3. Webhook receiver (`webhook_server.py` in this repo) logs the payload and is
-   intended to forward it to OpenClaw/WhatsApp.
-
-> **Important:** As of now, the OpenClaw gateway is **not** yet wired to accept
-> this webhook and relay to WhatsApp. The module is functional up to the
-> HTTP POST boundary and should be considered **experimental**.
+- callers can use `send_whatsapp_alert(...)` for generic text alerts
 
 ## Gotchas / Notes
 
-- If `OPENCLAW_WHATSAPP_WEBHOOK` or `OPENCLAW_WHATSAPP_RECIPIENT` are missing,
-  the notifier logs a warning and no alert is sent.
-- `requests` must be installed in the Python environment.
-- Token validation is handled by the webhook receiver; this module only appends
-  the token to the URL.
-- Because this is an **auxiliary** channel, failures here must **never** block
-  core trading logic; caller code is written to log exceptions and continue.
+- If webhook URL or recipient config is missing, the module should log and no-op
+  rather than break trading.
+- This module depends on outbound HTTP access and `requests` availability.
+- Token handling secures the handoff path, but end-to-end delivery still depends
+  on the external receiver/gateway wiring.
+- Circuit-breaker alert helpers may exist before every final integration path is
+  wired; documentation should reflect actual usage rather than intended usage.
 
 ## Changelog (Docs)
 
-- 2026-03-21: Updated to document `webhook_server.py`, clarified experimental
-  status, and noted that circuit-breaker alerts are implemented as helpers but
-  not yet wired into `live_monitor`.
+- 2026-03-21: Documented webhook-based WhatsApp alerting and clarified the
+  experimental status.
+- 2026-03-27: Refreshed for pass 3 to frame notifications as best-effort
+  operational alerts for macro events, degradation, and live-state transitions.

@@ -2,156 +2,209 @@
 
 ## Purpose
 
-This module runs **offline simulations** of strategies over historical data,
-computes evaluation metrics, and builds structured explanations of behavior.
+This module handles the **offline research side** of the trading system:
 
-It provides:
+- simulate strategy behavior bar-by-bar
+- compute summary performance statistics
+- build structured explanations of where a strategy works or fails
+- run robustness checks before a strategy is trusted more broadly
 
-- A bar-by-bar backtest engine with position management and trading costs.
-- Strategy evaluation & scoring logic used by the research loop.
-- Walk-forward validation for robustness.
-- Monte Carlo PnL stress testing.
-- `strategy_explain` objects (regime/session/risk/news behavior) used to
-  enrich evaluation and pool promotion.
+In pass 3, this module matters even more because its outputs now feed the
+system’s **specialist routing model**, not just a single numeric score.
+
+## What This Module Produces
+
+The key outputs from the backtesting layer are:
+
+- `BacktestResult`
+- performance `stats`
+- `strategy_explain`
+- evaluation `score`
+- acceptance decision (`accepted`)
+- optional walk-forward aggregates
+- optional Monte Carlo stress-test aggregates
+
+These outputs are then consumed by:
+
+- `scheduler/main.py`
+- `strategies/pool.py`
+- `vector_memory/research_memory.py`
+- `execution/signals.py` indirectly via `strategy_explain.meta`
 
 ## Key Files
 
-- `engine.py`
-  - Core backtest engine and result structures.
-  - `Trade` dataclass – single closed trade with:
-    - `entry_time`, `exit_time`, `direction`, `entry_price`, `exit_price`,
-      `stop_loss`, `take_profit`, `size`, `pnl`, optional `regime`.
-  - `BacktestResult` dataclass – per-strategy summary:
-    - `strategy`, `symbol`, `timeframe`, list of `trades`,
-      `equity_curve` (pandas Series), `stats` dict.
-    - `to_dict()` for JSON serialization (equity index → ISO strings).
-  - `_eval_rule(row, rule)` – evaluates boolean rule strings against a feature row
-    using a restricted `eval` namespace (only numeric fields from the row).
-  - `TIMEFRAME_PERIODS_PER_YEAR` – mapping from timeframe to approx. periods/year
-    for Sharpe scaling.
-  - `run_backtest(df, strategy, ...)`:
-    - Assumes `df` has `time, open, high, low, close` + feature columns.
-    - Simulates multi-position long/short entries subject to `max_positions_total`.
-    - Sizing per trade: risk-based using `risk_per_trade_pct` and SL distance.
-    - SL/TP can be defined as fixed pips (`stop_loss_pips`/`take_profit_pips`) or
-      as multiples of ATR when `strategy.sl_atr_mult` / `strategy.tp_atr_mult`
-      are set and an `atr` column is present in `df`.
-    - Applies costs via `apply_costs(...)` from `costs.py` (spread, commission, slippage).
-    - Supports optional `regime_column` to tag trades with a regime string.
-    - Tracks equity over time and computes basic stats via `_compute_basic_stats`.
-    - Tries to build a `strategy_explain` (see `explain.py`) and attach it under
-      `stats["strategy_explain"]`.
-  - `_compute_basic_stats(equity_curve, trades, initial_equity, timeframe)`:
-    - Computes:
-      - `final_equity`, `net_profit`, `return_pct`.
-      - `sharpe_ratio` using timeframe scaling.
-      - `max_drawdown_pct` from equity curve.
-      - `profit_factor` from gross profit/loss.
-      - `win_rate`, `num_trades`.
-  - `save_backtest_result(result)` – writes JSON files under
-    `backtests/results/{strategy}_{symbol}_{timeframe}.json`.
+### `engine.py`
 
-- `evaluation.py`
-  - Config + logic for turning backtest stats into a **single score** and an
-    acceptance decision.
-  - `EvaluationConfig` dataclass:
-    - `min_trades`, `min_sharpe`, `max_drawdown_pct`, `min_profit_factor`.
-    - Weights: `weight_sharpe`, `weight_profit_factor`, `weight_drawdown_penalty`.
-  - `compute_score(stats, cfg=DEFAULT_EVAL_CONFIG)`:
-    - Computes a base weighted score from Sharpe, profit factor, and a drawdown
-      penalty (linear decay to 0 at `max_drawdown_pct`).
-    - Adjusts the score using `strategy_explain` when available:
-      - **Regime behavior** (`regime_pnl`): bonus for positive trend performance
-        and non-disastrous range performance.
-      - **Stability** (`stability`): penalty for high `sharpe_std`.
-      - **News behavior** (`news_behavior`): penalty if high-impact news trading
-        is consistently negative; bonus for good avoidance behavior.
-  - `passes_thresholds(stats, cfg)` – enforces minimum requirements on
-    trades/Sharpe/DD/profit factor.
-  - `evaluate_strategy(stats, cfg)` – wraps everything into a new stats dict with
-    `score` and boolean `accepted`.
+Core bar-by-bar simulator.
 
-- `explain.py`
-  - Builds the `strategy_explain` object used by evaluation and the pool.
-  - `build_strategy_explain(trades, features, regime_column="regime", initial_equity=None, symbol=None)`:
-    - Expects trade records with times, prices, SL/TP, and PnL; and a feature
-      DataFrame with `time`, a `regime` column, and optional `news_*` columns.
-    - Maps trades to their nearest feature row at entry time.
-    - Infers per-trade:
-      - risk-reward (`RR`),
-      - exit type (SL / TP / RULE) based on `exit_price` vs `sl`/`tp`,
-      - session bucket (asia / london / new_york).
-    - Produces several sections:
-      - `regime_pnl` – PnL, returns, trade counts, RR and win rate by regime.
-      - `session_pnl` – return and trade count by session.
-      - `risk_behavior` – average RR, SL/TP/exit-rule ratios, holding time,
-        max consecutive losses.
-      - `stability` – sub-period Sharpe & returns, plus `sharpe_std`.
-      - `news_behavior` – performance around news (when news features exist):
-        high-impact window PnL, pre/post news performance, avoidance rate.
-      - `meta` – high-level characterization and explicit routing hints, including:
-        - `best_regime`, `worst_regime`
-        - `best_session`, `worst_session`
-        - `best_regime_return_pct`, `worst_regime_return_pct`
-        - `best_session_return_pct`, `worst_session_return_pct`
-        - `allowed_regimes`, `blocked_regimes`
-        - `allowed_sessions`, `blocked_sessions`
-        - `routing_confidence`
-        - trend follower vs range trader flags.
+Important pieces:
 
-- `walkforward.py`
-  - Implements walk-forward validation over time-series data.
-  - `WalkForwardConfig` – number of splits and train ratio per split.
-  - `_split_walkforward_indices(n, n_splits, train_ratio)` – builds index ranges
-    for train/test segments.
-  - `walk_forward_test(df, strategy, cfg=None, **backtest_kwargs)`:
-    - Sorts by time and splits the data into `n_splits` folds.
-    - For each fold:
-      - Uses the first part as train (currently unused, future hook for tuning).
-      - Runs `run_backtest` on the test portion.
-    - Aggregates all out-of-sample equity curves to compute:
-      - overall Sharpe (scaled with 252),
-      - overall max drawdown,
-      - number of windows.
-    - Returns:
-      - `{"windows": [...], "aggregate": {...}}`.
+- `Trade` dataclass
+  - single closed-trade record with times, prices, side, size, SL/TP, PnL,
+    and optional regime tagging
+- `BacktestResult` dataclass
+  - strategy metadata
+  - list of trades
+  - equity curve
+  - summary stats dict
+- `_eval_rule(row, rule)`
+  - evaluates rule strings against a feature row using a restricted namespace
+- `run_backtest(df, strategy, ...)`
+  - executes the simulation over historical bars
+  - applies position sizing from risk-per-trade and SL distance
+  - supports fixed-pip SL/TP and ATR-based SL/TP
+  - applies costs from `costs.py`
+  - tags trades with regimes when available
+  - computes stats and attaches `strategy_explain`
+- `_compute_basic_stats(...)`
+  - computes core metrics such as return, Sharpe, DD, PF, win rate, trade count
+- `save_backtest_result(result)`
+  - writes JSON exports under `backtests/results/`
 
-- `monte_carlo.py`
-  - Monte Carlo stress testing for a list of trades.
-  - `monte_carlo_pnl(trades, n_runs=1000, slippage_std_pips=0.0, pip_size=0.0001)`:
-    - Randomizes trade order per run.
-    - Optionally applies random slippage in pips.
-    - Accumulates equity, tracks max drawdown per run.
-    - Returns distribution stats:
-      - `mc_final_equity_mean`, `mc_final_equity_p5`, `mc_final_equity_p95`.
-      - `mc_max_dd_mean`, `mc_max_dd_p5`, `mc_max_dd_p95`.
+### `costs.py`
 
-## Directories
+Trading-cost helpers used by the backtest engine.
+
+This file keeps cost modeling separate from simulation logic so spreads,
+slippage, and commissions can be applied consistently.
+
+### `evaluation.py`
+
+Turns performance outputs into a score and pass/fail decision.
+
+Important pieces:
+
+- `EvaluationConfig`
+  - thresholds for minimum trades, Sharpe, drawdown, PF
+  - weights for the scoring model
+- `compute_score(stats, cfg)`
+  - combines Sharpe, PF, and DD penalty into a base score
+  - then adjusts it using `strategy_explain`
+- `passes_thresholds(stats, cfg)`
+  - enforces minimum requirements
+- `evaluate_strategy(stats, cfg)`
+  - produces the final score + `accepted` decision
+
+In pass 3, scoring is not just about “good total return.” It also rewards or
+penalizes **behavior quality** in ways that matter for specialist live routing.
+
+### `explain.py`
+
+Builds the structured `strategy_explain` object.
+
+This is one of the most important pass 3 pieces.
+
+`strategy_explain` can include:
+
+- `regime_pnl`
+- `session_pnl`
+- `risk_behavior`
+- `stability`
+- `news_behavior`
+- `meta`
+
+The `meta` section is especially important because it can contain:
+
+- `best_regime` / `worst_regime`
+- `best_session` / `worst_session`
+- `allowed_regimes` / `blocked_regimes`
+- `allowed_sessions` / `blocked_sessions`
+- `routing_confidence`
+- descriptive tags like trend-follower vs range trader
+
+Those fields persist into pool stats and are later reused by the live-routing
+layer.
+
+### `walkforward.py`
+
+Out-of-sample validation helpers.
+
+Used to split time-series data into rolling train/test windows and estimate how
+stable a fixed strategy spec remains when evaluated on unseen sections.
+
+Outputs typically include:
+
+- per-window results
+- aggregate Sharpe
+- aggregate max drawdown
+- number of windows
+
+### `monte_carlo.py`
+
+PnL stress-testing helpers.
+
+Used to shuffle trade order and optionally perturb outcomes with slippage-like
+noise to estimate how fragile a trade sequence may be.
+
+Outputs typically include:
+
+- mean / p5 / p95 final equity
+- mean / p5 / p95 max drawdown
+
+## Core Pass 3 Role
+
+Pass 3 makes backtests more than a promotion filter. They now provide the raw
+material for **specialist governance**:
+
+- which regimes a strategy should be allowed in
+- which sessions it should avoid
+- whether it behaves poorly near macro events
+- whether it is too unstable to route live capital confidently
+
+In other words:
+
+- `evaluation.py` decides if a strategy is good enough
+- `explain.py` helps decide **where and when** it should be used
+
+## Directory Layout
 
 - `backtests/results/`
-  - JSON files storing `BacktestResult` outputs.
-  - Used mainly for offline inspection and AI-assisted research (e.g. exported
-    views of top/bottom strategies).
+  - exported JSON results for offline inspection and AI-assisted review
 
 ## How It’s Used
 
-- `scheduler/job_research_strategies()`:
-  - For each candidate strategy:
-    - Calls `run_backtest(...)` with `regime_column="regime"`.
-    - Passes `result.stats` into `evaluate_strategy(...)`.
-    - Optionally runs `walk_forward_test(...)` and `monte_carlo_pnl(...)` and
-      merges their aggregate stats into `eval_result`.
-    - Stores `strategy_explain` inside stats, which then feeds into the scoring
-      and `ResearchMemory`.
+### In research
+
+`scheduler.job_research_strategies()` typically:
+
+1. loads features
+2. runs `run_backtest(...)`
+3. evaluates stats with `evaluate_strategy(...)`
+4. optionally runs walk-forward and Monte Carlo
+5. stores stats + explain into the strategy pool and research memory
+
+### In live routing
+
+The live layer does not call this module directly during each execution pass,
+but it consumes the artifacts produced here through saved pool records.
+
+That means the quality of:
+
+- `regime_pnl`
+- `session_pnl`
+- `news_behavior`
+- `meta.allowed_*`
+- `meta.blocked_*`
+- `meta.routing_confidence`
+
+has direct downstream impact on execution behavior.
 
 ## Gotchas / Notes
 
-- `_eval_rule` relies on `eval` with a restricted namespace; rules are generated
-  by the system itself, not from arbitrary user input.
-- Backtests are **single-symbol** and bar-based; they do not model
-  multi-asset margin interactions or broker-specific quirks.
-- The current walk-forward implementation does not re-optimize strategy
-  parameters per window; it is purely an out-of-sample validation of a fixed
-  strategy spec.
-- Monte Carlo assumes independence of trade outcomes when shuffling; in
-  practice, serial correlation may exist and is not modeled here.
+- `_eval_rule` uses restricted `eval`; rule strings are system-generated, not
+  intended for arbitrary user-supplied expressions.
+- Backtests are bar-based abstractions and cannot fully model live broker
+  microstructure.
+- Walk-forward validation currently checks robustness of a fixed strategy spec;
+  it does not do full per-window re-optimization.
+- Monte Carlo trade-order shuffling is useful, but it still assumes simplified
+  independence and does not model all regime clustering effects.
+- For pass 3, a strategy with decent global PnL can still be a poor live
+  candidate if its routing or stability profile is weak.
+
+## Changelog (Docs)
+
+- 2026-03-21: Documented bar simulation, evaluation, explainability, and
+  robustness tooling.
+- 2026-03-27: Updated for pass 3 emphasis on `strategy_explain.meta`,
+  specialist routing support, and the module’s role in live governance.

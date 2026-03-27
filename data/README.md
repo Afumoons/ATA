@@ -2,142 +2,169 @@
 
 ## Purpose
 
-This module handles **market data ingestion from MetaTrader 5** and persistence
-to disk so that research, backtests, and live trading all share a consistent
-source of OHLC data.
+This module is the project’s **input layer**.
 
-It also contains a **macro news collector** that fetches economic calendar data
-from Forex Factory and stores it under `data/raw/` for use by
-`research/features.py` and the notifications system.
+It is responsible for collecting and persisting:
 
-It focuses on:
+- raw OHLCV market data from MetaTrader 5
+- macro calendar data from Forex Factory
 
-- Connecting to the MT5 terminal.
-- Fetching OHLC bars for configured symbols/timeframes.
-- Saving raw OHLC data under `data/raw/`.
-- Fetching and maintaining a gold-relevant macro news calendar
-  (`news_events.parquet`).
+Everything downstream depends on this module being clean and consistent:
 
-Feature engineering and regime detection are handled separately under
-`research/`.
+- research
+- backtests
+- live execution
+- news-aware lockout logic
+- alerting
+
+## Scope
+
+This module focuses on:
+
+- connecting to MT5
+- fetching OHLC bars for configured symbols/timeframes
+- saving raw parquet inputs under `data/raw/`
+- refreshing and storing normalized macro news events
+
+It does **not** handle:
+
+- feature engineering
+- regime detection
+- strategy logic
+
+Those belong to `research/`.
 
 ## Key Files
 
-- `collector_mt5.py`
-  - `initialize_mt5()` / `shutdown_mt5()` – open/close the MetaTrader 5
-    connection used by the rest of the system.
-  - `fetch_ohlc(symbol, timeframe=None, bars=None)` – fetch OHLCV data from MT5
-    with a robust fallback strategy:
-    - Uses `data_config.mt5_timeframe_default` and
-      `data_config.history_bars_default` when args are not provided.
-    - Maps higher-level timeframe strings (`"M15"`, `"H1"`, etc.) to MT5
-      constants via `TIMEFRAME_MAP`.
-    - Anchors at `datetime.now(timezone.utc)` and returns **UTC-aware**
-      timestamps – this matches `features.py`, which expects UTC-aware times
-      for correct joins with news events.
-    - First tries `mt5.copy_rates_from(symbol, tf, now, n_bars)`.
-    - If that fails (returns `None`), logs `mt5.last_error()` and falls back to
-      `mt5.copy_rates_from_pos(symbol, tf, 0, fallback_bars)` with a reduced
-      bar count.
-    - Returns a pandas DataFrame with columns:
-      - `time` (UTC-aware pandas `datetime`),
-      - `open`, `high`, `low`, `close`, `tick_volume`.
-  - `save_ohlc(df, symbol, timeframe)` – writes OHLC to
-    `data/raw/{symbol}_{timeframe}_ohlc.parquet` and logs the path.
+### `collector_mt5.py`
 
-- `news_collector.py`
-  - Fetches macro events from **Forex Factory** public JSON feeds:
-    - `ff_calendar_thisweek.json`
-    - `ff_calendar_nextweek.json`
-  - Focused on events that are **gold-relevant** (XAUUSDm) by currency and
-    keyword filter.
-  - Core helpers:
-    - `fetch_ff_calendar(weeks=2)` – pulls the raw calendar and normalises it
-      into a DataFrame with columns:
-      - `datetime_utc` – event time (UTC-aware),
-      - `currency` – e.g. `USD`, `EUR`, ...,
-      - `impact` – integer 0–3 (`High` → 3, `Medium` → 2, `Low` → 1,
-        `Holiday` → 0),
-      - `event_name`, `forecast`, `previous`,
-      - `is_gold_relevant` – boolean flag.
-    - `load_news_events()` / `save_news_events(df)` – I/O helpers for
-      `data/raw/news_events.parquet`.
-    - `update_news_events()` – idempotent merge of new calendar data into the
-      existing parquet file (deduplicates by `(datetime_utc, event_name)`).
-    - `get_upcoming_high_impact(hours_ahead=4.0, min_impact=3, gold_relevant_only=True)` –
-      returns a filtered DataFrame of high-impact upcoming events within the
-      next N hours, used by the scheduler for WhatsApp alerts and
-      pre-event lockouts.
+Handles MT5 connectivity and OHLC fetching.
 
-## Directories
+Important functions:
 
-- `data/raw/`
-  - Parquet files with raw OHLCV data per symbol/timeframe
-    (`{symbol}_{timeframe}_ohlc.parquet`).
-  - `news_events.parquet` containing macro events from Forex Factory.
-  - Used as the input to `research/features.py` (both price and news
-    context).
+- `initialize_mt5()` / `shutdown_mt5()`
+  - open and close the MT5 connection used by the rest of the system
+- `fetch_ohlc(symbol, timeframe=None, bars=None)`
+  - fetches OHLCV bars from MT5
+  - uses config defaults when args are omitted
+  - normalizes timestamps to **UTC-aware** datetimes
+  - includes fallback logic when the primary MT5 copy call fails
+- `save_ohlc(df, symbol, timeframe)`
+  - writes OHLC parquet under `data/raw/{symbol}_{timeframe}_ohlc.parquet`
 
-- `data/features/`
-  - Not written directly by this module, but closely related. See
-    `research/README.md` for details on feature files.
+### `news_collector.py`
+
+Handles macro news ingestion from Forex Factory JSON feeds.
+
+Important helpers:
+
+- `fetch_ff_calendar(weeks=2)`
+  - fetches one or more weekly FF calendars and normalizes them into a DataFrame
+- `load_news_events()` / `save_news_events(df)`
+  - reads/writes `data/raw/news_events.parquet`
+- `update_news_events()`
+  - refreshes and merges FF events into the local store idempotently
+- `get_upcoming_high_impact(...)`
+  - finds near-term, high-impact events for lockout and alerting flows
+
+### `news_schema.md`
+
+Human-readable schema notes for the normalized news dataset.
+
+This is documentation for the structure expected by the research and
+notification layers.
+
+## Data Outputs
+
+### `data/raw/`
+
+This folder stores canonical raw inputs such as:
+
+- `{symbol}_{timeframe}_ohlc.parquet`
+- `news_events.parquet`
+
+These files are the upstream source for feature generation.
+
+### `data/features/`
+
+This folder is not written by `data/` directly, but it is the immediate next
+stage in the pipeline and is populated by `research/features.py`.
+
+## Pass 3 Relevance
+
+In pass 3, the data module becomes more important because the rest of the
+system now depends on **better contextual inputs**, not just price bars.
+
+Key pass 3 implications:
+
+- OHLC timestamps must remain reliably **UTC-aware** to join correctly with
+  macro events.
+- News data is now part of the practical live-routing stack through:
+  - `news_impact_level`
+  - `news_time_delta_min`
+  - `has_news_window`
+  - `in_news_lockout`
+- The alerting layer also depends on the same normalized news store for
+  pre-event notifications.
 
 ## Configuration
 
-`collector_mt5.py` relies on `DataConfig` in `config.py`:
+### Market data
 
-```python
-@dataclass
-class DataConfig:
-    mt5_timeframe_default: str = "M15"
-    history_bars_default: int = 2000
+`collector_mt5.py` relies on `DataConfig` in `config.py`, including defaults like:
 
-data_config = DataConfig()
-```
+- default timeframe
+- default history-bar count
 
-These defaults are used when `timeframe` or `bars` are not provided explicitly
-in `fetch_ohlc(...)`.
+### News data
 
-`news_collector.py` has no external configuration; it uses Forex Factory's
-public JSON API and stores results under `data/raw/news_events.parquet`.
+`news_collector.py` is intentionally lightweight and relies on:
+
+- Forex Factory public JSON feeds
+- local parquet persistence under `data/raw/`
+
+No complex external service configuration is required beyond network access.
 
 ## How It’s Used
 
-- `scheduler/main.py` → `job_update_data()`:
-  - For each managed symbol:
-    - Calls `fetch_ohlc(symbol, timeframe=TIMEFRAME)`.
-    - Calls `save_ohlc(df, symbol, TIMEFRAME)`.
-    - Passes the resulting DataFrame on to `research.compute_features(...)`.
+### `scheduler.job_update_data()`
 
-- `scheduler/main.py` → `job_update_news()` (daily at 06:00 UTC):
-  - Calls `update_news_events()` to refresh `news_events.parquet`.
-  - Calls `get_upcoming_high_impact(...)` to detect important upcoming events
-    and forwards them to `notifications.whatsapp_notifier.send_news_alert(...)`.
+For each managed symbol:
 
-- `scheduler/main.py` → `job_news_alert()` (every 5 minutes):
-  - Uses `get_upcoming_high_impact(...)` to look for events within the next
-    hour and triggers WhatsApp alerts as needed (with cooldowns).
+1. fetch OHLC from MT5
+2. save raw OHLC
+3. pass the DataFrame to `research.compute_features(...)`
 
-- `research/features.py`:
-  - Calls `_load_news_events()` which reads `news_events.parquet` via
-    `news_collector.load_news_events()` and filters to `is_gold_relevant`.
-  - Joins news context into features (time deltas, impact level, lockout
-    flags) via `_add_news_features(...)`.
+### `scheduler.job_update_news()`
+
+- refreshes the local FF calendar
+- stores/upserts `news_events.parquet`
+- supports summary alert generation for upcoming events
+
+### `scheduler.job_news_alert()`
+
+- queries the normalized news store for imminent events
+- hands those events to the notifier layer
+
+### `research/features.py`
+
+- loads `news_events.parquet`
+- joins macro context into the feature matrix
 
 ## Gotchas / Notes
 
-- **MT5 Terminal must be running and logged into the correct account** before
-  `initialize_mt5()` is called, otherwise `mt5.initialize()` will fail.
-- All times are handled as **UTC-aware** datetimes; mixing naive and
-  timezone-aware timestamps will cause subtle bugs in joins, which is why
-  both OHLC and news data are normalised to UTC in this module.
-- If both `copy_rates_from` and `copy_rates_from_pos` fail, a `RuntimeError` is
-  raised with both MT5 error codes to aid debugging.
-- If Forex Factory endpoints are unavailable, `news_collector` logs warnings
-  and returns an empty DataFrame; downstream code degrades gracefully and
-  simply behaves as if there is "no news".
+- MT5 must be running and connected to the intended account before
+  `initialize_mt5()` succeeds.
+- Mixing naive timestamps with UTC-aware timestamps will create subtle,
+  damaging join bugs. This module should continue to normalize everything to UTC.
+- If FF endpoints fail, downstream code is designed to degrade gracefully and
+  continue without news context.
+- The data module should remain conservative and boring: correctness and
+  timestamp hygiene matter more than cleverness here.
 
 ## Changelog (Docs)
 
-- 2026-03-21: Documented `news_collector.py`, UTC-aware OHLC timestamps, and
-  scheduler jobs for news updates / alerts.
+- 2026-03-21: Documented MT5 OHLC ingestion, Forex Factory news ingestion,
+  and scheduler integration.
+- 2026-03-27: Refreshed for pass 3 with stronger emphasis on UTC hygiene,
+  normalized news inputs, and the module’s role in news-aware routing + alerts.
