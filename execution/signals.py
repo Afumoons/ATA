@@ -11,6 +11,7 @@ from collections import Counter, defaultdict
 
 import pandas as pd
 
+from ..config import routing_config
 from ..logging_utils import get_logger
 from ..strategies.base import StrategyDefinition
 from ..strategies.live_manifest import strategy_definition_from_manifest_entry
@@ -19,11 +20,6 @@ from ..execution.engine import execute_trade
 from ..execution.live_state_utils import can_open_new_trade, strategy_has_open_position
 
 logger = get_logger(__name__)
-
-ACTIVE_REGIME_EDGE_THRESHOLD = 1.0
-EXPLORATORY_REGIME_EDGE_THRESHOLD = 0.25
-MIN_REGIME_CONFIDENCE_ACTIVE = 0.60
-MIN_REGIME_CONFIDENCE_EXPLORATORY = 0.45
 
 # ---------------------------------------------------------------------------
 # Ticket → strategy name mapping
@@ -230,20 +226,23 @@ def _build_routing_context(row: pd.Series) -> RoutingContext:
     )
 
 
-def _passes_session_gate(stats: Dict[str, Any], current_session: str) -> tuple[bool, str]:
+def _passes_session_gate(stats: Dict[str, Any], current_session: str, routing_cfg=routing_config) -> tuple[bool, str]:
     ex = stats.get("strategy_explain", {}) or {}
     meta = ex.get("meta", {}) or {}
     allowed = [str(x) for x in (meta.get("allowed_sessions", []) or [])]
     blocked = [str(x) for x in (meta.get("blocked_sessions", []) or [])]
+    best_session = str(meta.get("best_session", "") or "")
 
-    if current_session in blocked:
+    if routing_cfg.enforce_blocked_sessions and current_session in blocked:
         return False, f"session_blocked:{current_session}"
-    if allowed and current_session not in allowed:
+    if routing_cfg.require_best_session_for_entry and best_session and current_session != best_session:
+        return False, f"session_not_best:{current_session}:best={best_session}"
+    if routing_cfg.enforce_allowed_sessions and allowed and current_session not in allowed:
         return False, f"session_not_allowed:{current_session}"
     return True, "ok"
 
 
-def _passes_regime_gate(stats: Dict[str, Any], context: RoutingContext) -> tuple[bool, str, str]:
+def _passes_regime_gate(stats: Dict[str, Any], context: RoutingContext, routing_cfg=routing_config) -> tuple[bool, str, str]:
     ex = stats.get("strategy_explain", {}) or {}
     meta = ex.get("meta", {}) or {}
     allowed = [str(x) for x in (meta.get("allowed_regimes", []) or [])]
@@ -251,10 +250,10 @@ def _passes_regime_gate(stats: Dict[str, Any], context: RoutingContext) -> tuple
 
     candidate_labels = context.candidate_regime_labels
     blocked_hits = [label for label in candidate_labels if label in blocked]
-    if blocked_hits:
+    if routing_cfg.enforce_blocked_regimes and blocked_hits:
         return False, f"regime_blocked:{','.join(blocked_hits)}", blocked_hits[0]
 
-    if allowed:
+    if routing_cfg.enforce_allowed_regimes and allowed:
         allowed_hits = [label for label in candidate_labels if label in allowed]
         if not allowed_hits:
             return False, f"regime_not_allowed:{','.join(candidate_labels)}", candidate_labels[0]
@@ -263,9 +262,13 @@ def _passes_regime_gate(stats: Dict[str, Any], context: RoutingContext) -> tuple
     return True, "ok", candidate_labels[0]
 
 
-def _passes_regime_confidence_gate(context: RoutingContext, tier: str) -> tuple[bool, str]:
+def _passes_regime_confidence_gate(context: RoutingContext, tier: str, routing_cfg=routing_config) -> tuple[bool, str]:
     confidence = context.regime_confidence
-    min_conf = MIN_REGIME_CONFIDENCE_ACTIVE if tier == "active" else MIN_REGIME_CONFIDENCE_EXPLORATORY
+    min_conf = (
+        routing_cfg.min_regime_confidence_active
+        if tier == "active"
+        else routing_cfg.min_regime_confidence_exploratory
+    )
 
     if confidence < min_conf:
         return False, (
@@ -275,7 +278,10 @@ def _passes_regime_confidence_gate(context: RoutingContext, tier: str) -> tuple[
     return True, "ok"
 
 
-def _passes_volatility_gate(stats: Dict[str, Any], context: RoutingContext) -> tuple[bool, str]:
+def _passes_volatility_gate(stats: Dict[str, Any], context: RoutingContext, routing_cfg=routing_config) -> tuple[bool, str]:
+    if not routing_cfg.enforce_volatility_mismatch_gate:
+        return True, "ok"
+
     ex = stats.get("strategy_explain", {}) or {}
     meta = ex.get("meta", {}) or {}
     allowed = [str(x) for x in (meta.get("allowed_regimes", []) or [])]
@@ -421,7 +427,7 @@ def execute_signals_for_symbol(
         session_eligible: List[Any] = []
         session_blocked: List[str] = []
         for rec in records:
-            ok, reason = _passes_session_gate(rec.stats or {}, current_session)
+            ok, reason = _passes_session_gate(rec.stats or {}, current_session, routing_cfg=routing_config)
             if ok:
                 session_eligible.append(rec)
             else:
@@ -446,7 +452,7 @@ def execute_signals_for_symbol(
         confidence_eligible: List[Any] = []
         confidence_blocked: List[str] = []
         for rec in session_eligible:
-            ok, reason = _passes_regime_confidence_gate(context, tier)
+            ok, reason = _passes_regime_confidence_gate(context, tier, routing_cfg=routing_config)
             if ok:
                 confidence_eligible.append(rec)
             else:
@@ -471,7 +477,7 @@ def execute_signals_for_symbol(
         volatility_eligible: List[Any] = []
         volatility_blocked: List[str] = []
         for rec in confidence_eligible:
-            ok, reason = _passes_volatility_gate(rec.stats or {}, context)
+            ok, reason = _passes_volatility_gate(rec.stats or {}, context, routing_cfg=routing_config)
             if ok:
                 volatility_eligible.append(rec)
             else:
@@ -504,7 +510,7 @@ def execute_signals_for_symbol(
         regime_policy_blocked: List[str] = []
         selected_regime_labels: Dict[str, str] = {}
         for rec in volatility_eligible:
-            ok, reason, selected_label = _passes_regime_gate(rec.stats or {}, context)
+            ok, reason, selected_label = _passes_regime_gate(rec.stats or {}, context, routing_cfg=routing_config)
             if ok:
                 regime_eligible.append(rec)
                 selected_regime_labels[rec.name] = selected_label
@@ -527,7 +533,11 @@ def execute_signals_for_symbol(
         if not regime_eligible:
             return []
 
-        threshold = ACTIVE_REGIME_EDGE_THRESHOLD if tier == "active" else EXPLORATORY_REGIME_EDGE_THRESHOLD
+        threshold = (
+            routing_config.active_regime_edge_threshold
+            if tier == "active"
+            else routing_config.exploratory_regime_edge_threshold
+        )
         scored: List[Tuple[float, Any]] = []
         edge_selected_labels: Dict[str, str] = {}
         for rec in regime_eligible:
@@ -568,7 +578,12 @@ def execute_signals_for_symbol(
                 blocked,
             )
 
-        if not filtered and scored and tier == "exploratory":
+        if (
+            not filtered
+            and scored
+            and tier == "exploratory"
+            and routing_config.keep_best_exploratory_on_empty_edge_filter
+        ):
             scored.sort(key=lambda x: x[0], reverse=True)
             best_edge, best_rec = scored[0]
             filtered = [best_rec]

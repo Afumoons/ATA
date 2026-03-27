@@ -71,6 +71,7 @@ Important behavior includes:
 - expanding coarse regimes into candidate labels using structured regime context
 - applying volatility mismatch guards
 - using `regime_confidence` to reject weak-confidence contexts
+- loading live routing switches/thresholds from `autonomous_trading_ai.config.routing_config`
 - ranking strategies by regime-specific edge
 - executing with normal risk for `active` and reduced risk for `exploratory`
 - returning structured outcome info so the scheduler can log why trades were or were not taken

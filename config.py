@@ -21,6 +21,7 @@ class RiskConfig:
     max_trades_per_day: int = 288               # lock trading after N trades/day
     daily_limits_enabled: bool = False
 
+
 @dataclass
 class DataConfig:
     mt5_timeframe_default: str = "M15"
@@ -32,7 +33,32 @@ class SchedulerConfig:
     enable_scheduler: bool = True
 
 
+@dataclass
+class RoutingConfig:
+    # Session gates
+    require_best_session_for_entry: bool = True
+    enforce_allowed_sessions: bool = True
+    enforce_blocked_sessions: bool = True
+
+    # Regime policy gates
+    enforce_allowed_regimes: bool = True
+    enforce_blocked_regimes: bool = True
+
+    # Structured routing confidence gates
+    min_regime_confidence_active: float = 0.60
+    min_regime_confidence_exploratory: float = 0.45
+
+    # Volatility mismatch gate
+    enforce_volatility_mismatch_gate: bool = True
+
+    # Regime edge ranking thresholds
+    active_regime_edge_threshold: float = 1.0
+    exploratory_regime_edge_threshold: float = 0.25
+    keep_best_exploratory_on_empty_edge_filter: bool = True
+
+
 # Module-level singletons — import and reference these directly in other modules
 risk_config = RiskConfig()
 data_config = DataConfig()
 scheduler_config = SchedulerConfig()
+routing_config = RoutingConfig()
