@@ -1,231 +1,304 @@
 # autonomous_trading_ai – Architecture
 
-This document describes how the system is structured at a high level. It should be kept in sync with the actual code as the project evolves.
+This document describes the implemented high-level architecture of the current
+system.
 
-Important framing:
-- The current implementation is **not** a generic multi-broker execution platform.
-- The current codebase is best understood as an **MT5-centric research + live execution stack**, with the strongest present operating alignment around **`XAUUSDm M15`**.
-- When this doc uses conceptual terms, prefer interpreting them through the actual implemented modules (`data`, `research`, `strategies`, `backtests`, `execution`, `scheduler`, `risk`) rather than as future-platform promises.
+## Framing
 
-## 1. High‑Level Diagram (Conceptual)
+The current codebase is best understood as:
 
-A typical end‑to‑end flow looks like this:
+- an **MT5-centric research + live execution stack**
+- with a **specialist strategy inventory**
+- governed by a **routing layer**
+- orchestrated by a recurring scheduler loop
 
-```text
-[Data Source(s)] -> [Data Layer] -> [Signal Engine] -> [Trade Planner]
-                                          |                 |
-                                          v                 v
-                                     [Risk Checker] ----> [Execution Adapter]
-                                          |
-                                          v
-                                      [Journal]
-```
+It is not a generic abstract exchange framework. Use the real modules and files
+as the source of truth.
 
-And for OpenClaw integration:
+## High-Level Flow
 
 ```text
-[autonomous_trading_ai] <-> [Project Files / Logs]
-                               ^
-                               |
-                        [Clio + Subagents]
-                               |
-                               v
-                       [Alerts / Dashboards]
+[MT5 OHLC + Forex Factory News]
+              ↓
+        [data/ collection]
+              ↓
+ [research/ features + structured regimes]
+              ↓
+[strategies/ generation + pool governance]
+              ↓
+ [backtests/ evaluation + explainability]
+              ↓
+[vector_memory/ research memory guidance]
+              ↓
+[scheduler/ orchestration]
+       ↙                    ↘
+[execution/ live routing]   [notifications/ alerts]
+       ↓
+ [MT5 order execution + monitoring]
 ```
 
-## 2. Main Components
+## Main Runtime Components
 
-> NOTE: Update names/paths to match the actual code structure (modules, packages, folders).
-
-### 2.1 Data Layer
+### 1. Data layer – `data/`
 
 Responsibilities:
-- Fetch historical and/or live market data (candles, order book, funding, etc.).
-- Normalize data into a format the signal engine expects.
-- Provide caching where needed to avoid hammering APIs.
 
-Possible locations:
-- `src/data/` or equivalent.
+- connect to MT5
+- fetch OHLCV bars
+- persist raw parquet data
+- fetch and normalize Forex Factory macro events
 
-### 2.2 Signal Engine
+Important files:
 
-Responsibilities:
-- Consume normalized market data.
-- Compute indicators and patterns.
-- Emit **signals** like:
-  - `LONG_SETUP`, `SHORT_SETUP`, `EXIT_SIGNAL`, etc.
+- `data/collector_mt5.py`
+- `data/news_collector.py`
 
-Notes:
-- Should be deterministic given the same data.
-- Should be testable in isolation (unit tests on indicator logic).
-- Current trading mode is **1 strategy → 1 open position**. Backtests and live
-  execution should not pyramid the same strategy while its prior position is
-  still open, unless a legacy/migration path explicitly opts back into
-  multi-position behaviour.
-- Signal quality should be interpreted together with the **routing layer**:
-  the system should prefer a portfolio of specialist strategies and then decide
-  which specialists are eligible under the current regime/session context.
+Important outputs:
 
-### 2.3 Trade Planner
+- `data/raw/{symbol}_{timeframe}_ohlc.parquet`
+- `data/raw/news_events.parquet`
+
+### 2. Feature + regime layer – `research/`
 
 Responsibilities:
-- Turn a signal into a **trade plan**:
-  - symbol, side, entry, SL, TP, size, leverage, time‑in‑force.
-- Use account/equity info and risk parameters to size positions.
 
-Interface (conceptual):
+- compute indicators and derived features
+- join macro-news context
+- classify market regimes
+- preserve both legacy and structured regime fields
 
-```ts
-TradePlan = {
-  id: string,
-  timestamp: string,
-  symbol: string,
-  side: "long" | "short",
-  leverage: number,
-  size_quote: number,
-  entry: number,
-  stop_loss?: number,
-  take_profit?: number,
-  meta?: Record<string, any>
-}
-```
+Important files:
 
-### 2.4 Risk Checker (Core for OpenClaw Sandbox)
+- `research/features.py`
+- `research/regime.py`
 
-Responsibilities:
-- Decide whether a `TradePlan` is **allowed** or **blocked** before execution.
-- Encapsulate rules such as:
-  - max % equity per trade,
-  - max number of concurrent positions per symbol,
-  - **max one open position per strategy slot** (`strategy + symbol + timeframe`) in the current live mode,
-  - max leverage per market,
-  - session time rules (avoid certain hours),
-  - volatility filters, etc.
+Important outputs:
 
-Integration pattern with OpenClaw (file‑based example):
+- `data/features/{symbol}_{timeframe}_features.parquet`
+- fields such as:
+  - `regime`
+  - `regime_class`
+  - `regime_type`
+  - `regime_confidence`
+  - `vol_regime`
+  - `in_news_lockout`
 
-1. Engine writes a JSON file like:
-   - `runtime/risk_requests/<id>.json` containing the `TradePlan` + context.
-2. An OpenClaw sandbox subagent:
-   - reads the request file,
-   - evaluates rules,
-   - writes `runtime/risk_results/<id>.json` with a structure like:
-
-```jsonc
-{
-  "id": "same-as-request",
-  "decision": "allow",     // or "block"
-  "reasons": [
-    "risk_per_trade_ok",
-    "within_leverage_limit"
-  ],
-  "adjustments": {
-    // optional: the risk engine can shrink size, force tighter SL, etc.
-  }
-}
-```
-
-3. Engine waits for the result and either:
-   - proceeds to execution, or
-   - skips the trade and logs the block.
-
-### 2.5 Execution Adapter(s)
+### 3. Strategy inventory layer – `strategies/`
 
 Responsibilities:
-- Translate `TradePlan` into real API calls for specific exchanges:
-  - Binance, Bybit, Exness, etc.
-- Handle authentication, rate limits, and error handling.
 
-Design notes:
-- Keep adapters thin and declarative; they should not contain strategy logic.
-- Prefer a clean interface like:
+- define strategy specs as data
+- generate and evolve candidate strategies
+- persist pool records and statuses
+- carry routing metadata forward from research
 
-```ts
-executeTrade(plan: TradePlan, options?: ExecuteOptions): Promise<ExecutionResult>
-```
+Important files:
 
-### 2.6 Journal & Logging
+- `strategies/base.py`
+- `strategies/generator.py`
+- `strategies/evolution.py`
+- `strategies/pool.py`
+- `strategies/live_manifest.py`
+
+Important persistent artifacts:
+
+- `strategies/generated/*.json`
+- `strategies/pool_state.json`
+
+### 4. Research evaluation layer – `backtests/`
 
 Responsibilities:
-- Persist all important events:
-  - signals,
-  - trade plans,
-  - risk decisions,
-  - executed orders,
-  - PnL and metrics.
 
-Implementation ideas:
-- Append‑only JSONL files in `logs/` or `runtime/logs/`.
-- Human‑readable summaries in Markdown for daily/weekly review.
+- simulate historical strategy behavior
+- compute score and threshold decisions
+- build `strategy_explain`
+- run walk-forward and Monte Carlo checks
 
-## 3. Config & Parameters
+Important files:
 
-> Keep this section in sync with actual config files (YAML/JSON/env).
+- `backtests/engine.py`
+- `backtests/evaluation.py`
+- `backtests/explain.py`
+- `backtests/walkforward.py`
+- `backtests/monte_carlo.py`
 
-Key configuration areas:
-- Exchange credentials (kept **out of git**, loaded via env/secret store).
-- Risk parameters:
-  - max_risk_pct_per_trade,
-  - max_daily_loss,
-  - per‑symbol leverage caps.
-- Strategy toggles:
-  - enable/disable specific signals or markets.
+Important architectural role:
 
-File layout suggestion:
+This layer produces the metadata later reused by live routing, especially via:
+
+- `strategy_explain.regime_pnl`
+- `strategy_explain.session_pnl`
+- `strategy_explain.meta`
+
+### 5. Research memory layer – `vector_memory/`
+
+Responsibilities:
+
+- store evaluation summaries in Chroma
+- query similar prior strategies
+- provide soft guidance for parent selection and candidate filtering
+
+Important file:
+
+- `vector_memory/research_memory.py`
+
+Important property:
+
+This is **advisory**, not a hard execution dependency.
+
+### 6. Orchestration layer – `scheduler/`
+
+Responsibilities:
+
+- run recurring jobs
+- keep the whole system synchronized
+- invoke research, execution, monitoring, and alerts
+
+Important file:
+
+- `scheduler/main.py`
+
+Typical jobs:
+
+- `job_update_data`
+- `job_research_strategies`
+- `job_execute_signals`
+- `job_live_monitor`
+- `job_update_news`
+- `job_news_alert`
+
+### 7. Live execution layer – `execution/`
+
+Responsibilities:
+
+- enforce live eligibility and routing logic
+- validate trades through account-level risk checks
+- place orders into MT5
+- maintain daily state and live-performance state
+- observe equity and open/closed trades
+
+Important files:
+
+- `execution/signals.py`
+- `execution/engine.py`
+- `execution/live_state_utils.py`
+- `execution/live_monitor.py`
+- `execution/live_observer.py`
+- `execution/strategy_live_stats.py`
+
+Important state artifacts:
+
+- `execution/trades.log`
+- `execution/live_state.json`
+- `execution/equity_history.json`
+- `execution/closed_trades_state.json`
+- `execution/strategy_live_stats.json`
+- `execution/open_trades.json`
+- `execution/ticket_strategy_map.json`
+
+### 8. Hard risk layer – `risk/`
+
+Responsibilities:
+
+- per-trade risk cap
+- max open positions
+- max portfolio drawdown check vs peak equity
+
+Important file:
+
+- `risk/manager.py`
+
+Important note:
+
+This is separate from session/regime routing and separate from daily guardrails.
+
+### 9. Notifications / alert layer – `notifications/` + `webhook_server.py`
+
+Responsibilities:
+
+- build outbound alerts
+- POST them to a configured webhook target
+- support operator awareness for important events
+
+Important files:
+
+- `notifications/whatsapp_notifier.py`
+- `webhook_server.py`
+
+Important note:
+
+This path is currently **best-effort / experimental** and not critical for the
+trading loop.
+
+## Pass 3 Architecture Shift
+
+Pass 3 mainly changes how research and live layers connect.
+
+### Before
+
+The system leaned more toward:
+
+- score-driven selection
+- coarse regime usage
+- lighter specialist governance
+
+### Now
+
+The system leans more toward:
+
+- explicit specialist metadata
+- structured regime-aware routing
+- session hard gates
+- confidence-aware eligibility
+- volatility mismatch handling
+- clear no-trade outcomes when no specialist is credible
+
+## Live Decision Pipeline
+
+A practical pass 3 live flow now looks like:
 
 ```text
-config/
-  env.example            # placeholder env vars
-  risk.default.json      # default risk limits
-  strategy.default.json  # default strategy toggles
+[Latest feature row]
+      ↓
+[Daily/news/open-slot guards]
+      ↓
+[Session eligibility gate]
+      ↓
+[Regime allow/block gate]
+      ↓
+[Volatility mismatch gate]
+      ↓
+[Confidence gate]
+      ↓
+[Rank eligible specialists by edge]
+      ↓
+[Apply active/exploratory risk tier]
+      ↓
+[Risk manager validation]
+      ↓
+[MT5 order execution]
 ```
 
-## 4. OpenClaw Integration Points
+Key principle:
 
-Current/planned integration points:
+- **eligibility first, ranking second**
 
-1. **Risk Checker Subagent**
-   - Sandbox subagent consumes `runtime/risk_requests/*.json`.
-   - Produces `runtime/risk_results/*.json`.
+## Design Constraints
 
-2. **Journaling & Analytics**
-   - Clio can read logs and produce:
-     - daily summaries,
-     - edge analysis,
-     - anomaly detection (e.g., unusual loss streaks).
+The architecture intentionally accepts these limitations:
 
-3. **Alerting (via WhatsApp webhook skill)**
-   - A separate process/agent can watch:
-     - `logs/` for error events,
-     - `risk_results/` for blocked trades,
-     - PnL metrics.
-   - When certain thresholds are hit, send concise alerts.
+- per-symbol research is stronger than portfolio-level intelligence
+- backtests are still bar-based abstractions
+- research memory is heuristic guidance, not authority
+- alert delivery is not guaranteed infrastructure
+- operator visibility exists, but not yet as a polished dashboard product
 
-## 5. Runtime Topologies
+## Practical Mental Model
 
-A few ways this system can be deployed:
+If you need one sentence to remember the architecture:
 
-1. **Local Dev & Backtest**
-   - Run engine + data locally.
-   - No OpenClaw involvement required.
+> `autonomous_trading_ai` is a scheduler-driven MT5 research/execution system that discovers specialist strategies, stores them in a governed pool, and deploys them conservatively through a structured live-routing layer.
 
-2. **Local Live + OpenClaw Sandbox**
-   - Engine runs on the same machine as OpenClaw.
-   - File‑based risk requests/results exchanged via the workspace.
-   - Subagents in sandbox handle risk logic and summaries.
+## Changelog (Docs)
 
-3. **Hybrid (Server Engine, Local Gateway)**
-   - In future, engine can run on a server/VPS,
-   - OpenClaw gateway on your laptop/desktop,
-   - Connected via shared storage or API bridge.
-
-## 6. Future Extensions
-
-- Multi‑strategy orchestration (portfolio of strategies running in parallel).
-- Strategy‑specific risk modules (e.g., mean‑reversion vs breakout).
-- Web dashboard for monitoring (positions, PnL, health).
-- Richer integration with Clio for semi‑automated parameter tuning.
-
----
-
-> Keep this file short, accurate, and updated. When you change how components talk to each other, update this doc so both you and Clio always have the same mental model.
+- 2026-03-27: Rewrote the architecture doc to match the implemented pass 3 module graph, state artifacts, and specialist-routing execution model.

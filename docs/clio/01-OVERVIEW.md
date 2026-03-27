@@ -1,103 +1,160 @@
 # autonomous_trading_ai – Overview
 
-## 1. Purpose
+## Purpose
 
-`autonomous_trading_ai` is an opinionated trading engine designed to run semi‑autonomously under Afu's supervision.
+`autonomous_trading_ai` is an MT5-centric autonomous trading research and
+execution system designed for **supervised semi-autonomous operation**.
 
-High‑level goals:
-- Automate repetitive trading workflows (signal evaluation, order sizing, risk checks, logging).
-- Keep a **clear separation** between decision logic (strategy) and execution (brokers/exchanges).
-- Make it easy to **test, simulate, and audit** decisions after the fact.
+Its current strengths are:
 
-Non‑goals (for now):
-- Being a generic "for everyone" framework.
-- Blind, fully autonomous trading without risk guardrails.
+- automated market-data refresh
+- feature engineering and regime detection
+- strategy generation/evolution
+- backtesting and robustness checks
+- persistent strategy-pool governance
+- live execution with hard risk controls
+- live monitoring, degradation, and circuit-breaker behavior
 
-## 2. Scope
+The current codebase is best understood as a **specialist strategy portfolio +
+routing engine**, not a generic all-broker trading framework.
 
-Current implemented scope in the codebase:
-- Broker/data/execution path: **MetaTrader 5 centric**.
-- Primary live symbol focus: **`XAUUSDm`**.
-- Current operating timeframe bias: **`M15`**.
-- Research can also include other MT5 symbols/timeframes, but the strongest current alignment is with **M15 intraday / semi-scalp behavior**, not true sub-5-minute scalping.
+## Current Scope
 
-Out of scope (current implemented design):
-- A broad multi-broker production engine across Binance/Bybit/Exness APIs.
-- Options/derivatives beyond the currently implemented MT5-oriented flow.
-- Long‑horizon portfolio optimization.
-- Claiming the system is already optimized for `M5` / `M1`.
+Implemented scope today is centered on:
 
-> NOTE: Keep this section grounded in the actual code, not aspirational market coverage.
+- **MetaTrader 5** for data and execution
+- strongest practical alignment with **`XAUUSDm` on `M15`**
+- support for additional symbols/timeframes where configured
+- structured regime-aware live routing
+- Chroma-backed research memory
+- optional best-effort webhook/WhatsApp alerts
 
-## 3. Core Concepts
+The current system is **not** best described as:
 
-- **Signal** – A structured description of why a trade is considered (indicator state, pattern, context).
-- **Specialist strategy** – A strategy intended to perform best in a **specific regime / session / volatility context**, not universally.
-- **Routing layer** – The logic that decides **which specialist strategies are allowed to trade right now** based on current regime, session, volatility, and confidence.
-- **Trade plan** – A proposed order: symbol, side, size, entry, SL/TP, leverage, time‑in‑force, etc.
-- **Risk rule** – A constraint that can block or shrink a trade (max % equity per trade, max leverage, session time rules, etc.).
-- **Execution** – The concrete interaction with an exchange/broker API.
-- **Journal entry** – A log record that ties together signal → decision → execution → outcome.
+- a universal multi-broker engine
+- a mature multi-asset portfolio optimizer
+- a fully hands-off black-box trading bot
 
-## 4. Operating Modes
+## Core Design Philosophy
 
-Planned/typical modes:
+### 1) Specialist strategies, not one universal strategy
 
-1. **Backtest / Simulation**
-   - Inputs: historical data.
-   - Output: trade logs + performance metrics.
-   - No real API calls.
+The system is designed to find and operate **bounded specialists**:
 
-2. **Paper / Shadow Trading**
-   - Runs in (near) real‑time.
-   - Generates trade plans and decisions, but does not hit live order APIs.
+- trend specialists
+- range / mean-reversion specialists
+- session-biased specialists
+- volatility-sensitive specialists
 
-3. **Live Assisted**
-   - Engine proposes trades and passes through a **risk checker** (e.g., via OpenClaw sandbox subagent).
-   - Final execution can still require explicit human approval.
+A strategy is allowed to be narrow if it has a credible role and the routing
+layer knows when to use it.
 
-4. **Live Semi‑Autonomous** (future)
-   - Engine + risk checker operate continuously.
-   - Human supervision via alerts, dashboards, and configurable kill‑switches.
+### 2) Eligibility before ranking
 
-## 5. Safety & Risk Philosophy
+The live system should first ask:
 
-- Default stance: **aggressive but bounded** risk.
-- Every trade should be explainable in terms of:
-  - What signal triggered it.
-  - Which risk rules were checked and passed.
-  - How size and leverage were calculated.
-- The engine should fail **safe** (stop trading or reduce size) on:
-  - Data quality issues (missing candles, bad prices).
-  - Connectivity issues to exchanges.
-  - Inconsistent account state (margin, positions).
+- is this strategy allowed in the current session?
+- is it allowed in the current regime?
+- is volatility a fit?
+- is routing confidence high enough?
 
-## 6. Integration with OpenClaw
+Only then should it rank eligible strategies by edge.
 
-`autonomous_trading_ai` is designed to integrate with an OpenClaw‑based assistant (Clio Nova):
+### 3) Research and live are connected, but not identical
 
-- Clio can read and write project files (plans, logs, configs) to:
-  - Propose strategy changes.
-  - Summarize performance.
-  - Generate or review risk rules.
-- Sandbox subagents can:
-  - Perform **risk & sanity checks** on trade plans before execution.
-  - Produce human‑readable explanations.
-- Messaging plugins (WhatsApp, etc.) can be wired (via webhook skills) to send alerts on:
-  - Strategy errors.
-  - Risk rule violations.
-  - Large PnL swings.
+Research finds and explains candidate behaviors.
+Live execution reuses that information conservatively.
 
-## 7. Status
+Backtests help answer:
 
-Early stage / evolving.
+- does this strategy have evidence?
+- where is it strongest or weakest?
 
-Use this section to keep a short, honest snapshot:
+Live routing then asks:
 
-- [ ] Backtest path stable
-- [ ] Paper trading stable
-- [ ] Live trading connected (which exchanges?)
-- [ ] Risk checker integrated with OpenClaw
-- [ ] Alerting wired (WhatsApp / others)
+- should it trade **right now**?
 
-Update checkboxes as features become real.
+## Key Concepts
+
+- **StrategyDefinition** – declarative rule-based strategy spec
+- **StrategyPool** – long-lived inventory of strategy records and statuses
+- **Specialist routing** – live policy layer that determines strategy eligibility
+- **`strategy_explain`** – structured explanation of backtest behavior
+- **`strategy_explain.meta`** – routing-oriented summary such as allowed/blocked regimes/sessions
+- **Exploratory tier** – lower-risk live tier used for controlled evidence gathering
+- **ResearchMemory** – Chroma-backed memory of prior evaluated strategies
+- **Daily guardrails** – daily DD / trade-count limits
+- **Circuit breaker** – portfolio-level protection based on drawdown from peak equity
+
+## Current Operating Modes
+
+### 1. Backtest / research
+
+- historical features
+- candidate generation/evolution
+- scoring, explainability, walk-forward, Monte Carlo
+- no live order placement
+
+### 2. Live semi-autonomous operation
+
+- scheduler refreshes data/features
+- live router selects eligible strategies
+- MT5 orders are placed if all gates pass
+- state, equity, and live PnL are continuously monitored
+
+### 3. Operator-assisted inspection
+
+- scripts provide quick debugging, status summaries, and maintenance tooling
+- docs/runbooks support manual restart, inspection, and troubleshooting
+
+## Safety Philosophy
+
+The system should prefer:
+
+- **no trade** over weak trade
+- bounded exploratory risk over blind experimentation
+- explicit logging over hidden behavior
+- conservative degradation over overconfident promotion
+
+Failure should lean safe:
+
+- missing data → skip
+- bad routing context → skip
+- daily lock active → skip
+- portfolio DD breach → disable active strategies
+
+## OpenClaw / Clio Role
+
+Clio is best used here as:
+
+- an operator/developer assistant
+- a documentation maintainer
+- a research summarizer
+- a workflow orchestrator
+
+Clio can inspect:
+
+- pool state
+- runbooks
+- logs
+- research exports
+- memory summaries
+
+but should not be treated as a replacement for the hard-coded risk and
+execution safety layers.
+
+## Current Status Snapshot
+
+A more honest shorthand for the project today:
+
+- **Research loop:** strong and expanding
+- **Live routing:** materially improved in pass 3
+- **Risk controls:** real and meaningful
+- **Operator visibility:** improved, but still evolving
+- **Alerting:** useful but best-effort
+- **Portfolio intelligence:** still limited
+- **Backtest realism:** adequate for screening, not perfect
+
+## Changelog (Docs)
+
+- 2026-03-27: Rewrote the overview to reflect the real MT5-centric pass 3 system, specialist-routing design, and current safety boundaries.

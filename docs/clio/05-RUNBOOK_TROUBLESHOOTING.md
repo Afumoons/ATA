@@ -1,159 +1,182 @@
 # RUNBOOK_TROUBLESHOOTING – autonomous_trading_ai
 
-Quick troubleshooting notes when something feels off. This is meant for
-Afu (user) and Clio (agent) as a fast checklist.
+Quick troubleshooting checklist for Afu and Clio.
 
----
+Use this when:
 
-## 1. Tidak ada trade sama sekali
+- no trades appear
+- the scheduler is noisy or failing
+- strategies seem to disappear or stop trading
+- live state looks wrong
+- you need a fast sanity check before deeper debugging
 
-**Gejala:** Scheduler jalan, tapi tidak ada posisi baru di MT5.
+## 1. No trades at all
 
-Cek cepat:
+### Symptoms
 
-1. MT5 benar-benar jalan dan login?
-   - Buka MT5, pastikan:
-     - koneksi hijau (bukan merah),
-     - symbol `XAUUSDm` kelihatan dan bergerak.
+- scheduler appears to run
+- MT5 is open
+- but no new positions are being opened
 
-2. Scheduler benar-benar running?
-   - Di terminal, harus ada proses:
-     - `python -m autonomous_trading_ai.scheduler.main`
-   - Jika tidak, jalankan lagi dari workspace root (venv aktif).
+### Fast checks
 
-3. Features tersedia?
-   - Cek file di `autonomous_trading_ai/data/features/` untuk symbol/timeframe.
-   - Kalau kosong:
-     - jalankan manual: `job_update_data()` dari `scheduler.main`.
+1. **Is MT5 actually running and logged in?**
+   - confirm live connection in MT5
+   - confirm target symbols are visible and ticking
 
-4. Pool punya strategi `active` / `exploratory`?
-   - Jalankan:
-     ```powershell
-     python -m autonomous_trading_ai.scripts.print_top_strategies --symbol XAUUSDm --timeframe M15 --status active --limit 5
-     python -m autonomous_trading_ai.scripts.print_top_strategies --symbol XAUUSDm --timeframe M15 --status exploratory --limit 5
-     ```
-   - Kalau tidak ada strategi live-tier yang layak, wajar kalau tidak ada trade.
-   - Jalankan `job_research_strategies()` dan lihat apakah ada strategi yang dipromote.
+2. **Is the scheduler process actually running?**
+   - expected command:
 
-5. Daily lockout aktif?
-   - Lihat `execution/live_state.json`:
-     - `locked_for_day` bisa `true` kalau DD/trade cap tercapai.
-   - Kalau `true`, sistem memang tidak akan buka trade baru sampai hari reset.
-
-6. Tidak ada specialist yang eligible?
-   - Sekarang sistem bisa sengaja **flat** kalau:
-     - session tidak cocok,
-     - regime policy tidak cocok,
-     - confidence routing terlalu rendah,
-     - atau tidak ada strategy live-tier yang lolos gate.
-   - Cek log scheduler / execution untuk alasan seperti:
-     - `blocked by session gate`
-     - `blocked by regime policy`
-     - `routing confidence too low`
-     - `no eligible specialists survived routing gates`
-
----
-
-## 2. Strategi terasa "mati" padahal dulu aktif
-
-Kemungkinan besar kena **degradasi berbasis live**:
-
-1. Cek status di pool:
    ```powershell
-   python -m autonomous_trading_ai.scripts.print_top_strategies --symbol XAUUSDm --timeframe M15 --status candidate --limit 10
+   python -m autonomous_trading_ai.scheduler.main
    ```
 
-2. Cek live stats:
+3. **Do features exist?**
+   - inspect `autonomous_trading_ai/data/features/`
+   - if missing, run a manual data refresh
+
+4. **Does the pool contain live-tier strategies?**
+   - inspect `active` and `exploratory` strategies
+
    ```powershell
-   python -m autonomous_trading_ai.scripts.print_live_summary
+   python -m autonomous_trading_ai.scripts.print_top_strategies --symbol XAUUSDm --timeframe M15 --status active --limit 5
+   python -m autonomous_trading_ai.scripts.print_top_strategies --symbol XAUUSDm --timeframe M15 --status exploratory --limit 5
    ```
 
-3. Lihat di output bagian:
-   - "Worst 5 strategies by total live PnL"
-   - Kalau strategi kamu ada di daftar ini dengan PnL recent yang buruk,
-     itu artinya degradasi bekerja (di-demote ke `candidate`).
+5. **Is daily lock active?**
+   - inspect `execution/live_state.json`
+   - if `locked_for_day=true`, new trades will be blocked
 
-Kalau menurutmu strategi tersebut masih layak, kamu bisa:
-- sementara set status manual via script custom,
-- atau sesuaikan threshold degradasi di masa depan (via config khusus).
+6. **Is news lockout active?**
+   - latest feature row may have `in_news_lockout=true`
+   - in that case execution is intentionally skipped
 
----
+7. **Did pass 3 routing intentionally reject everything?**
+   - this is now normal in some contexts
+   - common reasons:
+     - blocked session
+     - blocked regime
+     - volatility mismatch
+     - low routing confidence
+     - no eligible specialist survived routing gates
+     - no entry trigger on otherwise eligible strategies
 
-## 3. Job sering error di log
+## 2. A strategy that used to trade looks “dead”
 
-**Gejala:** Di `logs/system.log` banyak baris `ERROR` untuk job tertentu.
+Likely causes:
 
-Langkah:
+- it was degraded from `active` to `candidate`
+- current session/regime blocks it
+- it has an open slot already
+- current edge is insufficient
 
-1. Buka `autonomous_trading_ai/logs/system.log`.
-2. Cari kata kunci:
-   - `job_update_data`, `job_research_strategies`, `job_execute_signals`, `job_live_monitor`.
-3. Lihat trace pertama untuk setiap job:
-   - Kalau error di MT5 (misal `account_info() returned None`):
-     - MT5 belum login atau connection drop.
-   - Kalau error di file I/O (FileNotFoundError):
-     - biasanya fitur belum ada → jalankan `job_update_data()` dulu.
+### Check pool + live summary
 
-Jika error konsisten dan bukan masalah koneksi, catat:
-- pesan error utama,
-- dan konteks (job apa, symbol apa),
- lalu kita bisa bikin patch khusus.
+```powershell
+python -m autonomous_trading_ai.scripts.print_live_summary
+python -m autonomous_trading_ai.scripts.print_top_strategies --symbol XAUUSDm --timeframe M15 --status candidate --limit 10
+```
 
----
+If it was degraded, check per-strategy live PnL and recent performance windows.
 
-## 4. Cara emergency stop
+## 3. Scheduler jobs are erroring repeatedly
 
-Kalau kamu ingin **langsung berhenti trading**:
+### Fast path
 
-1. Di terminal scheduler:
-   - Tekan `Ctrl + C` untuk menghentikan `python -m ...scheduler.main`.
-2. Di MT5:
-   - Bisa matikan tombol AutoTrading (ikon hijau di toolbar), atau
-   - Tutup MT5 sepenuhnya.
+1. inspect logs under `autonomous_trading_ai/logs/`
+2. search for job names such as:
+   - `job_update_data`
+   - `job_research_strategies`
+   - `job_execute_signals`
+   - `job_live_monitor`
+3. focus on the **first real traceback**, not the repeated noise after it
 
-Sistem tidak akan mengirim order baru tanpa scheduler + MT5 aktif.
+### Common patterns
 
----
+- **MT5/account calls failing**
+  - MT5 not logged in
+  - terminal connection lost
+- **feature/data file missing**
+  - data update has not run successfully yet
+- **strategy definition missing**
+  - pool entry references generated JSON that no longer exists
+- **Chroma/research memory issue**
+  - research may degrade, but live execution should still mostly work from existing pool state
 
-## 5. Cek cepat status sistem (script baru)
+## 4. Emergency stop
 
-Gunakan:
+If you want to stop new trades immediately:
+
+1. stop the scheduler process
+   - `Ctrl + C` in the scheduler terminal
+2. disable MT5 AutoTrading or close MT5
+
+Without the scheduler and MT5 connection, no new automated orders will be sent.
+
+## 5. Quick status snapshot
+
+Use:
 
 ```powershell
 python -m autonomous_trading_ai.scripts.print_live_summary
 ```
 
-Yang akan menampilkan:
-- **Daily Account State**: equity start, equity current, daily PnL, trades_today, locked_for_day.
-- **Strategy Pool**: jumlah strategi per status + top 5 `active` by score.
-- **Per-Strategy Live PnL**: 5 strategi terburuk berdasarkan total live PnL
-  (plus average PnL di rolling window terbaru).
+This is the fastest operator-facing snapshot for:
 
-Ini bisa dipakai Afu untuk "sekali lihat" sebelum sesi, dan dipakai Clio
-sebagai sumber kebenaran ketika menjawab pertanyaan tentang kondisi sistem.
+- daily equity / PnL
+- strategy counts by status
+- top active strategies
+- live PnL summaries
+- open-trade state when available
 
----
+## 6. If routing feels too strict
 
-## 6. Kalau semuanya kacau
+Pass 3 intentionally makes the system more selective.
 
-Kalau:
-- banyak error di log,
-- data/error sulit dimengerti,
-- atau perilaku bot terasa tidak masuk akal,
+If the system is flat, that does **not** automatically mean it is broken.
+The correct next question is:
 
-langkah minimal:
+- is the system skipping for a good reason?
 
-1. Emergency stop (lihat bagian 4).
-2. Catat:
-   - waktu kejadian,
-   - cuplikan `logs/system.log` sekitar error,
-   - status file penting:
-     - `execution/live_state.json`
-     - `execution/strategy_live_stats.json`
-     - `strategies/pool_state.json`
-3. Simpan sebagai bahan analisis; kita bisa:
-   - rollback ke commit sebelumnya,
-   - atau bikin branch eksperimen untuk memperbaiki tanpa menyentuh main.
+Use:
 
-Ingat: **keselamatan akun dan kejelasan perilaku > aktivitas trading**.
-Kalau ragu, lebih baik sistem berhenti dan kita bedah pelan-pelan.
+- scheduler logs
+- `debug_signals_for_latest_bar.py`
+- `print_live_summary.py`
+
+to distinguish:
+
+- broken pipeline
+- healthy but flat behavior
+
+## 7. If state files look inconsistent
+
+Important live-state artifacts to inspect:
+
+- `execution/live_state.json`
+- `execution/equity_history.json`
+- `execution/closed_trades_state.json`
+- `execution/strategy_live_stats.json`
+- `execution/open_trades.json`
+- `strategies/pool_state.json`
+
+If something looks corrupted or clearly stale, stop the scheduler before doing
+manual repair.
+
+## 8. When everything feels wrong
+
+Minimum safe sequence:
+
+1. stop the scheduler
+2. keep a copy of relevant logs and JSON state files
+3. note the approximate time of the issue
+4. inspect the latest commit and recent changes
+5. restart only after the failure mode is understood
+
+Safety rule:
+
+> account safety and behavioral clarity matter more than keeping the bot active.
+
+## Changelog (Docs)
+
+- 2026-03-27: Rewrote the troubleshooting runbook to reflect pass 3 routing behavior, news lockout, expanded live-state files, and the distinction between “flat by design” vs “broken.”
