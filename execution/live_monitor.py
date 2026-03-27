@@ -278,15 +278,15 @@ def update_live_stats() -> None:
 
         if dd_pct > threshold:
             pool = load_pool()
-            disabled_names = []
+            disabled_entries = []
             for rec in pool.strategies.values():
-                if rec.status == "active":
+                if rec.status in {"active", "exploratory"}:
+                    disabled_entries.append(f"{rec.name}:{rec.status}")
                     rec.status = "disabled"
-                    disabled_names.append(rec.name)
-            if disabled_names:
+            if disabled_entries:
                 save_pool(pool)
                 logger.warning(
                     "Circuit breaker: portfolio DD %.2f%% > %.2f%% — "
-                    "disabled %d active strategies: %s",
-                    dd_pct, threshold, len(disabled_names), disabled_names,
+                    "disabled %d live-tier strategies (active/exploratory): %s",
+                    dd_pct, threshold, len(disabled_entries), disabled_entries,
                 )

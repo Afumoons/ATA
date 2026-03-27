@@ -119,7 +119,7 @@ work. It does not itself call an AI service.
 ### `debug_signals_for_latest_bar.py`
 
 Most important live-debug script. It helps inspect the current routing context,
-strategy set, and signal outcomes for the latest bar.
+strategy set, regime-edge view, execution summary, and signal outcomes for the latest bar.
 
 **Warning:** because it routes through real execution code, it may place trades
 if conditions and guards allow.

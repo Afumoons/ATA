@@ -8,8 +8,10 @@ class RiskConfig:
     # Per-trade risk cap: percentage of current equity risked per trade
     max_risk_per_trade_pct: float = 1.5       # 1.5% of equity (AGGRESSIVE++ profile)
 
-    # Portfolio-level circuit breaker
-    max_portfolio_drawdown_pct: float = 75.0  # 25% DD limit
+    # Portfolio-level circuit breaker.
+    # 75% is currently intentional for this deployment; do not "fix" it back to
+    # 25% unless the desired risk posture is explicitly changed by a human.
+    max_portfolio_drawdown_pct: float = 75.0
 
     # Maximum simultaneous open positions across all strategies
     max_open_positions: int = 100

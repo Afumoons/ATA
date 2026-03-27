@@ -31,8 +31,18 @@ def _family_from_stats(stats: Dict[str, Any]) -> str:
     strategy = (stats or {}).get("strategy") or {}
     return str(
         (strategy.get("family") if isinstance(strategy, dict) else None)
+        or (strategy.get("playbook_type") if isinstance(strategy, dict) else None)
         or (stats or {}).get("family")
         or (stats or {}).get("playbook_type")
+        or "unknown"
+    )
+
+
+def _family_from_strategy_payload(strategy_payload: Dict[str, Any]) -> str:
+    strategy_payload = strategy_payload or {}
+    return str(
+        strategy_payload.get("family")
+        or strategy_payload.get("playbook_type")
         or "unknown"
     )
 
@@ -96,7 +106,7 @@ class StrategyPool:
             strat_dict = (rec.stats or {}).get("strategy") or {}
             if strat_dict:
                 fp = "|".join([
-                    str(strat_dict.get("family", "unknown") or "unknown"),
+                    _family_from_strategy_payload(strat_dict),
                     str(strat_dict.get("long_entry_rule", "") or ""),
                     str(strat_dict.get("short_entry_rule", "") or ""),
                     str(strat_dict.get("exit_rule", "") or ""),

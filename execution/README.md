@@ -104,8 +104,8 @@ Responsibilities:
 - query MT5 closed deals
 - register newly closed trade PnL into daily state
 - update per-strategy live PnL stats
-- enforce the portfolio circuit breaker by disabling `active` strategies when
-  drawdown breaches the configured threshold
+- enforce the portfolio circuit breaker by disabling live-tier strategies
+  (`active` and `exploratory`) when drawdown breaches the configured threshold
 
 ### `live_observer.py`
 

@@ -93,7 +93,7 @@ def debug_symbol(symbol: str) -> None:
     edges: dict[str, float] = {}
     for rec in records:
         try:
-            edge = _regime_edge(rec.stats or {}, regime_label)
+            edge, _selected_label = _regime_edge(rec.stats or {}, [regime_label])
         except Exception:
             edge = float("nan")
         edges[rec.name] = edge
@@ -107,8 +107,9 @@ def debug_symbol(symbol: str) -> None:
         )
 
     print("\nRunning execute_signals_for_symbol (this will attempt execution):")
-    results = execute_signals_for_symbol(symbol, TIMEFRAME, feat, pool, risk_perc)
+    results, summary = execute_signals_for_symbol(symbol, TIMEFRAME, feat, pool, risk_perc)
 
+    print("Routing summary:", summary)
     if not results:
         print("No signals executed or all blocked.")
     else:

@@ -33,7 +33,10 @@ MANAGED_SYMBOLS = ["XAUUSDm", "BTCUSDm"]
 TIMEFRAME = "M15"
 MINIMUM_EDGE_FOR_EXECUTION = 0.0
 
-EXEC_MIN_WF_SHARPE = 2.0
+# Keep execution quality gating aligned with active-promotion requirements:
+# an `active` strategy should not be routinely promoted into a live tier that
+# can never pass execution gating solely because WF Sharpe uses a much harsher cutoff.
+EXEC_MIN_WF_SHARPE = 0.75
 EXEC_MAX_DD_PCT = 12.0
 EXEC_MIN_TRADES = 200
 EXEC_MAX_CONSEC_LOSS = 15

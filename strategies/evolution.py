@@ -121,7 +121,8 @@ def _crossover(a: StrategyDefinition, b: StrategyDefinition) -> StrategyDefiniti
 
 
 def _strategy_fingerprint(strat: StrategyDefinition) -> str:
-    family = str((getattr(strat, "params", {}) or {}).get("family", ""))
+    params = getattr(strat, "params", {}) or {}
+    family = str(params.get("family") or params.get("playbook_type") or "unknown")
     return "|".join([
         family,
         str(strat.long_entry_rule or ""),

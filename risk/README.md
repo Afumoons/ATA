@@ -69,7 +69,7 @@ Risk thresholds are defined in `config.py` through `RiskConfig`.
 Typical fields include:
 
 - `max_risk_per_trade_pct`
-- `max_portfolio_drawdown_pct`
+- `max_portfolio_drawdown_pct` (current local deployment intentionally uses `75.0`; treat this as deployment-specific policy, not an assumed universal default)
 - `max_open_positions`
 - `max_daily_drawdown_pct`
 - `max_trades_per_day`

@@ -330,6 +330,31 @@ def execute_signals_for_symbol(
     current_regime = context.regime_label
     current_session = context.session
 
+    missing_structured_fields = [
+        field_name
+        for field_name in ("regime_class", "regime_type", "regime_confidence", "vol_regime")
+        if field_name not in features_df.columns
+    ]
+    if missing_structured_fields:
+        logger.warning(
+            "Structured routing fields missing for %s %s: missing=%s — live routing may over-block or degrade to defaults",
+            symbol,
+            timeframe,
+            missing_structured_fields,
+        )
+    elif context.regime_confidence <= 0.0:
+        logger.warning(
+            "Structured routing confidence is %.2f for %s %s at %s (regime=%s class=%s type=%s vol=%s) — check whether features were generated before structured regime enrichment",
+            context.regime_confidence,
+            symbol,
+            timeframe,
+            latest.get("time", "?"),
+            context.regime_label,
+            context.regime_class,
+            context.regime_type,
+            context.vol_regime,
+        )
+
     # ------------------------------------------------------------------ #
     # Tier 1: News lockout guard — inside execute_signals_for_symbol      #
     # Protects against any caller bypassing the check in scheduler/main.  #
