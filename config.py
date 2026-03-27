@@ -35,25 +35,66 @@ class SchedulerConfig:
 
 @dataclass
 class RoutingConfig:
+    """Controls pass-3 live routing gates.
+
+    These settings decide whether a strategy is allowed to trade in the
+    *current* market/session context after it already passed broader pool
+    selection.
+
+    Mental model:
+    - session filters answer: "is this the right trading session for this strategy?"
+    - regime filters answer: "is this the right market regime for this strategy?"
+    - confidence filters answer: "how sure are we about the detected regime?"
+    - edge thresholds answer: "is this strategy's historical edge strong enough here?"
+    """
+
     # Session gates
+    # If True: only allow entry when the current session equals the strategy's
+    # recorded `best_session` in strategy_explain.meta. This is the strictest
+    # session filter. Set False to allow a strategy to trade outside its single
+    # best session, as long as no other session policy blocks it.
     require_best_session_for_entry: bool = True
+
+    # If True: and the strategy declares `allowed_sessions=[...]`, the current
+    # session must be inside that allowlist. If False: ignore allowlist-based
+    # session restrictions entirely.
     enforce_allowed_sessions: bool = True
+
+    # If True: and the strategy declares `blocked_sessions=[...]`, the current
+    # session must NOT be inside that blocklist. If False: ignore blocklist-
+    # based session restrictions entirely.
     enforce_blocked_sessions: bool = True
 
     # Regime policy gates
+    # If True: and the strategy declares `allowed_regimes=[...]`, at least one
+    # current candidate regime label must be inside that allowlist.
     enforce_allowed_regimes: bool = True
+
+    # If True: and the strategy declares `blocked_regimes=[...]`, none of the
+    # current candidate regime labels may be inside that blocklist.
     enforce_blocked_regimes: bool = True
 
     # Structured routing confidence gates
+    # Higher values = stricter routing. `active` should usually remain stricter
+    # than `exploratory` because active capital is the main deployment tier.
     min_regime_confidence_active: float = 0.60
     min_regime_confidence_exploratory: float = 0.45
 
     # Volatility mismatch gate
+    # If True: block strategies whose metadata suggests they are a bad fit for
+    # the current volatility regime (for example a low-vol/ranging specialist in
+    # an event-driven high-vol environment). If False: skip this guard.
     enforce_volatility_mismatch_gate: bool = True
 
     # Regime edge ranking thresholds
+    # Higher values = stricter selection after eligibility gates.
+    # A strategy must beat the threshold to survive the edge filter.
     active_regime_edge_threshold: float = 1.0
     exploratory_regime_edge_threshold: float = 0.25
+
+    # If exploratory candidates all fail the edge threshold, keep the single
+    # best exploratory candidate anyway. This preserves controlled exploration
+    # instead of going fully empty.
     keep_best_exploratory_on_empty_edge_filter: bool = True
 
 

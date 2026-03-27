@@ -204,6 +204,225 @@ So a strategy may be skipped even if it has a high total score, because:
 That is intentional. Pass 3 favors **controlled specialist deployment** over
 looser general execution.
 
+## Routing Config Reference
+
+All pass-3 routing switches live in `autonomous_trading_ai.config.RoutingConfig`.
+These settings control how strict the live router is after a strategy already
+made it into the pool.
+
+### Quick mental model
+
+- **best session** = the single session where the strategy looked strongest
+- **allowed sessions** = sessions the strategy is permitted to trade in
+- **blocked sessions** = sessions the strategy should avoid
+- **allowed regimes** = market regimes the strategy is permitted to trade in
+- **blocked regimes** = market regimes the strategy should avoid
+
+Think of them as different layers, not duplicates.
+
+### Session config: what is the difference?
+
+#### `require_best_session_for_entry`
+
+This is the **strictest** session rule.
+
+If `True`:
+- the strategy can only trade in its one recorded `best_session`
+- example: if best session is `london`, it will be blocked in `asia` and `new_york`
+
+If `False`:
+- the strategy may still trade outside its single best session
+- but it can still be restricted by `allowed_sessions` or `blocked_sessions`
+
+Practical meaning:
+- use `True` when you want highly specialist deployment
+- use `False` when you want to relax the system and allow “good enough outside best session” behavior
+
+#### `enforce_allowed_sessions`
+
+This checks the strategy's explicit session allowlist.
+
+If `True`:
+- and the strategy has `allowed_sessions=[...]`
+- the current session must be in that list
+
+If `False`:
+- ignore the strategy's allowlist completely
+
+Example:
+- `allowed_sessions=["london", "new_york"]`
+- current session = `asia`
+- if `enforce_allowed_sessions=True` → blocked
+- if `enforce_allowed_sessions=False` → this allowlist does not block the trade
+
+Practical meaning:
+- this is a **whitelist-style** filter
+- useful when research found the strategy should only operate in some sessions
+
+#### `enforce_blocked_sessions`
+
+This checks the strategy's explicit session blocklist.
+
+If `True`:
+- and the strategy has `blocked_sessions=[...]`
+- the current session must not be in that list
+
+If `False`:
+- ignore the strategy's session blocklist completely
+
+Example:
+- `blocked_sessions=["asia"]`
+- current session = `asia`
+- if `enforce_blocked_sessions=True` → blocked
+- if `enforce_blocked_sessions=False` → this blocklist does not block the trade
+
+Practical meaning:
+- this is a **blacklist-style** filter
+- useful when a strategy is broadly okay, except for a few bad sessions
+
+### Best-session vs allowed-session vs blocked-session
+
+These three settings are related, but not the same:
+
+- `require_best_session_for_entry=True`
+  - only one session is acceptable: the single best one
+- `enforce_allowed_sessions=True`
+  - several sessions may be acceptable if they are in the allowlist
+- `enforce_blocked_sessions=True`
+  - several sessions may be acceptable except the explicitly blocked ones
+
+Compact examples:
+
+- Best session = `london`
+- Allowed sessions = `[london, new_york]`
+- Blocked sessions = `[asia]`
+
+If current session is:
+- `london`
+  - best-session gate: pass
+  - allowed-session gate: pass
+  - blocked-session gate: pass
+- `new_york`
+  - best-session gate: fail
+  - allowed-session gate: pass
+  - blocked-session gate: pass
+- `asia`
+  - best-session gate: fail
+  - allowed-session gate: fail
+  - blocked-session gate: fail
+
+So:
+- **best session** is the narrowest rule
+- **allowed sessions** is a positive allowlist
+- **blocked sessions** is a negative denylist
+
+### Regime config
+
+#### `enforce_allowed_regimes`
+
+If `True`:
+- and the strategy defines `allowed_regimes=[...]`
+- at least one of the current candidate regimes must be in that list
+
+If `False`:
+- ignore the regime allowlist
+
+Practical meaning:
+- keeps a strategy inside the market conditions it was designed for
+
+#### `enforce_blocked_regimes`
+
+If `True`:
+- and the strategy defines `blocked_regimes=[...]`
+- any overlap with the current candidate regimes will block the strategy
+
+If `False`:
+- ignore the regime blocklist
+
+Practical meaning:
+- prevents known-bad deployment contexts
+
+### Confidence config
+
+#### `min_regime_confidence_active`
+
+Minimum required regime-confidence score for `active` routing.
+
+- higher = stricter, fewer trades, more confidence required
+- lower = looser, more trades allowed under uncertain classification
+
+Recommended interpretation:
+- keep this relatively strict because `active` is the main risk tier
+
+#### `min_regime_confidence_exploratory`
+
+Minimum required regime-confidence score for `exploratory` routing.
+
+- higher = exploratory behaves more conservatively
+- lower = more exploratory participation in uncertain conditions
+
+Recommended interpretation:
+- usually lower than `active`, because exploratory is intentionally looser and smaller sized
+
+### Volatility config
+
+#### `enforce_volatility_mismatch_gate`
+
+If `True`:
+- block strategies whose metadata says they are a poor fit for the current volatility state
+
+If `False`:
+- skip the volatility mismatch protection
+
+Practical meaning:
+- protects against using calm-market specialists in event-driven/high-vol conditions and similar mismatches
+
+### Edge threshold config
+
+#### `active_regime_edge_threshold`
+
+Minimum regime-specific edge required for `active` strategies after they already pass earlier gates.
+
+- higher = stricter quality bar, fewer active strategies survive
+- lower = more active strategies survive
+
+#### `exploratory_regime_edge_threshold`
+
+Minimum regime-specific edge required for `exploratory` strategies.
+
+- higher = exploratory becomes more selective
+- lower = exploratory admits weaker candidates
+
+#### `keep_best_exploratory_on_empty_edge_filter`
+
+If `True`:
+- when all exploratory candidates fail the edge threshold, keep the single best one anyway
+
+If `False`:
+- exploratory stays empty if nothing beats the threshold
+
+Practical meaning:
+- `True` preserves controlled experimentation
+- `False` makes exploratory behave more like a strict reject-only tier
+
+### Operator guidance
+
+If you want the system to stay very strict:
+- keep `require_best_session_for_entry=True`
+- keep all allow/block enforcement enabled
+- keep confidence thresholds relatively high
+- keep volatility mismatch gate enabled
+
+If you want to relax the system slightly without removing all discipline:
+- first consider setting `require_best_session_for_entry=False`
+- keep allow/block enforcement on
+- only lower confidence/edge thresholds gradually
+
+If you want to experiment more aggressively:
+- relax best-session enforcement first
+- then evaluate whether allow/block lists are too restrictive
+- avoid disabling too many gates at once, or you lose the meaning of specialist routing
+
 ## How It’s Used
 
 ### `scheduler.job_execute_signals()`
