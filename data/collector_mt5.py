@@ -66,6 +66,30 @@ def fetch_ohlc(
 
     logger.info("Fetching %d bars for %s %s", n_bars, symbol, tf)
 
+    info = mt5.symbol_info(symbol)
+    if info is None:
+        available = []
+        try:
+            matches = mt5.symbols_get(f"*{symbol[:3]}*") or []
+            available = [s.name for s in matches[:20]]
+        except Exception:
+            pass
+        raise RuntimeError(
+            f"MT5 symbol not found/available: {symbol}. "
+            f"Make sure the correct broker account/terminal is logged in and the symbol is visible in Market Watch. "
+            f"Sample matches={available}"
+        )
+
+    if not bool(getattr(info, "visible", False)):
+        selected = mt5.symbol_select(symbol, True)
+        logger.info("Symbol %s not visible; symbol_select -> %s", symbol, selected)
+        info = mt5.symbol_info(symbol)
+        if info is None or not bool(getattr(info, "visible", False)):
+            raise RuntimeError(
+                f"MT5 symbol unavailable after symbol_select: {symbol}. "
+                f"Check Market Watch / broker symbol name."
+            )
+
     now_utc = datetime.now(timezone.utc)
 
     rates = mt5.copy_rates_from(symbol, TIMEFRAME_MAP[tf], now_utc, n_bars)
