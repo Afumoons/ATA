@@ -8,7 +8,7 @@ from collections import Counter, defaultdict
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from ..logging_utils import get_logger
-from ..config import scheduler_config, risk_config
+from ..config import scheduler_config, risk_config, canonical_symbol
 from ..data.collector_mt5 import initialize_mt5, shutdown_mt5, fetch_ohlc, save_ohlc
 from ..research.features import compute_features, save_features
 from ..research.regime import add_regime_column
@@ -110,7 +110,10 @@ def job_update_data() -> None:
             save_ohlc(df, symbol, TIMEFRAME)
             feat = compute_features(df, symbol, TIMEFRAME)
             feat = add_regime_column(feat)
-            save_features(feat, symbol, TIMEFRAME)
+            canon = canonical_symbol(symbol)
+            save_features(feat, canon, TIMEFRAME)
+            if canon != symbol:
+                logger.info("Symbol alias: %s → saved features as %s", symbol, canon)
         except Exception as e:
             logger.exception("job_update_data error for %s: %s", symbol, e)
     logger.info("Scheduler: job_update_data done")
@@ -266,18 +269,29 @@ def job_research_strategies() -> None:
     logger.info("Scheduler: job_research_strategies start")
     pool = load_pool()
     memory = ResearchMemory()
+    researched_canonicals: set[str] = set()
 
     for symbol in MANAGED_SYMBOLS:
-        try:
-            feat = load_features(symbol, TIMEFRAME)
-        except FileNotFoundError:
-            logger.warning("No features for %s %s; skipping research", symbol, TIMEFRAME)
+        canon = canonical_symbol(symbol)
+        if canon in researched_canonicals:
+            logger.info("Skipping %s — canonical %s already researched this cycle", symbol, canon)
             continue
+        researched_canonicals.add(canon)
+
+        try:
+            feat = load_features(canon, TIMEFRAME)
+        except FileNotFoundError:
+            try:
+                feat = load_features(symbol, TIMEFRAME)
+                logger.info("Research fallback: loaded legacy features for %s using actual symbol", symbol)
+            except FileNotFoundError:
+                logger.warning("No features for %s/%s %s; skipping research", symbol, canon, TIMEFRAME)
+                continue
         except Exception as e:
-            logger.exception("Failed to load features for %s: %s", symbol, e)
+            logger.exception("Failed to load features for %s/%s: %s", symbol, canon, e)
             continue
 
-        bt_kwargs = _research_backtest_kwargs(symbol)
+        bt_kwargs = _research_backtest_kwargs(canon)
 
         def _memory_bonus_for_parent(rec) -> float:
             try:
@@ -343,7 +357,10 @@ def job_research_strategies() -> None:
             bonus = max(-0.2, min(0.2, balance * 0.2))
             return bonus
 
-        parent_candidates = [rec for rec in pool.strategies.values() if rec.symbol == symbol and rec.timeframe == TIMEFRAME]
+        parent_candidates = [
+            rec for rec in pool.strategies.values()
+            if canonical_symbol(rec.symbol) == canon and rec.timeframe == TIMEFRAME
+        ]
         scored_parents = []
         for rec in parent_candidates:
             bonus = _memory_bonus_for_parent(rec)
@@ -364,13 +381,13 @@ def job_research_strategies() -> None:
         save_population(new_population)
 
         family_mix = Counter(str((getattr(s, 'params', {}) or {}).get('family', 'unknown')) for s in new_population)
-        logger.info("Research family mix for %s %s: %s", symbol, TIMEFRAME, dict(family_mix))
+        logger.info("Research family mix for %s (%s) %s: %s", symbol, canon, TIMEFRAME, dict(family_mix))
         research_skip_counts: dict[str, int] = defaultdict(int)
         research_skip_samples: dict[str, list[str]] = defaultdict(list)
 
         for strat in new_population:
             try:
-                if _memory_is_clearly_bad(strat, memory, symbol, TIMEFRAME):
+                if _memory_is_clearly_bad(strat, memory, canon, TIMEFRAME):
                     research_skip_counts["memory_veto"] += 1
                     if len(research_skip_samples["memory_veto"]) < 3:
                         research_skip_samples["memory_veto"].append(strat.name)
@@ -396,7 +413,7 @@ def job_research_strategies() -> None:
                     continue
 
                 wf = walk_forward_test(feat, strat, **bt_kwargs)
-                mc = monte_carlo_pnl(result.trades, n_runs=300, slippage_std_pips=max(0.5, bt_kwargs["slippage_pips"] * 0.5), pip_size=0.01 if "XAU" in symbol else 1.0)
+                mc = monte_carlo_pnl(result.trades, n_runs=300, slippage_std_pips=max(0.5, bt_kwargs["slippage_pips"] * 0.5), pip_size=0.01 if "XAU" in canon else 1.0)
 
                 eval_result["wf_overall_sharpe"] = wf.get("aggregate", {}).get("overall_sharpe", 0.0)
                 eval_result["wf_overall_max_drawdown_pct"] = wf.get("aggregate", {}).get("overall_max_drawdown_pct", 0.0)
@@ -490,7 +507,7 @@ def job_research_strategies() -> None:
             except Exception as e:
                 logger.exception("Research error for %s: %s", strat.name, e)
 
-        _log_research_skip_summary(symbol, TIMEFRAME, research_skip_counts, research_skip_samples)
+        _log_research_skip_summary(canon, TIMEFRAME, research_skip_counts, research_skip_samples)
 
     _apply_live_degradation(pool)
     pool.prune(max_inactive=200, min_family_keep=8)

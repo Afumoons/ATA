@@ -103,3 +103,25 @@ risk_config = RiskConfig()
 data_config = DataConfig()
 scheduler_config = SchedulerConfig()
 routing_config = RoutingConfig()
+
+# Symbol alias — all keys normalize to the canonical research symbol.
+# Execution layer should still use the actual broker symbol known by MT5.
+SYMBOL_ALIASES: dict[str, str] = {
+    "XAUUSD": "XAUUSDm",
+    "XAUUSDc": "XAUUSDm",
+    "XAUUSDm": "XAUUSDm",
+    "BTCUSDT": "BTCUSDm",
+    "BTCUSD": "BTCUSDm",
+    "BTCUSDm": "BTCUSDm",
+}
+
+# Reverse map: canonical symbol → broker variants valid for execution.
+SYMBOL_EXECUTION_VARIANTS: dict[str, list[str]] = {
+    "XAUUSDm": ["XAUUSDm", "XAUUSD", "XAUUSDc"],
+    "BTCUSDm": ["BTCUSDm", "BTCUSD", "BTCUSDT"],
+}
+
+
+def canonical_symbol(symbol: str) -> str:
+    """Normalize a broker/execution symbol to the canonical research symbol."""
+    return SYMBOL_ALIASES.get(symbol, symbol)
