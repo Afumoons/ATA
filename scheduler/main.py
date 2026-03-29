@@ -544,20 +544,33 @@ def job_execute_signals() -> None:
         except Exception:
             pass
 
-        manifest_entries = manifest_entries_for_slot(live_manifest, symbol=symbol, timeframe=TIMEFRAME)
+        manifest_entries = manifest_entries_for_slot(live_manifest, symbol=canon, timeframe=TIMEFRAME)
         manifest_pool = strategy_pool_from_manifest_entries(manifest_entries)
         live_tier_strats = list(manifest_pool.strategies.values())
         manifest_loaded = bool(live_tier_strats)
 
+        if not live_tier_strats and canon != symbol:
+            manifest_entries = manifest_entries_for_slot(live_manifest, symbol=symbol, timeframe=TIMEFRAME)
+            manifest_pool = strategy_pool_from_manifest_entries(manifest_entries)
+            live_tier_strats = list(manifest_pool.strategies.values())
+            manifest_loaded = bool(live_tier_strats)
+            if live_tier_strats:
+                logger.info(
+                    "Execution manifest fallback: loaded entries for actual symbol %s (canonical %s)",
+                    symbol,
+                    canon,
+                )
+
         if not live_tier_strats:
             live_tier_strats = [
                 rec for rec in pool.strategies.values()
-                if rec.symbol == symbol and rec.timeframe == TIMEFRAME and rec.status in {"active", "exploratory"}
+                if canonical_symbol(rec.symbol) == canon and rec.timeframe == TIMEFRAME and rec.status in {"active", "exploratory"}
             ]
             if live_tier_strats:
                 logger.warning(
-                    "Live manifest missing/stale for %s %s — falling back to pool scan (%d live strategies)",
+                    "Live manifest missing/stale for %s/%s %s — falling back to pool scan (%d live strategies)",
                     symbol,
+                    canon,
                     TIMEFRAME,
                     len(live_tier_strats),
                 )
