@@ -29,7 +29,7 @@ from ..vector_memory.research_memory import ResearchMemory
 logger = get_logger(__name__)
 BASE_DIR = Path(__file__).resolve().parents[1]
 
-MANAGED_SYMBOLS = ["XAUUSDm", "BTCUSDm"]
+MANAGED_SYMBOLS = ["XAUUSD"]
 TIMEFRAME = "M15"
 MINIMUM_EDGE_FOR_EXECUTION = 0.0
 
@@ -522,13 +522,18 @@ def job_execute_signals() -> None:
     risk_perc = min(2.0, risk_config.max_risk_per_trade_pct)
 
     for symbol in MANAGED_SYMBOLS:
+        canon = canonical_symbol(symbol)
         try:
-            feat = load_features(symbol, TIMEFRAME)
+            feat = load_features(canon, TIMEFRAME)
         except FileNotFoundError:
-            logger.warning("No features for %s %s; skipping signals", symbol, TIMEFRAME)
-            continue
+            try:
+                feat = load_features(symbol, TIMEFRAME)
+                logger.info("Execution fallback: loaded legacy features for %s using actual symbol", symbol)
+            except FileNotFoundError:
+                logger.warning("No features for %s/%s %s; skipping signals", symbol, canon, TIMEFRAME)
+                continue
         except Exception as e:
-            logger.exception("Failed to load features for %s: %s", symbol, e)
+            logger.exception("Failed to load features for %s/%s: %s", symbol, canon, e)
             continue
 
         try:
