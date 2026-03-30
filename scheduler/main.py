@@ -652,7 +652,7 @@ def job_execute_signals() -> None:
                 and tr >= min_trades
                 and cls <= EXEC_MAX_CONSEC_LOSS
                 and mc_p5 > 0.0
-                and specialist_score >= 0.45
+                and (specialist_score >= 0.30 or wf >= 5.0)
             )
 
         quality_strats = [r for r in unique_strats if _passes_quality(r)]
