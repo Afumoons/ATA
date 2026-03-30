@@ -58,12 +58,12 @@ class RoutingConfig:
     # If True: and the strategy declares `allowed_sessions=[...]`, the current
     # session must be inside that allowlist. If False: ignore allowlist-based
     # session restrictions entirely.
-    enforce_allowed_sessions: bool = True
+    enforce_allowed_sessions: bool = False
 
     # If True: and the strategy declares `blocked_sessions=[...]`, the current
     # session must NOT be inside that blocklist. If False: ignore blocklist-
     # based session restrictions entirely.
-    enforce_blocked_sessions: bool = True
+    enforce_blocked_sessions: bool = False
 
     # Regime policy gates
     # If True: and the strategy declares `allowed_regimes=[...]`, at least one
@@ -77,8 +77,8 @@ class RoutingConfig:
     # Structured routing confidence gates
     # Higher values = stricter routing. `active` should usually remain stricter
     # than `exploratory` because active capital is the main deployment tier.
-    min_regime_confidence_active: float = 0.25
-    min_regime_confidence_exploratory: float = 0.15
+    min_regime_confidence_active: float = 0.0
+    min_regime_confidence_exploratory: float = 0.0
 
     # Volatility mismatch gate
     # If True: block strategies whose metadata suggests they are a bad fit for
