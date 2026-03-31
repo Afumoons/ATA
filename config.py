@@ -63,12 +63,12 @@ class RoutingConfig:
     # If True: and the strategy declares `blocked_sessions=[...]`, the current
     # session must NOT be inside that blocklist. If False: ignore blocklist-
     # based session restrictions entirely.
-    enforce_blocked_sessions: bool = False
+    enforce_blocked_sessions: bool = True
 
     # Regime policy gates
     # If True: and the strategy declares `allowed_regimes=[...]`, at least one
     # current candidate regime label must be inside that allowlist.
-    enforce_allowed_regimes: bool = True
+    enforce_allowed_regimes: bool = False
 
     # If True: and the strategy declares `blocked_regimes=[...]`, none of the
     # current candidate regime labels may be inside that blocklist.
