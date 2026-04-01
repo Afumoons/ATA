@@ -60,6 +60,19 @@ DEFAULT_BACKTEST_KWARGS = {
     "max_positions_per_strategy": 1,
 }
 
+CHEAP_PRESCREEN_BACKTEST_KWARGS = {
+    "spread": 0.25,
+    "commission_per_lot": 0.0,
+    "slippage_pips": 0.0,
+    "max_positions_total": 1,
+    "max_positions_per_strategy": 1,
+}
+
+CHEAP_PRESCREEN_MIN_TRADES = 20
+CHEAP_PRESCREEN_MIN_PF = 0.95
+CHEAP_PRESCREEN_MIN_SHARPE = -0.10
+CHEAP_PRESCREEN_MAX_DD_PCT = 35.0
+
 XAU_BACKTEST_KWARGS = {
     "spread": 0.60,
     "commission_per_lot": 7.0,
@@ -120,6 +133,39 @@ def _research_backtest_kwargs(symbol: str) -> dict:
         float(params.get("slippage_pips", 0.0) or 0.0),
     )
     return params
+
+
+def _cheap_prescreen_backtest_kwargs(symbol: str) -> dict:
+    params = dict(CHEAP_PRESCREEN_BACKTEST_KWARGS)
+    sym_u = symbol.upper()
+    if "XAU" in sym_u:
+        params["spread"] = 0.35
+    if "BTC" in sym_u:
+        params["spread"] = 4.0
+    return params
+
+
+def _passes_cheap_prescreen(feat, strat, symbol: str) -> tuple[bool, dict]:
+    prescreen_kwargs = _cheap_prescreen_backtest_kwargs(symbol)
+    result = run_backtest(feat, strat, regime_column="regime", **prescreen_kwargs)
+    stats = result.stats or {}
+    num_trades = float(stats.get("num_trades", 0.0) or 0.0)
+    pf = float(stats.get("profit_factor", 0.0) or 0.0)
+    sharpe = float(stats.get("sharpe_ratio", 0.0) or 0.0)
+    dd = abs(float(stats.get("max_drawdown_pct", 0.0) or 0.0))
+
+    passed = (
+        num_trades >= CHEAP_PRESCREEN_MIN_TRADES
+        and pf >= CHEAP_PRESCREEN_MIN_PF
+        and sharpe >= CHEAP_PRESCREEN_MIN_SHARPE
+        and dd <= CHEAP_PRESCREEN_MAX_DD_PCT
+    )
+    return passed, {
+        "num_trades": num_trades,
+        "profit_factor": pf,
+        "sharpe_ratio": sharpe,
+        "max_drawdown_pct": dd,
+    }
 
 
 def job_update_data() -> None:
@@ -414,6 +460,16 @@ def job_research_strategies() -> None:
                     continue
 
                 feat.attrs["strategy_params"] = getattr(strat, "params", {}) or {}
+
+                prescreen_ok, prescreen_stats = _passes_cheap_prescreen(feat, strat, canon)
+                if not prescreen_ok:
+                    research_skip_counts["cheap_prescreen"] += 1
+                    if len(research_skip_samples["cheap_prescreen"]) < 3:
+                        research_skip_samples["cheap_prescreen"].append(
+                            f"{strat.name}:tr={prescreen_stats['num_trades']:.0f},pf={prescreen_stats['profit_factor']:.2f},sh={prescreen_stats['sharpe_ratio']:.2f},dd={prescreen_stats['max_drawdown_pct']:.1f}"
+                        )
+                    continue
+
                 result = run_backtest(feat, strat, regime_column="regime", **bt_kwargs)
                 eval_result = evaluate_strategy(result.stats)
 
