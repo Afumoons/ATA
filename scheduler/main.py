@@ -60,6 +60,18 @@ DEFAULT_BACKTEST_KWARGS = {
     "max_positions_per_strategy": 1,
 }
 
+XAU_BACKTEST_KWARGS = {
+    "spread": 0.60,
+    "commission_per_lot": 7.0,
+    "slippage_pips": 4.0,
+}
+
+BTC_BACKTEST_KWARGS = {
+    "spread": 8.0,
+    "commission_per_lot": 0.0,
+    "slippage_pips": 12.0,
+}
+
 
 def _current_session() -> str:
     from datetime import datetime, timezone
@@ -95,10 +107,18 @@ def _hybrid_regime_score(rec, current_regime: str, current_session: str = "") ->
 
 def _research_backtest_kwargs(symbol: str) -> dict:
     params = dict(DEFAULT_BACKTEST_KWARGS)
-    if "BTC" in symbol.upper():
-        params["spread"] = 8.0
-        params["commission_per_lot"] = 0.0
-        params["slippage_pips"] = 12.0
+    sym_u = symbol.upper()
+    if "XAU" in sym_u:
+        params.update(XAU_BACKTEST_KWARGS)
+    if "BTC" in sym_u:
+        params.update(BTC_BACKTEST_KWARGS)
+    logger.info(
+        "Research backtest costs for %s: spread=%.2f commission_per_lot=%.2f slippage_pips=%.2f",
+        symbol,
+        float(params.get("spread", 0.0) or 0.0),
+        float(params.get("commission_per_lot", 0.0) or 0.0),
+        float(params.get("slippage_pips", 0.0) or 0.0),
+    )
     return params
 
 
@@ -451,11 +471,16 @@ def job_research_strategies() -> None:
                     if len(research_skip_samples["exit_rule_dependency"]) < 3:
                         research_skip_samples["exit_rule_dependency"].append(strat.name)
                     continue
-                if float(risk_behavior.get("avg_holding_bars", 0.0) or 0.0) < 1.0:
-                    research_skip_counts["holding_too_short"] += 1
-                    if len(research_skip_samples["holding_too_short"]) < 3:
-                        research_skip_samples["holding_too_short"].append(strat.name)
-                    continue
+                avg_holding_bars = float(risk_behavior.get("avg_holding_bars", 0.0) or 0.0)
+                if avg_holding_bars < 1.0:
+                    research_skip_counts["holding_too_short_warning"] += 1
+                    if len(research_skip_samples["holding_too_short_warning"]) < 3:
+                        research_skip_samples["holding_too_short_warning"].append(f"{strat.name}:{avg_holding_bars:.2f}")
+                    logger.info(
+                        "Research warning: %s has avg_holding_bars=%.2f (<1.0) but is no longer hard-rejected",
+                        strat.name,
+                        avg_holding_bars,
+                    )
 
                 trend_ret = (
                     (explain.get("regime_pnl", {}).get("trending_up", {}) or {}).get("return_pct", 0.0)
