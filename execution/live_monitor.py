@@ -6,14 +6,14 @@ import tempfile
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, List, Optional
 
 import MetaTrader5 as mt5
 
 from ..logging_utils import get_logger
 from ..strategies.pool import load_pool, save_pool
 from ..config import risk_config
-from .live_state_utils import register_trade_pnl
+from .live_state_utils import DailyState, save_daily_state, register_trade_pnl
 from .strategy_live_stats import register_strategy_pnl
 
 logger = get_logger(__name__)
@@ -23,6 +23,7 @@ CLOSED_TRADES_STATE_PATH = Path(__file__).resolve().parent / "closed_trades_stat
 
 _MAX_EQUITY_HISTORY = 2016      # ~1 week at 5-min intervals
 _MAX_PROCESSED_DEAL_IDS = 1000  # ~6 months at ~5 deals/day
+_BASELINE_WARMUP_CYCLES = 3
 
 
 @dataclass
@@ -30,6 +31,10 @@ class LiveStats:
     equity_history: List[float] = field(default_factory=list)
     times: List[str] = field(default_factory=list)
     peak_equity: float = 0.0
+    account_identity: dict[str, Any] = field(default_factory=dict)
+    baseline_created_at: Optional[str] = None
+    warmup_cycles_remaining: int = 0
+    last_baseline_reason: str = "initial"
 
     @classmethod
     def from_dict(cls, data: dict) -> "LiveStats":
@@ -37,6 +42,10 @@ class LiveStats:
             equity_history=data.get("equity_history") or [],
             times=data.get("times") or [],
             peak_equity=float(data.get("peak_equity") or 0.0),
+            account_identity=data.get("account_identity") or {},
+            baseline_created_at=data.get("baseline_created_at"),
+            warmup_cycles_remaining=int(data.get("warmup_cycles_remaining", 0) or 0),
+            last_baseline_reason=str(data.get("last_baseline_reason", "initial") or "initial"),
         )
 
     def to_dict(self) -> dict:
@@ -44,6 +53,10 @@ class LiveStats:
             "equity_history": self.equity_history,
             "times": self.times,
             "peak_equity": self.peak_equity,
+            "account_identity": self.account_identity,
+            "baseline_created_at": self.baseline_created_at,
+            "warmup_cycles_remaining": self.warmup_cycles_remaining,
+            "last_baseline_reason": self.last_baseline_reason,
         }
 
 
@@ -51,11 +64,56 @@ class LiveStats:
 # Public helpers
 # ---------------------------------------------------------------------------
 
-def _get_account_equity() -> float:
+def _get_account_info():
     info = mt5.account_info()
     if info is None:
         raise RuntimeError("MT5 account_info() returned None")
+    return info
+
+
+def _get_account_equity() -> float:
+    info = _get_account_info()
     return float(info.equity)
+
+
+def _account_identity_from_info(info) -> dict[str, Any]:
+    return {
+        "login": int(getattr(info, "login", 0) or 0),
+        "server": str(getattr(info, "server", "") or ""),
+        "currency": str(getattr(info, "currency", "") or ""),
+        "company": str(getattr(info, "company", "") or ""),
+    }
+
+
+def _identity_changed(prev: dict[str, Any], current: dict[str, Any]) -> bool:
+    if not prev:
+        return False
+    return (
+        prev.get("login") != current.get("login")
+        or prev.get("server") != current.get("server")
+    )
+
+
+def _reset_live_baseline(
+    stats: LiveStats,
+    *,
+    equity: float,
+    now_iso: str,
+    account_identity: dict[str, Any],
+    reason: str,
+) -> LiveStats:
+    stats.equity_history = [equity]
+    stats.times = [now_iso]
+    stats.peak_equity = equity
+    stats.account_identity = account_identity
+    stats.baseline_created_at = now_iso
+    stats.warmup_cycles_remaining = _BASELINE_WARMUP_CYCLES
+    stats.last_baseline_reason = reason
+
+    today = datetime.now(timezone.utc).date().isoformat()
+    save_daily_state(DailyState.new(equity=equity, date=today))
+    _save_closed_trades_state({"last_check_time": None, "processed_deal_ids": []})
+    return stats
 
 
 def get_equity_peak() -> float:
@@ -239,8 +297,10 @@ def update_live_stats() -> None:
     """Update equity history, enforce portfolio circuit breaker,
     and wire closed deals into DailyState + per-strategy stats.
     """
-    equity = _get_account_equity()
+    info = _get_account_info()
+    equity = float(info.equity)
     now_iso = datetime.now(timezone.utc).isoformat()
+    account_identity = _account_identity_from_info(info)
 
     if LIVE_STATE_PATH.exists():
         try:
@@ -253,9 +313,33 @@ def update_live_stats() -> None:
     else:
         stats = LiveStats()
 
-    stats.equity_history.append(equity)
-    stats.times.append(now_iso)
-    stats.peak_equity = max(stats.peak_equity, equity)
+    if not stats.account_identity:
+        stats.account_identity = account_identity
+        stats.baseline_created_at = stats.baseline_created_at or now_iso
+        stats.last_baseline_reason = stats.last_baseline_reason or "initial"
+
+    if _identity_changed(stats.account_identity, account_identity):
+        logger.warning(
+            "Live monitor: account switch detected (%s@%s -> %s@%s). Refreshing baseline and skipping circuit breaker warmup.",
+            stats.account_identity.get("login"),
+            stats.account_identity.get("server"),
+            account_identity.get("login"),
+            account_identity.get("server"),
+        )
+        stats = _reset_live_baseline(
+            stats,
+            equity=equity,
+            now_iso=now_iso,
+            account_identity=account_identity,
+            reason="account_switch",
+        )
+    else:
+        stats.equity_history.append(equity)
+        stats.times.append(now_iso)
+        stats.peak_equity = max(stats.peak_equity, equity)
+        stats.account_identity = account_identity
+        if not stats.baseline_created_at:
+            stats.baseline_created_at = now_iso
 
     if len(stats.equity_history) > _MAX_EQUITY_HISTORY:
         stats.equity_history = stats.equity_history[-_MAX_EQUITY_HISTORY:]
@@ -264,12 +348,30 @@ def update_live_stats() -> None:
     with LIVE_STATE_PATH.open("w", encoding="utf-8") as f:
         json.dump(stats.to_dict(), f, indent=2)
 
-    logger.info("Live monitor: equity=%.2f peak=%.2f", equity, stats.peak_equity)
+    logger.info(
+        "Live monitor: equity=%.2f peak=%.2f login=%s server=%s warmup_cycles=%d baseline_reason=%s",
+        equity,
+        stats.peak_equity,
+        account_identity.get("login"),
+        account_identity.get("server"),
+        stats.warmup_cycles_remaining,
+        stats.last_baseline_reason,
+    )
 
     try:
         _update_daily_pnl_from_closed_deals()
     except Exception:
         logger.exception("Error while updating DailyState from closed deals")
+
+    if stats.warmup_cycles_remaining > 0:
+        stats.warmup_cycles_remaining -= 1
+        with LIVE_STATE_PATH.open("w", encoding="utf-8") as f:
+            json.dump(stats.to_dict(), f, indent=2)
+        logger.warning(
+            "Live monitor: baseline warmup active (%d cycles remaining) — skipping circuit breaker",
+            stats.warmup_cycles_remaining,
+        )
+        return
 
     # Portfolio-level circuit breaker
     if stats.peak_equity > 0:
