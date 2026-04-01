@@ -1,14 +1,18 @@
 import logging
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 BASE_LOG_DIR = Path(__file__).resolve().parent / "logs"
 BASE_LOG_DIR.mkdir(exist_ok=True)
 
+MAX_LOG_BYTES = 5 * 1024 * 1024  # 5 MB per file
+BACKUP_COUNT = 5                 # keep system.log + 5 rotated files
+
 
 def get_logger(name: str) -> logging.Logger:
     """Return a module-specific logger writing to logs/system.log.
 
-    Use this everywhere instead of configuring logging in each module.
+    Uses size-based rotation so the main log file does not grow forever.
     """
     log_file = BASE_LOG_DIR / "system.log"
     logger = logging.getLogger(name)
@@ -16,11 +20,18 @@ def get_logger(name: str) -> logging.Logger:
         return logger
 
     logger.setLevel(logging.INFO)
+    logger.propagate = False
 
-    # File handler
-    fh = logging.FileHandler(log_file, encoding="utf-8")
-    fh.setLevel(logging.INFO)
     fmt = logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+
+    # Rotating file handler
+    fh = RotatingFileHandler(
+        log_file,
+        maxBytes=MAX_LOG_BYTES,
+        backupCount=BACKUP_COUNT,
+        encoding="utf-8",
+    )
+    fh.setLevel(logging.INFO)
     fh.setFormatter(fmt)
 
     # Console handler (optional)
