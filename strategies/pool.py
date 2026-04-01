@@ -29,9 +29,14 @@ _STATUS_RANK = {
 
 def _family_from_stats(stats: Dict[str, Any]) -> str:
     strategy = (stats or {}).get("strategy") or {}
+    params = (strategy.get("params") if isinstance(strategy, dict) else None) or {}
     return str(
         (strategy.get("family") if isinstance(strategy, dict) else None)
         or (strategy.get("playbook_type") if isinstance(strategy, dict) else None)
+        or params.get("family")
+        or params.get("playbook_type")
+        or params.get("long_family")
+        or params.get("short_family")
         or (stats or {}).get("family")
         or (stats or {}).get("playbook_type")
         or "unknown"
@@ -40,9 +45,14 @@ def _family_from_stats(stats: Dict[str, Any]) -> str:
 
 def _family_from_strategy_payload(strategy_payload: Dict[str, Any]) -> str:
     strategy_payload = strategy_payload or {}
+    params = strategy_payload.get("params") or {}
     return str(
         strategy_payload.get("family")
         or strategy_payload.get("playbook_type")
+        or params.get("family")
+        or params.get("playbook_type")
+        or params.get("long_family")
+        or params.get("short_family")
         or "unknown"
     )
 

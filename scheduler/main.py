@@ -29,7 +29,7 @@ from ..vector_memory.research_memory import ResearchMemory
 logger = get_logger(__name__)
 BASE_DIR = Path(__file__).resolve().parents[1]
 
-MANAGED_SYMBOLS = ["XAUUSD"]
+MANAGED_SYMBOLS = ["XAUUSDc","BTCUSDc"]
 TIMEFRAME = "M15"
 MINIMUM_EDGE_FOR_EXECUTION = 0.0
 
@@ -492,14 +492,18 @@ def job_research_strategies() -> None:
                 else:
                     status = "disabled"
 
+                strat_params = dict(getattr(strat, "params", {}) or {})
                 eval_result["strategy"] = {
                     "long_entry_rule": getattr(strat, "long_entry_rule", "") or "",
                     "short_entry_rule": getattr(strat, "short_entry_rule", "") or "",
                     "exit_rule": getattr(strat, "exit_rule", "") or "",
                     "sl_atr_mult": getattr(strat, "sl_atr_mult", ""),
                     "tp_atr_mult": getattr(strat, "tp_atr_mult", ""),
-                    "family": str((getattr(strat, "params", {}) or {}).get("family", "unknown")),
-                    "playbook_type": str((getattr(strat, "params", {}) or {}).get("playbook_type", "unknown")),
+                    "stop_loss_pips": getattr(strat, "stop_loss_pips", 0.0) or 0.0,
+                    "take_profit_pips": getattr(strat, "take_profit_pips", 0.0) or 0.0,
+                    "family": str(strat_params.get("family", "unknown")),
+                    "playbook_type": str(strat_params.get("playbook_type", "unknown")),
+                    "params": strat_params,
                 }
 
                 pool.upsert_strategy(strategy=strat, stats=eval_result, score=eval_result.get("score", 0.0), status=status)

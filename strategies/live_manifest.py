@@ -83,8 +83,14 @@ def _safe_write_json(path: Path, payload: Dict[str, Any]) -> None:
 
 def _strategy_block(rec: StrategyRecord) -> Dict[str, Any]:
     strategy = ((rec.stats or {}).get("strategy") or {}).copy()
+    params = dict(strategy.get("params") or {})
     family = str(
         strategy.get("family")
+        or strategy.get("playbook_type")
+        or params.get("family")
+        or params.get("playbook_type")
+        or params.get("long_family")
+        or params.get("short_family")
         or (rec.stats or {}).get("family")
         or (rec.stats or {}).get("playbook_type")
         or "unknown"
@@ -94,11 +100,11 @@ def _strategy_block(rec: StrategyRecord) -> Dict[str, Any]:
         "long_entry_rule": strategy.get("long_entry_rule"),
         "short_entry_rule": strategy.get("short_entry_rule"),
         "exit_rule": strategy.get("exit_rule") or "False",
-        "stop_loss_pips": float(strategy.get("stop_loss_pips", 0.0) or 0.0),
-        "take_profit_pips": float(strategy.get("take_profit_pips", 0.0) or 0.0),
-        "sl_atr_mult": strategy.get("sl_atr_mult"),
-        "tp_atr_mult": strategy.get("tp_atr_mult"),
-        "params": dict(strategy.get("params") or {}),
+        "stop_loss_pips": float(strategy.get("stop_loss_pips", params.get("stop_loss_pips", 0.0)) or 0.0),
+        "take_profit_pips": float(strategy.get("take_profit_pips", params.get("take_profit_pips", 0.0)) or 0.0),
+        "sl_atr_mult": strategy.get("sl_atr_mult", params.get("sl_atr_mult")),
+        "tp_atr_mult": strategy.get("tp_atr_mult", params.get("tp_atr_mult")),
+        "params": params,
     }
 
 
