@@ -240,8 +240,19 @@ def _update_daily_pnl_from_closed_deals() -> None:
             register_trade_pnl(pnl=pnl, current_equity=equity_now)
 
             # Look up strategy via ticket map (Exness-safe attribution)
-            order_ticket = getattr(deal, "order", ticket)
-            strategy_name = get_strategy_for_ticket(int(order_ticket))
+            order_ticket = getattr(deal, "order", None)
+            position_id = getattr(deal, "position_id", None)
+            strategy_name = None
+
+            for candidate_ticket in (order_ticket, position_id, ticket):
+                if candidate_ticket is None:
+                    continue
+                try:
+                    strategy_name = get_strategy_for_ticket(int(candidate_ticket))
+                except Exception:
+                    strategy_name = None
+                if strategy_name:
+                    break
 
             if strategy_name:
                 try:
@@ -251,6 +262,14 @@ def _update_daily_pnl_from_closed_deals() -> None:
                         "Failed to update StrategyLiveStats for %s", strategy_name
                     )
             else:
+                logger.warning(
+                    "No strategy attribution for closed deal ticket=%s order=%s position_id=%s comment=%s profit=%.2f",
+                    ticket,
+                    order_ticket,
+                    position_id,
+                    getattr(deal, "comment", "") or "",
+                    pnl,
+                )
                 # Fallback: try comment (works on non-Exness brokers)
                 comment = getattr(deal, "comment", "") or ""
                 if comment.startswith("clio-auto-"):
