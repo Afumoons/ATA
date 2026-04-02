@@ -26,8 +26,9 @@ Current expected symbols may include:
 
 - `XAUUSDm`
 - `BTCUSDm`
+- broker variants / canonical aliases such as `XAUUSD`, `XAUUSDc`, `XAGUSD`, `XAGUSDc`
 
-Actual live configuration should be verified in `scheduler/main.py`.
+Actual live configuration should be verified in `scheduler/main.py` and symbol canonicalization in `config.py`.
 
 ### 1.2 Python + Git
 
@@ -220,5 +221,7 @@ On a new machine:
 - do not assume Docker/Chroma/webhook pieces are required for the core loop to function
 
 ## Changelog (Docs)
+
+- 2026-04-03: Updated setup notes to reflect canonical symbol aliasing expectations (including XAG variants).
 
 - 2026-03-27: Rewrote the setup guide for the current pass 3 architecture, added environment/webhook notes, and updated validation steps around routing-aware behavior.

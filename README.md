@@ -10,8 +10,9 @@ system built around:
 - **vector-backed research memory**
 - **optional macro-news awareness and WhatsApp alerts**
 
-This README is the **top-level map** for the project after **pass 3**. Each
-major submodule also has its own `README.md` with implementation-level detail.
+This README is the **top-level map** for the current system state after the
+recent Track A / Track B / Track C hardening work. Each major submodule also has
+its own `README.md` with implementation-level detail.
 
 ## Current Architecture
 
@@ -57,10 +58,10 @@ The project is organized into a few core loops:
    - `notifications/whatsapp_notifier.py` sends best-effort alerts via webhook.
    - `webhook_server.py` provides a small FastAPI receiver for outbound alerts.
 
-## Pass 3 Highlights
+## Current Highlights
 
-Pass 3 brings the system into a more explicit **research-to-live specialization**
-model.
+The system now reflects a more explicit **research-to-live specialization**
+model, plus the recently implemented Track A / B / C upgrades.
 
 ### 1) Structured regime-aware routing
 
@@ -113,6 +114,8 @@ The execution layer now has a clearer separation between:
 - per-strategy live stats (`strategy_live_stats.json`)
 - open-trade snapshots (`open_trades.json`)
 - ticket-to-strategy mapping (`ticket_strategy_map.json`)
+- unmatched closed-deal audit (`unmatched_closed_deals.json`)
+- pool / circuit-breaker audit trail (`pool_audit_trail.json`)
 
 ### 5) Better doc coverage for operations
 
@@ -139,7 +142,12 @@ of the system.
 3. Existing strategies are ranked using base evaluation stats plus small
    memory-based bonuses/penalties from `ResearchMemory`.
 4. New candidates are generated/evolved.
-5. Each candidate is:
+5. Research gating now includes:
+   - cheap pre-screening,
+   - stronger dead-zone / family-memory penalties,
+   - stricter exit-fragility checks,
+   - more selective specialist bootstrap handling.
+6. Each surviving candidate is:
    - backtested,
    - explained,
    - scored,
@@ -226,6 +234,39 @@ Typical runtime flow:
 python -m autonomous_trading_ai.scheduler.main
 ```
 
+## Track A / B / C Snapshot
+
+### Track A – Research Pipeline Improvement
+
+Implemented practical upgrades include:
+
+- cheap prescreen before heavier robustness checks
+- stronger memory-guided dead-zone penalties
+- explicit XAU specialist playbooks
+- more selective trade-count/history handling for specialist strategies
+
+### Track B – Live Monitoring & Attribution Improvement
+
+Implemented practical upgrades include:
+
+- bootstrapped `strategy_live_stats.json`
+- broader closed-deal attribution fallbacks (`order`, `position_id`, deal ticket)
+- ticket-map augmentation from `execution/trades.log`
+- reconciliation helper in `scripts/reconcile_strategy_live_stats.py`
+- unmatched-deal and pool-audit artifacts
+
+### Track C – XAU Exit Hardening Improvement
+
+Implemented practical upgrades include:
+
+- stronger governance penalties for exit-rule-heavy strategies
+- explicit XAU exit archetypes that bias toward time-stop / invalidation logic
+- session-guard style exits available selectively for some XAU specialist families
+
+Important nuance:
+- session-aware exits are **not** globally mandatory
+- true native partial-TP engine support is still not implemented
+
 ## Current Limitations
 
 - The system is still heavily oriented around **single-symbol / per-symbol**
@@ -244,3 +285,5 @@ python -m autonomous_trading_ai.scheduler.main
 - 2026-03-27: Updated top-level documentation for **pass 3** with structured
   routing, explicit strategy metadata, stronger live gating, expanded execution
   state artifacts, and refreshed module map.
+- 2026-04-03: Refreshed the top-level map for Track A / B / C work, including
+  research hardening, live attribution/audit artifacts, and XAU exit hardening.

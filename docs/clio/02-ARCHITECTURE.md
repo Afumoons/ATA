@@ -195,6 +195,8 @@ Important state artifacts:
 - `execution/strategy_live_stats.json`
 - `execution/open_trades.json`
 - `execution/ticket_strategy_map.json`
+- `execution/unmatched_closed_deals.json`
+- `execution/pool_audit_trail.json`
 
 ### 8. Hard risk layer – `risk/`
 
@@ -300,5 +302,7 @@ If you need one sentence to remember the architecture:
 > `autonomous_trading_ai` is a scheduler-driven MT5 research/execution system that discovers specialist strategies, stores them in a governed pool, and deploys them conservatively through a structured live-routing layer.
 
 ## Changelog (Docs)
+
+- 2026-04-03: Added Track B audit artifacts to the execution-state architecture summary.
 
 - 2026-03-27: Rewrote the architecture doc to match the implemented pass 3 module graph, state artifacts, and specialist-routing execution model.

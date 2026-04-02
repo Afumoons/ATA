@@ -158,6 +158,8 @@ Important live-state artifacts to inspect:
 - `execution/closed_trades_state.json`
 - `execution/strategy_live_stats.json`
 - `execution/open_trades.json`
+- `execution/unmatched_closed_deals.json`
+- `execution/pool_audit_trail.json`
 - `strategies/pool_state.json`
 
 If something looks corrupted or clearly stale, stop the scheduler before doing
@@ -178,5 +180,7 @@ Safety rule:
 > account safety and behavioral clarity matter more than keeping the bot active.
 
 ## Changelog (Docs)
+
+- 2026-04-03: Added new Track B audit files to the troubleshooting checklist.
 
 - 2026-03-27: Rewrote the troubleshooting runbook to reflect pass 3 routing behavior, news lockout, expanded live-state files, and the distinction between “flat by design” vs “broken.”

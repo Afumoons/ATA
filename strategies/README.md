@@ -48,15 +48,18 @@ Current strategy-generation bias includes:
 - MA-based trend rules
 - RSI/range-style rules
 - legacy Ichimoku/Fibonacci-based templates
+- explicit XAU specialist families such as impulse/pullback and session continuation
 
 For core 15m markets, generation is biased toward simpler, more interpretable
-families.
+families with more explicit family/playbook metadata.
 
 The generator also stores lightweight family metadata in `params`, such as:
 
 - long/short family type
 - regime bias
 - preferred symbol/timeframe
+- exit archetype (`state_change`, `time_stop`, `session_guard`)
+- whether the strategy has a time stop or session exit guard
 
 That makes later analysis easier without re-parsing rule strings.
 
@@ -227,6 +230,8 @@ Useful during manual maintenance or recovery.
   more readily than it grants it.
 
 ## Changelog (Docs)
+
+- 2026-04-03: Updated for Track A / C generator changes, explicit XAU playbooks, and exit-archetype metadata.
 
 - 2026-03-21: Documented ATR-based SL/TP support, defensive pool loading,
   pruning, and live degradation integration.

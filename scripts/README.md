@@ -46,6 +46,7 @@ Current scripts in this folder include:
 - `rebuild_pool_status.py`
 - `reset_strategy_memory.py`
 - `scrape_news.py`
+- `reconcile_strategy_live_stats.py`
 
 ## Script Categories
 
@@ -75,6 +76,7 @@ Current scripts in this folder include:
 - `prune_strategies.py`
 - `prune_strategies_btc.py`
 - `rebuild_pool_status.py`
+- `reconcile_strategy_live_stats.py`
 
 ### News / memory maintenance
 
@@ -181,6 +183,8 @@ Treat as production-sensitive:
   evolves quickly.
 
 ## Changelog (Docs)
+
+- 2026-04-03: Added `reconcile_strategy_live_stats.py` and refreshed script inventory around live-attribution maintenance.
 
 - 2026-03-21 to 2026-03-22: Initial script inventory documentation, including
   research, MT5 analysis, maintenance, and news tooling.

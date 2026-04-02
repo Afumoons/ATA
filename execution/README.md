@@ -12,8 +12,9 @@ It is responsible for:
 - wiring closed MT5 deals back into account and strategy state
 - maintaining open-trade and per-strategy live snapshots
 
-Pass 3 significantly strengthens this module by making it more explicitly
-**routing-aware**, **stateful**, and **observable**.
+Recent Track B and Track C work significantly strengthen this module by making
+it more explicitly **routing-aware**, **stateful**, **observable**, and more
+robust in closed-deal attribution.
 
 ## Key Responsibilities
 
@@ -105,6 +106,8 @@ Responsibilities:
 - query MT5 closed deals
 - register newly closed trade PnL into daily state
 - update per-strategy live PnL stats
+- use broader attribution fallbacks (`order`, `position_id`, deal ticket)
+- write unmatched closed-deal audit rows when attribution fails
 - enforce the portfolio circuit breaker by disabling live-tier strategies
   (`active` and `exploratory`) when drawdown breaches the configured threshold
 
@@ -175,6 +178,16 @@ Snapshot of current open trades for quick inspection and tooling.
 
 Maps MT5 trade identifiers back to strategy identity when needed for later
 attribution and monitoring flows.
+
+### `execution/unmatched_closed_deals.json`
+
+Audit artifact for closed MT5 deals that could not be mapped back to a strategy.
+Useful for diagnosing broker-id lineage mismatches.
+
+### `execution/pool_audit_trail.json`
+
+Audit artifact for pool/circuit-breaker actions such as pruning, dedup
+replacement, and bulk disable events.
 
 ## Pass 3 Live Routing Model
 
@@ -455,6 +468,8 @@ If you want to experiment more aggressively:
   pool; that is a deliberate safety mechanism, not just a log event.
 
 ## Changelog (Docs)
+
+- 2026-04-03: Updated for Track B attribution/audit improvements and Track C execution-facing exit/governance context.
 
 - 2026-03-21: Documented daily guardrails, news lockout, circuit breaker,
   and active/exploratory risk tiers.

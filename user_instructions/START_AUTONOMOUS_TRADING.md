@@ -142,11 +142,15 @@ Check these files first:
 - `autonomous_trading_ai/execution/live_state.json`
 - `autonomous_trading_ai/execution/equity_history.json`
 - `autonomous_trading_ai/execution/strategy_live_stats.json`
+- `autonomous_trading_ai/execution/unmatched_closed_deals.json`
+- `autonomous_trading_ai/execution/pool_audit_trail.json`
 - `autonomous_trading_ai/strategies/pool_state.json`
 - logs under `autonomous_trading_ai/logs/`
 
 If in doubt, stop the scheduler first and inspect before restarting.
 
 ## Changelog (Docs)
+
+- 2026-04-03: Expanded troubleshooting file references to include unmatched closed-deal and pool-audit artifacts.
 
 - 2026-03-27: Rewrote the user start runbook for the pass 3 system, including routing-aware expectations, optional alert startup, and updated quick-check commands.

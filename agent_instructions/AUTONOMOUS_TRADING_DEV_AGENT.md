@@ -7,14 +7,17 @@ works on the repo incrementally.
 
 ## Current Status
 
-As of pass 3, the following are already materially in place:
+As of the current state, the following are already materially in place:
 
 - exploratory tier + tiered live risk behavior
 - regime-aware live routing
 - stronger generator / practical strategy improvements
-- baseline memory-guided governance
+- memory-guided governance in research
 - explicit routing metadata in `strategy_explain.meta`
 - session hard gates and structured regime-aware live routing
+- Track A research-pipeline hardening
+- Track B live-attribution and audit hardening
+- Track C XAU exit hardening
 - documentation refresh across root/module/runbook files
 
 That means the default posture now should be:
@@ -144,5 +147,7 @@ Never:
 - claim roadmap items are implemented when they are not
 
 ## Changelog (Docs)
+
+- 2026-04-03: Updated current-state guidance to include Track A / B / C as implemented practical work.
 
 - 2026-03-27: Rewrote the dev-agent instructions after pass 3 to shift from build-out mode toward conservative maintenance, targeted fixes, and doc/runbook fidelity.

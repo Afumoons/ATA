@@ -52,15 +52,18 @@ Typical flow:
 3. query research memory for neighbor guidance
 4. rank/select parents with hybrid scoring
 5. evolve/generate candidate strategies
-6. backtest and evaluate each candidate
-7. run robustness checks
-8. assign pool status
-9. persist results into pool + vector memory
-10. run live-degradation pass on current active strategies
-11. save/prune pool
+6. cheap-prescreen candidates before heavier checks
+7. backtest and evaluate each candidate
+8. apply memory-guided dead-zone penalties and stricter exit-fragility checks
+9. run robustness checks
+10. assign pool status
+11. persist results into pool + vector memory
+12. run live-degradation pass on current active strategies
+13. save/prune pool
 
-In pass 3, this job is especially important because it persists routing-related
-metadata from `strategy_explain.meta`, not just raw performance stats.
+This job is especially important because it persists routing-related metadata
+from `strategy_explain.meta`, not just raw performance stats, and now also
+includes stricter research gating from Track A / Track C.
 
 ### `job_execute_signals()`
 
@@ -188,6 +191,8 @@ usually the first file to inspect.
   module matters more than before for debugging why a trade did or didn’t happen.
 
 ## Changelog (Docs)
+
+- 2026-04-03: Updated for Track A / C research-gating behavior (cheap prescreen, dead-zone penalties, and stricter exit-fragility checks).
 
 - 2026-03-21: Documented job structure, news jobs, lockout flow, and live
   degradation integration.

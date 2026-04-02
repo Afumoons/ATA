@@ -147,14 +147,17 @@ execution safety layers.
 
 A more honest shorthand for the project today:
 
-- **Research loop:** strong and expanding
-- **Live routing:** materially improved in pass 3
+- **Research loop:** materially hardened by Track A
+- **Live routing:** materially improved and now paired with stronger attribution/audit behavior from Track B
 - **Risk controls:** real and meaningful
-- **Operator visibility:** improved, but still evolving
+- **Operator visibility:** improved, including unmatched-deal and pool-audit artifacts
 - **Alerting:** useful but best-effort
 - **Portfolio intelligence:** still limited
 - **Backtest realism:** adequate for screening, not perfect
+- **Exit quality:** improved by Track C, though native partial-TP support is still absent
 
 ## Changelog (Docs)
+
+- 2026-04-03: Refreshed the overview status snapshot after Track A / B / C implementation.
 
 - 2026-03-27: Rewrote the overview to reflect the real MT5-centric pass 3 system, specialist-routing design, and current safety boundaries.
