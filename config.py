@@ -110,6 +110,9 @@ SYMBOL_ALIASES: dict[str, str] = {
     "XAUUSD": "XAUUSDm",
     "XAUUSDc": "XAUUSDm",
     "XAUUSDm": "XAUUSDm",
+    "XAGUSD": "XAGUSDm",
+    "XAGUSDc": "XAGUSDm",
+    "XAGUSDm": "XAGUSDm",
     "BTCUSDT": "BTCUSDm",
     "BTCUSD": "BTCUSDm",
     "BTCUSDm": "BTCUSDm",
@@ -118,6 +121,7 @@ SYMBOL_ALIASES: dict[str, str] = {
 # Reverse map: canonical symbol → broker variants valid for execution.
 SYMBOL_EXECUTION_VARIANTS: dict[str, list[str]] = {
     "XAUUSDm": ["XAUUSDm", "XAUUSD", "XAUUSDc"],
+    "XAGUSDm": ["XAGUSDm", "XAGUSD", "XAGUSDc"],
     "BTCUSDm": ["BTCUSDm", "BTCUSD", "BTCUSDc", "BTCUSDT"],
 }
 
