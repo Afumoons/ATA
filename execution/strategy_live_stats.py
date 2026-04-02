@@ -70,6 +70,11 @@ def load_all_strategy_stats() -> Dict[str, StrategyLiveStats]:
 
     if not STATS_PATH.exists():
         _NAME_MAP = {}
+        try:
+            save_all_strategy_stats({})
+            logger.info("Bootstrapped missing strategy_live_stats.json at %s", STATS_PATH)
+        except Exception:
+            logger.exception("Failed to bootstrap strategy_live_stats.json")
         return {}
 
     try:
