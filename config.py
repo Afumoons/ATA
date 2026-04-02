@@ -25,7 +25,7 @@ class RiskConfig:
 @dataclass
 class DataConfig:
     mt5_timeframe_default: str = "M15"
-    history_bars_default: int = 2000
+    history_bars_default: int = 4000
 
 
 @dataclass
