@@ -8,6 +8,7 @@ from collections import Counter, defaultdict
 
 from ..logging_utils import get_logger
 from .base import StrategyDefinition
+from ..execution.audit_utils import append_pool_audit
 
 logger = get_logger(__name__)
 
@@ -196,6 +197,15 @@ class StrategyPool:
                         existing_rec.status, status,
                         existing_rec.score, score,
                     )
+                    append_pool_audit({
+                        "event": "dedup_replace",
+                        "old_name": existing_name,
+                        "new_name": strategy.name,
+                        "old_status": existing_rec.status,
+                        "new_status": status,
+                        "old_score": existing_rec.score,
+                        "new_score": score,
+                    })
                     del self.strategies[existing_name]
                     del self._fp_map[fp]
 
@@ -273,6 +283,15 @@ class StrategyPool:
         self._rebuild_fp_map()
 
         kept_family_mix = dict(Counter(_family_from_stats(rec.stats) for rec in keep.values()))
+        if pruned_names:
+            append_pool_audit({
+                "event": "prune_inactive",
+                "count": len(pruned_names),
+                "sample": sorted(pruned_names)[:20],
+                "kept_inactive": len(keep),
+                "live_count": len(live),
+                "inactive_family_mix": kept_family_mix,
+            })
         logger.info(
             "Pool pruned %d inactive strategies (kept %d inactive + %d live = %d total) | inactive_family_mix=%s",
             len(pruned_names), len(keep), len(live), len(self.strategies), kept_family_mix,

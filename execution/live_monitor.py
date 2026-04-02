@@ -15,6 +15,7 @@ from ..strategies.pool import load_pool, save_pool
 from ..config import risk_config
 from .live_state_utils import DailyState, save_daily_state, register_trade_pnl
 from .strategy_live_stats import register_strategy_pnl
+from .audit_utils import append_unmatched_closed_deal, append_pool_audit
 
 logger = get_logger(__name__)
 
@@ -262,16 +263,26 @@ def _update_daily_pnl_from_closed_deals() -> None:
                         "Failed to update StrategyLiveStats for %s", strategy_name
                     )
             else:
+                comment = getattr(deal, "comment", "") or ""
                 logger.warning(
                     "No strategy attribution for closed deal ticket=%s order=%s position_id=%s comment=%s profit=%.2f",
                     ticket,
                     order_ticket,
                     position_id,
-                    getattr(deal, "comment", "") or "",
+                    comment,
                     pnl,
                 )
+                append_unmatched_closed_deal({
+                    "deal_ticket": ticket,
+                    "order_ticket": order_ticket,
+                    "position_id": position_id,
+                    "comment": comment,
+                    "profit": pnl,
+                    "symbol": getattr(deal, "symbol", "") or "",
+                    "entry": getattr(deal, "entry", None),
+                    "reason": "ticket_map_miss",
+                })
                 # Fallback: try comment (works on non-Exness brokers)
-                comment = getattr(deal, "comment", "") or ""
                 if comment.startswith("clio-auto-"):
                     name_from_comment = comment[len("clio-auto-"):]
                     if name_from_comment:
@@ -406,6 +417,12 @@ def update_live_stats() -> None:
                     rec.status = "disabled"
             if disabled_entries:
                 save_pool(pool)
+                append_pool_audit({
+                    "event": "circuit_breaker_disable",
+                    "dd_pct": dd_pct,
+                    "threshold": threshold,
+                    "disabled_entries": disabled_entries,
+                })
                 logger.warning(
                     "Circuit breaker: portfolio DD %.2f%% > %.2f%% — "
                     "disabled %d live-tier strategies (active/exploratory): %s",

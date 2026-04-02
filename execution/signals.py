@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import List, Tuple, Any, Dict, Optional
 
 from collections import Counter, defaultdict
+import re
 
 import pandas as pd
 
@@ -28,19 +29,51 @@ logger = get_logger(__name__)
 # live_monitor.py reads this for PnL attribution.
 # ---------------------------------------------------------------------------
 _TICKET_MAP_PATH = Path(__file__).resolve().parent / "ticket_strategy_map.json"
+_TRADES_LOG_PATH = Path(__file__).resolve().parent / "trades.log"
 _MAX_TICKET_MAP_SIZE = 2000
 
 
+def _rebuild_ticket_map_from_trades_log(limit_lines: int = 5000) -> Dict[str, str]:
+    mapping: Dict[str, str] = {}
+    if not _TRADES_LOG_PATH.exists():
+        return mapping
+
+    ticket_re = re.compile(r"ticket=(\d+)")
+    strategy_re = re.compile(r"strategy=([^\s]+)")
+
+    try:
+        with _TRADES_LOG_PATH.open("r", encoding="utf-8") as f:
+            lines = f.readlines()[-limit_lines:]
+    except Exception:
+        logger.exception("Failed to read trades.log for ticket-map rebuild")
+        return mapping
+
+    for line in lines:
+        try:
+            t_match = ticket_re.search(line)
+            s_match = strategy_re.search(line)
+            if not t_match or not s_match:
+                continue
+            mapping[str(t_match.group(1))] = s_match.group(1)
+        except Exception:
+            continue
+    return mapping
+
+
 def _load_ticket_map() -> Dict[str, str]:
+    file_map: Dict[str, str] = {}
     if _TICKET_MAP_PATH.exists():
         try:
             with _TICKET_MAP_PATH.open("r", encoding="utf-8") as f:
                 data = json.load(f)
             if isinstance(data, dict):
-                return data
+                file_map = data
         except Exception:
             logger.exception("Failed to load ticket_strategy_map")
-    return {}
+
+    log_map = _rebuild_ticket_map_from_trades_log()
+    merged = {**log_map, **file_map}
+    return merged
 
 
 def _save_ticket_map(mapping: Dict[str, str]) -> None:
