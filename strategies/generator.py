@@ -125,6 +125,24 @@ SHORT_ENTRY_TEMPLATES = (
     + _SESSION_BREAKOUT_SHORT_TEMPLATES
 )
 
+XAU_IMPULSE_PULLBACK_LONG_TEMPLATES = [
+    "session_london == 1 and close > ma_short and ma_short > ma_long and trend_strength > {trend_min} and volatility > vol_min and rsi > 52 and rsi < 68",
+    "close > ma_short and ma_short > ma_long and trend_strength > {trend_min} and volatility > vol_min and fib_zone_382 == 1",
+]
+XAU_IMPULSE_PULLBACK_SHORT_TEMPLATES = [
+    "session_london == 1 and close < ma_short and ma_short < ma_long and trend_strength < -{trend_min} and volatility > vol_min and rsi < 48 and rsi > 32",
+    "close < ma_short and ma_short < ma_long and trend_strength < -{trend_min} and volatility > vol_min and fib_zone_618 == 1",
+]
+
+XAU_SESSION_CONTINUATION_LONG_TEMPLATES = [
+    "session_london == 1 and session_new_york == 0 and ma_short > ma_long and close > ma_short and trend_strength > {trend_min} and volatility > vol_min",
+    "session_new_york == 1 and ma_short > ma_long and close > ma_short and trend_strength > {trend_min} and rsi > 55 and volatility > vol_min",
+]
+XAU_SESSION_CONTINUATION_SHORT_TEMPLATES = [
+    "session_london == 1 and session_new_york == 0 and ma_short < ma_long and close < ma_short and trend_strength < -{trend_min} and volatility > vol_min",
+    "session_new_york == 1 and ma_short < ma_long and close < ma_short and trend_strength < -{trend_min} and rsi < 45 and volatility > vol_min",
+]
+
 FAMILY_LIBRARY: Dict[str, Dict[str, Any]] = {
     "ma_trend": {
         "long": _LIGHT_LONG_TEMPLATES[1:],
@@ -174,15 +192,33 @@ FAMILY_LIBRARY: Dict[str, Dict[str, Any]] = {
         "preferred_sessions": ["london", "new_york"],
         "exit_templates": EXIT_TEMPLATES + TIME_EXIT_TEMPLATES,
     },
+    "xau_impulse_pullback": {
+        "long": XAU_IMPULSE_PULLBACK_LONG_TEMPLATES,
+        "short": XAU_IMPULSE_PULLBACK_SHORT_TEMPLATES,
+        "regime_type": "trend",
+        "playbook_type": "xau_impulse_pullback",
+        "preferred_sessions": ["london", "new_york"],
+        "exit_templates": EXIT_TEMPLATES + TIME_EXIT_TEMPLATES,
+    },
+    "xau_session_continuation": {
+        "long": XAU_SESSION_CONTINUATION_LONG_TEMPLATES,
+        "short": XAU_SESSION_CONTINUATION_SHORT_TEMPLATES,
+        "regime_type": "trend",
+        "playbook_type": "xau_session_continuation",
+        "preferred_sessions": ["london", "new_york"],
+        "exit_templates": EXIT_TEMPLATES + TIME_EXIT_TEMPLATES,
+    },
 }
 
 CORE_M15_FAMILY_WEIGHTS: Dict[str, float] = {
-    "ma_trend": 0.18,
-    "rsi_range": 0.16,
-    "pullback_trend": 0.20,
-    "vol_breakout": 0.18,
+    "ma_trend": 0.14,
+    "rsi_range": 0.14,
+    "pullback_trend": 0.22,
+    "vol_breakout": 0.16,
     "compression_breakout": 0.14,
-    "session_breakout": 0.14,
+    "session_breakout": 0.12,
+    "xau_impulse_pullback": 0.05,
+    "xau_session_continuation": 0.03,
 }
 
 
@@ -259,14 +295,35 @@ def _sample_family_params(family: str, symbol: str, timeframe: str) -> Dict[str,
     is_core_15m = symbol in {"XAUUSDm", "BTCUSDm"} and timeframe == "M15"
     if is_core_15m:
         if family in {"vol_breakout", "session_breakout"}:
-            params["sl_atr_mult"] = random.choice([1.8, 2.0, 2.5, 3.0])
-            params["tp_atr_mult"] = random.choice([2.5, 3.0, 4.0, 5.0])
+            params["sl_atr_mult"] = random.choice([1.8, 2.0, 2.2, 2.5])
+            params["tp_atr_mult"] = random.choice([2.5, 3.0, 3.5, 4.0])
         elif family == "rsi_range":
             params["sl_atr_mult"] = random.choice([1.2, 1.5, 1.8])
             params["tp_atr_mult"] = random.choice([1.5, 2.0, 2.5])
         else:
-            params["sl_atr_mult"] = random.choice([1.5, 2.0, 2.5])
-            params["tp_atr_mult"] = random.choice([2.0, 3.0, 4.0])
+            params["sl_atr_mult"] = random.choice([1.5, 1.8, 2.0, 2.2])
+            params["tp_atr_mult"] = random.choice([2.0, 2.5, 3.0, 3.5])
+
+    if symbol == "XAUUSDm" and timeframe == "M15":
+        params["microstructure_profile"] = "xau_m15"
+        params["stop_loss_pips"] = random.choice([150, 200, 250, 300])
+        params["take_profit_pips"] = random.choice([200, 250, 300, 400, 500])
+        if family in {"xau_impulse_pullback", "xau_session_continuation"}:
+            params["trend_min"] = round(random.uniform(0.08, 0.25), 2)
+            params["vol_min"] = round(random.uniform(0.7, 1.4), 3)
+            params["time_stop_bars"] = random.choice([3, 4, 6, 8])
+            params["sl_atr_mult"] = random.choice([1.8, 2.0, 2.2, 2.5])
+            params["tp_atr_mult"] = random.choice([2.5, 3.0, 3.5, 4.0])
+        elif family == "pullback_trend":
+            params["trend_min"] = round(random.uniform(0.07, 0.22), 2)
+            params["time_stop_bars"] = random.choice([4, 6, 8])
+        elif family == "vol_breakout":
+            params["trend_min"] = round(random.uniform(0.10, 0.28), 2)
+            params["vol_min"] = round(random.uniform(0.9, 1.5), 3)
+        elif family == "ma_trend":
+            params["trend_min"] = round(random.uniform(0.06, 0.18), 2)
+        elif family == "rsi_range":
+            params["vol_max"] = round(random.uniform(0.10, 0.35), 3)
 
     return params
 

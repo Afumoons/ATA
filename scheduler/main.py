@@ -38,9 +38,12 @@ MINIMUM_EDGE_FOR_EXECUTION = 0.0
 # can never pass execution gating solely because WF Sharpe uses a much harsher cutoff.
 EXEC_MIN_WF_SHARPE = 0.75
 EXEC_MAX_DD_PCT = 12.0
-EXEC_MIN_TRADES = 200
+EXEC_MIN_TRADES = 160
 EXEC_MAX_CONSEC_LOSS = 15
 MAX_EXECUTION_POOL = 10
+
+SPECIALIST_EXEC_MIN_TRADES = 120
+EXPLORATORY_SPECIALIST_MIN_TRADES = 100
 
 REGIME_SORT_NORM = 20.0
 SESSION_SORT_NORM = 10.0
@@ -331,6 +334,89 @@ def _memory_is_clearly_bad(candidate, memory: ResearchMemory, symbol: str, timef
     return False
 
 
+def _memory_dead_zone_penalty(candidate, memory: ResearchMemory, symbol: str, timeframe: str) -> tuple[float, dict]:
+    try:
+        params = getattr(candidate, "params", {}) or {}
+        query_text = "\n".join([
+            f"symbol={symbol}",
+            f"timeframe={timeframe}",
+            f"family={params.get('family', '')}",
+            f"playbook={params.get('playbook_type', '')}",
+            f"long_entry={getattr(candidate, 'long_entry_rule', '')}",
+            f"short_entry={getattr(candidate, 'short_entry_rule', '')}",
+            f"exit={getattr(candidate, 'exit_rule', '')}",
+            f"sl_atr={getattr(candidate, 'sl_atr_mult', '')}",
+            f"tp_atr={getattr(candidate, 'tp_atr_mult', '')}",
+            f"regime={params.get('regime_type', '')}",
+        ])
+        neighbors = memory.query_similar_strategies(symbol=symbol, timeframe=timeframe, text=query_text, n_results=12)
+    except Exception as e:
+        logger.exception("ResearchMemory dead-zone query failed for %s: %s", getattr(candidate, "name", "?"), e)
+        return 0.0, {}
+
+    if not neighbors:
+        return 0.0, {}
+
+    weak = 0
+    strong = 0
+    same_family = 0
+    wf_vals = []
+    pf_vals = []
+
+    candidate_family = str(params.get("family", "") or "")
+    for nb in neighbors:
+        nb_family = str(nb.get("meta_family") or nb.get("stat_family") or "")
+        if candidate_family and nb_family == candidate_family:
+            same_family += 1
+
+        sharpe = nb.get("stat_sharpe_ratio")
+        pf = nb.get("stat_profit_factor")
+        ret_pct = nb.get("stat_return_pct")
+        wf_sharpe = nb.get("stat_wf_overall_sharpe")
+
+        if wf_sharpe is not None:
+            wf_vals.append(float(wf_sharpe))
+        if pf is not None:
+            pf_vals.append(float(pf))
+
+        if (
+            (sharpe is not None and float(sharpe) < 0.10)
+            or (pf is not None and float(pf) < 1.02)
+            or (ret_pct is not None and float(ret_pct) <= 0.0)
+            or (wf_sharpe is not None and float(wf_sharpe) < 0.15)
+        ):
+            weak += 1
+        if (
+            (sharpe is not None and float(sharpe) > 0.35)
+            or (pf is not None and float(pf) > 1.15)
+            or (ret_pct is not None and float(ret_pct) > 2.0)
+            or (wf_sharpe is not None and float(wf_sharpe) > 0.35)
+        ):
+            strong += 1
+
+    total = len(neighbors)
+    weak_ratio = weak / float(total)
+    strong_ratio = strong / float(total)
+    same_family_ratio = same_family / float(total)
+
+    penalty = 0.0
+    if weak_ratio >= 0.55:
+        penalty += min(0.35, weak_ratio * 0.35)
+    if same_family_ratio >= 0.65 and strong_ratio <= 0.20:
+        penalty += 0.10
+    if wf_vals and sum(wf_vals) / len(wf_vals) < 0.12:
+        penalty += 0.10
+    if pf_vals and sum(pf_vals) / len(pf_vals) < 1.03:
+        penalty += 0.08
+
+    return penalty, {
+        "neighbors": total,
+        "weak_ratio": weak_ratio,
+        "strong_ratio": strong_ratio,
+        "same_family_ratio": same_family_ratio,
+    }
+
+
 def job_research_strategies() -> None:
     logger.info("Scheduler: job_research_strategies start")
     pool = load_pool()
@@ -473,22 +559,48 @@ def job_research_strategies() -> None:
                 result = run_backtest(feat, strat, regime_column="regime", **bt_kwargs)
                 eval_result = evaluate_strategy(result.stats)
 
+                dead_zone_penalty, dead_zone_meta = _memory_dead_zone_penalty(strat, memory, canon, TIMEFRAME)
+                if dead_zone_penalty > 0.0:
+                    eval_result["score"] = float(eval_result.get("score", 0.0) or 0.0) - dead_zone_penalty
+                    eval_result["research_dead_zone_penalty"] = dead_zone_penalty
+                    eval_result["research_dead_zone_meta"] = dead_zone_meta
+                    if dead_zone_penalty >= 0.30:
+                        research_skip_counts["dead_zone_penalty"] += 1
+                        if len(research_skip_samples["dead_zone_penalty"]) < 3:
+                            research_skip_samples["dead_zone_penalty"].append(
+                                f"{strat.name}:pen={dead_zone_penalty:.2f},weak={dead_zone_meta.get('weak_ratio', 0.0):.2f},fam={dead_zone_meta.get('same_family_ratio', 0.0):.2f}"
+                            )
+                        continue
+
                 num_trades = float(eval_result.get("num_trades", 0.0) or 0.0)
-                if num_trades < 60:
+                params = getattr(strat, "params", {}) or {}
+                playbook_type = str(params.get("playbook_type", "") or "")
+                family = str(params.get("family", "") or "")
+                bootstrap_candidate = playbook_type in {"xau_impulse_pullback", "xau_session_continuation"} or family in {"xau_impulse_pullback", "xau_session_continuation"}
+
+                if num_trades < 60 and not bootstrap_candidate:
                     research_skip_counts["low_trade_count"] += 1
                     if len(research_skip_samples["low_trade_count"]) < 3:
                         research_skip_samples["low_trade_count"].append(f"{strat.name}:{num_trades:.0f}")
                     continue
+                if num_trades < 40 and bootstrap_candidate:
+                    research_skip_counts["bootstrap_too_few_trades"] += 1
+                    if len(research_skip_samples["bootstrap_too_few_trades"]) < 3:
+                        research_skip_samples["bootstrap_too_few_trades"].append(f"{strat.name}:{num_trades:.0f}")
+                    continue
 
                 pf = float(eval_result.get("profit_factor", 0.0) or 0.0)
                 sharpe = float(eval_result.get("sharpe_ratio", 0.0) or 0.0)
-                if pf < 1.10 or sharpe < 0.20:
+                if (pf < 1.10 or sharpe < 0.20) and not (bootstrap_candidate and pf >= 1.05 and sharpe >= 0.12):
                     research_skip_counts["weak_perf"] += 1
                     if len(research_skip_samples["weak_perf"]) < 3:
                         research_skip_samples["weak_perf"].append(f"{strat.name}:pf={pf:.2f},sh={sharpe:.2f}")
                     continue
 
                 wf = walk_forward_test(feat, strat, **bt_kwargs)
+                eval_result["research_bootstrap_candidate"] = bootstrap_candidate
+                eval_result["research_bootstrap_applied"] = bool(bootstrap_candidate and (pf < 1.10 or sharpe < 0.20 or num_trades < 60))
+
                 mc = monte_carlo_pnl(result.trades, n_runs=300, slippage_std_pips=max(0.5, bt_kwargs["slippage_pips"] * 0.5), pip_size=0.01 if "XAU" in canon else 1.0)
 
                 eval_result["wf_overall_sharpe"] = wf.get("aggregate", {}).get("overall_sharpe", 0.0)
@@ -507,10 +619,15 @@ def job_research_strategies() -> None:
                 meta = explain.get("meta", {}) or {}
                 risk_behavior = explain.get("risk_behavior", {}) or {}
 
-                if wf_sharpe < 0.20:
+                if wf_sharpe < 0.20 and not bootstrap_candidate:
                     research_skip_counts["weak_wf_sharpe"] += 1
                     if len(research_skip_samples["weak_wf_sharpe"]) < 3:
                         research_skip_samples["weak_wf_sharpe"].append(f"{strat.name}:{wf_sharpe:.3f}")
+                    continue
+                if wf_sharpe < 0.15 and bootstrap_candidate:
+                    research_skip_counts["bootstrap_weak_wf_sharpe"] += 1
+                    if len(research_skip_samples["bootstrap_weak_wf_sharpe"]) < 3:
+                        research_skip_samples["bootstrap_weak_wf_sharpe"].append(f"{strat.name}:{wf_sharpe:.3f}")
                     continue
                 if mc_p5 <= 0.0:
                     research_skip_counts["mc_p5_non_positive"] += 1
@@ -727,9 +844,9 @@ def job_execute_signals() -> None:
 
             min_trades = EXEC_MIN_TRADES
             if bounded_specialist and routing_conf >= 0.65 and specialist_score >= 0.60:
-                min_trades = 120
+                min_trades = SPECIALIST_EXEC_MIN_TRADES
             if getattr(rec, "status", "candidate") == "exploratory" and bounded_specialist and routing_conf >= 0.70:
-                min_trades = 100
+                min_trades = EXPLORATORY_SPECIALIST_MIN_TRADES
 
             return (
                 wf >= EXEC_MIN_WF_SHARPE
