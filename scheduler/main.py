@@ -29,7 +29,7 @@ from ..vector_memory.research_memory import ResearchMemory
 logger = get_logger(__name__)
 BASE_DIR = Path(__file__).resolve().parents[1]
 
-MANAGED_SYMBOLS = ["XAUUSDc","BTCUSDc"]
+MANAGED_SYMBOLS = ["XAUUSDc","BTCUSDc","XAGUSDc"]
 TIMEFRAME = "M15"
 MINIMUM_EDGE_FOR_EXECUTION = 0.0
 
