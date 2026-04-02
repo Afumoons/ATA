@@ -107,6 +107,16 @@ TIME_EXIT_TEMPLATES = [
     "bars_since_entry >= {time_stop_bars}",
 ]
 
+ATR_INVALIDATION_EXIT_TEMPLATES = [
+    "bars_since_entry >= {time_stop_bars} or trend_strength < {trend_exit}",
+    "bars_since_entry >= {time_stop_bars} or trend_strength > {trend_exit}",
+]
+
+SESSION_GUARD_EXIT_TEMPLATES = [
+    "bars_since_entry >= {time_stop_bars} or session_new_york == 1",
+    "bars_since_entry >= {time_stop_bars} or session_asia == 1",
+]
+
 # Expose combined lists for backward compatibility
 LONG_ENTRY_TEMPLATES = (
     _ICHIFIB_LONG_TEMPLATES
@@ -198,7 +208,7 @@ FAMILY_LIBRARY: Dict[str, Dict[str, Any]] = {
         "regime_type": "trend",
         "playbook_type": "xau_impulse_pullback",
         "preferred_sessions": ["london", "new_york"],
-        "exit_templates": EXIT_TEMPLATES + TIME_EXIT_TEMPLATES,
+        "exit_templates": ATR_INVALIDATION_EXIT_TEMPLATES + TIME_EXIT_TEMPLATES,
     },
     "xau_session_continuation": {
         "long": XAU_SESSION_CONTINUATION_LONG_TEMPLATES,
@@ -206,7 +216,7 @@ FAMILY_LIBRARY: Dict[str, Dict[str, Any]] = {
         "regime_type": "trend",
         "playbook_type": "xau_session_continuation",
         "preferred_sessions": ["london", "new_york"],
-        "exit_templates": EXIT_TEMPLATES + TIME_EXIT_TEMPLATES,
+        "exit_templates": ATR_INVALIDATION_EXIT_TEMPLATES + SESSION_GUARD_EXIT_TEMPLATES + TIME_EXIT_TEMPLATES,
     },
 }
 
@@ -366,6 +376,13 @@ def _build_strategy_from_templates(
     params["regime_type"] = long_regime if long_regime == short_regime else "mixed"
     params.setdefault("family", long_family if long_family == short_family else "mixed")
     params.setdefault("playbook_type", params["family"])
+    params["has_time_stop"] = "bars_since_entry" in exit_rule
+    params["has_session_exit_guard"] = ("session_new_york" in exit_rule) or ("session_asia" in exit_rule)
+    params["exit_archetype"] = (
+        "session_guard" if params["has_session_exit_guard"]
+        else "time_stop" if params["has_time_stop"]
+        else "state_change"
+    )
 
     uid = uuid.uuid4().hex[:4]
     name = f"{name_prefix}_{symbol}_{timeframe}_{uid}"

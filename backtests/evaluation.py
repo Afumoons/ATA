@@ -93,11 +93,32 @@ def compute_score(stats: Dict, cfg: EvaluationConfig = DEFAULT_EVAL_CONFIG) -> f
 
     exit_rule_ratio = float(risk_behavior.get("exit_rule_ratio", 0.0) or 0.0)
     avg_holding_bars = float(risk_behavior.get("avg_holding_bars", 0.0) or 0.0)
+    strategy_payload = stats.get("strategy", {}) or {}
+    strategy_params = (strategy_payload.get("params") if isinstance(strategy_payload, dict) else {}) or {}
+    exit_archetype = str(strategy_params.get("exit_archetype", "") or "")
+    has_time_stop = bool(strategy_params.get("has_time_stop", False))
+    has_session_exit_guard = bool(strategy_params.get("has_session_exit_guard", False))
+    tp_hit_ratio = float(risk_behavior.get("tp_hit_ratio", 0.0) or 0.0)
+
     fragility_penalty = 0.0
     if exit_rule_ratio > 0.80:
-        fragility_penalty += 0.12
+        fragility_penalty += 0.18
+    if exit_rule_ratio > 0.90:
+        fragility_penalty += 0.10
     if avg_holding_bars < 1.0:
         fragility_penalty += 0.08
+    if tp_hit_ratio < 0.10 and exit_rule_ratio > 0.75:
+        fragility_penalty += 0.08
+    if not has_time_stop and exit_rule_ratio > 0.70:
+        fragility_penalty += 0.06
+
+    exit_bonus = 0.0
+    if has_time_stop:
+        exit_bonus += 0.05
+    if has_session_exit_guard:
+        exit_bonus += 0.04
+    if exit_archetype in {"time_stop", "session_guard"} and tp_hit_ratio >= 0.10:
+        exit_bonus += 0.04
 
     score = (
         base_score
@@ -105,6 +126,7 @@ def compute_score(stats: Dict, cfg: EvaluationConfig = DEFAULT_EVAL_CONFIG) -> f
         + news_bonus
         + specialist_bonus
         + routing_bonus
+        + exit_bonus
         - stability_penalty
         - news_penalty
         - session_penalty

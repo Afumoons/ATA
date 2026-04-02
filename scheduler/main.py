@@ -639,10 +639,26 @@ def job_research_strategies() -> None:
                     if len(research_skip_samples["mc_dd_too_high"]) < 3:
                         research_skip_samples["mc_dd_too_high"].append(f"{strat.name}:{mc_dd_p95:.2f}")
                     continue
-                if float(risk_behavior.get("exit_rule_ratio", 0.0) or 0.0) > 0.85:
+                exit_rule_ratio = float(risk_behavior.get("exit_rule_ratio", 0.0) or 0.0)
+                tp_hit_ratio = float(risk_behavior.get("tp_hit_ratio", 0.0) or 0.0)
+                has_time_stop = bool((getattr(strat, "params", {}) or {}).get("has_time_stop", False))
+                has_session_exit_guard = bool((getattr(strat, "params", {}) or {}).get("has_session_exit_guard", False))
+                if exit_rule_ratio > 0.80 and not has_time_stop:
                     research_skip_counts["exit_rule_dependency"] += 1
                     if len(research_skip_samples["exit_rule_dependency"]) < 3:
                         research_skip_samples["exit_rule_dependency"].append(strat.name)
+                    continue
+                if exit_rule_ratio > 0.88:
+                    research_skip_counts["extreme_exit_rule_dependency"] += 1
+                    if len(research_skip_samples["extreme_exit_rule_dependency"]) < 3:
+                        research_skip_samples["extreme_exit_rule_dependency"].append(strat.name)
+                    continue
+                if tp_hit_ratio < 0.08 and exit_rule_ratio > 0.75 and not has_session_exit_guard:
+                    research_skip_counts["weak_exit_signature"] += 1
+                    if len(research_skip_samples["weak_exit_signature"]) < 3:
+                        research_skip_samples["weak_exit_signature"].append(
+                            f"{strat.name}:tp={tp_hit_ratio:.2f},exit={exit_rule_ratio:.2f}"
+                        )
                     continue
                 avg_holding_bars = float(risk_behavior.get("avg_holding_bars", 0.0) or 0.0)
                 if avg_holding_bars < 1.0:
