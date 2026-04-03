@@ -250,8 +250,26 @@ def _add_news_features(
     news["datetime_utc"] = pd.to_datetime(news["datetime_utc"], utc=True)
     news = news.sort_values("datetime_utc").reset_index(drop=True)
 
-    bar_ns = df["time"].values.astype(np.int64)           # (n_bars,)
-    event_ns = news["datetime_utc"].values.astype(np.int64)  # (n_events,)
+    # Normalize both bar/event times to a common nanosecond scale.
+    # Parquet-loaded timezone-aware columns may preserve different underlying
+    # units (e.g. `datetime64[ms, UTC]` vs `datetime64[us, UTC]`), which breaks
+    # raw subtraction if we do not coerce them to the same resolution first.
+    bar_ns = (
+        pd.to_datetime(df["time"], utc=True)
+        .dt.tz_convert("UTC")
+        .dt.tz_localize(None)
+        .astype("datetime64[ns]")
+        .astype(np.int64)
+        .to_numpy()
+    )
+    event_ns = (
+        pd.to_datetime(news["datetime_utc"], utc=True)
+        .dt.tz_convert("UTC")
+        .dt.tz_localize(None)
+        .astype("datetime64[ns]")
+        .astype(np.int64)
+        .to_numpy()
+    )
     impact_vals = news[impact_col].values.astype(int)     # (n_events,)
 
     # delta_matrix[i, j] = (bar_i_time - event_j_time) in minutes
