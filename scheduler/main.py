@@ -47,6 +47,9 @@ EXPLORATORY_SPECIALIST_MIN_TRADES = 100
 BTC_EXEC_MIN_TRADES = 100
 BTC_SPECIALIST_EXEC_MIN_TRADES = 80
 BTC_EXPLORATORY_SPECIALIST_MIN_TRADES = 70
+XAG_EXEC_MIN_TRADES = 80
+XAG_SPECIALIST_EXEC_MIN_TRADES = 60
+XAG_EXPLORATORY_SPECIALIST_MIN_TRADES = 50
 XAG_BOOTSTRAP_MIN_TRADES = 20
 XAG_BOOTSTRAP_MIN_PF = 1.01
 XAG_BOOTSTRAP_MIN_SHARPE = 0.05
@@ -126,6 +129,72 @@ def _hybrid_regime_score(rec, current_regime: str, current_session: str = "") ->
     specialist_bonus = 1.0 + 0.20 * float(meta.get("specialist_score", 0.0) or 0.0)
     routing_bonus = 1.0 + 0.15 * float(meta.get("routing_confidence", 0.0) or 0.0)
     return wf * regime_bonus * session_bonus * status_bonus * specialist_bonus * routing_bonus
+
+
+def _base_research_min_trades(symbol: str) -> int:
+    sym_u = symbol.upper()
+    if "XAG" in sym_u:
+        return 35
+    if "BTC" in sym_u:
+        return 45
+    return 60
+
+
+def _bootstrap_research_min_trades(symbol: str) -> int:
+    sym_u = symbol.upper()
+    if "XAG" in sym_u:
+        return XAG_BOOTSTRAP_MIN_TRADES
+    if "BTC" in sym_u:
+        return 30
+    return 40
+
+
+def _bootstrap_min_pf(symbol: str) -> float:
+    sym_u = symbol.upper()
+    if "XAG" in sym_u:
+        return XAG_BOOTSTRAP_MIN_PF
+    if "BTC" in sym_u:
+        return 1.03
+    return 1.05
+
+
+def _bootstrap_min_sharpe(symbol: str) -> float:
+    sym_u = symbol.upper()
+    if "XAG" in sym_u:
+        return XAG_BOOTSTRAP_MIN_SHARPE
+    if "BTC" in sym_u:
+        return 0.08
+    return 0.12
+
+
+def _bootstrap_min_wf_sharpe(symbol: str) -> float:
+    sym_u = symbol.upper()
+    if "XAG" in sym_u:
+        return XAG_BOOTSTRAP_MIN_WF_SHARPE
+    if "BTC" in sym_u:
+        return 0.10
+    return 0.15
+
+
+def _execution_min_trades(symbol: str, *, bounded_specialist: bool, exploratory: bool, routing_conf: float, specialist_score: float) -> int:
+    sym_u = symbol.upper()
+    if "BTC" in sym_u:
+        if exploratory and bounded_specialist and routing_conf >= 0.70:
+            return BTC_EXPLORATORY_SPECIALIST_MIN_TRADES
+        if bounded_specialist and routing_conf >= 0.65 and specialist_score >= 0.60:
+            return BTC_SPECIALIST_EXEC_MIN_TRADES
+        return BTC_EXEC_MIN_TRADES
+    if "XAG" in sym_u:
+        if exploratory and bounded_specialist and routing_conf >= 0.70:
+            return XAG_EXPLORATORY_SPECIALIST_MIN_TRADES
+        if bounded_specialist and routing_conf >= 0.65 and specialist_score >= 0.60:
+            return XAG_SPECIALIST_EXEC_MIN_TRADES
+        return XAG_EXEC_MIN_TRADES
+    if exploratory and bounded_specialist and routing_conf >= 0.70:
+        return EXPLORATORY_SPECIALIST_MIN_TRADES
+    if bounded_specialist and routing_conf >= 0.65 and specialist_score >= 0.60:
+        return SPECIALIST_EXEC_MIN_TRADES
+    return EXEC_MIN_TRADES
 
 
 def _research_backtest_kwargs(symbol: str) -> dict:
@@ -590,12 +659,13 @@ def job_research_strategies() -> None:
                     or (is_xag and family in {"compression_breakout", "vol_breakout", "session_breakout", "pullback_trend"})
                 )
 
-                if num_trades < 60 and not bootstrap_candidate:
+                base_min_trades = _base_research_min_trades(canon)
+                if num_trades < base_min_trades and not bootstrap_candidate:
                     research_skip_counts["low_trade_count"] += 1
                     if len(research_skip_samples["low_trade_count"]) < 3:
                         research_skip_samples["low_trade_count"].append(f"{strat.name}:{num_trades:.0f}")
                     continue
-                bootstrap_min_trades = XAG_BOOTSTRAP_MIN_TRADES if is_xag else 40
+                bootstrap_min_trades = _bootstrap_research_min_trades(canon)
                 if num_trades < bootstrap_min_trades and bootstrap_candidate:
                     research_skip_counts["bootstrap_too_few_trades"] += 1
                     if len(research_skip_samples["bootstrap_too_few_trades"]) < 3:
@@ -604,8 +674,8 @@ def job_research_strategies() -> None:
 
                 pf = float(eval_result.get("profit_factor", 0.0) or 0.0)
                 sharpe = float(eval_result.get("sharpe_ratio", 0.0) or 0.0)
-                bootstrap_pf = XAG_BOOTSTRAP_MIN_PF if is_xag else 1.05
-                bootstrap_sharpe = XAG_BOOTSTRAP_MIN_SHARPE if is_xag else 0.12
+                bootstrap_pf = _bootstrap_min_pf(canon)
+                bootstrap_sharpe = _bootstrap_min_sharpe(canon)
                 if (pf < 1.10 or sharpe < 0.20) and not (bootstrap_candidate and pf >= bootstrap_pf and sharpe >= bootstrap_sharpe):
                     research_skip_counts["weak_perf"] += 1
                     if len(research_skip_samples["weak_perf"]) < 3:
@@ -639,7 +709,7 @@ def job_research_strategies() -> None:
                     if len(research_skip_samples["weak_wf_sharpe"]) < 3:
                         research_skip_samples["weak_wf_sharpe"].append(f"{strat.name}:{wf_sharpe:.3f}")
                     continue
-                bootstrap_wf = XAG_BOOTSTRAP_MIN_WF_SHARPE if is_xag else 0.15
+                bootstrap_wf = _bootstrap_min_wf_sharpe(canon)
                 if wf_sharpe < bootstrap_wf and bootstrap_candidate:
                     research_skip_counts["bootstrap_weak_wf_sharpe"] += 1
                     if len(research_skip_samples["bootstrap_weak_wf_sharpe"]) < 3:
@@ -721,11 +791,11 @@ def job_research_strategies() -> None:
                     is_xag
                     and bootstrap_candidate
                     and eval_result.get("accepted")
-                    and wf_sharpe >= XAG_BOOTSTRAP_MIN_WF_SHARPE
+                    and wf_sharpe >= _bootstrap_min_wf_sharpe(canon)
                     and mc_p5 > 0.0
-                    and num_trades >= XAG_BOOTSTRAP_MIN_TRADES
-                    and pf >= XAG_BOOTSTRAP_MIN_PF
-                    and sharpe >= XAG_BOOTSTRAP_MIN_SHARPE
+                    and num_trades >= _bootstrap_research_min_trades(canon)
+                    and pf >= _bootstrap_min_pf(canon)
+                    and sharpe >= _bootstrap_min_sharpe(canon)
                 ):
                     status = "exploratory"
                 else:
@@ -883,14 +953,13 @@ def job_execute_signals() -> None:
             bounded_specialist = bool(allowed_regimes or allowed_sessions)
             mc_p5 = float(s.get("mc_final_pnl_p5", 0.0) or 0.0)
 
-            sym_u = str(getattr(rec, "symbol", "") or "").upper()
-            is_btc = "BTC" in sym_u
-
-            min_trades = BTC_EXEC_MIN_TRADES if is_btc else EXEC_MIN_TRADES
-            if bounded_specialist and routing_conf >= 0.65 and specialist_score >= 0.60:
-                min_trades = BTC_SPECIALIST_EXEC_MIN_TRADES if is_btc else SPECIALIST_EXEC_MIN_TRADES
-            if getattr(rec, "status", "candidate") == "exploratory" and bounded_specialist and routing_conf >= 0.70:
-                min_trades = BTC_EXPLORATORY_SPECIALIST_MIN_TRADES if is_btc else EXPLORATORY_SPECIALIST_MIN_TRADES
+            min_trades = _execution_min_trades(
+                str(getattr(rec, "symbol", "") or ""),
+                bounded_specialist=bounded_specialist,
+                exploratory=bool(getattr(rec, "status", "candidate") == "exploratory"),
+                routing_conf=routing_conf,
+                specialist_score=specialist_score,
+            )
 
             return (
                 wf >= EXEC_MIN_WF_SHARPE
@@ -919,14 +988,13 @@ def job_execute_signals() -> None:
             bounded_specialist = bool(allowed_regimes or allowed_sessions)
             mc_p5 = float(s.get("mc_final_pnl_p5", 0.0) or 0.0)
 
-            sym_u = str(getattr(rec, "symbol", "") or "").upper()
-            is_btc = "BTC" in sym_u
-
-            min_trades = BTC_EXEC_MIN_TRADES if is_btc else EXEC_MIN_TRADES
-            if bounded_specialist and routing_conf >= 0.65 and specialist_score >= 0.60:
-                min_trades = BTC_SPECIALIST_EXEC_MIN_TRADES if is_btc else SPECIALIST_EXEC_MIN_TRADES
-            if getattr(rec, "status", "candidate") == "exploratory" and bounded_specialist and routing_conf >= 0.70:
-                min_trades = BTC_EXPLORATORY_SPECIALIST_MIN_TRADES if is_btc else EXPLORATORY_SPECIALIST_MIN_TRADES
+            min_trades = _execution_min_trades(
+                str(getattr(rec, "symbol", "") or ""),
+                bounded_specialist=bounded_specialist,
+                exploratory=bool(getattr(rec, "status", "candidate") == "exploratory"),
+                routing_conf=routing_conf,
+                specialist_score=specialist_score,
+            )
 
             reasons: list[str] = []
             if wf < EXEC_MIN_WF_SHARPE:
