@@ -44,6 +44,9 @@ MAX_EXECUTION_POOL = 10
 
 SPECIALIST_EXEC_MIN_TRADES = 120
 EXPLORATORY_SPECIALIST_MIN_TRADES = 100
+BTC_EXEC_MIN_TRADES = 100
+BTC_SPECIALIST_EXEC_MIN_TRADES = 80
+BTC_EXPLORATORY_SPECIALIST_MIN_TRADES = 70
 
 REGIME_SORT_NORM = 20.0
 SESSION_SORT_NORM = 10.0
@@ -858,11 +861,14 @@ def job_execute_signals() -> None:
             bounded_specialist = bool(allowed_regimes or allowed_sessions)
             mc_p5 = float(s.get("mc_final_pnl_p5", 0.0) or 0.0)
 
-            min_trades = EXEC_MIN_TRADES
+            sym_u = str(getattr(rec, "symbol", "") or "").upper()
+            is_btc = "BTC" in sym_u
+
+            min_trades = BTC_EXEC_MIN_TRADES if is_btc else EXEC_MIN_TRADES
             if bounded_specialist and routing_conf >= 0.65 and specialist_score >= 0.60:
-                min_trades = SPECIALIST_EXEC_MIN_TRADES
+                min_trades = BTC_SPECIALIST_EXEC_MIN_TRADES if is_btc else SPECIALIST_EXEC_MIN_TRADES
             if getattr(rec, "status", "candidate") == "exploratory" and bounded_specialist and routing_conf >= 0.70:
-                min_trades = EXPLORATORY_SPECIALIST_MIN_TRADES
+                min_trades = BTC_EXPLORATORY_SPECIALIST_MIN_TRADES if is_btc else EXPLORATORY_SPECIALIST_MIN_TRADES
 
             return (
                 wf >= EXEC_MIN_WF_SHARPE
@@ -873,7 +879,56 @@ def job_execute_signals() -> None:
                 and (specialist_score >= 0.30 or wf >= 5.0)
             )
 
-        quality_strats = [r for r in unique_strats if _passes_quality(r)]
+        quality_fail_counts: Counter[str] = Counter()
+
+        def _quality_fail_reasons(rec) -> list[str]:
+            s = rec.stats or {}
+            ex = s.get("strategy_explain", {}) or {}
+            risk_beh = ex.get("risk_behavior", {}) or {}
+            meta = ex.get("meta", {}) or {}
+            wf = float(s.get("wf_overall_sharpe", 0) or 0)
+            dd = abs(float(s.get("max_drawdown_pct", 0) or 0))
+            tr = int(s.get("num_trades", 0) or 0)
+            cls = int(risk_beh.get("max_consecutive_losses", 0) or 0)
+            routing_conf = float(meta.get("routing_confidence", 0.0) or 0.0)
+            specialist_score = float(meta.get("specialist_score", 0.0) or 0.0)
+            allowed_regimes = list(meta.get("allowed_regimes", []) or [])
+            allowed_sessions = list(meta.get("allowed_sessions", []) or [])
+            bounded_specialist = bool(allowed_regimes or allowed_sessions)
+            mc_p5 = float(s.get("mc_final_pnl_p5", 0.0) or 0.0)
+
+            sym_u = str(getattr(rec, "symbol", "") or "").upper()
+            is_btc = "BTC" in sym_u
+
+            min_trades = BTC_EXEC_MIN_TRADES if is_btc else EXEC_MIN_TRADES
+            if bounded_specialist and routing_conf >= 0.65 and specialist_score >= 0.60:
+                min_trades = BTC_SPECIALIST_EXEC_MIN_TRADES if is_btc else SPECIALIST_EXEC_MIN_TRADES
+            if getattr(rec, "status", "candidate") == "exploratory" and bounded_specialist and routing_conf >= 0.70:
+                min_trades = BTC_EXPLORATORY_SPECIALIST_MIN_TRADES if is_btc else EXPLORATORY_SPECIALIST_MIN_TRADES
+
+            reasons: list[str] = []
+            if wf < EXEC_MIN_WF_SHARPE:
+                reasons.append(f"wf<{EXEC_MIN_WF_SHARPE}")
+            if dd > EXEC_MAX_DD_PCT:
+                reasons.append(f"dd>{EXEC_MAX_DD_PCT}")
+            if tr < min_trades:
+                reasons.append(f"trades<{min_trades}")
+            if cls > EXEC_MAX_CONSEC_LOSS:
+                reasons.append(f"cls>{EXEC_MAX_CONSEC_LOSS}")
+            if mc_p5 <= 0.0:
+                reasons.append("mc_p5<=0")
+            if not (specialist_score >= 0.30 or wf >= 5.0):
+                reasons.append("specialist<0.30_and_wf<5")
+            return reasons
+
+        quality_strats = []
+        for r in unique_strats:
+            reasons = _quality_fail_reasons(r)
+            if reasons:
+                for reason in reasons:
+                    quality_fail_counts[reason] += 1
+                continue
+            quality_strats.append(r)
 
         current_regime = "unknown"
         current_session = _current_session()
@@ -896,7 +951,14 @@ def job_execute_signals() -> None:
             )
 
         if not final_strats:
-            logger.warning("No strategies passed execution filter for %s %s", symbol, TIMEFRAME)
+            logger.warning(
+                "No strategies passed execution filter for %s %s | live_tier=%d unique=%d quality_fail_counts=%s",
+                symbol,
+                TIMEFRAME,
+                len(live_tier_strats),
+                len(unique_strats),
+                dict(quality_fail_counts),
+            )
             continue
 
         from ..strategies.pool import StrategyPool
