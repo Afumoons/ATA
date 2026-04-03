@@ -5,6 +5,7 @@ from dataclasses import dataclass, asdict, field
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 from collections import Counter, defaultdict
+from tempfile import NamedTemporaryFile
 
 from ..logging_utils import get_logger
 from .base import StrategyDefinition
@@ -317,10 +318,18 @@ def load_pool() -> StrategyPool:
         return StrategyPool(strategies={})
 
 
+def _safe_write_pool_json(path: Path, payload: Dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    data = json.dumps(payload, indent=2, ensure_ascii=False)
+    with NamedTemporaryFile("w", encoding="utf-8", delete=False, dir=path.parent, prefix=f".{path.stem}_", suffix=".tmp") as tmp:
+        tmp.write(data)
+        tmp_path = Path(tmp.name)
+    tmp_path.replace(path)
+
+
 def save_pool(pool: StrategyPool) -> None:
-    with POOL_STATE_PATH.open("w", encoding="utf-8") as f:
-        json.dump(pool.to_dict(), f, indent=2)
-    logger.info("Pool saved: %d strategies", len(pool.strategies))
+    _safe_write_pool_json(POOL_STATE_PATH, pool.to_dict())
+    logger.info("Pool saved atomically: %d strategies", len(pool.strategies))
 
     try:
         from .live_manifest import rebuild_runtime_artifacts
