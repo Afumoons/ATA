@@ -31,6 +31,8 @@ logger = get_logger(__name__)
 _TICKET_MAP_PATH = Path(__file__).resolve().parent / "ticket_strategy_map.json"
 _TRADES_LOG_PATH = Path(__file__).resolve().parent / "trades.log"
 _MAX_TICKET_MAP_SIZE = 2000
+_TICKET_MAP_CACHE: Dict[str, str] | None = None
+_TICKET_MAP_CACHE_KEY: tuple[float | None, float | None] | None = None
 
 
 def _rebuild_ticket_map_from_trades_log(limit_lines: int = 5000) -> Dict[str, str]:
@@ -61,6 +63,15 @@ def _rebuild_ticket_map_from_trades_log(limit_lines: int = 5000) -> Dict[str, st
 
 
 def _load_ticket_map() -> Dict[str, str]:
+    global _TICKET_MAP_CACHE, _TICKET_MAP_CACHE_KEY
+
+    file_mtime = _TICKET_MAP_PATH.stat().st_mtime if _TICKET_MAP_PATH.exists() else None
+    log_mtime = _TRADES_LOG_PATH.stat().st_mtime if _TRADES_LOG_PATH.exists() else None
+    cache_key = (file_mtime, log_mtime)
+
+    if _TICKET_MAP_CACHE is not None and _TICKET_MAP_CACHE_KEY == cache_key:
+        return dict(_TICKET_MAP_CACHE)
+
     file_map: Dict[str, str] = {}
     if _TICKET_MAP_PATH.exists():
         try:
@@ -73,10 +84,13 @@ def _load_ticket_map() -> Dict[str, str]:
 
     log_map = _rebuild_ticket_map_from_trades_log()
     merged = {**log_map, **file_map}
+    _TICKET_MAP_CACHE = dict(merged)
+    _TICKET_MAP_CACHE_KEY = cache_key
     return merged
 
 
 def _save_ticket_map(mapping: Dict[str, str]) -> None:
+    global _TICKET_MAP_CACHE, _TICKET_MAP_CACHE_KEY
     try:
         if len(mapping) > _MAX_TICKET_MAP_SIZE:
             keys = sorted(mapping.keys(), key=lambda k: int(k) if k.isdigit() else 0)
@@ -89,6 +103,10 @@ def _save_ticket_map(mapping: Dict[str, str]) -> None:
             with os.fdopen(fd, "w", encoding="utf-8") as f:
                 f.write(data)
             os.replace(tmp, _TICKET_MAP_PATH)
+            _TICKET_MAP_CACHE = dict(mapping)
+            file_mtime = _TICKET_MAP_PATH.stat().st_mtime if _TICKET_MAP_PATH.exists() else None
+            log_mtime = _TRADES_LOG_PATH.stat().st_mtime if _TRADES_LOG_PATH.exists() else None
+            _TICKET_MAP_CACHE_KEY = (file_mtime, log_mtime)
         except Exception:
             try:
                 os.unlink(tmp)
