@@ -276,12 +276,12 @@ def build_strategy_explain(
     rr_all = [rr for rr in trades["_rr"].values if rr is not None]
 
     holding_bars: List[int] = []
-    feat_index_np = feat_index.view(np.int64)
     for _, row in trades.iterrows():
-        et_ns = row["entry_time"].value
-        xt_ns = row["exit_time"].value
-        epos = int(np.searchsorted(feat_index_np, et_ns, side="right")) - 1
-        xpos = int(np.searchsorted(feat_index_np, xt_ns, side="right")) - 1
+        try:
+            epos = _nearest_feat_idx(feat_index, row["entry_time"])
+            xpos = _nearest_feat_idx(feat_index, row["exit_time"])
+        except Exception:
+            continue
         if epos >= 0 and xpos >= 0:
             holding_bars.append(max(0, xpos - epos))
 
