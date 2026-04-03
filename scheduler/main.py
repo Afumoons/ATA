@@ -329,18 +329,27 @@ def _apply_live_degradation(pool) -> None:
         bt_sharpe = float(stats.get("sharpe_ratio", 0.0) or 0.0)
         if bt_ret <= 0 or bt_sharpe <= 0.3:
             continue
-        if rec.num_trades < max(10, MAX_RECENT_TRADES):
+        if rec.num_trades < max(15, MAX_RECENT_TRADES):
             continue
 
         initial_eq = float(stats.get("initial_equity", 1.0) or 1.0)
         live_ret_total_pct = rec.total_pnl / max(initial_eq, 1.0) * 100.0
         live_ret_recent_pct = sum(rec.recent_pnls) / max(initial_eq, 1.0) * 100.0 if rec.recent_pnls else 0.0
+        recent_avg_pnl = float(rec.recent_avg_pnl or 0.0)
 
-        if live_ret_recent_pct < -3.0 or live_ret_recent_pct < 0.25 * bt_ret:
+        severe_recent_break = live_ret_recent_pct < -3.0
+        sustained_underperformance = (
+            live_ret_recent_pct < 0.0
+            and live_ret_total_pct < 0.0
+            and live_ret_recent_pct < 0.25 * bt_ret
+            and recent_avg_pnl <= 0.0
+        )
+
+        if severe_recent_break or sustained_underperformance:
             pool_rec.status = "candidate"
             logger.warning(
-                "Degradation: demoting %s to candidate (bt_ret=%.2f%% bt_sharpe=%.2f live_total=%.2f%% live_recent=%.2f%% trades=%d)",
-                name, bt_ret, bt_sharpe, live_ret_total_pct, live_ret_recent_pct, rec.num_trades,
+                "Degradation: demoting %s to candidate (bt_ret=%.2f%% bt_sharpe=%.2f live_total=%.2f%% live_recent=%.2f%% recent_avg_pnl=%.2f trades=%d severe=%s sustained=%s)",
+                name, bt_ret, bt_sharpe, live_ret_total_pct, live_ret_recent_pct, recent_avg_pnl, rec.num_trades, severe_recent_break, sustained_underperformance,
             )
             try:
                 from ..notifications.whatsapp_notifier import send_strategy_degradation_alert
