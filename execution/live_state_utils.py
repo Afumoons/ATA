@@ -6,7 +6,7 @@ import tempfile
 from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Iterable, Any
 
 import MetaTrader5 as mt5
 
@@ -112,6 +112,7 @@ def strategy_has_open_position(
     strategy_name: str,
     symbol: str,
     timeframe: str,
+    positions: Optional[Iterable[Any]] = None,
 ) -> bool:
     """Return True when MT5 already has an open position for this strategy slot.
 
@@ -120,24 +121,25 @@ def strategy_has_open_position(
     format used by execution.engine (`{timeframe}{symbol}{uid4}`) so the guard
     still works across process restarts when possible.
     """
-    try:
-        positions = mt5.positions_get(symbol=symbol)
-    except Exception:
-        logger.exception(
-            "strategy_has_open_position: mt5.positions_get failed for %s %s %s",
-            strategy_name,
-            symbol,
-            timeframe,
-        )
-        return False
-
     if positions is None:
-        logger.warning(
-            "strategy_has_open_position: positions_get returned None for %s %s",
-            symbol,
-            timeframe,
-        )
-        return False
+        try:
+            positions = mt5.positions_get(symbol=symbol)
+        except Exception:
+            logger.exception(
+                "strategy_has_open_position: mt5.positions_get failed for %s %s %s",
+                strategy_name,
+                symbol,
+                timeframe,
+            )
+            return False
+
+        if positions is None:
+            logger.warning(
+                "strategy_has_open_position: positions_get returned None for %s %s",
+                symbol,
+                timeframe,
+            )
+            return False
 
     try:
         from .signals import get_strategy_for_ticket  # avoid circular import

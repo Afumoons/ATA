@@ -729,6 +729,14 @@ def execute_signals_for_symbol(
 
     def _execute_batch(strategies: List[StrategyDefinition], rp: float, tier: str) -> None:
         sigs = generate_signals_for_row(latest, strategies)
+        open_positions = None
+        if sigs:
+            try:
+                import MetaTrader5 as mt5
+                open_positions = mt5.positions_get(symbol=symbol)
+            except Exception:
+                logger.exception("Failed to snapshot open positions for %s %s", symbol, timeframe)
+                open_positions = None
         if not sigs:
             logger.info(
                 "No entry conditions met for %s strategies on %s %s (%d evaluated)",
@@ -746,6 +754,7 @@ def execute_signals_for_symbol(
                     strategy_name=strat.name,
                     symbol=symbol,
                     timeframe=timeframe,
+                    positions=open_positions,
                 ):
                     reason = "blocked_existing_position"
                     logger.info(
