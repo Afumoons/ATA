@@ -47,6 +47,10 @@ EXPLORATORY_SPECIALIST_MIN_TRADES = 100
 BTC_EXEC_MIN_TRADES = 100
 BTC_SPECIALIST_EXEC_MIN_TRADES = 80
 BTC_EXPLORATORY_SPECIALIST_MIN_TRADES = 70
+XAG_BOOTSTRAP_MIN_TRADES = 20
+XAG_BOOTSTRAP_MIN_PF = 1.01
+XAG_BOOTSTRAP_MIN_SHARPE = 0.05
+XAG_BOOTSTRAP_MIN_WF_SHARPE = 0.05
 
 REGIME_SORT_NORM = 20.0
 SESSION_SORT_NORM = 10.0
@@ -579,14 +583,20 @@ def job_research_strategies() -> None:
                 params = getattr(strat, "params", {}) or {}
                 playbook_type = str(params.get("playbook_type", "") or "")
                 family = str(params.get("family", "") or "")
-                bootstrap_candidate = playbook_type in {"xau_impulse_pullback", "xau_session_continuation"} or family in {"xau_impulse_pullback", "xau_session_continuation"}
+                is_xag = "XAG" in canon.upper()
+                bootstrap_candidate = (
+                    playbook_type in {"xau_impulse_pullback", "xau_session_continuation"}
+                    or family in {"xau_impulse_pullback", "xau_session_continuation"}
+                    or (is_xag and family in {"compression_breakout", "vol_breakout", "session_breakout", "pullback_trend"})
+                )
 
                 if num_trades < 60 and not bootstrap_candidate:
                     research_skip_counts["low_trade_count"] += 1
                     if len(research_skip_samples["low_trade_count"]) < 3:
                         research_skip_samples["low_trade_count"].append(f"{strat.name}:{num_trades:.0f}")
                     continue
-                if num_trades < 40 and bootstrap_candidate:
+                bootstrap_min_trades = XAG_BOOTSTRAP_MIN_TRADES if is_xag else 40
+                if num_trades < bootstrap_min_trades and bootstrap_candidate:
                     research_skip_counts["bootstrap_too_few_trades"] += 1
                     if len(research_skip_samples["bootstrap_too_few_trades"]) < 3:
                         research_skip_samples["bootstrap_too_few_trades"].append(f"{strat.name}:{num_trades:.0f}")
@@ -594,7 +604,9 @@ def job_research_strategies() -> None:
 
                 pf = float(eval_result.get("profit_factor", 0.0) or 0.0)
                 sharpe = float(eval_result.get("sharpe_ratio", 0.0) or 0.0)
-                if (pf < 1.10 or sharpe < 0.20) and not (bootstrap_candidate and pf >= 1.05 and sharpe >= 0.12):
+                bootstrap_pf = XAG_BOOTSTRAP_MIN_PF if is_xag else 1.05
+                bootstrap_sharpe = XAG_BOOTSTRAP_MIN_SHARPE if is_xag else 0.12
+                if (pf < 1.10 or sharpe < 0.20) and not (bootstrap_candidate and pf >= bootstrap_pf and sharpe >= bootstrap_sharpe):
                     research_skip_counts["weak_perf"] += 1
                     if len(research_skip_samples["weak_perf"]) < 3:
                         research_skip_samples["weak_perf"].append(f"{strat.name}:pf={pf:.2f},sh={sharpe:.2f}")
@@ -627,7 +639,8 @@ def job_research_strategies() -> None:
                     if len(research_skip_samples["weak_wf_sharpe"]) < 3:
                         research_skip_samples["weak_wf_sharpe"].append(f"{strat.name}:{wf_sharpe:.3f}")
                     continue
-                if wf_sharpe < 0.15 and bootstrap_candidate:
+                bootstrap_wf = XAG_BOOTSTRAP_MIN_WF_SHARPE if is_xag else 0.15
+                if wf_sharpe < bootstrap_wf and bootstrap_candidate:
                     research_skip_counts["bootstrap_weak_wf_sharpe"] += 1
                     if len(research_skip_samples["bootstrap_weak_wf_sharpe"]) < 3:
                         research_skip_samples["bootstrap_weak_wf_sharpe"].append(f"{strat.name}:{wf_sharpe:.3f}")
@@ -704,6 +717,15 @@ def job_research_strategies() -> None:
                     and specialist_score >= 0.40
                     and routing_conf >= 0.40
                     and num_trades >= 40
+                ) or (
+                    is_xag
+                    and bootstrap_candidate
+                    and eval_result.get("accepted")
+                    and wf_sharpe >= XAG_BOOTSTRAP_MIN_WF_SHARPE
+                    and mc_p5 > 0.0
+                    and num_trades >= XAG_BOOTSTRAP_MIN_TRADES
+                    and pf >= XAG_BOOTSTRAP_MIN_PF
+                    and sharpe >= XAG_BOOTSTRAP_MIN_SHARPE
                 ):
                     status = "exploratory"
                 else:
