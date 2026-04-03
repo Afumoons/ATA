@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from collections import OrderedDict
 
 from chromadb import PersistentClient
 
@@ -78,6 +79,8 @@ class ResearchMemory:
         self.cfg = cfg
         self.client = PersistentClient(path=cfg.chroma_path)
         self.collection = self.client.get_or_create_collection(name=cfg.collection_name)
+        self._query_cache: "OrderedDict[str, List[Dict[str, Any]]]" = OrderedDict()
+        self._query_cache_max = 256
         logger.info(
             "ResearchMemory initialized: path=%s collection=%s",
             cfg.chroma_path,
@@ -215,6 +218,19 @@ class ResearchMemory:
         )
         return res
 
+    def _cache_get(self, key: str) -> Optional[List[Dict[str, Any]]]:
+        val = self._query_cache.get(key)
+        if val is None:
+            return None
+        self._query_cache.move_to_end(key)
+        return list(val)
+
+    def _cache_put(self, key: str, value: List[Dict[str, Any]]) -> None:
+        self._query_cache[key] = list(value)
+        self._query_cache.move_to_end(key)
+        while len(self._query_cache) > self._query_cache_max:
+            self._query_cache.popitem(last=False)
+
     def query_similar_strategies(
         self,
         symbol: str,
@@ -250,6 +266,19 @@ class ResearchMemory:
         else:
             query_text = f"symbol={symbol}\ntimeframe={timeframe}"
 
+        preferred_mode = _normalise_position_mode(preferred_position_mode)
+        cache_key = f"{symbol}|{timeframe}|{preferred_mode}|{n_results}|{query_text}"
+        cached = self._cache_get(cache_key)
+        if cached is not None:
+            logger.info(
+                "ResearchMemory: cache hit for %s/%s (preferred_mode=%s, n=%d)",
+                symbol,
+                timeframe,
+                preferred_mode,
+                n_results,
+            )
+            return cached
+
         res = self.query_similar(
             text=query_text,
             n_results=n_results,
@@ -260,7 +289,6 @@ class ResearchMemory:
         metadatas = res.get("metadatas", [[]])[0] or []
         distances = res.get("distances", [[]])[0] or []
 
-        preferred_mode = _normalise_position_mode(preferred_position_mode)
         neighbors: List[Dict[str, Any]] = []
         for i, meta in enumerate(metadatas):
             raw_mode = meta.get("position_mode")
@@ -300,4 +328,5 @@ class ResearchMemory:
             len(neighbors),
             preferred_mode,
         )
+        self._cache_put(cache_key, neighbors)
         return neighbors
