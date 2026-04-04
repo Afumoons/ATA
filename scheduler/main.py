@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import time as _time
 from datetime import datetime
 from pathlib import Path
@@ -72,6 +73,24 @@ XAG_BOOTSTRAP_MIN_TRADES = 20
 XAG_BOOTSTRAP_MIN_PF = 1.01
 XAG_BOOTSTRAP_MIN_SHARPE = 0.05
 XAG_BOOTSTRAP_MIN_WF_SHARPE = 0.05
+
+RESEARCH_FAMILY_SUMMARY_DIR = BASE_DIR / "tmp" / "research_family_stage_summaries"
+RESEARCH_FAMILY_SUMMARY_SYMBOLS = {"XAUUSDm", "XAGUSDm"}
+RESEARCH_FAMILY_STAGE_KEYS = (
+    "generated",
+    "cheap_prescreen_pass",
+    "cheap_prescreen_fail",
+    "backtest_pass",
+    "backtest_fail",
+    "wf_pass",
+    "wf_fail",
+    "mc_pass",
+    "mc_fail",
+    "accepted",
+    "candidate",
+    "exploratory",
+    "active",
+)
 
 REGIME_SORT_NORM = 20.0
 SESSION_SORT_NORM = 10.0
@@ -390,6 +409,90 @@ def _log_research_skip_summary(symbol: str, timeframe: str, skip_counts: dict[st
     )
 
 
+def _new_family_stage_row() -> dict[str, int]:
+    return {key: 0 for key in RESEARCH_FAMILY_STAGE_KEYS}
+
+
+def _record_family_skip(
+    family_skip_counts: dict[str, dict[str, int]],
+    family_skip_samples: dict[str, dict[str, list[str]]],
+    family: str,
+    reason: str,
+    sample: str | None = None,
+) -> None:
+    fam_counts = family_skip_counts.setdefault(family, {})
+    fam_counts[reason] = fam_counts.get(reason, 0) + 1
+    if sample:
+        fam_samples = family_skip_samples.setdefault(family, {})
+        bucket = fam_samples.setdefault(reason, [])
+        if len(bucket) < 3:
+            bucket.append(sample)
+
+
+def _family_stage_summary_payload(
+    symbol: str,
+    timeframe: str,
+    family_stage_counts: dict[str, dict[str, int]],
+    family_skip_counts: dict[str, dict[str, int]],
+    family_skip_samples: dict[str, dict[str, list[str]]],
+) -> dict:
+    families = sorted(set(family_stage_counts.keys()) | set(family_skip_counts.keys()))
+    return {
+        "symbol": symbol,
+        "timeframe": timeframe,
+        "generated_at": datetime.utcnow().isoformat(timespec="seconds") + "Z",
+        "families": {
+            family: {
+                "stages": dict(family_stage_counts.get(family, _new_family_stage_row())),
+                "skip_reasons": dict(sorted((family_skip_counts.get(family) or {}).items())),
+                "skip_samples": {
+                    key: value[:3]
+                    for key, value in sorted((family_skip_samples.get(family) or {}).items())
+                },
+            }
+            for family in families
+        },
+    }
+
+
+def _emit_family_stage_summary(
+    symbol: str,
+    timeframe: str,
+    family_stage_counts: dict[str, dict[str, int]],
+    family_skip_counts: dict[str, dict[str, int]],
+    family_skip_samples: dict[str, dict[str, list[str]]],
+) -> None:
+    payload = _family_stage_summary_payload(symbol, timeframe, family_stage_counts, family_skip_counts, family_skip_samples)
+    compact = {
+        family: {
+            "generated": row.get("generated", 0),
+            "cp_pass": row.get("cheap_prescreen_pass", 0),
+            "cp_fail": row.get("cheap_prescreen_fail", 0),
+            "bt_pass": row.get("backtest_pass", 0),
+            "bt_fail": row.get("backtest_fail", 0),
+            "wf_pass": row.get("wf_pass", 0),
+            "wf_fail": row.get("wf_fail", 0),
+            "mc_pass": row.get("mc_pass", 0),
+            "mc_fail": row.get("mc_fail", 0),
+            "accepted": row.get("accepted", 0),
+            "candidate": row.get("candidate", 0),
+            "exploratory": row.get("exploratory", 0),
+            "active": row.get("active", 0),
+        }
+        for family, row in payload["families"].items()
+        if row.get("stages", {}).get("generated", 0) > 0
+    }
+    logger.info("Research family-stage summary for %s %s: %s", symbol, timeframe, compact)
+
+    if symbol not in RESEARCH_FAMILY_SUMMARY_SYMBOLS:
+        return
+
+    RESEARCH_FAMILY_SUMMARY_DIR.mkdir(parents=True, exist_ok=True)
+    out_path = RESEARCH_FAMILY_SUMMARY_DIR / f"{symbol}_{timeframe}.json"
+    out_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    logger.info("Research family-stage artifact written: %s", out_path)
+
+
 def _memory_is_clearly_bad(candidate, memory: ResearchMemory, symbol: str, timeframe: str) -> bool:
     try:
         params = getattr(candidate, "params", {}) or {}
@@ -663,28 +766,45 @@ def job_research_strategies() -> None:
         logger.info("Research family mix for %s (%s) %s: %s", symbol, canon, TIMEFRAME, dict(family_mix))
         research_skip_counts: dict[str, int] = defaultdict(int)
         research_skip_samples: dict[str, list[str]] = defaultdict(list)
+        family_stage_counts: dict[str, dict[str, int]] = defaultdict(_new_family_stage_row)
+        family_skip_counts: dict[str, dict[str, int]] = {}
+        family_skip_samples: dict[str, dict[str, list[str]]] = {}
 
         for strat in new_population:
             try:
+                family = _strategy_family_from_params(getattr(strat, "params", {}) or {})
+                family_stage_counts[family]["generated"] += 1
+
                 if _memory_is_clearly_bad(strat, memory, canon, TIMEFRAME):
                     research_skip_counts["memory_veto"] += 1
                     if len(research_skip_samples["memory_veto"]) < 3:
                         research_skip_samples["memory_veto"].append(strat.name)
+                    _record_family_skip(family_skip_counts, family_skip_samples, family, "memory_veto", strat.name)
                     continue
 
                 feat.attrs["strategy_params"] = getattr(strat, "params", {}) or {}
 
                 prescreen_ok, prescreen_stats = _passes_cheap_prescreen(feat, strat, canon)
                 if not prescreen_ok:
+                    family_stage_counts[family]["cheap_prescreen_fail"] += 1
                     research_skip_counts["cheap_prescreen"] += 1
                     if len(research_skip_samples["cheap_prescreen"]) < 3:
                         research_skip_samples["cheap_prescreen"].append(
                             f"{strat.name}:tr={prescreen_stats['num_trades']:.0f},pf={prescreen_stats['profit_factor']:.2f},sh={prescreen_stats['sharpe_ratio']:.2f},dd={prescreen_stats['max_drawdown_pct']:.1f}"
                         )
+                    _record_family_skip(
+                        family_skip_counts,
+                        family_skip_samples,
+                        family,
+                        "cheap_prescreen",
+                        f"{strat.name}:tr={prescreen_stats['num_trades']:.0f},pf={prescreen_stats['profit_factor']:.2f},sh={prescreen_stats['sharpe_ratio']:.2f},dd={prescreen_stats['max_drawdown_pct']:.1f}",
+                    )
                     continue
+                family_stage_counts[family]["cheap_prescreen_pass"] += 1
 
                 result = run_backtest(feat, strat, regime_column="regime", **bt_kwargs)
                 eval_result = evaluate_strategy(result.stats)
+                family_stage_counts[family]["backtest_pass" if eval_result.get("accepted") else "backtest_fail"] += 1
 
                 dead_zone_penalty, dead_zone_meta = _memory_dead_zone_penalty(strat, memory, canon, TIMEFRAME)
                 if dead_zone_penalty > 0.0:
@@ -697,12 +817,18 @@ def job_research_strategies() -> None:
                             research_skip_samples["dead_zone_penalty"].append(
                                 f"{strat.name}:pen={dead_zone_penalty:.2f},weak={dead_zone_meta.get('weak_ratio', 0.0):.2f},fam={dead_zone_meta.get('same_family_ratio', 0.0):.2f}"
                             )
+                        _record_family_skip(
+                            family_skip_counts,
+                            family_skip_samples,
+                            family,
+                            "dead_zone_penalty",
+                            f"{strat.name}:pen={dead_zone_penalty:.2f},weak={dead_zone_meta.get('weak_ratio', 0.0):.2f},fam={dead_zone_meta.get('same_family_ratio', 0.0):.2f}",
+                        )
                         continue
 
                 num_trades = float(eval_result.get("num_trades", 0.0) or 0.0)
                 params = getattr(strat, "params", {}) or {}
                 playbook_type = str(params.get("playbook_type", "") or "")
-                family = _strategy_family_from_params(params)
                 is_xag = "XAG" in canon.upper()
                 bootstrap_candidate = (
                     playbook_type in {"xau_impulse_pullback", "xau_session_continuation"}
@@ -717,12 +843,14 @@ def job_research_strategies() -> None:
                     research_skip_counts["low_trade_count"] += 1
                     if len(research_skip_samples["low_trade_count"]) < 3:
                         research_skip_samples["low_trade_count"].append(f"{strat.name}:{num_trades:.0f}")
+                    _record_family_skip(family_skip_counts, family_skip_samples, family, "low_trade_count", f"{strat.name}:{num_trades:.0f}")
                     continue
                 bootstrap_min_trades = _bootstrap_research_min_trades(canon)
                 if num_trades < bootstrap_min_trades and bootstrap_candidate:
                     research_skip_counts["bootstrap_too_few_trades"] += 1
                     if len(research_skip_samples["bootstrap_too_few_trades"]) < 3:
                         research_skip_samples["bootstrap_too_few_trades"].append(f"{strat.name}:{num_trades:.0f}")
+                    _record_family_skip(family_skip_counts, family_skip_samples, family, "bootstrap_too_few_trades", f"{strat.name}:{num_trades:.0f}")
                     continue
 
                 pf = float(eval_result.get("profit_factor", 0.0) or 0.0)
@@ -738,6 +866,7 @@ def job_research_strategies() -> None:
                     research_skip_counts["weak_perf"] += 1
                     if len(research_skip_samples["weak_perf"]) < 3:
                         research_skip_samples["weak_perf"].append(f"{strat.name}:pf={pf:.2f},sh={sharpe:.2f}")
+                    _record_family_skip(family_skip_counts, family_skip_samples, family, "weak_perf", f"{strat.name}:pf={pf:.2f},sh={sharpe:.2f}")
                     continue
 
                 wf = walk_forward_test(feat, strat, **bt_kwargs)
@@ -777,31 +906,43 @@ def job_research_strategies() -> None:
                 if FAMILY_AWARE_GOVERNANCE_ENABLED and _is_challenger_family(family):
                     wf_min_sharpe = 0.12
                 if wf_sharpe < wf_min_sharpe and not bootstrap_candidate:
+                    family_stage_counts[family]["wf_fail"] += 1
                     research_skip_counts["weak_wf_sharpe"] += 1
                     if len(research_skip_samples["weak_wf_sharpe"]) < 3:
                         research_skip_samples["weak_wf_sharpe"].append(f"{strat.name}:{wf_sharpe:.3f}")
+                    _record_family_skip(family_skip_counts, family_skip_samples, family, "weak_wf_sharpe", f"{strat.name}:{wf_sharpe:.3f}")
                     continue
                 bootstrap_wf = _bootstrap_min_wf_sharpe(canon)
                 if wf_sharpe < bootstrap_wf and bootstrap_candidate:
+                    family_stage_counts[family]["wf_fail"] += 1
                     research_skip_counts["bootstrap_weak_wf_sharpe"] += 1
                     if len(research_skip_samples["bootstrap_weak_wf_sharpe"]) < 3:
                         research_skip_samples["bootstrap_weak_wf_sharpe"].append(f"{strat.name}:{wf_sharpe:.3f}")
+                    _record_family_skip(family_skip_counts, family_skip_samples, family, "bootstrap_weak_wf_sharpe", f"{strat.name}:{wf_sharpe:.3f}")
                     continue
+                family_stage_counts[family]["wf_pass"] += 1
                 if mc_p5 <= 0.0:
+                    family_stage_counts[family]["mc_fail"] += 1
                     research_skip_counts["mc_p5_non_positive"] += 1
                     if len(research_skip_samples["mc_p5_non_positive"]) < 3:
                         research_skip_samples["mc_p5_non_positive"].append(f"{strat.name}:{mc_p5:.2f}")
+                    _record_family_skip(family_skip_counts, family_skip_samples, family, "mc_p5_non_positive", f"{strat.name}:{mc_p5:.2f}")
                     continue
                 if mc_dd_p95 > 2500.0:
+                    family_stage_counts[family]["mc_fail"] += 1
                     research_skip_counts["mc_dd_too_high"] += 1
                     if len(research_skip_samples["mc_dd_too_high"]) < 3:
                         research_skip_samples["mc_dd_too_high"].append(f"{strat.name}:{mc_dd_p95:.2f}")
+                    _record_family_skip(family_skip_counts, family_skip_samples, family, "mc_dd_too_high", f"{strat.name}:{mc_dd_p95:.2f}")
                     continue
                 if mc_loss_prob > 0.55:
+                    family_stage_counts[family]["mc_fail"] += 1
                     research_skip_counts["mc_loss_prob_too_high"] += 1
                     if len(research_skip_samples["mc_loss_prob_too_high"]) < 3:
                         research_skip_samples["mc_loss_prob_too_high"].append(f"{strat.name}:{mc_loss_prob:.2f}")
+                    _record_family_skip(family_skip_counts, family_skip_samples, family, "mc_loss_prob_too_high", f"{strat.name}:{mc_loss_prob:.2f}")
                     continue
+                family_stage_counts[family]["mc_pass"] += 1
                 exit_rule_ratio = float(risk_behavior.get("exit_rule_ratio", 0.0) or 0.0)
                 tp_hit_ratio = float(risk_behavior.get("tp_hit_ratio", 0.0) or 0.0)
                 has_time_stop = bool((getattr(strat, "params", {}) or {}).get("has_time_stop", False))
@@ -810,11 +951,13 @@ def job_research_strategies() -> None:
                     research_skip_counts["exit_rule_dependency"] += 1
                     if len(research_skip_samples["exit_rule_dependency"]) < 3:
                         research_skip_samples["exit_rule_dependency"].append(strat.name)
+                    _record_family_skip(family_skip_counts, family_skip_samples, family, "exit_rule_dependency", strat.name)
                     continue
                 if exit_rule_ratio > 0.88:
                     research_skip_counts["extreme_exit_rule_dependency"] += 1
                     if len(research_skip_samples["extreme_exit_rule_dependency"]) < 3:
                         research_skip_samples["extreme_exit_rule_dependency"].append(strat.name)
+                    _record_family_skip(family_skip_counts, family_skip_samples, family, "extreme_exit_rule_dependency", strat.name)
                     continue
                 if tp_hit_ratio < 0.08 and exit_rule_ratio > 0.75 and not has_session_exit_guard:
                     research_skip_counts["weak_exit_signature"] += 1
@@ -822,6 +965,7 @@ def job_research_strategies() -> None:
                         research_skip_samples["weak_exit_signature"].append(
                             f"{strat.name}:tp={tp_hit_ratio:.2f},exit={exit_rule_ratio:.2f}"
                         )
+                    _record_family_skip(family_skip_counts, family_skip_samples, family, "weak_exit_signature", f"{strat.name}:tp={tp_hit_ratio:.2f},exit={exit_rule_ratio:.2f}")
                     continue
                 avg_holding_bars = float(risk_behavior.get("avg_holding_bars", 0.0) or 0.0)
                 if avg_holding_bars < 1.0:
@@ -903,12 +1047,15 @@ def job_research_strategies() -> None:
                     "params": strat_params,
                 }
 
+                family_stage_counts[family]["accepted"] += int(bool(eval_result.get("accepted")))
+                family_stage_counts[family][status] += 1
                 pool.upsert_strategy(strategy=strat, stats=eval_result, score=eval_result.get("score", 0.0), status=status)
                 memory.store_strategy_result(strategy_name=strat.name, symbol=strat.symbol, timeframe=strat.timeframe, stats=eval_result)
             except Exception as e:
                 logger.exception("Research error for %s: %s", strat.name, e)
 
         _log_research_skip_summary(canon, TIMEFRAME, research_skip_counts, research_skip_samples)
+        _emit_family_stage_summary(canon, TIMEFRAME, family_stage_counts, family_skip_counts, family_skip_samples)
 
     _apply_live_degradation(pool)
     if FAMILY_AWARE_GOVERNANCE_ENABLED:

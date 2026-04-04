@@ -106,16 +106,19 @@ Per symbol/timeframe/family counts for:
 - active
 
 ### Tasks
-- [ ] Add per-family counters inside `job_research_strategies()`
-- [ ] Capture skip reasons grouped by family
-- [ ] Emit compact family-stage summaries for `XAUUSDm M15`
-- [ ] Emit compact family-stage summaries for `XAGUSDm M15`
-- [ ] Decide where to persist these summaries (log only vs JSON artifact)
-- [ ] Document the artifact/log format
+- [x] Add per-family counters inside `job_research_strategies()`
+- [x] Capture skip reasons grouped by family
+- [x] Emit compact family-stage summaries for `XAUUSDm M15`
+- [x] Emit compact family-stage summaries for `XAGUSDm M15`
+- [x] Decide where to persist these summaries (log only vs JSON artifact)
+- [x] Document the artifact/log format
 
 ### Progress notes
-- Status: not started
+- Status: implemented
 - Owner: Clio Nova
+- 2026-04-05: Added family-stage counters + family-grouped skip reasons in `scheduler/main.py`.
+- 2026-04-05: Family-stage summaries now log for all symbols; JSON artifacts are persisted for `XAUUSDm` and `XAGUSDm` under `tmp/research_family_stage_summaries/`.
+- 2026-04-05: Artifact/log format documented in `docs/clio/track-d-d1a-family-stage-instrumentation.md`.
 
 ---
 
@@ -148,8 +151,9 @@ Identify why certain families repeatedly produce `0 trades`.
 - [ ] Re-run research and compare zero-trade counts before vs after
 
 ### Progress notes
-- Status: not started
+- Status: pending diagnosis
 - Owner: Clio Nova
+- 2026-04-05: D1a instrumentation landed first so zero-trade diagnosis can use family-stage artifacts instead of raw log scraping.
 
 ---
 
@@ -178,8 +182,9 @@ Identify families that do trade, but in structurally broken ways.
 - [ ] Re-test after the first patch batch
 
 ### Progress notes
-- Status: not started
+- Status: pending diagnosis
 - Owner: Clio Nova
+- 2026-04-05: D1a instrumentation landed first so catastrophic-loss diagnosis can sample failures by family/stage from a stable artifact.
 
 ---
 
@@ -208,8 +213,9 @@ Use family-aware priors to reduce junk before evaluation.
 - [ ] Compare family-stage counts after the patch
 
 ### Progress notes
-- Status: not started
+- Status: pending priors audit
 - Owner: Clio Nova
+- 2026-04-05: First generator-prior patch intentionally deferred until D2/D3 evidence is captured from the new family-stage summaries.
 
 ---
 
@@ -231,8 +237,9 @@ The after-run audit suggests:
 - [ ] Re-run and compare outcomes across both metals
 
 ### Progress notes
-- Status: not started
+- Status: pending symbol-separation audit
 - Owner: Clio Nova
+- 2026-04-05: No XAU/XAG separation changes yet; holding until D2/D3 findings identify where priors and playbooks are still leaking across metals.
 
 ---
 
@@ -256,9 +263,9 @@ Keep Afu able to inspect progress without digging through logs.
 # Immediate execution order
 
 ## Batch D1a — Instrumentation first
-- [ ] Add family stage counters
-- [ ] Add per-family skip-reason summaries
-- [ ] Save/report the summaries
+- [x] Add family stage counters
+- [x] Add per-family skip-reason summaries
+- [x] Save/report the summaries
 
 ## Batch D2a — Zero-trade diagnosis
 - [ ] Inspect zero-trade family samples
@@ -286,7 +293,8 @@ Keep Afu able to inspect progress without digging through logs.
 ## 2026-04-05
 - [x] Created this instruction + tasklist file.
 - [x] Confirmed current post-governance diagnosis: quality is now the dominant active bottleneck.
-- [ ] Next live implementation batch: D1a instrumentation.
+- [x] Completed D1a instrumentation.
+- [ ] Next live implementation batch: D2a zero-trade diagnosis.
 
 ---
 
