@@ -22,6 +22,8 @@ LIVE_STATUSES = {"active", "exploratory"}
 ARCHIVE_STATUSES = {"disabled", "retired", "archived"}
 DEFAULT_MAX_LIVE_PER_SLOT = 16
 DEFAULT_MAX_ARCHIVE_PER_SLOT = 120
+DEFAULT_MAX_PER_BEST_REGIME = 8
+DEFAULT_MAX_PER_FAMILY = 6
 
 
 @dataclass
@@ -122,6 +124,58 @@ def _rank_key(rec: StrategyRecord) -> tuple:
 
 
 
+def _best_regime(rec: StrategyRecord) -> str:
+    meta = (((rec.stats or {}).get("strategy_explain", {}) or {}).get("meta", {}) or {})
+    return str(meta.get("best_regime", "unknown") or "unknown")
+
+
+
+def _select_diversified_live_records(
+    records: List[StrategyRecord],
+    *,
+    max_live_per_slot: int,
+    max_per_best_regime: int = DEFAULT_MAX_PER_BEST_REGIME,
+    max_per_family: int = DEFAULT_MAX_PER_FAMILY,
+) -> List[StrategyRecord]:
+    ranked = sorted(records, key=_rank_key, reverse=True)
+    selected: List[StrategyRecord] = []
+    regime_counts: Dict[str, int] = defaultdict(int)
+    family_counts: Dict[str, int] = defaultdict(int)
+
+    remaining = list(ranked)
+
+    def _take(pass_name: str, allow_family_overflow: bool, allow_regime_overflow: bool) -> None:
+        nonlocal remaining
+        next_remaining: List[StrategyRecord] = []
+        for rec in remaining:
+            if len(selected) >= max_live_per_slot:
+                next_remaining.append(rec)
+                continue
+            family = _strategy_block(rec)["family"]
+            regime = _best_regime(rec)
+            family_blocked = family_counts[family] >= max_per_family
+            regime_blocked = regime_counts[regime] >= max_per_best_regime
+            if (family_blocked and not allow_family_overflow) or (regime_blocked and not allow_regime_overflow):
+                next_remaining.append(rec)
+                continue
+            selected.append(rec)
+            regime_counts[regime] += 1
+            family_counts[family] += 1
+        remaining = next_remaining
+
+    # Pass 1: respect both caps.
+    _take("strict", allow_family_overflow=False, allow_regime_overflow=False)
+    # Pass 2: if we still have room, allow family overflow but still respect regime cap.
+    if len(selected) < max_live_per_slot:
+        _take("family_overflow", allow_family_overflow=True, allow_regime_overflow=False)
+    # Pass 3: only if still underfilled, allow any remaining ranked records.
+    if len(selected) < max_live_per_slot:
+        _take("final_fill", allow_family_overflow=True, allow_regime_overflow=True)
+
+    return selected[:max_live_per_slot]
+
+
+
 def build_live_manifest(
     pool: StrategyPool,
     *,
@@ -134,7 +188,7 @@ def build_live_manifest(
 
     entries: List[LiveManifestEntry] = []
     for (symbol, timeframe), records in sorted(grouped.items()):
-        ranked = sorted(records, key=_rank_key, reverse=True)[:max_live_per_slot]
+        ranked = _select_diversified_live_records(records, max_live_per_slot=max_live_per_slot)
         for idx, rec in enumerate(ranked, start=1):
             block = _strategy_block(rec)
             entries.append(

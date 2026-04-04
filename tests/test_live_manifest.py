@@ -104,3 +104,38 @@ def test_manifest_slot_helpers_rebuild_strategy_pool_without_json_files():
     assert rebuilt.name == active.name
     assert rebuilt.long_entry_rule == active.long_entry_rule
     assert rebuilt.params == active.params
+
+
+def test_live_manifest_applies_light_concentration_caps_before_filling_remaining_slots():
+    pool = StrategyPool()
+
+    dominant = []
+    for idx in range(10):
+        strat = random_strategy('BTCUSDm', 'M15', family='ma_trend')
+        stats = _stats_for(strat, 'ma_trend', wf=10.0 - idx * 0.1, specialist_score=0.9)
+        stats['strategy_explain']['meta']['best_regime'] = 'ranging'
+        pool.upsert_strategy(strat, stats=stats, score=100.0 - idx, status='active')
+        dominant.append(strat.name)
+
+    alt_a = random_strategy('BTCUSDm', 'M15', family='pullback_trend')
+    alt_a_stats = _stats_for(alt_a, 'pullback_trend', wf=7.0, specialist_score=0.8)
+    alt_a_stats['strategy_explain']['meta']['best_regime'] = 'trending_up'
+    pool.upsert_strategy(alt_a, stats=alt_a_stats, score=80.0, status='active')
+
+    alt_b = random_strategy('BTCUSDm', 'M15', family='session_breakout')
+    alt_b_stats = _stats_for(alt_b, 'session_breakout', wf=6.5, specialist_score=0.75)
+    alt_b_stats['strategy_explain']['meta']['best_regime'] = 'high_vol'
+    pool.upsert_strategy(alt_b, stats=alt_b_stats, score=79.0, status='active')
+
+    manifest = build_live_manifest(pool, max_live_per_slot=10)
+    btc_entries = manifest_entries_for_slot(manifest, symbol='BTCUSDm', timeframe='M15')
+
+    best_regimes = [((entry.get('stats') or {}).get('strategy_explain', {}) or {}).get('meta', {}).get('best_regime') for entry in btc_entries]
+    families = [entry['family'] for entry in btc_entries]
+
+    assert len(btc_entries) == 10
+    assert best_regimes.count('ranging') <= 8
+    assert 'trending_up' in best_regimes
+    assert 'high_vol' in best_regimes
+    # Family cap is soft because final fill may relax family overflow to avoid underfilled slots.
+    assert families.count('ma_trend') < 10
