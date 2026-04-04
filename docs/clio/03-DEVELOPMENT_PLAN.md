@@ -137,11 +137,12 @@ Future work should aim for:
 
 ### 4. Live-vs-backtest governance refinement
 
-The degradation loop exists, but future work can still improve:
+The degradation loop exists, and the system now also has proactive live decay detection plus concentration controls, but future work can still improve:
 
 - anomaly detection for live outperformers / underperformers
 - clearer operator surfacing of unusual live behavior
 - stronger distinction between noise and structural change
+- better escalation from warning -> degrade -> stronger operator action
 
 ### 5. Portfolio intelligence
 
@@ -185,4 +186,5 @@ Do not:
 
 ## Changelog (Docs)
 
+- 2026-04-04: Updated the broad plan to acknowledge post-audit hardening already completed (live decay detection, concentration control) and narrow remaining priorities more honestly.
 - 2026-03-27: Reframed the development plan around implemented phase status, pass 3 outcomes, and next-priority work after specialist-routing hardening.

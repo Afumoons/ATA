@@ -113,6 +113,7 @@ Why this matters:
 
 Interpretation:
 - The current backtester is good enough for discovery, but not yet strict enough to confidently separate mediocre from production-grade M15 strategies.
+- Same-bar ambiguity is now instrumented, which improves visibility, but that instrumentation is diagnostic only and not yet a fill-model upgrade.
 
 ---
 
@@ -144,6 +145,7 @@ Why this matters:
 
 Interpretation:
 - Pool governance still needs to become more selective, not to force universal robustness, but to ensure each surviving specialist has a credible and well-bounded role.
+- Recent post-audit hardening already helped here through negative-edge fallback blocking, light concentration control, and proactive live decay detection.
 
 ---
 
@@ -410,18 +412,20 @@ For the detailed routing-layer audit and implementation checklist, see:
 - `07-ROUTING_LAYER_AUDIT_AND_TASKLIST.md`
 
 Implemented so far:
-- **A1 v1** � explicit routing metadata derived into strategy_explain.meta`r
-- **A2 v1** � session hard gate in live routing using llowed_sessions / locked_sessions`r
-- **A3 v1** � structured regime routing and confidence-aware gating in live execution`r
-- **A4 v1** � unified scheduler orchestration for ctive + exploratory`
-- **A5 v1** � explicit no-eligible-specialist vs no-entry reporting`r
-- **A6 v1** � specialist-aware promotion logic`r
-- **A7 v1** � specialist-aware execution quality-gate review
+- **A1 v1** - explicit routing metadata derived into `strategy_explain.meta`
+- **A2 v1** - session hard gate in live routing using `allowed_sessions` / `blocked_sessions`
+- **A3 v1** - structured regime routing and confidence-aware gating in live execution
+- **A4 v1** - unified scheduler orchestration for `active` + `exploratory`
+- **A5 v1** - explicit no-eligible-specialist vs no-entry reporting
+- **A6 v1** - specialist-aware promotion logic
+- **A7 v1** - specialist-aware execution quality-gate review
+- **Post-audit follow-through** - negative-edge fallback guard, same-bar ambiguity instrumentation, proactive live decay detection v1, and concentration control at manifest/runtime layers
 
 ---
 
 ## Changelog (Docs)
 
+- 2026-04-04: Cleaned roadmap status text, fixed corrupted bullets, and added post-audit hardening work now already completed.
 - 2026-03-26: Added a dedicated M15 improvement roadmap focused on regime robustness, session filtering, stricter selection pressure, backtest realism, playbook diversity, and exit design.
 - 2026-03-26: Reframed the roadmap around specialist strategies + routing-layer discipline.
 - 2026-03-26: Updated roadmap status after A1/A2 implementation progress and linked the routing-layer audit/tasklist.

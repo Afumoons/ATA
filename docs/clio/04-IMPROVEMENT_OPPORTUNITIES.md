@@ -35,6 +35,7 @@ Future expansion ideas:
 - richer attribution by session/regime/news window
 - better anomaly flags for live-vs-backtest drift
 - cleaner operator summaries for live state transitions
+- better operator framing of live decay warning/degrade outcomes
 
 ### 2. AI-assisted research tooling
 
@@ -119,7 +120,7 @@ Still a meaningful longer-term gap.
 
 Potential work:
 
-- clustered exposure control
+- clustered exposure control beyond the current light concentration caps
 - capital weighting/allocation layer
 - portfolio-level simulation
 - correlation-aware strategy selection
@@ -146,4 +147,5 @@ If choosing what to pursue next, prefer this order:
 
 ## Changelog (Docs)
 
+- 2026-04-04: Updated opportunity framing to acknowledge live decay governance and current light concentration control as already implemented baselines.
 - 2026-03-27: Reframed this file as a future-opportunities parking lot after pass 3, reduced mismatch with current architecture, and clarified priority ordering.

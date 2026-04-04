@@ -58,6 +58,8 @@ Use this when:
      - blocked regime
      - volatility mismatch
      - low routing confidence
+     - negative-edge exploratory fallback being blocked instead of force-kept
+     - concentration-aware runtime selection preferring a less clustered execution pool
      - no eligible specialist survived routing gates
      - no entry trigger on otherwise eligible strategies
 
@@ -77,7 +79,7 @@ python -m autonomous_trading_ai.scripts.print_live_summary
 python -m autonomous_trading_ai.scripts.print_top_strategies --symbol XAUUSDm --timeframe M15 --status candidate --limit 10
 ```
 
-If it was degraded, check per-strategy live PnL and recent performance windows.
+If it was degraded, check per-strategy live PnL, recent performance windows, and whether the newer live decay logic emitted a warning/degrade signal in scheduler logs.
 
 ## 3. Scheduler jobs are erroring repeatedly
 
@@ -181,6 +183,7 @@ Safety rule:
 
 ## Changelog (Docs)
 
+- 2026-04-04: Updated troubleshooting guidance for live decay review signals and concentration-aware routing behavior.
 - 2026-04-03: Added new Track B audit files to the troubleshooting checklist.
 
 - 2026-03-27: Rewrote the troubleshooting runbook to reflect pass 3 routing behavior, news lockout, expanded live-state files, and the distinction between “flat by design” vs “broken.”

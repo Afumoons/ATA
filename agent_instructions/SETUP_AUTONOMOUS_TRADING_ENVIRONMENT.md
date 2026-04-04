@@ -82,7 +82,7 @@ Install required packages appropriate for the current project state, for example
 
 ```powershell
 pip install --upgrade pip
-pip install MetaTrader5 ccxt pandas numpy scikit-learn torch chromadb fastapi uvicorn apscheduler pyarrow requests beautifulsoup4
+pip install MetaTrader5 ccxt pandas numpy scikit-learn torch chromadb fastapi uvicorn apscheduler pyarrow requests beautifulsoup4 pytest
 ```
 
 Adjust only if the actual project dependencies have changed.
@@ -186,15 +186,17 @@ This drives:
 
 ## 9. Pass 3 Behavioral Expectations
 
-After pass 3, expect the system to behave more selectively.
+After pass 3 and the latest post-audit hardening, expect the system to behave more selectively.
 
 That means:
 
 - fewer trades can be normal
 - “no eligible specialist” can be a healthy outcome
 - session/regime/confidence gating may block many otherwise plausible trades
+- negative-edge exploratory fallback is intentionally blocked rather than force-kept
+- concentration-aware manifest/runtime selection may reduce clustered picks
 - `active` and `exploratory` are both live tiers, but with different trust/risk levels
-- circuit-breaker and degradation behavior are intentional governance features
+- circuit-breaker, degradation, and live-decay behavior are intentional governance features
 
 Do not assume low activity automatically means misconfiguration.
 
@@ -222,6 +224,7 @@ On a new machine:
 
 ## Changelog (Docs)
 
+- 2026-04-04: Updated setup guidance for current dependency reality (`pytest`) and newer live-routing/live-decay behavior.
 - 2026-04-03: Updated setup notes to reflect canonical symbol aliasing expectations (including XAG variants).
 
 - 2026-03-27: Rewrote the setup guide for the current pass 3 architecture, added environment/webhook notes, and updated validation steps around routing-aware behavior.
