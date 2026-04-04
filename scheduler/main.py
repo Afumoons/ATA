@@ -22,6 +22,7 @@ from ..backtests.evaluation import evaluate_strategy
 from ..backtests.walkforward import walk_forward_test
 from ..backtests.monte_carlo import monte_carlo_pnl
 from ..execution.live_monitor import update_live_stats
+from ..execution.live_decay import evaluate_live_decay, apply_live_decay_actions
 from ..execution.signals import execute_signals_for_symbol
 from ..execution.strategy_live_stats import load_all_strategy_stats, MAX_RECENT_TRADES
 from ..vector_memory.research_memory import ResearchMemory
@@ -1090,6 +1091,21 @@ def job_live_monitor() -> None:
         update_live_stats()
     except Exception as e:
         logger.exception("job_live_monitor error: %s", e)
+
+    try:
+        pool = load_pool()
+        live_stats = load_all_strategy_stats()
+        actions = evaluate_live_decay(pool, live_stats)
+        changed = apply_live_decay_actions(pool, actions)
+        if actions:
+            save_pool(pool)
+            logger.info(
+                "job_live_monitor: processed %d live decay actions (%d status changes)",
+                len(actions),
+                changed,
+            )
+    except Exception:
+        logger.exception("job_live_monitor live_decay error")
 
     try:
         from ..execution.live_observer import snapshot_open_trades
