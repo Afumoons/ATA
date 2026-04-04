@@ -141,6 +141,9 @@ def run_backtest(
     times: List[pd.Timestamp] = []
     trades: List[Trade] = []
     positions: List[Dict] = []
+    same_bar_ambiguity_count = 0
+    same_bar_ambiguity_stop_loss_count = 0
+    same_bar_ambiguity_take_profit_count = 0
 
     if pip_size is None:
         pip_size = 0.01 if "XAU" in strategy.symbol or "XAG" in strategy.symbol else 0.0001
@@ -180,17 +183,27 @@ def run_backtest(
             exit_price = close
 
             if pos["direction"] == "long":
-                if low <= pos["stop_loss"]:
+                hit_sl = low <= pos["stop_loss"]
+                hit_tp = high >= pos["take_profit"]
+                if hit_sl and hit_tp:
+                    same_bar_ambiguity_count += 1
+                    same_bar_ambiguity_stop_loss_count += 1
+                if hit_sl:
                     exit_price = pos["stop_loss"]
                     exit_reason = "stop_loss"
-                elif high >= pos["take_profit"]:
+                elif hit_tp:
                     exit_price = pos["take_profit"]
                     exit_reason = "take_profit"
             else:
-                if high >= pos["stop_loss"]:
+                hit_sl = high >= pos["stop_loss"]
+                hit_tp = low <= pos["take_profit"]
+                if hit_sl and hit_tp:
+                    same_bar_ambiguity_count += 1
+                    same_bar_ambiguity_stop_loss_count += 1
+                if hit_sl:
                     exit_price = pos["stop_loss"]
                     exit_reason = "stop_loss"
-                elif low <= pos["take_profit"]:
+                elif hit_tp:
                     exit_price = pos["take_profit"]
                     exit_reason = "take_profit"
 
@@ -332,6 +345,10 @@ def run_backtest(
 
     ppy = periods_per_year or _get_periods_per_year(strategy.symbol, strategy.timeframe)
     stats = _compute_basic_stats(equity_series, trades, initial_equity, ppy)
+    stats["same_bar_ambiguity_count"] = float(same_bar_ambiguity_count)
+    stats["same_bar_ambiguity_stop_loss_count"] = float(same_bar_ambiguity_stop_loss_count)
+    stats["same_bar_ambiguity_take_profit_count"] = float(same_bar_ambiguity_take_profit_count)
+    stats["same_bar_ambiguity_rate"] = float(same_bar_ambiguity_count / len(trades)) if trades else 0.0
 
     try:
         from .explain import build_strategy_explain
@@ -348,13 +365,14 @@ def run_backtest(
         logger.exception("Failed to build strategy_explain for %s: %s", strategy.name, e)
 
     logger.info(
-        "Backtest complete for %s: trades=%d final_eq=%.2f return=%.2f%% sharpe=%.3f max_dd=%.2f%%",
+        "Backtest complete for %s: trades=%d final_eq=%.2f return=%.2f%% sharpe=%.3f max_dd=%.2f%% same_bar_ambiguity=%d",
         strategy.name,
         len(trades),
         equity,
         stats.get("return_pct", 0.0),
         stats.get("sharpe_ratio", 0.0),
         stats.get("max_drawdown_pct", 0.0),
+        same_bar_ambiguity_count,
     )
 
     return BacktestResult(

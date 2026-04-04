@@ -641,11 +641,17 @@ def execute_signals_for_symbol(
         ):
             scored.sort(key=lambda x: x[0], reverse=True)
             best_edge, best_rec = scored[0]
-            filtered = [best_rec]
-            logger.info(
-                "Regime fallback %s %s: keeping best exploratory edge=%.2f after eligibility gates",
-                symbol, timeframe, best_edge,
-            )
+            if best_edge >= 0.0:
+                filtered = [best_rec]
+                logger.info(
+                    "Regime fallback %s %s: keeping best exploratory edge=%.2f after eligibility gates",
+                    symbol, timeframe, best_edge,
+                )
+            else:
+                logger.info(
+                    "Regime fallback %s %s: rejected best exploratory edge=%.2f because it is negative",
+                    symbol, timeframe, best_edge,
+                )
 
         return filtered
 

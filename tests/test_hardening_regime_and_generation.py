@@ -1,5 +1,9 @@
+import pandas as pd
+
+from autonomous_trading_ai.backtests.engine import run_backtest
 from autonomous_trading_ai.backtests.evaluation import evaluate_strategy
 from autonomous_trading_ai.backtests.explain import _derive_routing_confidence
+from autonomous_trading_ai.strategies.base import StrategyDefinition
 from autonomous_trading_ai.strategies.generator import random_strategy
 from autonomous_trading_ai.strategies.pool import StrategyPool
 
@@ -75,3 +79,41 @@ def test_family_aware_pool_prune_preserves_diversity_floor():
 
     for family in families:
         assert remaining_families.get(family, 0) >= 2
+
+
+def test_backtest_tracks_same_bar_ambiguity_when_sl_and_tp_hit_in_same_candle():
+    strat = StrategyDefinition(
+        name='same_bar_probe',
+        symbol='XAUUSDm',
+        timeframe='M15',
+        long_entry_rule='close > 0',
+        short_entry_rule=None,
+        exit_rule='False',
+        stop_loss_pips=10,
+        take_profit_pips=10,
+        sl_atr_mult=None,
+        tp_atr_mult=None,
+        params={},
+    )
+
+    df = pd.DataFrame([
+        {'time': '2026-01-01 00:00:00', 'open': 100.0, 'high': 100.0, 'low': 100.0, 'close': 100.0},
+        {'time': '2026-01-01 00:15:00', 'open': 100.0, 'high': 100.3, 'low': 99.7, 'close': 100.0},
+    ])
+
+    result = run_backtest(
+        df,
+        strat,
+        initial_equity=10000.0,
+        risk_per_trade_pct=1.0,
+        pip_size=0.01,
+        max_positions_total=1,
+        max_positions_per_strategy=1,
+        spread=0.0,
+        commission_per_lot=0.0,
+        slippage_pips=0.0,
+    )
+
+    assert result.stats['same_bar_ambiguity_count'] == 1.0
+    assert result.stats['same_bar_ambiguity_stop_loss_count'] == 1.0
+    assert result.stats['same_bar_ambiguity_rate'] > 0.0

@@ -6,6 +6,7 @@ from autonomous_trading_ai.execution.signals import (
     _passes_regime_confidence_gate,
     _passes_session_gate,
     _passes_volatility_gate,
+    _regime_edge,
 )
 
 
@@ -120,3 +121,19 @@ def test_volatility_gate_can_be_disabled():
     )
     assert ok is True
     assert reason == "ok"
+
+
+def test_regime_edge_can_be_negative_and_identifies_best_of_bad_options():
+    stats = {
+        "strategy_explain": {
+            "regime_pnl": {
+                "ranging": {"return_pct": -0.8},
+                "high_vol": {"return_pct": -1.4},
+            }
+        }
+    }
+
+    edge, label = _regime_edge(stats, ["ranging", "high_vol"])
+
+    assert edge == -0.8
+    assert label == "ranging"
