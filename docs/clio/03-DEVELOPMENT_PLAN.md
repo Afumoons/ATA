@@ -17,6 +17,10 @@ home-field setup, see:
 - `06-M15_IMPROVEMENT_ROADMAP.md`
 - `07-ROUTING_LAYER_AUDIT_AND_TASKLIST.md`
 
+For the newer experimental lower-timeframe branch direction, see:
+
+- `08-SUB5M_BRANCH_PLAN.md`
+
 Treat this file as the **broad roadmap / status ledger**, not the detailed
 implementation checklist.
 
@@ -186,5 +190,6 @@ Do not:
 
 ## Changelog (Docs)
 
+- 2026-04-04: Linked the new dedicated sub-5m branch plan for M5/M1/tick-aware experimental work.
 - 2026-04-04: Updated the broad plan to acknowledge post-audit hardening already completed (live decay detection, concentration control) and narrow remaining priorities more honestly.
 - 2026-03-27: Reframed the development plan around implemented phase status, pass 3 outcomes, and next-priority work after specialist-routing hardening.
