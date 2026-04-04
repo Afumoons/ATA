@@ -134,13 +134,20 @@ Outputs typically include:
 
 PnL stress-testing helpers.
 
-Used to shuffle trade order and optionally perturb outcomes with slippage-like
-noise to estimate how fragile a trade sequence may be.
+Used to stress trade-sequence fragility with either:
+
+- full trade-order shuffling, or
+- block-bootstrap resampling that preserves short local streak structure
+
+Optional slippage-like noise can also be applied.
 
 Outputs typically include:
 
-- mean / p5 / p95 final equity
+- mean / p5 / p95 final PnL
 - mean / p5 / p95 max drawdown
+- loss probability
+- CVaR-style tail loss metric (`mc_cvar_p5`)
+- drawdown threshold breach probabilities
 
 ## Core Pass 3 Role
 
@@ -172,6 +179,8 @@ In other words:
 2. runs `run_backtest(...)`
 3. evaluates stats with `evaluate_strategy(...)`
 4. optionally runs walk-forward and Monte Carlo
+   - current research flow now prefers block-bootstrap MC for larger trade sets,
+     because sequence clustering matters for bounded specialists too
 5. stores stats + explain into the strategy pool and research memory
 
 ### In live routing
@@ -200,13 +209,16 @@ has direct downstream impact on execution behavior.
   it does not do full per-window re-optimization.
 - Same-bar ambiguity instrumentation is currently diagnostic only; it improves
   auditability but does not yet change fill policy.
-- Monte Carlo trade-order shuffling is useful, but it still assumes simplified
-  independence and does not model all regime clustering effects.
+- Monte Carlo is now stronger than pure shuffle because it can use block-bootstrap
+  resampling plus richer governance metrics.
+- Even so, it still does not fully model regime-aware scenario stress or all
+  real execution clustering effects.
 - For pass 3, a strategy with decent global PnL can still be a poor live
   candidate if its routing or stability profile is weak.
 
 ## Changelog (Docs)
 
+- 2026-04-04: Updated for Monte Carlo v1 upgrade (block bootstrap, richer tail metrics, and governance-oriented outputs).
 - 2026-04-04: Updated for same-bar ambiguity diagnostics in backtest stats.
 - 2026-03-21: Documented bar simulation, evaluation, explainability, and
   robustness tooling.

@@ -152,7 +152,8 @@ of the system.
    - cheap pre-screening,
    - stronger dead-zone / family-memory penalties,
    - stricter exit-fragility checks,
-   - more selective specialist bootstrap handling.
+   - more selective specialist bootstrap handling,
+   - stronger Monte Carlo robustness checks using block-bootstrap for larger trade sets.
 6. Each surviving candidate is:
    - backtested,
    - explained,
@@ -202,7 +203,7 @@ of the system.
 - `strategies/README.md` – strategy definitions, generation, pool, manifests,
   concentration control, and live-aware governance.
 - `backtests/README.md` – bar simulation, explainability, scoring, robustness,
-  and same-bar ambiguity diagnostics.
+  same-bar ambiguity diagnostics, and upgraded Monte Carlo assessment.
 - `risk/README.md` – account-level risk checks and config relationships.
 - `execution/README.md` – live execution, routing, state files, monitoring.
 - `scheduler/README.md` – recurring jobs and orchestration logic.
@@ -289,6 +290,8 @@ Important nuance:
   heuristic layer, not a source of truth.
 - Backtests remain bar-based abstractions and do not model every broker/runtime
   edge case.
+- Monte Carlo is now block-aware and more governance-useful, but it still is
+  not fully regime-aware scenario stress testing.
 
 ## Changelog (Docs)
 
@@ -297,6 +300,7 @@ Important nuance:
 - 2026-03-27: Updated top-level documentation for **pass 3** with structured
   routing, explicit strategy metadata, stronger live gating, expanded execution
   state artifacts, and refreshed module map.
+- 2026-04-04: Updated for Monte Carlo v1 upgrade with block-bootstrap robustness assessment and richer tail-risk metrics.
 - 2026-04-04: Refreshed for post-audit hardening work: negative-edge exploratory fallback guard, same-bar ambiguity instrumentation, proactive live decay detection v1, and concentration control v1/v2.
 - 2026-04-03: Refreshed the top-level map for Track A / B / C work, including
   research hardening, live attribution/audit artifacts, and XAU exit hardening.

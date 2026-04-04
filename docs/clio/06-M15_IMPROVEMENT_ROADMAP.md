@@ -114,6 +114,7 @@ Why this matters:
 Interpretation:
 - The current backtester is good enough for discovery, but not yet strict enough to confidently separate mediocre from production-grade M15 strategies.
 - Same-bar ambiguity is now instrumented, which improves visibility, but that instrumentation is diagnostic only and not yet a fill-model upgrade.
+- Monte Carlo has now been upgraded to a block-aware v1, which is better at surfacing sequence fragility, but it is still not yet a full regime-aware scenario stress layer.
 
 ---
 
@@ -419,12 +420,13 @@ Implemented so far:
 - **A5 v1** - explicit no-eligible-specialist vs no-entry reporting
 - **A6 v1** - specialist-aware promotion logic
 - **A7 v1** - specialist-aware execution quality-gate review
-- **Post-audit follow-through** - negative-edge fallback guard, same-bar ambiguity instrumentation, proactive live decay detection v1, and concentration control at manifest/runtime layers
+- **Post-audit follow-through** - negative-edge fallback guard, same-bar ambiguity instrumentation, proactive live decay detection v1, concentration control at manifest/runtime layers, and Monte Carlo v1 block-bootstrap robustness assessment
 
 ---
 
 ## Changelog (Docs)
 
+- 2026-04-04: Updated roadmap after Monte Carlo v1 upgrade so remaining realism gap is framed more honestly as regime-aware/scenario-aware stress, not pure sequence shuffle.
 - 2026-04-04: Cleaned roadmap status text, fixed corrupted bullets, and added post-audit hardening work now already completed.
 - 2026-03-26: Added a dedicated M15 improvement roadmap focused on regime robustness, session filtering, stricter selection pressure, backtest realism, playbook diversity, and exit design.
 - 2026-03-26: Reframed the roadmap around specialist strategies + routing-layer discipline.
