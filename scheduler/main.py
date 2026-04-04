@@ -45,6 +45,21 @@ MAX_EXECUTION_POOL = 10
 MAX_EXECUTION_PER_BEST_REGIME = 5
 MAX_EXECUTION_PER_FAMILY = 4
 
+FAMILY_AWARE_GOVERNANCE_ENABLED = True
+CHALLENGER_FAMILIES = {
+    "ma_trend",
+    "compression_breakout",
+    "pullback_trend",
+    "session_breakout",
+    "vol_breakout",
+    "rsi_range",
+    "ichifib",
+    "mixed:ma_trend+rsi_range",
+    "mixed:rsi_range+ma_trend",
+}
+CHALLENGER_EXPLORATORY_MIN_SLOTS = 2
+CHALLENGER_CANDIDATE_MIN_SLOTS = 2
+
 SPECIALIST_EXEC_MIN_TRADES = 120
 EXPLORATORY_SPECIALIST_MIN_TRADES = 100
 BTC_EXEC_MIN_TRADES = 100
@@ -422,13 +437,35 @@ def _memory_is_clearly_bad(candidate, memory: ResearchMemory, symbol: str, timef
     return False
 
 
+def _strategy_family_from_params(params: dict | None) -> str:
+    params = params or {}
+    family = str(params.get("family") or params.get("playbook_type") or "").strip()
+    if family:
+        return family
+    long_family = str(params.get("long_family") or "").strip()
+    short_family = str(params.get("short_family") or "").strip()
+    if long_family and short_family and long_family != short_family:
+        return f"mixed:{long_family}+{short_family}"
+    if long_family:
+        return long_family
+    if short_family:
+        return short_family
+    return "unknown"
+
+
+def _is_challenger_family(family: str) -> bool:
+    family = str(family or "unknown")
+    return family in CHALLENGER_FAMILIES or family.startswith("mixed:")
+
+
 def _memory_dead_zone_penalty(candidate, memory: ResearchMemory, symbol: str, timeframe: str) -> tuple[float, dict]:
     try:
         params = getattr(candidate, "params", {}) or {}
+        candidate_family = _strategy_family_from_params(params)
         query_text = "\n".join([
             f"symbol={symbol}",
             f"timeframe={timeframe}",
-            f"family={params.get('family', '')}",
+            f"family={candidate_family}",
             f"playbook={params.get('playbook_type', '')}",
             f"long_entry={getattr(candidate, 'long_entry_rule', '')}",
             f"short_entry={getattr(candidate, 'short_entry_rule', '')}",
@@ -451,7 +488,7 @@ def _memory_dead_zone_penalty(candidate, memory: ResearchMemory, symbol: str, ti
     wf_vals = []
     pf_vals = []
 
-    candidate_family = str(params.get("family", "") or "")
+    candidate_family = _strategy_family_from_params(params)
     for nb in neighbors:
         nb_family = str(nb.get("meta_family") or nb.get("stat_family") or "")
         if candidate_family and nb_family == candidate_family:
@@ -492,6 +529,8 @@ def _memory_dead_zone_penalty(candidate, memory: ResearchMemory, symbol: str, ti
         penalty += min(0.35, weak_ratio * 0.35)
     if same_family_ratio >= 0.65 and strong_ratio <= 0.20:
         penalty += 0.10
+    if _is_challenger_family(candidate_family):
+        penalty *= 0.6
     if wf_vals and sum(wf_vals) / len(wf_vals) < 0.12:
         penalty += 0.10
     if pf_vals and sum(pf_vals) / len(pf_vals) < 1.03:
@@ -620,7 +659,7 @@ def job_research_strategies() -> None:
         new_population = evolve_population(symbol, TIMEFRAME, existing_strats)
         save_population(new_population)
 
-        family_mix = Counter(str((getattr(s, 'params', {}) or {}).get('family', 'unknown')) for s in new_population)
+        family_mix = Counter(_strategy_family_from_params(getattr(s, 'params', {}) or {}) for s in new_population)
         logger.info("Research family mix for %s (%s) %s: %s", symbol, canon, TIMEFRAME, dict(family_mix))
         research_skip_counts: dict[str, int] = defaultdict(int)
         research_skip_samples: dict[str, list[str]] = defaultdict(list)
@@ -663,7 +702,7 @@ def job_research_strategies() -> None:
                 num_trades = float(eval_result.get("num_trades", 0.0) or 0.0)
                 params = getattr(strat, "params", {}) or {}
                 playbook_type = str(params.get("playbook_type", "") or "")
-                family = str(params.get("family", "") or "")
+                family = _strategy_family_from_params(params)
                 is_xag = "XAG" in canon.upper()
                 bootstrap_candidate = (
                     playbook_type in {"xau_impulse_pullback", "xau_session_continuation"}
@@ -672,6 +711,8 @@ def job_research_strategies() -> None:
                 )
 
                 base_min_trades = _base_research_min_trades(canon)
+                if FAMILY_AWARE_GOVERNANCE_ENABLED and _is_challenger_family(family):
+                    base_min_trades = max(60, base_min_trades - 40)
                 if num_trades < base_min_trades and not bootstrap_candidate:
                     research_skip_counts["low_trade_count"] += 1
                     if len(research_skip_samples["low_trade_count"]) < 3:
@@ -688,7 +729,12 @@ def job_research_strategies() -> None:
                 sharpe = float(eval_result.get("sharpe_ratio", 0.0) or 0.0)
                 bootstrap_pf = _bootstrap_min_pf(canon)
                 bootstrap_sharpe = _bootstrap_min_sharpe(canon)
-                if (pf < 1.10 or sharpe < 0.20) and not (bootstrap_candidate and pf >= bootstrap_pf and sharpe >= bootstrap_sharpe):
+                perf_min_pf = 1.10
+                perf_min_sharpe = 0.20
+                if FAMILY_AWARE_GOVERNANCE_ENABLED and _is_challenger_family(family):
+                    perf_min_pf = 1.06
+                    perf_min_sharpe = 0.12
+                if (pf < perf_min_pf or sharpe < perf_min_sharpe) and not (bootstrap_candidate and pf >= bootstrap_pf and sharpe >= bootstrap_sharpe):
                     research_skip_counts["weak_perf"] += 1
                     if len(research_skip_samples["weak_perf"]) < 3:
                         research_skip_samples["weak_perf"].append(f"{strat.name}:pf={pf:.2f},sh={sharpe:.2f}")
@@ -714,7 +760,7 @@ def job_research_strategies() -> None:
                 eval_result["wf_overall_max_drawdown_pct"] = wf.get("aggregate", {}).get("overall_max_drawdown_pct", 0.0)
                 eval_result["symbol"] = getattr(strat, "symbol", "")
                 eval_result["timeframe"] = getattr(strat, "timeframe", "")
-                eval_result["family"] = str((getattr(strat, "params", {}) or {}).get("family", "unknown"))
+                eval_result["family"] = family
                 eval_result["playbook_type"] = str((getattr(strat, "params", {}) or {}).get("playbook_type", "unknown"))
                 eval_result.update(mc)
 
@@ -727,7 +773,10 @@ def job_research_strategies() -> None:
                 meta = explain.get("meta", {}) or {}
                 risk_behavior = explain.get("risk_behavior", {}) or {}
 
-                if wf_sharpe < 0.20 and not bootstrap_candidate:
+                wf_min_sharpe = 0.20
+                if FAMILY_AWARE_GOVERNANCE_ENABLED and _is_challenger_family(family):
+                    wf_min_sharpe = 0.12
+                if wf_sharpe < wf_min_sharpe and not bootstrap_candidate:
                     research_skip_counts["weak_wf_sharpe"] += 1
                     if len(research_skip_samples["weak_wf_sharpe"]) < 3:
                         research_skip_samples["weak_wf_sharpe"].append(f"{strat.name}:{wf_sharpe:.3f}")
@@ -816,6 +865,15 @@ def job_research_strategies() -> None:
                     and routing_conf >= 0.40
                     and num_trades >= 40
                 ) or (
+                    FAMILY_AWARE_GOVERNANCE_ENABLED
+                    and _is_challenger_family(family)
+                    and eval_result.get("accepted")
+                    and wf_sharpe >= 0.18
+                    and mc_p5 > 0.0
+                    and specialist_score >= 0.28
+                    and routing_conf >= 0.28
+                    and num_trades >= 30
+                ) or (
                     is_xag
                     and bootstrap_candidate
                     and eval_result.get("accepted")
@@ -830,6 +888,8 @@ def job_research_strategies() -> None:
                     status = "disabled"
 
                 strat_params = dict(getattr(strat, "params", {}) or {})
+                eval_result["family_aware_governance"] = bool(FAMILY_AWARE_GOVERNANCE_ENABLED)
+                eval_result["family_governance_bucket"] = "challenger" if _is_challenger_family(family) else "incumbent"
                 eval_result["strategy"] = {
                     "long_entry_rule": getattr(strat, "long_entry_rule", "") or "",
                     "short_entry_rule": getattr(strat, "short_entry_rule", "") or "",
@@ -851,6 +911,29 @@ def job_research_strategies() -> None:
         _log_research_skip_summary(canon, TIMEFRAME, research_skip_counts, research_skip_samples)
 
     _apply_live_degradation(pool)
+    if FAMILY_AWARE_GOVERNANCE_ENABLED:
+        challenger_candidates = [
+            rec for rec in pool.strategies.values()
+            if canonical_symbol(rec.symbol) == "XAUUSDm" and rec.timeframe == TIMEFRAME and rec.status == "candidate" and _is_challenger_family(_execution_family(rec))
+        ]
+        challenger_candidates.sort(key=lambda r: float(r.score or 0.0), reverse=True)
+        for rec in challenger_candidates[:CHALLENGER_CANDIDATE_MIN_SLOTS]:
+            rec.stats["family_governance_protected"] = True
+
+        challenger_exploratory = [
+            rec for rec in pool.strategies.values()
+            if canonical_symbol(rec.symbol) == "XAUUSDm" and rec.timeframe == TIMEFRAME and rec.status == "exploratory" and _is_challenger_family(_execution_family(rec))
+        ]
+        if len(challenger_exploratory) < CHALLENGER_EXPLORATORY_MIN_SLOTS:
+            promotable = [
+                rec for rec in challenger_candidates
+                if float((rec.stats or {}).get("wf_overall_sharpe", 0.0) or 0.0) >= 0.18 and float((rec.stats or {}).get("mc_final_pnl_p5", 0.0) or 0.0) > 0.0
+            ]
+            for rec in promotable[: max(0, CHALLENGER_EXPLORATORY_MIN_SLOTS - len(challenger_exploratory))]:
+                rec.status = "exploratory"
+                rec.stats["family_governance_promoted"] = True
+                rec.stats["family_governance_reason"] = "challenger_slot_bootstrap"
+
     pool.prune(max_inactive=200, min_family_keep=8)
     save_pool(pool)
     logger.info("Scheduler: job_research_strategies done")

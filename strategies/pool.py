@@ -29,33 +29,46 @@ _STATUS_RANK = {
 }
 
 
+def _normalize_family(value: Any) -> str:
+    return str(value or "").strip() or "unknown"
+
+
+def _family_from_params(params: Dict[str, Any]) -> str:
+    params = params or {}
+    family = params.get("family") or params.get("playbook_type")
+    if family:
+        return _normalize_family(family)
+
+    long_family = _normalize_family(params.get("long_family"))
+    short_family = _normalize_family(params.get("short_family"))
+    if long_family != "unknown" and short_family != "unknown" and long_family != short_family:
+        return f"mixed:{long_family}+{short_family}"
+    if long_family != "unknown":
+        return long_family
+    if short_family != "unknown":
+        return short_family
+    return "unknown"
+
+
 def _family_from_stats(stats: Dict[str, Any]) -> str:
     strategy = (stats or {}).get("strategy") or {}
     params = (strategy.get("params") if isinstance(strategy, dict) else None) or {}
-    return str(
+    return _normalize_family(
         (strategy.get("family") if isinstance(strategy, dict) else None)
         or (strategy.get("playbook_type") if isinstance(strategy, dict) else None)
-        or params.get("family")
-        or params.get("playbook_type")
-        or params.get("long_family")
-        or params.get("short_family")
+        or _family_from_params(params)
         or (stats or {}).get("family")
         or (stats or {}).get("playbook_type")
-        or "unknown"
     )
 
 
 def _family_from_strategy_payload(strategy_payload: Dict[str, Any]) -> str:
     strategy_payload = strategy_payload or {}
     params = strategy_payload.get("params") or {}
-    return str(
+    return _normalize_family(
         strategy_payload.get("family")
         or strategy_payload.get("playbook_type")
-        or params.get("family")
-        or params.get("playbook_type")
-        or params.get("long_family")
-        or params.get("short_family")
-        or "unknown"
+        or _family_from_params(params)
     )
 
 
