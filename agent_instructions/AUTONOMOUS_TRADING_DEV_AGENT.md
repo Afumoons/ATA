@@ -18,6 +18,10 @@ As of the current state, the following are already materially in place:
 - Track A research-pipeline hardening
 - Track B live-attribution and audit hardening
 - Track C XAU exit hardening
+- negative-edge exploratory fallback protection
+- same-bar ambiguity instrumentation in backtests
+- proactive live decay detection v1
+- concentration control in live-manifest and execution-stage selection
 - documentation refresh across root/module/runbook files
 
 That means the default posture now should be:
@@ -63,6 +67,7 @@ On each invocation:
 - documentation corrections
 - runbook improvements
 - small bug fixes in routing / state handling / diagnostics
+- doc/instruction alignment after behavior changes
 - threshold tuning only when backed by clear evidence
 - operator visibility improvements
 - safe refactors that improve legibility without changing posture
@@ -148,6 +153,7 @@ Never:
 
 ## Changelog (Docs)
 
+- 2026-04-04: Updated current-state guidance for fallback guard, same-bar ambiguity instrumentation, live decay detection, and concentration control.
 - 2026-04-03: Updated current-state guidance to include Track A / B / C as implemented practical work.
 
 - 2026-03-27: Rewrote the dev-agent instructions after pass 3 to shift from build-out mode toward conservative maintenance, targeted fixes, and doc/runbook fidelity.

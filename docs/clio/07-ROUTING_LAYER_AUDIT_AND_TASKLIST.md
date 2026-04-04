@@ -445,7 +445,22 @@ Use these as validation targets after implementation:
 
 ---
 
+## Post-Audit Follow-Through (2026-04-04)
+
+After the original routing-layer implementation phases, several follow-through hardening steps are now also implemented:
+
+- explicit runtime guard so exploratory fallback does not keep a best candidate when its best regime edge is still negative
+- same-bar ambiguity instrumentation in backtest stats for audit visibility
+- manifest-stage light concentration control in `strategies/live_manifest.py`
+- execution-stage diversified candidate-pool selection in `scheduler/main.py`
+- proactive live decay detection v1 in `execution/live_decay.py`
+
+These are not a replacement for future Monte Carlo realism review, but they materially improve upstream selection sanity and live governance.
+
+---
+
 ## Changelog (Docs)
 
+- 2026-04-04: Added post-audit follow-through items covering fallback guard, ambiguity instrumentation, concentration control, and live decay detection.
 - 2026-03-26: Added routing-layer audit summary and Phase A specialist-router implementation tasklist.
 - 2026-03-27: Marked A1–A7 validation targets complete after implementation review, structured-routing verification, and doc alignment.

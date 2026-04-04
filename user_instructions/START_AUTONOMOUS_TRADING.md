@@ -99,6 +99,8 @@ That means it is normal for the system to skip trades because of:
 - volatility mismatch
 - low routing confidence
 - no eligible specialist
+- negative-edge exploratory fallback being blocked instead of force-kept
+- concentration-aware selection reducing clustered runtime picks
 - no entry trigger on eligible specialists
 
 So:
@@ -144,6 +146,7 @@ Check these files first:
 - `autonomous_trading_ai/execution/strategy_live_stats.json`
 - `autonomous_trading_ai/execution/unmatched_closed_deals.json`
 - `autonomous_trading_ai/execution/pool_audit_trail.json`
+- scheduler logs for live decay warning/degrade decisions when strategies underperform recently
 - `autonomous_trading_ai/strategies/pool_state.json`
 - logs under `autonomous_trading_ai/logs/`
 
@@ -151,6 +154,7 @@ If in doubt, stop the scheduler first and inspect before restarting.
 
 ## Changelog (Docs)
 
+- 2026-04-04: Updated start runbook for concentration-aware runtime selection and live decay review signals.
 - 2026-04-03: Expanded troubleshooting file references to include unmatched closed-deal and pool-audit artifacts.
 
 - 2026-03-27: Rewrote the user start runbook for the pass 3 system, including routing-aware expectations, optional alert startup, and updated quick-check commands.

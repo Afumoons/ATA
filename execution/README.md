@@ -12,9 +12,10 @@ It is responsible for:
 - wiring closed MT5 deals back into account and strategy state
 - maintaining open-trade and per-strategy live snapshots
 
-Recent Track B and Track C work significantly strengthen this module by making
-it more explicitly **routing-aware**, **stateful**, **observable**, and more
-robust in closed-deal attribution.
+Recent Track B / Track C work plus the latest post-audit hardening significantly
+strengthen this module by making it more explicitly **routing-aware**,
+**stateful**, **observable**, more robust in closed-deal attribution, and more
+proactive about strategy-level decay.
 
 ## Key Responsibilities
 
@@ -30,6 +31,7 @@ robust in closed-deal attribution.
 - enforce one-open-position-per-strategy slot rules
 - apply session and regime routing gates
 - apply volatility mismatch and confidence gates
+- block negative-edge exploratory fallback from forcing clearly bad candidates through
 - rank strategies by edge
 - run separate exposure tiers for `active` vs `exploratory`
 
@@ -133,6 +135,18 @@ Typical fields include:
 
 These stats are used downstream by the scheduler’s degradation logic.
 
+### `live_decay.py`
+
+Provides a lightweight proactive decay-assessment layer on top of realized live
+strategy stats.
+
+Current role:
+
+- read rolling recent outcomes from `strategy_live_stats.json`
+- identify weak live behavior before account-level damage accumulates
+- emit warning/degrade-style outcomes for scheduler/or operator use
+- stay intentionally conservative (soft governance first, not blind hard disable)
+
 ## State Files
 
 Pass 3 makes the execution state surface more explicit.
@@ -213,6 +227,7 @@ So a strategy may be skipped even if it has a high total score, because:
 - it already has an open live slot
 - daily limits are hit
 - no current entry trigger exists
+- exploratory fallback would otherwise have forced through a still-negative edge candidate
 
 That is intentional. Pass 3 favors **controlled specialist deployment** over
 looser general execution.
@@ -469,6 +484,7 @@ If you want to experiment more aggressively:
 
 ## Changelog (Docs)
 
+- 2026-04-04: Updated for negative-edge exploratory fallback guard and proactive live decay detection v1.
 - 2026-04-03: Updated for Track B attribution/audit improvements and Track C execution-facing exit/governance context.
 
 - 2026-03-21: Documented daily guardrails, news lockout, circuit breaker,

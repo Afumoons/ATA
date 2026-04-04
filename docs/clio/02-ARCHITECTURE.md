@@ -105,6 +105,10 @@ Important persistent artifacts:
 - `strategies/generated/*.json`
 - `strategies/pool_state.json`
 
+Important note:
+
+- `live_manifest.py` now applies light concentration control so manifest selection is not a raw top-N rank cut anymore.
+
 ### 4. Research evaluation layer – `backtests/`
 
 Responsibilities:
@@ -185,6 +189,7 @@ Important files:
 - `execution/live_monitor.py`
 - `execution/live_observer.py`
 - `execution/strategy_live_stats.py`
+- `execution/live_decay.py`
 
 Important state artifacts:
 
@@ -272,6 +277,8 @@ A practical pass 3 live flow now looks like:
       ↓
 [Confidence gate]
       ↓
+[Light diversification / concentration control]
+      ↓
 [Rank eligible specialists by edge]
       ↓
 [Apply active/exploratory risk tier]
@@ -303,6 +310,7 @@ If you need one sentence to remember the architecture:
 
 ## Changelog (Docs)
 
+- 2026-04-04: Updated architecture summary for live decay detection and concentration control at manifest/runtime layers.
 - 2026-04-03: Added Track B audit artifacts to the execution-state architecture summary.
 
 - 2026-03-27: Rewrote the architecture doc to match the implemented pass 3 module graph, state artifacts, and specialist-routing execution model.

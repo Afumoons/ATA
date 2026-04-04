@@ -7,6 +7,8 @@ system built around:
 - **feature engineering + structured regime detection**
 - **strategy generation, evaluation, and pool management**
 - **risk-aware live routing with daily guardrails and a portfolio circuit breaker**
+- **light concentration control in both live-manifest and execution-stage selection**
+- **proactive per-strategy live decay detection**
 - **vector-backed research memory**
 - **optional macro-news awareness and WhatsApp alerts**
 
@@ -46,8 +48,8 @@ The project is organized into a few core loops:
    - `execution/signals.py` turns features + pool state into live decisions.
    - `execution/engine.py` sends validated orders to MT5.
    - `execution/live_state_utils.py`, `live_monitor.py`, `live_observer.py`,
-     and `strategy_live_stats.py` maintain state, live PnL, open-trade views,
-     and drawdown protection.
+     `strategy_live_stats.py`, and `live_decay.py` maintain state, live PnL,
+     open-trade views, drawdown protection, and per-strategy decay assessment.
 
 6. **Orchestrate the whole system**
    - `scheduler/main.py` runs recurring jobs for data refresh, research,
@@ -91,7 +93,7 @@ Backtests now feed `strategy_explain.meta`, which can persist guidance such as:
 That metadata is stored in pool records and reused by live execution instead of
 being re-inferred ad hoc.
 
-### 3) Stronger live gating
+### 3) Stronger live gating and diversification
 
 The live execution path now combines:
 
@@ -101,7 +103,9 @@ The live execution path now combines:
 - regime allow/block policy gates
 - volatility mismatch filtering
 - confidence-aware gating
+- explicit negative-edge fallback guard for exploratory routing
 - edge-based ranking for `active` and `exploratory` tiers
+- light concentration control in both manifest construction and execution-stage pool selection
 
 ### 4) Live monitoring maturity
 
@@ -116,6 +120,8 @@ The execution layer now has a clearer separation between:
 - ticket-to-strategy mapping (`ticket_strategy_map.json`)
 - unmatched closed-deal audit (`unmatched_closed_deals.json`)
 - pool / circuit-breaker audit trail (`pool_audit_trail.json`)
+- same-bar ambiguity diagnostics emitted into backtest stats for future auditability
+- soft per-strategy live decay warnings/degrade decisions driven by rolling live outcomes
 
 ### 5) Better doc coverage for operations
 
@@ -161,10 +167,13 @@ of the system.
 2. If the latest row indicates `in_news_lockout=True`, execution is skipped for
    that symbol.
 3. `execution/signals.py` filters strategies through session/regime/confidence
-   gates and ranks them by regime-specific edge.
-4. Eligible signals are sent to `execution/engine.py`.
-5. `risk/manager.py` validates each trade before order submission.
-6. Successful trades are logged and tracked for later monitoring.
+   gates, blocks negative-edge exploratory fallback, and ranks them by
+   regime-specific edge.
+4. Scheduler-level execution-pool selection now also applies light
+   diversification so runtime routing is less prone to clustering.
+5. Eligible signals are sent to `execution/engine.py`.
+6. `risk/manager.py` validates each trade before order submission.
+7. Successful trades are logged and tracked for later monitoring.
 
 ### D. Live monitoring cycle
 
@@ -172,7 +181,9 @@ of the system.
 2. Daily PnL/trade counts are pushed into `live_state.json`.
 3. Strategy-specific live PnL is aggregated in `strategy_live_stats.json`.
 4. Open positions are snapshotted into `open_trades.json`.
-5. If portfolio drawdown breaches the configured threshold, the circuit breaker
+5. `live_decay.py` evaluates rolling recent strategy outcomes and can emit
+   warning/degrade signals before account-level damage accumulates.
+6. If portfolio drawdown breaches the configured threshold, the circuit breaker
    disables all `active` strategies.
 
 ### E. Alerting / webhook path
@@ -189,8 +200,9 @@ of the system.
 - `data/README.md` – MT5 OHLC ingestion and Forex Factory news ingestion.
 - `research/README.md` – features, news-aware context, structured regimes.
 - `strategies/README.md` – strategy definitions, generation, pool, manifests,
-  and live-aware degradation.
-- `backtests/README.md` – bar simulation, explainability, scoring, robustness.
+  concentration control, and live-aware governance.
+- `backtests/README.md` – bar simulation, explainability, scoring, robustness,
+  and same-bar ambiguity diagnostics.
 - `risk/README.md` – account-level risk checks and config relationships.
 - `execution/README.md` – live execution, routing, state files, monitoring.
 - `scheduler/README.md` – recurring jobs and orchestration logic.
@@ -285,5 +297,6 @@ Important nuance:
 - 2026-03-27: Updated top-level documentation for **pass 3** with structured
   routing, explicit strategy metadata, stronger live gating, expanded execution
   state artifacts, and refreshed module map.
+- 2026-04-04: Refreshed for post-audit hardening work: negative-edge exploratory fallback guard, same-bar ambiguity instrumentation, proactive live decay detection v1, and concentration control v1/v2.
 - 2026-04-03: Refreshed the top-level map for Track A / B / C work, including
   research hardening, live attribution/audit artifacts, and XAU exit hardening.

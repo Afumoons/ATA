@@ -13,7 +13,7 @@ Its current strengths are:
 - backtesting and robustness checks
 - persistent strategy-pool governance
 - live execution with hard risk controls
-- live monitoring, degradation, and circuit-breaker behavior
+- live monitoring, degradation, circuit-breaker behavior, and proactive live decay detection
 
 The current codebase is best understood as a **specialist strategy portfolio +
 routing engine**, not a generic all-broker trading framework.
@@ -148,8 +148,8 @@ execution safety layers.
 A more honest shorthand for the project today:
 
 - **Research loop:** materially hardened by Track A
-- **Live routing:** materially improved and now paired with stronger attribution/audit behavior from Track B
-- **Risk controls:** real and meaningful
+- **Live routing:** materially improved and now paired with stronger attribution/audit behavior from Track B plus post-audit concentration control
+- **Risk controls:** real and meaningful, with upstream selection sanity improved by negative-edge fallback protection and decay-aware governance
 - **Operator visibility:** improved, including unmatched-deal and pool-audit artifacts
 - **Alerting:** useful but best-effort
 - **Portfolio intelligence:** still limited
@@ -158,6 +158,7 @@ A more honest shorthand for the project today:
 
 ## Changelog (Docs)
 
+- 2026-04-04: Updated overview snapshot for post-audit hardening work (fallback guard, concentration control, live decay detection).
 - 2026-04-03: Refreshed the overview status snapshot after Track A / B / C implementation.
 
 - 2026-03-27: Rewrote the overview to reflect the real MT5-centric pass 3 system, specialist-routing design, and current safety boundaries.

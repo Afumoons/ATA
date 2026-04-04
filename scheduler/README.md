@@ -61,6 +61,11 @@ Typical flow:
 12. run live-degradation pass on current active strategies
 13. save/prune pool
 
+Recent adjacent hardening around this job family also added:
+
+- runtime protection against forcing exploratory candidates through fallback when best regime edge is still negative
+- concentration-aware selection at the execution-stage pool-building layer
+
 This job is especially important because it persists routing-related metadata
 from `strategy_explain.meta`, not just raw performance stats, and now also
 includes stricter research gating from Track A / Track C.
@@ -75,8 +80,9 @@ Typical flow:
 2. compute effective live risk cap
 3. load latest features for each symbol
 4. skip execution if `in_news_lockout` is active
-5. hand off to `execution.signals.execute_signals_for_symbol(...)`
-6. log detailed trade / skip / reject reasons
+5. build a diversified execution-stage candidate pool so runtime selection is less clustered by family/regime
+6. hand off to `execution.signals.execute_signals_for_symbol(...)`
+7. log detailed trade / skip / reject reasons
 
 This is where the scheduler activates pass 3’s specialist-routing behavior.
 
@@ -91,6 +97,7 @@ Typical responsibilities:
 - process newly closed MT5 deals
 - refresh daily state
 - refresh per-strategy live stats
+- run proactive live decay assessment from recent realized strategy outcomes
 - enforce portfolio-level circuit-breaker actions
 - support open-trade observation flows
 
@@ -192,6 +199,7 @@ usually the first file to inspect.
 
 ## Changelog (Docs)
 
+- 2026-04-04: Updated for execution-stage concentration control and proactive live decay assessment.
 - 2026-04-03: Updated for Track A / C research-gating behavior (cheap prescreen, dead-zone penalties, and stricter exit-fragility checks).
 
 - 2026-03-21: Documented job structure, news jobs, lockout flow, and live

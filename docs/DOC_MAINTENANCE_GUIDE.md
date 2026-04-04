@@ -85,13 +85,16 @@ When checking a module, prefer verifying:
 - actual state/status names in strategy pool records
 - actual alert paths and limitations
 
-For pass 3 specifically, double-check whether docs reflect:
+For pass 3 and later hardening work, double-check whether docs reflect:
 
 - structured regime fields
 - `strategy_explain.meta` routing metadata
 - live specialist gating
 - exploratory vs active behavior
 - open-trade / ticket-mapping state files where applicable
+- same-bar ambiguity diagnostics when backtest stats changed
+- live decay governance when `execution/live_decay.py` behavior changes
+- concentration-control behavior if manifest/runtime selection logic changes
 
 ## Style Conventions
 
@@ -143,4 +146,5 @@ Before finalizing doc work:
 
 ## Changelog (Docs)
 
+- 2026-04-04: Expanded verification checklist for post-audit hardening docs (ambiguity diagnostics, live decay, concentration control).
 - 2026-03-27: Refreshed the maintenance guide for pass 3 and expanded scope to include architecture, runbooks, and instruction files.

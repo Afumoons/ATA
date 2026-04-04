@@ -58,6 +58,7 @@ Important pieces:
   - computes stats and attaches `strategy_explain`
 - `_compute_basic_stats(...)`
   - computes core metrics such as return, Sharpe, DD, PF, win rate, trade count
+  - now also emits same-bar ambiguity diagnostics when a candle touches both SL and TP while the fill model remains pessimistic SL-first
 - `save_backtest_result(result)`
   - writes JSON exports under `backtests/results/`
 
@@ -197,6 +198,8 @@ has direct downstream impact on execution behavior.
   microstructure.
 - Walk-forward validation currently checks robustness of a fixed strategy spec;
   it does not do full per-window re-optimization.
+- Same-bar ambiguity instrumentation is currently diagnostic only; it improves
+  auditability but does not yet change fill policy.
 - Monte Carlo trade-order shuffling is useful, but it still assumes simplified
   independence and does not model all regime clustering effects.
 - For pass 3, a strategy with decent global PnL can still be a poor live
@@ -204,6 +207,7 @@ has direct downstream impact on execution behavior.
 
 ## Changelog (Docs)
 
+- 2026-04-04: Updated for same-bar ambiguity diagnostics in backtest stats.
 - 2026-03-21: Documented bar simulation, evaluation, explainability, and
   robustness tooling.
 - 2026-03-27: Updated for pass 3 emphasis on `strategy_explain.meta`,

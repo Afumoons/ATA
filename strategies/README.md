@@ -112,6 +112,10 @@ execution or operator-facing inspection.
 This helps bridge the rich stored pool data into a more operational surface for
 live workflows.
 
+Recent hardening adds light concentration control here, so manifest creation is
+no longer a pure top-N rank cut. It now tries to reduce obvious clustering by
+regime/family before filling remaining slots pragmatically.
+
 ## Strategy Status Model
 
 The pool can track statuses such as:
@@ -172,6 +176,12 @@ This can demote underperforming `active` strategies back to `candidate` when:
 
 That makes the pool a **living governance artifact**, not a static research dump.
 
+That governance loop is now paired with:
+
+- manifest-stage light concentration control (`live_manifest.py`)
+- execution-stage diversified pool selection in `scheduler/main.py`
+- proactive live decay signals from `execution/live_decay.py`
+
 ## Storage Layout
 
 ### `strategies/generated/`
@@ -231,6 +241,7 @@ Useful during manual maintenance or recovery.
 
 ## Changelog (Docs)
 
+- 2026-04-04: Updated for live-manifest concentration control and tighter linkage to live decay governance.
 - 2026-04-03: Updated for Track A / C generator changes, explicit XAU playbooks, and exit-archetype metadata.
 
 - 2026-03-21: Documented ATR-based SL/TP support, defensive pool loading,
