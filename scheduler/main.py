@@ -698,7 +698,17 @@ def job_research_strategies() -> None:
                 eval_result["research_bootstrap_candidate"] = bootstrap_candidate
                 eval_result["research_bootstrap_applied"] = bool(bootstrap_candidate and (pf < 1.10 or sharpe < 0.20 or num_trades < 60))
 
-                mc = monte_carlo_pnl(result.trades, n_runs=300, slippage_std_pips=max(0.5, bt_kwargs["slippage_pips"] * 0.5), pip_size=0.01 if "XAU" in canon else 1.0)
+                mc_method = "block" if len(result.trades) >= 12 else "shuffle"
+                mc_block_size = 4 if len(result.trades) >= 24 else 3
+                mc = monte_carlo_pnl(
+                    result.trades,
+                    n_runs=300,
+                    slippage_std_pips=max(0.5, bt_kwargs["slippage_pips"] * 0.5),
+                    pip_size=0.01 if "XAU" in canon else 1.0,
+                    method=mc_method,
+                    block_size=mc_block_size,
+                    initial_equity=float(eval_result.get("initial_equity", 10000.0) or 10000.0),
+                )
 
                 eval_result["wf_overall_sharpe"] = wf.get("aggregate", {}).get("overall_sharpe", 0.0)
                 eval_result["wf_overall_max_drawdown_pct"] = wf.get("aggregate", {}).get("overall_max_drawdown_pct", 0.0)
@@ -710,6 +720,7 @@ def job_research_strategies() -> None:
 
                 mc_p5 = float(eval_result.get("mc_final_pnl_p5", 0.0) or 0.0)
                 mc_dd_p95 = float(eval_result.get("mc_max_dd_p95", 0.0) or 0.0)
+                mc_loss_prob = float(eval_result.get("mc_loss_prob", 0.0) or 0.0)
                 wf_sharpe = float(eval_result.get("wf_overall_sharpe", 0.0) or 0.0)
                 dd_abs = abs(float(eval_result.get("max_drawdown_pct", 100.0) or 100.0))
                 explain = eval_result.get("strategy_explain", {}) or {}
@@ -736,6 +747,11 @@ def job_research_strategies() -> None:
                     research_skip_counts["mc_dd_too_high"] += 1
                     if len(research_skip_samples["mc_dd_too_high"]) < 3:
                         research_skip_samples["mc_dd_too_high"].append(f"{strat.name}:{mc_dd_p95:.2f}")
+                    continue
+                if mc_loss_prob > 0.55:
+                    research_skip_counts["mc_loss_prob_too_high"] += 1
+                    if len(research_skip_samples["mc_loss_prob_too_high"]) < 3:
+                        research_skip_samples["mc_loss_prob_too_high"].append(f"{strat.name}:{mc_loss_prob:.2f}")
                     continue
                 exit_rule_ratio = float(risk_behavior.get("exit_rule_ratio", 0.0) or 0.0)
                 tp_hit_ratio = float(risk_behavior.get("tp_hit_ratio", 0.0) or 0.0)
