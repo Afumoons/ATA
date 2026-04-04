@@ -42,6 +42,8 @@ EXEC_MAX_DD_PCT = 12.0
 EXEC_MIN_TRADES = 160
 EXEC_MAX_CONSEC_LOSS = 15
 MAX_EXECUTION_POOL = 10
+MAX_EXECUTION_PER_BEST_REGIME = 5
+MAX_EXECUTION_PER_FAMILY = 4
 
 SPECIALIST_EXEC_MIN_TRADES = 120
 EXPLORATORY_SPECIALIST_MIN_TRADES = 100
@@ -838,6 +840,61 @@ def job_research_strategies() -> None:
     logger.info("Scheduler: job_research_strategies done")
 
 
+def _execution_family(rec) -> str:
+    s = rec.stats or {}
+    st = s.get("strategy", {}) or {}
+    params = (st.get("params") if isinstance(st, dict) else {}) or {}
+    return str(
+        st.get("family")
+        or st.get("playbook_type")
+        or params.get("family")
+        or params.get("playbook_type")
+        or s.get("family")
+        or s.get("playbook_type")
+        or "unknown"
+    )
+
+
+def _execution_best_regime(rec) -> str:
+    ex = ((rec.stats or {}).get("strategy_explain", {}) or {})
+    meta = ex.get("meta", {}) or {}
+    return str(meta.get("best_regime", "unknown") or "unknown")
+
+
+def _select_diversified_execution_pool(records, current_regime: str, current_session: str, limit: int = MAX_EXECUTION_POOL):
+    ranked = sorted(records, key=lambda r: _hybrid_regime_score(r, current_regime, current_session), reverse=True)
+    selected = []
+    remaining = list(ranked)
+    regime_counts = defaultdict(int)
+    family_counts = defaultdict(int)
+
+    def _take(allow_family_overflow: bool, allow_regime_overflow: bool):
+        nonlocal remaining
+        next_remaining = []
+        for rec in remaining:
+            if len(selected) >= limit:
+                next_remaining.append(rec)
+                continue
+            regime = _execution_best_regime(rec)
+            family = _execution_family(rec)
+            regime_blocked = regime_counts[regime] >= MAX_EXECUTION_PER_BEST_REGIME
+            family_blocked = family_counts[family] >= MAX_EXECUTION_PER_FAMILY
+            if (regime_blocked and not allow_regime_overflow) or (family_blocked and not allow_family_overflow):
+                next_remaining.append(rec)
+                continue
+            selected.append(rec)
+            regime_counts[regime] += 1
+            family_counts[family] += 1
+        remaining = next_remaining
+
+    _take(allow_family_overflow=False, allow_regime_overflow=False)
+    if len(selected) < limit:
+        _take(allow_family_overflow=True, allow_regime_overflow=False)
+    if len(selected) < limit:
+        _take(allow_family_overflow=True, allow_regime_overflow=True)
+    return selected[:limit]
+
+
 def job_execute_signals() -> None:
     logger.info("Scheduler: job_execute_signals start")
     pool = load_pool()
@@ -1037,7 +1094,7 @@ def job_execute_signals() -> None:
         except Exception:
             pass
 
-        final_strats = sorted(quality_strats, key=lambda r: _hybrid_regime_score(r, current_regime, current_session), reverse=True)[:MAX_EXECUTION_POOL]
+        final_strats = _select_diversified_execution_pool(quality_strats, current_regime, current_session, limit=MAX_EXECUTION_POOL)
 
         if len(live_tier_strats) != len(final_strats):
             n_dupes = len(live_tier_strats) - len(unique_strats)
