@@ -143,17 +143,19 @@ Identify why certain families repeatedly produce `0 trades`.
 - Are volatility bands unrealistic for current feature scales?
 
 ### Tasks
-- [ ] Sample generated strategies per zero-trade family
-- [ ] Compare rule structure and parameter ranges
-- [ ] Identify the top recurring causes of `0 trades`
-- [ ] Propose family-specific generator constraints
+- [x] Sample generated strategies per zero-trade family
+- [x] Compare rule structure and parameter ranges
+- [x] Identify the top recurring causes of `0 trades`
+- [x] Propose family-specific generator constraints
 - [ ] Implement the first batch of zero-trade mitigations
 - [ ] Re-run research and compare zero-trade counts before vs after
 
 ### Progress notes
-- Status: pending diagnosis
+- Status: diagnosis complete, implementation pending
 - Owner: Clio Nova
 - 2026-04-05: D1a instrumentation landed first so zero-trade diagnosis can use family-stage artifacts instead of raw log scraping.
+- 2026-04-05: Completed D2a diagnosis and wrote `docs/clio/track-d-d2a-zero-trade-diagnosis.md`.
+- 2026-04-05: Diagnosis conclusion: the dominant issue is generator-side conjunction overload (session + vol + trend + confirmation stacking), not merely cheap-prescreen strictness.
 
 ---
 
@@ -175,16 +177,18 @@ Identify families that do trade, but in structurally broken ways.
 - Are some families overfitting to impossible bar assumptions?
 
 ### Tasks
-- [ ] Sample worst challenger backtests from the last run
-- [ ] Group failures by family archetype
-- [ ] Identify recurring catastrophic-loss signatures
-- [ ] Add family-level sanity filters / priors
+- [x] Sample worst challenger backtests from the last run
+- [x] Group failures by family archetype
+- [x] Identify recurring catastrophic-loss signatures
+- [x] Add family-level sanity filters / priors
 - [ ] Re-test after the first patch batch
 
 ### Progress notes
-- Status: pending diagnosis
+- Status: diagnosis complete, implementation pending
 - Owner: Clio Nova
 - 2026-04-05: D1a instrumentation landed first so catastrophic-loss diagnosis can sample failures by family/stage from a stable artifact.
+- 2026-04-05: Completed D3a diagnosis and wrote `docs/clio/track-d-d3a-catastrophic-loss-diagnosis.md`.
+- 2026-04-05: Diagnosis conclusion: destructive families are mainly suffering from over-permissive entries plus weak exit-family coherence, not just bad luck.
 
 ---
 
@@ -268,14 +272,14 @@ Keep Afu able to inspect progress without digging through logs.
 - [x] Save/report the summaries
 
 ## Batch D2a — Zero-trade diagnosis
-- [ ] Inspect zero-trade family samples
-- [ ] identify rule/threshold contradictions
-- [ ] write findings to a doc
+- [x] Inspect zero-trade family samples
+- [x] identify rule/threshold contradictions
+- [x] write findings to a doc
 
 ## Batch D3a — Catastrophic-loss diagnosis
-- [ ] Inspect worst-loss family samples
-- [ ] identify recurring broken patterns
-- [ ] write findings to a doc
+- [x] Inspect worst-loss family samples
+- [x] identify recurring broken patterns
+- [x] write findings to a doc
 
 ## Batch D4a — First generator-prior repair patch
 - [ ] Implement a conservative first batch of family-specific fixes
@@ -294,7 +298,9 @@ Keep Afu able to inspect progress without digging through logs.
 - [x] Created this instruction + tasklist file.
 - [x] Confirmed current post-governance diagnosis: quality is now the dominant active bottleneck.
 - [x] Completed D1a instrumentation.
-- [ ] Next live implementation batch: D2a zero-trade diagnosis.
+- [x] Completed D2a zero-trade diagnosis and documented generator-side trigger-overconstraint patterns.
+- [x] Completed D3a catastrophic-loss diagnosis and documented over-permissive entry / generic-exit failure signatures.
+- [ ] Next live implementation batch: D4a first generator-prior repair patch.
 
 ---
 
