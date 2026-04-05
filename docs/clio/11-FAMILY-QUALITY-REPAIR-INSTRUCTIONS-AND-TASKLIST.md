@@ -322,7 +322,8 @@ Keep Afu able to inspect progress without digging through logs.
 - [x] Audited BTC challenger `low_trade_count` gating and patched the inverted challenger floor in `scheduler/main.py`.
 - [x] Landed XAG repair v2 in `strategies/generator.py` with XAG-only trigger/continuity prior adjustments.
 - [x] Fixed live manifest family recovery for legacy rule-only pool records and verified manifest `unknown` family count dropped to `0` after runtime rebuild.
-- [ ] Confirm actual challenger continuity improvements with a fresh full rerun: BTC low-trade-count gate softening is now patched, XAG repair v2 is landed, and live manifest family recovery is fixed; still need end-to-end rerun evidence.
+- [x] Confirm actual challenger continuity improvements with a fresh full rerun: BTC low-trade-count gate softening is now patched, XAG repair v2 is landed, and live manifest family recovery is fixed; end-to-end rerun evidence captured in `docs/clio/14-POST-D857226-RERUN-AUDIT-2026-04-06.md`.
+- [x] Fresh rerun outcome summary: BTC progressed from `low_trade_count` failure to `mc_p5_non_positive` failure (real stage advancement), XAU stayed unchanged at `20/20` cheap-prescreen failure, XAG stayed unchanged at `20/20` cheap-prescreen failure, and manifest `unknown` families remained `0`.
 
 ---
 
