@@ -56,6 +56,8 @@ backtests/results/
 
 # --- Generated strategy files (hundreds of JSONs, regenerated) ---
 strategies/generated/
+strategies/live_manifest.json
+strategies/strategy_index.json
 
 # --- Live state files (machine-specific, changes every 5 min) ---
 execution/closed_trades_state.json
