@@ -147,7 +147,7 @@ Identify why certain families repeatedly produce `0 trades`.
 - [x] Compare rule structure and parameter ranges
 - [x] Identify the top recurring causes of `0 trades`
 - [x] Propose family-specific generator constraints
-- [ ] Implement the first batch of zero-trade mitigations
+- [x] Implement the first batch of zero-trade mitigations
 - [ ] Re-run research and compare zero-trade counts before vs after
 
 ### Progress notes
@@ -181,7 +181,7 @@ Identify families that do trade, but in structurally broken ways.
 - [x] Group failures by family archetype
 - [x] Identify recurring catastrophic-loss signatures
 - [x] Add family-level sanity filters / priors
-- [ ] Re-test after the first patch batch
+- [x] Re-test after the first patch batch
 
 ### Progress notes
 - Status: diagnosis complete, implementation pending
@@ -210,16 +210,19 @@ Use family-aware priors to reduce junk before evaluation.
   - align session conditions with realistic liquidity windows
 
 ### Tasks
-- [ ] Audit current generator parameter ranges by family
-- [ ] Create a first patch batch of family priors
-- [ ] Keep changes explicit and documented
+- [x] Audit current generator parameter ranges by family
+- [x] Create a first patch batch of family priors
+- [x] Keep changes explicit and documented
 - [ ] Re-run research cycle
 - [ ] Compare family-stage counts after the patch
 
 ### Progress notes
-- Status: pending priors audit
+- Status: first conservative patch landed; rerun pending
 - Owner: Clio Nova
 - 2026-04-05: First generator-prior patch intentionally deferred until D2/D3 evidence is captured from the new family-stage summaries.
+- 2026-04-05: Implemented D4a conservative generator repair batch in `strategies/generator.py` and documented it in `docs/clio/track-d-d4a-generator-prior-repair-patch.md`.
+- 2026-04-05: Landed zero-trade entry simplifications, family-specific exit pools, tighter catastrophic-loss family priors, and a guard preventing XAU-specialist families from leaking into non-XAU generation.
+- 2026-04-05: Focused validation passed with `python -m pytest tests/test_hardening_regime_and_generation.py -q` (`7 passed`) using workspace `PYTHONPATH`.
 
 ---
 
@@ -282,7 +285,7 @@ Keep Afu able to inspect progress without digging through logs.
 - [x] write findings to a doc
 
 ## Batch D4a — First generator-prior repair patch
-- [ ] Implement a conservative first batch of family-specific fixes
+- [x] Implement a conservative first batch of family-specific fixes
 - [ ] rerun research
 - [ ] compare before vs after
 
@@ -300,7 +303,8 @@ Keep Afu able to inspect progress without digging through logs.
 - [x] Completed D1a instrumentation.
 - [x] Completed D2a zero-trade diagnosis and documented generator-side trigger-overconstraint patterns.
 - [x] Completed D3a catastrophic-loss diagnosis and documented over-permissive entry / generic-exit failure signatures.
-- [ ] Next live implementation batch: D4a first generator-prior repair patch.
+- [x] Started D4a first generator-prior repair patch and documented the landed batch.
+- [ ] Next live implementation batch: rerun Track D research and compare family-stage summaries before vs after D4a.
 
 ---
 

@@ -4,7 +4,7 @@ from autonomous_trading_ai.backtests.engine import run_backtest
 from autonomous_trading_ai.backtests.evaluation import evaluate_strategy
 from autonomous_trading_ai.backtests.explain import _derive_routing_confidence
 from autonomous_trading_ai.strategies.base import StrategyDefinition
-from autonomous_trading_ai.strategies.generator import random_strategy
+from autonomous_trading_ai.strategies.generator import FAMILY_LIBRARY, random_strategy
 from autonomous_trading_ai.strategies.pool import StrategyPool
 
 
@@ -79,6 +79,22 @@ def test_family_aware_pool_prune_preserves_diversity_floor():
 
     for family in families:
         assert remaining_families.get(family, 0) >= 2
+
+
+def test_d4a_non_xau_generation_remaps_xau_specialist_families():
+    strat = random_strategy('XAGUSDc', 'M15', family='xau_impulse_pullback')
+    assert strat.params.get('family') == 'pullback_trend'
+    assert strat.params.get('playbook_type') == 'pullback_trend'
+
+    strat2 = random_strategy('XAGUSDc', 'M15', family='xau_session_continuation')
+    assert strat2.params.get('family') == 'session_breakout'
+    assert strat2.params.get('playbook_type') == 'session_breakout'
+
+
+def test_d4a_family_exit_pools_are_constrained_by_archetype():
+    assert FAMILY_LIBRARY['ma_trend']['exit_templates'] != FAMILY_LIBRARY['rsi_range']['exit_templates']
+    assert any('close < ma_short' in tpl for tpl in FAMILY_LIBRARY['pullback_trend']['exit_templates'])
+    assert any('close < ma_short' in tpl or 'close > ma_short' in tpl for tpl in FAMILY_LIBRARY['vol_breakout']['exit_templates'])
 
 
 def test_backtest_tracks_same_bar_ambiguity_when_sl_and_tp_hit_in_same_candle():

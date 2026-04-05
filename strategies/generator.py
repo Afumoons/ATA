@@ -70,30 +70,30 @@ _PULLBACK_SHORT_TEMPLATES = [
 ]
 
 _BREAKOUT_LONG_TEMPLATES = [
-    "volatility > vol_min and trend_strength > {trend_min} and close > ma_short and rsi > 55",
+    "volatility > vol_min and close > ma_short and trend_strength > {trend_min}",
     "volatility > vol_min and close > ma_short and ma_short > ma_long and trend_strength > {trend_min}",
 ]
 _BREAKOUT_SHORT_TEMPLATES = [
-    "volatility > vol_min and trend_strength < -{trend_min} and close < ma_short and rsi < 45",
+    "volatility > vol_min and close < ma_short and trend_strength < -{trend_min}",
     "volatility > vol_min and close < ma_short and ma_short < ma_long and trend_strength < -{trend_min}",
 ]
 
 _COMPRESSION_LONG_TEMPLATES = [
-    "volatility < vol_max and ma_short > ma_long and trend_strength > {trend_min} and rsi > 50",
-    "volatility < vol_max and close > ma_short and ma_short > ma_long and trend_strength > {trend_min}",
+    "volatility < vol_max and close > ma_short and trend_strength > {trend_min}",
+    "volatility < vol_max and ma_short > ma_long and close > ma_short",
 ]
 _COMPRESSION_SHORT_TEMPLATES = [
-    "volatility < vol_max and ma_short < ma_long and trend_strength < -{trend_min} and rsi < 50",
-    "volatility < vol_max and close < ma_short and ma_short < ma_long and trend_strength < -{trend_min}",
+    "volatility < vol_max and close < ma_short and trend_strength < -{trend_min}",
+    "volatility < vol_max and ma_short < ma_long and close < ma_short",
 ]
 
 _SESSION_BREAKOUT_LONG_TEMPLATES = [
     "session_london == 1 and volatility > vol_min and close > ma_short and trend_strength > {trend_min}",
-    "session_new_york == 1 and volatility > vol_min and ma_short > ma_long and rsi > 55 and trend_strength > {trend_min}",
+    "session_new_york == 1 and volatility > vol_min and close > ma_short and ma_short > ma_long",
 ]
 _SESSION_BREAKOUT_SHORT_TEMPLATES = [
     "session_london == 1 and volatility > vol_min and close < ma_short and trend_strength < -{trend_min}",
-    "session_new_york == 1 and volatility > vol_min and ma_short < ma_long and rsi < 45 and trend_strength < -{trend_min}",
+    "session_new_york == 1 and volatility > vol_min and close < ma_short and ma_short < ma_long",
 ]
 
 EXIT_TEMPLATES = [
@@ -117,6 +117,34 @@ SESSION_GUARD_EXIT_TEMPLATES = [
     "bars_since_entry >= {time_stop_bars} or session_asia == 1",
 ]
 
+TREND_EXIT_TEMPLATES = [
+    "bars_since_entry >= {time_stop_bars} or trend_strength < {trend_exit}",
+    "bars_since_entry >= {time_stop_bars} or trend_strength > {trend_exit}",
+    "bars_since_entry >= {time_stop_bars} or rsi > {rsi_exit}",
+    "bars_since_entry >= {time_stop_bars} or rsi < {rsi_exit}",
+]
+
+FADE_EXIT_TEMPLATES = [
+    "rsi > {rsi_exit} or trend_strength < {trend_exit}",
+    "rsi < {rsi_exit} or trend_strength > {trend_exit}",
+    "bars_since_entry >= {time_stop_bars} or rsi > {rsi_exit}",
+    "bars_since_entry >= {time_stop_bars} or rsi < {rsi_exit}",
+]
+
+PULLBACK_EXIT_TEMPLATES = [
+    "bars_since_entry >= {time_stop_bars} or close < ma_short or trend_strength < {trend_exit}",
+    "bars_since_entry >= {time_stop_bars} or close > ma_short or trend_strength > {trend_exit}",
+    "bars_since_entry >= {time_stop_bars} or rsi > {rsi_exit}",
+    "bars_since_entry >= {time_stop_bars} or rsi < {rsi_exit}",
+]
+
+BREAKOUT_EXIT_TEMPLATES = [
+    "bars_since_entry >= {time_stop_bars} or trend_strength < {trend_exit}",
+    "bars_since_entry >= {time_stop_bars} or trend_strength > {trend_exit}",
+    "bars_since_entry >= {time_stop_bars} or close < ma_short",
+    "bars_since_entry >= {time_stop_bars} or close > ma_short",
+]
+
 # Expose combined lists for backward compatibility
 LONG_ENTRY_TEMPLATES = (
     _ICHIFIB_LONG_TEMPLATES
@@ -136,21 +164,21 @@ SHORT_ENTRY_TEMPLATES = (
 )
 
 XAU_IMPULSE_PULLBACK_LONG_TEMPLATES = [
-    "session_london == 1 and close > ma_short and ma_short > ma_long and trend_strength > {trend_min} and volatility > vol_min and rsi > 52 and rsi < 68",
-    "close > ma_short and ma_short > ma_long and trend_strength > {trend_min} and volatility > vol_min and fib_zone_382 == 1",
+    "session_london == 1 and close > ma_short and ma_short > ma_long and trend_strength > {trend_min} and volatility > vol_min",
+    "close > ma_short and ma_short > ma_long and trend_strength > {trend_min} and fib_zone_382 == 1",
 ]
 XAU_IMPULSE_PULLBACK_SHORT_TEMPLATES = [
-    "session_london == 1 and close < ma_short and ma_short < ma_long and trend_strength < -{trend_min} and volatility > vol_min and rsi < 48 and rsi > 32",
-    "close < ma_short and ma_short < ma_long and trend_strength < -{trend_min} and volatility > vol_min and fib_zone_618 == 1",
+    "session_london == 1 and close < ma_short and ma_short < ma_long and trend_strength < -{trend_min} and volatility > vol_min",
+    "close < ma_short and ma_short < ma_long and trend_strength < -{trend_min} and fib_zone_618 == 1",
 ]
 
 XAU_SESSION_CONTINUATION_LONG_TEMPLATES = [
-    "session_london == 1 and session_new_york == 0 and ma_short > ma_long and close > ma_short and trend_strength > {trend_min} and volatility > vol_min",
-    "session_new_york == 1 and ma_short > ma_long and close > ma_short and trend_strength > {trend_min} and rsi > 55 and volatility > vol_min",
+    "session_london == 1 and ma_short > ma_long and close > ma_short and trend_strength > {trend_min}",
+    "session_new_york == 1 and ma_short > ma_long and close > ma_short and volatility > vol_min",
 ]
 XAU_SESSION_CONTINUATION_SHORT_TEMPLATES = [
-    "session_london == 1 and session_new_york == 0 and ma_short < ma_long and close < ma_short and trend_strength < -{trend_min} and volatility > vol_min",
-    "session_new_york == 1 and ma_short < ma_long and close < ma_short and trend_strength < -{trend_min} and rsi < 45 and volatility > vol_min",
+    "session_london == 1 and ma_short < ma_long and close < ma_short and trend_strength < -{trend_min}",
+    "session_new_york == 1 and ma_short < ma_long and close < ma_short and volatility > vol_min",
 ]
 
 FAMILY_LIBRARY: Dict[str, Dict[str, Any]] = {
@@ -160,7 +188,7 @@ FAMILY_LIBRARY: Dict[str, Dict[str, Any]] = {
         "regime_type": "trend",
         "playbook_type": "ma_trend",
         "preferred_sessions": ["london", "new_york"],
-        "exit_templates": EXIT_TEMPLATES,
+        "exit_templates": TREND_EXIT_TEMPLATES,
     },
     "rsi_range": {
         "long": _LIGHT_LONG_TEMPLATES[:1],
@@ -168,7 +196,7 @@ FAMILY_LIBRARY: Dict[str, Dict[str, Any]] = {
         "regime_type": "range",
         "playbook_type": "rsi_range_fade",
         "preferred_sessions": ["asia", "london"],
-        "exit_templates": EXIT_TEMPLATES,
+        "exit_templates": FADE_EXIT_TEMPLATES,
     },
     "pullback_trend": {
         "long": _PULLBACK_LONG_TEMPLATES,
@@ -176,7 +204,7 @@ FAMILY_LIBRARY: Dict[str, Dict[str, Any]] = {
         "regime_type": "trend",
         "playbook_type": "pullback_trend",
         "preferred_sessions": ["london"],
-        "exit_templates": EXIT_TEMPLATES + TIME_EXIT_TEMPLATES,
+        "exit_templates": PULLBACK_EXIT_TEMPLATES,
     },
     "vol_breakout": {
         "long": _BREAKOUT_LONG_TEMPLATES,
@@ -184,7 +212,7 @@ FAMILY_LIBRARY: Dict[str, Dict[str, Any]] = {
         "regime_type": "breakout",
         "playbook_type": "vol_breakout",
         "preferred_sessions": ["london", "new_york"],
-        "exit_templates": EXIT_TEMPLATES + TIME_EXIT_TEMPLATES,
+        "exit_templates": BREAKOUT_EXIT_TEMPLATES,
     },
     "compression_breakout": {
         "long": _COMPRESSION_LONG_TEMPLATES,
@@ -192,7 +220,7 @@ FAMILY_LIBRARY: Dict[str, Dict[str, Any]] = {
         "regime_type": "breakout",
         "playbook_type": "compression_expansion",
         "preferred_sessions": ["asia", "london"],
-        "exit_templates": EXIT_TEMPLATES + TIME_EXIT_TEMPLATES,
+        "exit_templates": BREAKOUT_EXIT_TEMPLATES,
     },
     "session_breakout": {
         "long": _SESSION_BREAKOUT_LONG_TEMPLATES,
@@ -200,7 +228,7 @@ FAMILY_LIBRARY: Dict[str, Dict[str, Any]] = {
         "regime_type": "breakout",
         "playbook_type": "session_breakout",
         "preferred_sessions": ["london", "new_york"],
-        "exit_templates": EXIT_TEMPLATES + TIME_EXIT_TEMPLATES,
+        "exit_templates": BREAKOUT_EXIT_TEMPLATES + SESSION_GUARD_EXIT_TEMPLATES,
     },
     "xau_impulse_pullback": {
         "long": XAU_IMPULSE_PULLBACK_LONG_TEMPLATES,
@@ -208,7 +236,8 @@ FAMILY_LIBRARY: Dict[str, Dict[str, Any]] = {
         "regime_type": "trend",
         "playbook_type": "xau_impulse_pullback",
         "preferred_sessions": ["london", "new_york"],
-        "exit_templates": ATR_INVALIDATION_EXIT_TEMPLATES + TIME_EXIT_TEMPLATES,
+        "exit_templates": ATR_INVALIDATION_EXIT_TEMPLATES + PULLBACK_EXIT_TEMPLATES,
+        "allowed_symbols": ["XAUUSDm"],
     },
     "xau_session_continuation": {
         "long": XAU_SESSION_CONTINUATION_LONG_TEMPLATES,
@@ -217,6 +246,7 @@ FAMILY_LIBRARY: Dict[str, Dict[str, Any]] = {
         "playbook_type": "xau_session_continuation",
         "preferred_sessions": ["london", "new_york"],
         "exit_templates": ATR_INVALIDATION_EXIT_TEMPLATES + SESSION_GUARD_EXIT_TEMPLATES + TIME_EXIT_TEMPLATES,
+        "allowed_symbols": ["XAUUSDm"],
     },
 }
 
@@ -236,6 +266,14 @@ def _weighted_choice(weights: Dict[str, float]) -> str:
     labels = list(weights.keys())
     vals = list(weights.values())
     return random.choices(labels, weights=vals, k=1)[0]
+
+
+def _normalize_family_for_market(family: str, symbol: str) -> str:
+    family_meta = FAMILY_LIBRARY.get(family, {})
+    allowed_symbols = set(family_meta.get("allowed_symbols", []) or [])
+    if allowed_symbols and symbol not in allowed_symbols:
+        return "pullback_trend" if family == "xau_impulse_pullback" else "session_breakout"
+    return family
 
 
 # ---------------------------------------------------------------------------
@@ -261,6 +299,7 @@ def _classify_template(tpl: str) -> Tuple[str, str]:
 
 
 def _sample_family_params(family: str, symbol: str, timeframe: str) -> Dict[str, Any]:
+    family = _normalize_family_for_market(family, symbol)
     params: Dict[str, Any] = {
         "trend_min": round(random.uniform(_TREND_MIN_LOW, _TREND_MIN_HIGH), 2),
         "rsi_exit": random.randint(40, 60),
@@ -285,22 +324,34 @@ def _sample_family_params(family: str, symbol: str, timeframe: str) -> Dict[str,
         params["primary_market_condition"] = str(family_meta.get("regime_type", "unknown"))
 
     if family == "rsi_range":
-        params["trend_min"] = round(random.uniform(0.05, 0.18), 2)
-        params["vol_max"] = round(random.uniform(0.12, 0.55), 3)
+        params["trend_min"] = round(random.uniform(0.04, 0.12), 2)
+        params["trend_exit"] = round(random.uniform(-0.06, 0.06), 2)
+        params["rsi_exit"] = random.randint(48, 58)
+        params["vol_max"] = round(random.uniform(0.18, 0.55), 3)
         params["stop_loss_pips"] = random.choice([50, 75, 100])
         params["take_profit_pips"] = random.choice([50, 75, 100, 125])
-    elif family in {"vol_breakout", "session_breakout"}:
-        params["vol_min"] = round(random.uniform(0.8, 1.8), 3)
-        params["trend_min"] = round(random.uniform(0.10, 0.45), 2)
+        params["time_stop_bars"] = random.choice([4, 6, 8])
+    elif family == "vol_breakout":
+        params["vol_min"] = round(random.uniform(0.55, 1.15), 3)
+        params["trend_min"] = round(random.uniform(0.08, 0.24), 2)
+        params["time_stop_bars"] = random.choice([3, 4, 6, 8])
+    elif family == "session_breakout":
+        params["vol_min"] = round(random.uniform(0.55, 1.10), 3)
+        params["trend_min"] = round(random.uniform(0.06, 0.20), 2)
         params["time_stop_bars"] = random.choice([3, 4, 6, 8])
     elif family == "compression_breakout":
-        params["vol_max"] = round(random.uniform(0.08, 0.40), 3)
-        params["trend_min"] = round(random.uniform(0.08, 0.30), 2)
+        params["vol_max"] = round(random.uniform(0.20, 0.55), 3)
+        params["trend_min"] = round(random.uniform(0.05, 0.18), 2)
         params["time_stop_bars"] = random.choice([4, 6, 8])
     elif family == "pullback_trend":
-        params["trend_min"] = round(random.uniform(0.08, 0.35), 2)
-        params["rsi_exit"] = random.randint(48, 62)
+        params["trend_min"] = round(random.uniform(0.12, 0.28), 2)
+        params["trend_exit"] = round(random.uniform(-0.08, 0.04), 2)
+        params["rsi_exit"] = random.randint(50, 60)
         params["time_stop_bars"] = random.choice([6, 8, 10, 12])
+    elif family == "ma_trend":
+        params["trend_min"] = round(random.uniform(0.10, 0.26), 2)
+        params["trend_exit"] = round(random.uniform(-0.08, 0.05), 2)
+        params["time_stop_bars"] = random.choice([4, 6, 8, 12])
 
     is_core_15m = symbol in {"XAUUSDm", "BTCUSDm"} and timeframe == "M15"
     if is_core_15m:
@@ -319,26 +370,36 @@ def _sample_family_params(family: str, symbol: str, timeframe: str) -> Dict[str,
         params["stop_loss_pips"] = random.choice([150, 200, 250, 300])
         params["take_profit_pips"] = random.choice([200, 250, 300, 400, 500])
         if family in {"xau_impulse_pullback", "xau_session_continuation"}:
-            params["trend_min"] = round(random.uniform(0.08, 0.25), 2)
-            params["vol_min"] = round(random.uniform(0.7, 1.4), 3)
+            params["trend_min"] = round(random.uniform(0.08, 0.18), 2)
+            params["trend_exit"] = round(random.uniform(-0.08, 0.03), 2)
+            params["vol_min"] = round(random.uniform(0.55, 1.05), 3)
             params["time_stop_bars"] = random.choice([3, 4, 6, 8])
             params["sl_atr_mult"] = random.choice([1.8, 2.0, 2.2, 2.5])
             params["tp_atr_mult"] = random.choice([2.5, 3.0, 3.5, 4.0])
         elif family == "pullback_trend":
-            params["trend_min"] = round(random.uniform(0.07, 0.22), 2)
+            params["trend_min"] = round(random.uniform(0.10, 0.20), 2)
             params["time_stop_bars"] = random.choice([4, 6, 8])
         elif family == "vol_breakout":
-            params["trend_min"] = round(random.uniform(0.10, 0.28), 2)
-            params["vol_min"] = round(random.uniform(0.9, 1.5), 3)
-        elif family == "ma_trend":
+            params["trend_min"] = round(random.uniform(0.08, 0.20), 2)
+            params["vol_min"] = round(random.uniform(0.65, 1.10), 3)
+        elif family == "session_breakout":
             params["trend_min"] = round(random.uniform(0.06, 0.18), 2)
+            params["vol_min"] = round(random.uniform(0.60, 1.00), 3)
+        elif family == "ma_trend":
+            params["trend_min"] = round(random.uniform(0.10, 0.18), 2)
         elif family == "rsi_range":
-            params["vol_max"] = round(random.uniform(0.10, 0.35), 3)
+            params["vol_max"] = round(random.uniform(0.18, 0.35), 3)
+
+    params["family"] = family
+    params["playbook_type"] = str((FAMILY_LIBRARY.get(family, {}) or {}).get("playbook_type", family))
+    params["primary_market_condition"] = str((FAMILY_LIBRARY.get(family, {}) or {}).get("regime_type", params.get("primary_market_condition", "unknown")))
 
     return params
 
 
-def _pick_family_templates(family: str) -> tuple[str, str, str]:
+def _pick_family_templates(family: str, symbol: Optional[str] = None) -> tuple[str, str, str]:
+    if symbol is not None:
+        family = _normalize_family_for_market(family, symbol)
     family_meta = FAMILY_LIBRARY.get(family) or FAMILY_LIBRARY["ma_trend"]
     long_tpl = random.choice(list(family_meta.get("long", _LIGHT_LONG_TEMPLATES)))
     short_tpl = random.choice(list(family_meta.get("short", _LIGHT_SHORT_TEMPLATES)))
@@ -374,7 +435,7 @@ def _build_strategy_from_templates(
     params["regime_type_long"] = long_regime
     params["regime_type_short"] = short_regime
     params["regime_type"] = long_regime if long_regime == short_regime else "mixed"
-    params.setdefault("family", long_family if long_family == short_family else "mixed")
+    params["family"] = params.get("family") or (long_family if long_family == short_family else "mixed")
     params.setdefault("playbook_type", params["family"])
     params["has_time_stop"] = "bars_since_entry" in exit_rule
     params["has_session_exit_guard"] = ("session_new_york" in exit_rule) or ("session_asia" in exit_rule)
@@ -422,7 +483,8 @@ def random_strategy(symbol: str, timeframe: str, family: Optional[str] = None) -
     if family is None:
         family = _weighted_choice(CORE_M15_FAMILY_WEIGHTS) if is_core_15m else random.choice(list(FAMILY_LIBRARY.keys()))
 
-    long_tpl, short_tpl, exit_tpl = _pick_family_templates(family)
+    family = _normalize_family_for_market(family, symbol)
+    long_tpl, short_tpl, exit_tpl = _pick_family_templates(family, symbol=symbol)
     params = _sample_family_params(family, symbol, timeframe)
 
     name_prefix = "core15" if is_core_15m else family
@@ -453,13 +515,14 @@ def rebuild_strategy_from_params(
     family = str((params or {}).get("family") or (params or {}).get("playbook_type") or "ma_trend")
     if family not in FAMILY_LIBRARY:
         family = "ma_trend"
+    family = _normalize_family_for_market(family, symbol)
 
     params = dict(params)
     base_params = _sample_family_params(family, symbol, timeframe)
     base_params.update(params)
     params = base_params
 
-    long_tpl, short_tpl, exit_tpl = _pick_family_templates(family)
+    long_tpl, short_tpl, exit_tpl = _pick_family_templates(family, symbol=symbol)
 
     if is_core_15m:
         name_prefix = "core15"
