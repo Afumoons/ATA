@@ -148,14 +148,15 @@ Identify why certain families repeatedly produce `0 trades`.
 - [x] Identify the top recurring causes of `0 trades`
 - [x] Propose family-specific generator constraints
 - [x] Implement the first batch of zero-trade mitigations
-- [ ] Re-run research and compare zero-trade counts before vs after
+- [x] Re-run research and compare zero-trade counts before vs after
 
 ### Progress notes
-- Status: diagnosis complete, implementation pending
+- Status: rerun comparison complete
 - Owner: Clio Nova
 - 2026-04-05: D1a instrumentation landed first so zero-trade diagnosis can use family-stage artifacts instead of raw log scraping.
 - 2026-04-05: Completed D2a diagnosis and wrote `docs/clio/track-d-d2a-zero-trade-diagnosis.md`.
 - 2026-04-05: Diagnosis conclusion: the dominant issue is generator-side conjunction overload (session + vol + trend + confirmation stacking), not merely cheap-prescreen strictness.
+- 2026-04-05: Post-D4a rerun completed. Zero-trade cheap-prescreen samples improved from 11/20 -> 7/20 for `XAUUSDm M15` and from 11/20 -> 8/20 for `XAGUSDm M15`.
 
 ---
 
@@ -213,16 +214,17 @@ Use family-aware priors to reduce junk before evaluation.
 - [x] Audit current generator parameter ranges by family
 - [x] Create a first patch batch of family priors
 - [x] Keep changes explicit and documented
-- [ ] Re-run research cycle
-- [ ] Compare family-stage counts after the patch
+- [x] Re-run research cycle
+- [x] Compare family-stage counts after the patch
 
 ### Progress notes
-- Status: first conservative patch landed; rerun pending
+- Status: first conservative patch landed and first rerun audited
 - Owner: Clio Nova
 - 2026-04-05: First generator-prior patch intentionally deferred until D2/D3 evidence is captured from the new family-stage summaries.
 - 2026-04-05: Implemented D4a conservative generator repair batch in `strategies/generator.py` and documented it in `docs/clio/track-d-d4a-generator-prior-repair-patch.md`.
 - 2026-04-05: Landed zero-trade entry simplifications, family-specific exit pools, tighter catastrophic-loss family priors, and a guard preventing XAU-specialist families from leaking into non-XAU generation.
 - 2026-04-05: Focused validation passed with `python -m pytest tests/test_hardening_regime_and_generation.py -q` (`7 passed`) using workspace `PYTHONPATH`.
+- 2026-04-05: Post-D4a rerun completed and audited in `docs/clio/12-POST-D4A-RERUN-AUDIT.md`. Result: zero-trade pressure improved, XAU-specialist leakage into XAG/BTC rerun output appears fixed, but catastrophic-loss families still persist and `XAGUSDm` still failed to survive cheap prescreen.
 
 ---
 
@@ -237,16 +239,17 @@ The after-run audit suggests:
 - `XAG` is currently failing even earlier at cheap prescreen
 
 ### Tasks
-- [ ] Verify symbol canonicalization and feature-path consistency for XAG
-- [ ] Compare XAU vs XAG generated family behavior
+- [x] Verify symbol canonicalization and feature-path consistency for XAG
+- [x] Compare XAU vs XAG generated family behavior
 - [ ] Identify families that need different XAU/XAG parameter priors
 - [ ] Implement the first market-specific family prior split
-- [ ] Re-run and compare outcomes across both metals
+- [x] Re-run and compare outcomes across both metals
 
 ### Progress notes
-- Status: pending symbol-separation audit
+- Status: first rerun audit complete; prior split still pending
 - Owner: Clio Nova
 - 2026-04-05: No XAU/XAG separation changes yet; holding until D2/D3 findings identify where priors and playbooks are still leaking across metals.
+- 2026-04-05: Post-D4a rerun confirmed XAU-specialist families are no longer leaking into the new `XAGUSDm` generation batch, and XAU/XAG family mix behavior can now be compared cleanly from the family-stage artifacts. `XAGUSDm` still dies at cheap prescreen, so a market-specific prior split remains justified.
 
 ---
 
@@ -256,9 +259,9 @@ The after-run audit suggests:
 Keep Afu able to inspect progress without digging through logs.
 
 ### Tasks
-- [ ] Update this file with checkmarks as work progresses
-- [ ] Write short dated progress notes into this file or companion docs
-- [ ] Create a compact results doc after each major rerun
+- [x] Update this file with checkmarks as work progresses
+- [x] Write short dated progress notes into this file or companion docs
+- [x] Create a compact results doc after each major rerun
 - [ ] Commit every coherent batch with clear commit messages
 
 ### Progress notes
@@ -286,11 +289,11 @@ Keep Afu able to inspect progress without digging through logs.
 
 ## Batch D4a — First generator-prior repair patch
 - [x] Implement a conservative first batch of family-specific fixes
-- [ ] rerun research
-- [ ] compare before vs after
+- [x] rerun research
+- [x] compare before vs after
 
 ## Batch D5a — XAU vs XAG separation
-- [ ] verify symbol/canonical handling
+- [x] verify symbol/canonical handling
 - [ ] split the first family priors by metal where justified
 
 ---
@@ -304,7 +307,9 @@ Keep Afu able to inspect progress without digging through logs.
 - [x] Completed D2a zero-trade diagnosis and documented generator-side trigger-overconstraint patterns.
 - [x] Completed D3a catastrophic-loss diagnosis and documented over-permissive entry / generic-exit failure signatures.
 - [x] Started D4a first generator-prior repair patch and documented the landed batch.
-- [ ] Next live implementation batch: rerun Track D research and compare family-stage summaries before vs after D4a.
+- [x] Reran Track D research and compared family-stage summaries before vs after D4a.
+- [x] Wrote the companion rerun results doc: `docs/clio/12-POST-D4A-RERUN-AUDIT.md`.
+- [ ] Next live implementation batch: extend family-stage observability to `BTCUSDm` and push the next XAG-specific prior/acceptance repair batch.
 
 ---
 
