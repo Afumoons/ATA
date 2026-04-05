@@ -139,3 +139,26 @@ def test_live_manifest_applies_light_concentration_caps_before_filling_remaining
     assert 'high_vol' in best_regimes
     # Family cap is soft because final fill may relax family overflow to avoid underfilled slots.
     assert families.count('ma_trend') < 10
+
+
+def test_live_manifest_recovers_family_from_legacy_rule_only_payloads():
+    pool = StrategyPool()
+    strat = random_strategy('BTCUSDm', 'M15', family='ma_trend')
+    legacy_stats = {
+        'wf_overall_sharpe': 1.2,
+        'strategy': {
+            'long_entry_rule': strat.long_entry_rule,
+            'short_entry_rule': strat.short_entry_rule,
+            'exit_rule': strat.exit_rule,
+            'sl_atr_mult': strat.sl_atr_mult,
+            'tp_atr_mult': strat.tp_atr_mult,
+        },
+        'strategy_explain': {'meta': {'specialist_score': 0.7}},
+    }
+    pool.upsert_strategy(strat, stats=legacy_stats, score=88.0, status='active')
+
+    manifest = build_live_manifest(pool)
+    entry = manifest_entries_for_slot(manifest, symbol='BTCUSDm', timeframe='M15')[0]
+
+    assert entry['family'] == 'ma_trend'
+    assert entry['params'].get('family') == 'ma_trend'

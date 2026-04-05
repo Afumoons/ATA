@@ -177,6 +177,16 @@ def _base_research_min_trades(symbol: str) -> int:
     return 60
 
 
+def _challenger_research_min_trades(symbol: str) -> int:
+    base = _base_research_min_trades(symbol)
+    sym_u = symbol.upper()
+    if "BTC" in sym_u:
+        return min(base, 30)
+    if "XAG" in sym_u:
+        return min(base, 25)
+    return min(base, 60)
+
+
 def _bootstrap_research_min_trades(symbol: str) -> int:
     sym_u = symbol.upper()
     if "XAG" in sym_u:
@@ -839,7 +849,7 @@ def job_research_strategies() -> None:
 
                 base_min_trades = _base_research_min_trades(canon)
                 if FAMILY_AWARE_GOVERNANCE_ENABLED and _is_challenger_family(family):
-                    base_min_trades = max(60, base_min_trades - 40)
+                    base_min_trades = _challenger_research_min_trades(canon)
                 if num_trades < base_min_trades and not bootstrap_candidate:
                     research_skip_counts["low_trade_count"] += 1
                     if len(research_skip_samples["low_trade_count"]) < 3:

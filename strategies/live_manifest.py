@@ -10,6 +10,7 @@ from typing import Any, Dict, Iterable, List, Optional
 
 from ..logging_utils import get_logger
 from .base import StrategyDefinition
+from .generator import _classify_template
 from .pool import StrategyPool, StrategyRecord
 
 logger = get_logger(__name__)
@@ -83,6 +84,29 @@ def _safe_write_json(path: Path, payload: Dict[str, Any]) -> None:
 
 
 
+def _infer_family_from_rules(strategy: Dict[str, Any]) -> str:
+    long_rule = str(strategy.get("long_entry_rule") or "")
+    short_rule = str(strategy.get("short_entry_rule") or "")
+    families = []
+    for rule in (long_rule, short_rule):
+        if not rule:
+            continue
+        family, _ = _classify_template(rule)
+        family = str(family or "unknown").strip() or "unknown"
+        if family != "unknown":
+            families.append(family)
+    if not families:
+        return "unknown"
+    uniq = []
+    for family in families:
+        if family not in uniq:
+            uniq.append(family)
+    if len(uniq) == 1:
+        return uniq[0]
+    return f"mixed:{uniq[0]}+{uniq[1]}"
+
+
+
 def _strategy_block(rec: StrategyRecord) -> Dict[str, Any]:
     strategy = ((rec.stats or {}).get("strategy") or {}).copy()
     params = dict(strategy.get("params") or {})
@@ -97,6 +121,10 @@ def _strategy_block(rec: StrategyRecord) -> Dict[str, Any]:
         or (rec.stats or {}).get("playbook_type")
         or "unknown"
     )
+    if family == "unknown":
+        family = _infer_family_from_rules(strategy)
+    if family != "unknown" and not params:
+        params = {"family": family, "playbook_type": family}
     return {
         "family": family,
         "long_entry_rule": strategy.get("long_entry_rule"),

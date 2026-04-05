@@ -319,7 +319,10 @@ Keep Afu able to inspect progress without digging through logs.
 - [x] Ran a fresh Track D rerun/audit and wrote `docs/clio/13-CORE-UNIVERSE-RERUN-COHERENCE-AUDIT-2026-04-06.md`.
 - [x] Fixed the BTC artifact emission regression by canonicalizing `BTCUSDc -> BTCUSDm`.
 - [x] Fixed compact family-stage log rendering so observability logs now match the JSON artifacts.
-- [ ] Confirm actual challenger continuity improvements: BTC still dies on low-trade-count after backtest, XAU still has 20/20 cheap-prescreen failures, and XAG still has 20/20 cheap-prescreen failures with no pool/index/live-manifest presence.
+- [x] Audited BTC challenger `low_trade_count` gating and patched the inverted challenger floor in `scheduler/main.py`.
+- [x] Landed XAG repair v2 in `strategies/generator.py` with XAG-only trigger/continuity prior adjustments.
+- [x] Fixed live manifest family recovery for legacy rule-only pool records and verified manifest `unknown` family count dropped to `0` after runtime rebuild.
+- [ ] Confirm actual challenger continuity improvements with a fresh full rerun: BTC low-trade-count gate softening is now patched, XAG repair v2 is landed, and live manifest family recovery is fixed; still need end-to-end rerun evidence.
 
 ---
 

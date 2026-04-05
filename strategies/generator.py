@@ -395,30 +395,30 @@ def _sample_family_params(family: str, symbol: str, timeframe: str) -> Dict[str,
         params["stop_loss_pips"] = random.choice([75, 100, 125, 150])
         params["take_profit_pips"] = random.choice([100, 125, 150, 200])
         if family == "compression_breakout":
-            params["vol_max"] = round(random.uniform(0.28, 0.65), 3)
-            params["trend_min"] = round(random.uniform(0.03, 0.12), 2)
-            params["time_stop_bars"] = random.choice([6, 8, 10])
+            params["vol_max"] = round(random.uniform(0.35, 0.85), 3)
+            params["trend_min"] = round(random.uniform(0.02, 0.10), 2)
+            params["time_stop_bars"] = random.choice([6, 8, 10, 12])
         elif family == "vol_breakout":
-            params["vol_min"] = round(random.uniform(0.40, 0.85), 3)
-            params["trend_min"] = round(random.uniform(0.05, 0.16), 2)
-            params["time_stop_bars"] = random.choice([4, 6, 8])
-        elif family == "session_breakout":
-            params["vol_min"] = round(random.uniform(0.40, 0.80), 3)
+            params["vol_min"] = round(random.uniform(0.32, 0.70), 3)
             params["trend_min"] = round(random.uniform(0.04, 0.14), 2)
-            params["time_stop_bars"] = random.choice([4, 6, 8])
+            params["time_stop_bars"] = random.choice([4, 6, 8, 10])
+        elif family == "session_breakout":
+            params["vol_min"] = round(random.uniform(0.32, 0.65), 3)
+            params["trend_min"] = round(random.uniform(0.03, 0.12), 2)
+            params["time_stop_bars"] = random.choice([4, 6, 8, 10])
         elif family == "pullback_trend":
-            params["trend_min"] = round(random.uniform(0.10, 0.20), 2)
-            params["trend_exit"] = round(random.uniform(-0.06, 0.02), 2)
+            params["trend_min"] = round(random.uniform(0.08, 0.16), 2)
+            params["trend_exit"] = round(random.uniform(-0.05, 0.02), 2)
             params["time_stop_bars"] = random.choice([6, 8, 10])
         elif family == "ma_trend":
-            params["trend_min"] = round(random.uniform(0.16, 0.26), 2)
-            params["trend_exit"] = round(random.uniform(-0.06, 0.03), 2)
+            params["trend_min"] = round(random.uniform(0.14, 0.22), 2)
+            params["trend_exit"] = round(random.uniform(-0.05, 0.03), 2)
             params["time_stop_bars"] = random.choice([6, 8, 12])
         elif family == "rsi_range":
-            params["trend_min"] = round(random.uniform(0.03, 0.08), 2)
-            params["trend_exit"] = round(random.uniform(-0.04, 0.04), 2)
-            params["rsi_exit"] = random.randint(50, 56)
-            params["vol_max"] = round(random.uniform(0.22, 0.45), 3)
+            params["trend_min"] = round(random.uniform(0.02, 0.07), 2)
+            params["trend_exit"] = round(random.uniform(-0.03, 0.03), 2)
+            params["rsi_exit"] = random.randint(49, 55)
+            params["vol_max"] = round(random.uniform(0.28, 0.60), 3)
             params["time_stop_bars"] = random.choice([4, 6, 8])
 
     params["family"] = family

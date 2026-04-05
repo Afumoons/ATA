@@ -4,6 +4,7 @@ from autonomous_trading_ai.backtests.engine import run_backtest
 from autonomous_trading_ai.backtests.evaluation import evaluate_strategy
 from autonomous_trading_ai.backtests.explain import _derive_routing_confidence
 from autonomous_trading_ai.config import canonical_symbol
+from autonomous_trading_ai.scheduler.main import _challenger_research_min_trades
 from autonomous_trading_ai.strategies.base import StrategyDefinition
 from autonomous_trading_ai.strategies.generator import FAMILY_LIBRARY, random_strategy
 from autonomous_trading_ai.strategies.pool import StrategyPool
@@ -118,12 +119,18 @@ def test_d4b_rebuild_strategy_preserves_non_xau_family_normalization():
 
 def test_d4b_xag_m15_family_priors_are_market_specific_and_conservative():
     breakout = random_strategy('XAGUSDm', 'M15', family='session_breakout')
-    assert 0.40 <= float(breakout.params.get('vol_min', 0.0)) <= 0.80
-    assert 0.04 <= float(breakout.params.get('trend_min', 0.0)) <= 0.14
+    assert 0.32 <= float(breakout.params.get('vol_min', 0.0)) <= 0.65
+    assert 0.03 <= float(breakout.params.get('trend_min', 0.0)) <= 0.12
 
     compression = random_strategy('XAGUSDm', 'M15', family='compression_breakout')
-    assert 0.28 <= float(compression.params.get('vol_max', 0.0)) <= 0.65
-    assert 0.03 <= float(compression.params.get('trend_min', 0.0)) <= 0.12
+    assert 0.35 <= float(compression.params.get('vol_max', 0.0)) <= 0.85
+    assert 0.02 <= float(compression.params.get('trend_min', 0.0)) <= 0.10
+
+
+def test_btc_challenger_trade_floor_is_softened_not_hardened():
+    assert _challenger_research_min_trades('BTCUSDm') == 30
+    assert _challenger_research_min_trades('XAGUSDm') == 25
+    assert _challenger_research_min_trades('XAUUSDm') == 60
 
 
 def test_d4a_family_exit_pools_are_constrained_by_archetype():
