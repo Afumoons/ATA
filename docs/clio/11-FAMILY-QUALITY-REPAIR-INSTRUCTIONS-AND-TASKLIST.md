@@ -120,6 +120,7 @@ Per symbol/timeframe/family counts for:
 - 2026-04-05: Added family-stage counters + family-grouped skip reasons in `scheduler/main.py`.
 - 2026-04-05: Family-stage summaries now log for all symbols; JSON artifacts were first persisted for `XAUUSDm` and `XAGUSDm` under `tmp/research_family_stage_summaries/`.
 - 2026-04-05: BTC parity extension landed; Track D artifacts now cover `XAUUSDm`, `BTCUSDm`, and `XAGUSDm`, documented in `docs/clio/track-d-d1a-family-stage-instrumentation.md` and `docs/clio/track-d-d1b-btc-family-stage-parity.md`.
+- 2026-04-06: Fresh rerun audit exposed a BTC alias regression (`BTCUSDc` was not canonicalizing to `BTCUSDm`) and a compact family-stage logging bug. Both were fixed; BTC artifact emission now works and compact logs now match the persisted JSON summaries.
 
 ---
 
@@ -247,12 +248,13 @@ The after-run audit suggests:
 - [x] Re-run and compare outcomes across both metals
 
 ### Progress notes
-- Status: first market-specific split implemented; follow-up rerun still pending
+- Status: first market-specific split implemented; follow-up rerun audited
 - Owner: Clio Nova
 - 2026-04-05: No XAU/XAG separation changes yet; holding until D2/D3 findings identify where priors and playbooks are still leaking across metals.
 - 2026-04-05: Post-D4a rerun confirmed `XAGUSDm` still dies at cheap prescreen, so a market-specific prior split remains justified.
 - 2026-04-05: Implemented the first XAG-specific prior split in `strategies/generator.py` and documented it in `docs/clio/track-d-d5b-xag-prior-and-continuity-repair.md`.
 - 2026-04-05: Also fixed non-XAU rebuild normalization persistence so stale `xau_*` family metadata cannot survive into rebuilt XAG/BTC params after normalization.
+- 2026-04-06: Fresh rerun confirmed the non-XAU metadata leakage fix is holding, but `XAGUSDm` still fails 20/20 challengers at cheap prescreen and still has no pool/index/live-manifest footprint.
 
 ---
 
@@ -314,7 +316,10 @@ Keep Afu able to inspect progress without digging through logs.
 - [x] Wrote the companion rerun results doc: `docs/clio/12-POST-D4A-RERUN-AUDIT.md`.
 - [x] Extended family-stage observability parity to `BTCUSDm` and documented the change in `docs/clio/track-d-d1b-btc-family-stage-parity.md`.
 - [x] Landed the next XAG-specific repair batch in `strategies/generator.py` and documented it in `docs/clio/track-d-d5b-xag-prior-and-continuity-repair.md`.
-- [ ] Next live checkpoint: run a fresh Track D rerun/audit to confirm BTC artifact emission and measure whether XAG cheap-prescreen survival/downstream continuity actually improved.
+- [x] Ran a fresh Track D rerun/audit and wrote `docs/clio/13-CORE-UNIVERSE-RERUN-COHERENCE-AUDIT-2026-04-06.md`.
+- [x] Fixed the BTC artifact emission regression by canonicalizing `BTCUSDc -> BTCUSDm`.
+- [x] Fixed compact family-stage log rendering so observability logs now match the JSON artifacts.
+- [ ] Confirm actual challenger continuity improvements: BTC still dies on low-trade-count after backtest, XAU still has 20/20 cheap-prescreen failures, and XAG still has 20/20 cheap-prescreen failures with no pool/index/live-manifest presence.
 
 ---
 

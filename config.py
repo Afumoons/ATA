@@ -115,6 +115,7 @@ SYMBOL_ALIASES: dict[str, str] = {
     "XAGUSDm": "XAGUSDm",
     "BTCUSDT": "BTCUSDm",
     "BTCUSD": "BTCUSDm",
+    "BTCUSDc": "BTCUSDm",
     "BTCUSDm": "BTCUSDm",
 }
 

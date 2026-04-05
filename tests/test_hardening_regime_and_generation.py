@@ -3,6 +3,7 @@ import pandas as pd
 from autonomous_trading_ai.backtests.engine import run_backtest
 from autonomous_trading_ai.backtests.evaluation import evaluate_strategy
 from autonomous_trading_ai.backtests.explain import _derive_routing_confidence
+from autonomous_trading_ai.config import canonical_symbol
 from autonomous_trading_ai.strategies.base import StrategyDefinition
 from autonomous_trading_ai.strategies.generator import FAMILY_LIBRARY, random_strategy
 from autonomous_trading_ai.strategies.pool import StrategyPool
@@ -38,6 +39,13 @@ def test_evaluation_penalizes_blocked_contexts_and_low_routing_confidence():
     }
     result = evaluate_strategy(stats)
     assert result['score'] < 1.0
+
+
+def test_canonical_symbol_maps_btc_execution_aliases_to_research_symbol():
+    assert canonical_symbol('BTCUSDm') == 'BTCUSDm'
+    assert canonical_symbol('BTCUSD') == 'BTCUSDm'
+    assert canonical_symbol('BTCUSDT') == 'BTCUSDm'
+    assert canonical_symbol('BTCUSDc') == 'BTCUSDm'
 
 
 def test_core_m15_generation_produces_broader_families():

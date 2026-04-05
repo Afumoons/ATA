@@ -465,22 +465,23 @@ def _emit_family_stage_summary(
     payload = _family_stage_summary_payload(symbol, timeframe, family_stage_counts, family_skip_counts, family_skip_samples)
     compact = {
         family: {
-            "generated": row.get("generated", 0),
-            "cp_pass": row.get("cheap_prescreen_pass", 0),
-            "cp_fail": row.get("cheap_prescreen_fail", 0),
-            "bt_pass": row.get("backtest_pass", 0),
-            "bt_fail": row.get("backtest_fail", 0),
-            "wf_pass": row.get("wf_pass", 0),
-            "wf_fail": row.get("wf_fail", 0),
-            "mc_pass": row.get("mc_pass", 0),
-            "mc_fail": row.get("mc_fail", 0),
-            "accepted": row.get("accepted", 0),
-            "candidate": row.get("candidate", 0),
-            "exploratory": row.get("exploratory", 0),
-            "active": row.get("active", 0),
+            "generated": stages.get("generated", 0),
+            "cp_pass": stages.get("cheap_prescreen_pass", 0),
+            "cp_fail": stages.get("cheap_prescreen_fail", 0),
+            "bt_pass": stages.get("backtest_pass", 0),
+            "bt_fail": stages.get("backtest_fail", 0),
+            "wf_pass": stages.get("wf_pass", 0),
+            "wf_fail": stages.get("wf_fail", 0),
+            "mc_pass": stages.get("mc_pass", 0),
+            "mc_fail": stages.get("mc_fail", 0),
+            "accepted": stages.get("accepted", 0),
+            "candidate": stages.get("candidate", 0),
+            "exploratory": stages.get("exploratory", 0),
+            "active": stages.get("active", 0),
         }
         for family, row in payload["families"].items()
-        if row.get("stages", {}).get("generated", 0) > 0
+        for stages in [row.get("stages", {})]
+        if stages.get("generated", 0) > 0
     }
     logger.info("Research family-stage summary for %s %s: %s", symbol, timeframe, compact)
 
