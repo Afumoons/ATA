@@ -4,9 +4,9 @@ from autonomous_trading_ai.backtests.engine import run_backtest
 from autonomous_trading_ai.backtests.evaluation import evaluate_strategy
 from autonomous_trading_ai.backtests.explain import _derive_routing_confidence
 from autonomous_trading_ai.config import canonical_symbol
-from autonomous_trading_ai.scheduler.main import _challenger_research_min_trades
+from autonomous_trading_ai.scheduler.main import _challenger_research_min_trades, _passes_symbol_specific_mc_tail_relief
 from autonomous_trading_ai.strategies.base import StrategyDefinition
-from autonomous_trading_ai.strategies.generator import FAMILY_LIBRARY, random_strategy
+from autonomous_trading_ai.strategies.generator import FAMILY_LIBRARY, XAG_M15_FAMILY_WEIGHTS, random_strategy
 from autonomous_trading_ai.strategies.pool import StrategyPool
 
 
@@ -119,18 +119,78 @@ def test_d4b_rebuild_strategy_preserves_non_xau_family_normalization():
 
 def test_d4b_xag_m15_family_priors_are_market_specific_and_conservative():
     breakout = random_strategy('XAGUSDm', 'M15', family='session_breakout')
-    assert 0.32 <= float(breakout.params.get('vol_min', 0.0)) <= 0.65
-    assert 0.03 <= float(breakout.params.get('trend_min', 0.0)) <= 0.12
+    assert 0.0025 <= float(breakout.params.get('vol_min', 0.0)) <= 0.0065
+    assert 0.02 <= float(breakout.params.get('trend_min', 0.0)) <= 0.10
+    assert breakout.params.get('time_stop_bars') in {6, 8, 10, 12}
 
     compression = random_strategy('XAGUSDm', 'M15', family='compression_breakout')
-    assert 0.35 <= float(compression.params.get('vol_max', 0.0)) <= 0.85
-    assert 0.02 <= float(compression.params.get('trend_min', 0.0)) <= 0.10
+    assert 0.003 <= float(compression.params.get('vol_max', 0.0)) <= 0.008
+    assert 0.01 <= float(compression.params.get('trend_min', 0.0)) <= 0.08
+
+    pullback = random_strategy('XAGUSDm', 'M15', family='pullback_trend')
+    assert 0.12 <= float(pullback.params.get('trend_min', 0.0)) <= 0.22
+    assert pullback.params.get('rsi_exit') >= 52
 
 
 def test_btc_challenger_trade_floor_is_softened_not_hardened():
     assert _challenger_research_min_trades('BTCUSDm') == 30
     assert _challenger_research_min_trades('XAGUSDm') == 25
     assert _challenger_research_min_trades('XAUUSDm') == 60
+
+
+def test_btc_mc_tail_relief_is_narrow_and_family_aware():
+    assert _passes_symbol_specific_mc_tail_relief(
+        symbol='BTCUSDm',
+        family='mixed:ma_trend+rsi_range',
+        num_trades=46,
+        pf=1.19,
+        sharpe=1.63,
+        dd_abs=3.7,
+        wf_sharpe=4.2,
+        mc_p5=-423.0,
+        mc_loss_prob=0.27,
+        mc_dd_p95=733.0,
+    ) is True
+    assert _passes_symbol_specific_mc_tail_relief(
+        symbol='XAUUSDm',
+        family='mixed:ma_trend+rsi_range',
+        num_trades=46,
+        pf=1.19,
+        sharpe=1.63,
+        dd_abs=3.7,
+        wf_sharpe=4.2,
+        mc_p5=-423.0,
+        mc_loss_prob=0.27,
+        mc_dd_p95=733.0,
+    ) is False
+    assert _passes_symbol_specific_mc_tail_relief(
+        symbol='BTCUSDm',
+        family='ma_trend',
+        num_trades=46,
+        pf=1.19,
+        sharpe=1.63,
+        dd_abs=3.7,
+        wf_sharpe=4.2,
+        mc_p5=-423.0,
+        mc_loss_prob=0.27,
+        mc_dd_p95=733.0,
+    ) is False
+
+
+def test_xag_m15_generation_weights_bias_away_from_known_bad_families():
+    assert XAG_M15_FAMILY_WEIGHTS['vol_breakout'] > XAG_M15_FAMILY_WEIGHTS['ma_trend']
+    assert XAG_M15_FAMILY_WEIGHTS['session_breakout'] > XAG_M15_FAMILY_WEIGHTS['rsi_range']
+
+
+def test_xag_session_breakout_templates_are_no_longer_all_ma_gated():
+    saw_light_template = False
+    for _ in range(40):
+        strat = random_strategy('XAGUSDm', 'M15', family='session_breakout')
+        rule_text = f"{strat.long_entry_rule} || {strat.short_entry_rule}"
+        if 'session_london == 1 and volatility > vol_min and trend_strength' in rule_text:
+            saw_light_template = True
+            break
+    assert saw_light_template
 
 
 def test_d4a_family_exit_pools_are_constrained_by_archetype():

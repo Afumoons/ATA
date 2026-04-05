@@ -134,3 +134,17 @@ Run a fresh full Track D rerun and compare:
 - BTC challenger post-backtest survival after the trade-floor fix
 - XAG cheap-prescreen survival rate after v2 priors
 - whether any XAG candidates finally gain pool/index/manifest continuity
+
+## 2026-04-06 v3 follow-up
+
+See also: `docs/clio/15-BTC-MC-HARDENING-XAG-VIABILITY-V3-PATCH-2026-04-06.md`
+
+Summary of the next patch batch:
+- added **BTCUSDm M15 symbol/family-aware MC tail relief** for the narrow `mixed:ma_trend+rsi_range` challenger cohort instead of loosening MC globally
+- added **XAGUSDm M15 family weights** to steer generation away from weak churn families and toward breakout/compression/session families
+- corrected a real **XAG volatility prior scale mismatch** so `vol_min` / `vol_max` now align with observed XAG feature magnitudes
+- added lighter XAG-only `session_breakout` / `vol_breakout` templates
+
+Focused result:
+- BTC change is coherent and should save the strongest previously-failing MC cases
+- XAG repair is still incomplete; sampled cheap-prescreen reruns remained dominated by zero-trade breakout/session candidates, so the next repair likely needs expression-context / regime-gating inspection rather than more blind prior loosening

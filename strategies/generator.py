@@ -261,6 +261,15 @@ CORE_M15_FAMILY_WEIGHTS: Dict[str, float] = {
     "xau_session_continuation": 0.03,
 }
 
+XAG_M15_FAMILY_WEIGHTS: Dict[str, float] = {
+    "ma_trend": 0.08,
+    "rsi_range": 0.07,
+    "pullback_trend": 0.16,
+    "vol_breakout": 0.26,
+    "compression_breakout": 0.21,
+    "session_breakout": 0.22,
+}
+
 
 def _weighted_choice(weights: Dict[str, float]) -> str:
     labels = list(weights.keys())
@@ -392,33 +401,58 @@ def _sample_family_params(family: str, symbol: str, timeframe: str) -> Dict[str,
 
     if symbol == "XAGUSDm" and timeframe == "M15":
         params["microstructure_profile"] = "xag_m15"
-        params["stop_loss_pips"] = random.choice([75, 100, 125, 150])
-        params["take_profit_pips"] = random.choice([100, 125, 150, 200])
+        params["stop_loss_pips"] = random.choice([75, 100, 125])
+        params["take_profit_pips"] = random.choice([125, 150, 200, 250])
         if family == "compression_breakout":
-            params["vol_max"] = round(random.uniform(0.35, 0.85), 3)
-            params["trend_min"] = round(random.uniform(0.02, 0.10), 2)
-            params["time_stop_bars"] = random.choice([6, 8, 10, 12])
+            params["vol_max"] = round(random.uniform(0.003, 0.008), 4)
+            params["trend_min"] = round(random.uniform(0.01, 0.08), 2)
+            params["trend_exit"] = round(random.uniform(-0.03, 0.02), 2)
+            params["time_stop_bars"] = random.choice([8, 10, 12])
         elif family == "vol_breakout":
-            params["vol_min"] = round(random.uniform(0.32, 0.70), 3)
-            params["trend_min"] = round(random.uniform(0.04, 0.14), 2)
-            params["time_stop_bars"] = random.choice([4, 6, 8, 10])
-        elif family == "session_breakout":
-            params["vol_min"] = round(random.uniform(0.32, 0.65), 3)
+            params["vol_min"] = round(random.uniform(0.003, 0.007), 4)
             params["trend_min"] = round(random.uniform(0.03, 0.12), 2)
-            params["time_stop_bars"] = random.choice([4, 6, 8, 10])
+            params["trend_exit"] = round(random.uniform(-0.04, 0.03), 2)
+            params["time_stop_bars"] = random.choice([6, 8, 10])
+        elif family == "session_breakout":
+            params["vol_min"] = round(random.uniform(0.0025, 0.0065), 4)
+            params["trend_min"] = round(random.uniform(0.02, 0.10), 2)
+            params["trend_exit"] = round(random.uniform(-0.04, 0.02), 2)
+            params["time_stop_bars"] = random.choice([6, 8, 10, 12])
         elif family == "pullback_trend":
-            params["trend_min"] = round(random.uniform(0.08, 0.16), 2)
-            params["trend_exit"] = round(random.uniform(-0.05, 0.02), 2)
+            params["trend_min"] = round(random.uniform(0.12, 0.22), 2)
+            params["trend_exit"] = round(random.uniform(-0.04, 0.01), 2)
+            params["rsi_exit"] = random.randint(52, 58)
             params["time_stop_bars"] = random.choice([6, 8, 10])
         elif family == "ma_trend":
-            params["trend_min"] = round(random.uniform(0.14, 0.22), 2)
-            params["trend_exit"] = round(random.uniform(-0.05, 0.03), 2)
-            params["time_stop_bars"] = random.choice([6, 8, 12])
+            params["trend_min"] = round(random.uniform(0.16, 0.26), 2)
+            params["trend_exit"] = round(random.uniform(-0.04, 0.02), 2)
+            params["time_stop_bars"] = random.choice([6, 8, 10])
         elif family == "rsi_range":
-            params["trend_min"] = round(random.uniform(0.02, 0.07), 2)
-            params["trend_exit"] = round(random.uniform(-0.03, 0.03), 2)
-            params["rsi_exit"] = random.randint(49, 55)
-            params["vol_max"] = round(random.uniform(0.28, 0.60), 3)
+            params["trend_min"] = round(random.uniform(0.01, 0.05), 2)
+            params["trend_exit"] = round(random.uniform(-0.02, 0.02), 2)
+            params["rsi_exit"] = random.randint(50, 54)
+            params["vol_max"] = round(random.uniform(0.24, 0.48), 3)
+            params["time_stop_bars"] = random.choice([4, 6, 8])
+
+    if symbol == "BTCUSDm" and timeframe == "M15":
+        params["microstructure_profile"] = "btc_m15"
+        if family == "ma_trend":
+            params["trend_min"] = round(random.uniform(0.14, 0.24), 3)
+            params["trend_exit"] = round(random.uniform(-0.04, 0.03), 3)
+            params["rsi_exit"] = random.randint(52, 58)
+            params["sl_atr_mult"] = random.choice([2.2, 2.5, 2.8])
+            params["tp_atr_mult"] = random.choice([3.5, 4.0, 4.5])
+            params["stop_loss_pips"] = random.choice([100, 125, 150])
+            params["take_profit_pips"] = random.choice([200, 250, 300])
+            params["time_stop_bars"] = random.choice([6, 8, 10])
+        elif family == "rsi_range":
+            params["trend_min"] = round(random.uniform(0.02, 0.07), 3)
+            params["trend_exit"] = round(random.uniform(-0.03, 0.03), 3)
+            params["rsi_exit"] = random.randint(50, 56)
+            params["sl_atr_mult"] = random.choice([1.5, 1.8, 2.0])
+            params["tp_atr_mult"] = random.choice([2.0, 2.5, 3.0])
+            params["stop_loss_pips"] = random.choice([75, 100, 125])
+            params["take_profit_pips"] = random.choice([150, 200, 250])
             params["time_stop_bars"] = random.choice([4, 6, 8])
 
     params["family"] = family
@@ -432,6 +466,31 @@ def _pick_family_templates(family: str, symbol: Optional[str] = None) -> tuple[s
     if symbol is not None:
         family = _normalize_family_for_market(family, symbol)
     family_meta = FAMILY_LIBRARY.get(family) or FAMILY_LIBRARY["ma_trend"]
+
+    if symbol == "XAGUSDm" and family == "session_breakout":
+        long_templates = [
+            "session_london == 1 and volatility > vol_min and trend_strength > {trend_min}",
+            "session_new_york == 1 and volatility > vol_min and close > ma_short and trend_strength > {trend_min}",
+        ]
+        short_templates = [
+            "session_london == 1 and volatility > vol_min and trend_strength < -{trend_min}",
+            "session_new_york == 1 and volatility > vol_min and close < ma_short and trend_strength < -{trend_min}",
+        ]
+        exit_templates = list(family_meta.get("exit_templates", EXIT_TEMPLATES))
+        return random.choice(long_templates), random.choice(short_templates), random.choice(exit_templates)
+
+    if symbol == "XAGUSDm" and family == "vol_breakout":
+        long_templates = [
+            "volatility > vol_min and trend_strength > {trend_min}",
+            "volatility > vol_min and close > ma_short and trend_strength > {trend_min}",
+        ]
+        short_templates = [
+            "volatility > vol_min and trend_strength < -{trend_min}",
+            "volatility > vol_min and close < ma_short and trend_strength < -{trend_min}",
+        ]
+        exit_templates = list(family_meta.get("exit_templates", EXIT_TEMPLATES))
+        return random.choice(long_templates), random.choice(short_templates), random.choice(exit_templates)
+
     long_tpl = random.choice(list(family_meta.get("long", _LIGHT_LONG_TEMPLATES)))
     short_tpl = random.choice(list(family_meta.get("short", _LIGHT_SHORT_TEMPLATES)))
     exit_tpl = random.choice(list(family_meta.get("exit_templates", EXIT_TEMPLATES)))
@@ -510,9 +569,15 @@ def random_strategy(symbol: str, timeframe: str, family: Optional[str] = None) -
     search space contains genuinely different playbooks, not just MA/RSI cousins.
     """
     is_core_15m = symbol in {"XAUUSDm", "BTCUSDm"} and timeframe == "M15"
+    is_xag_m15 = symbol == "XAGUSDm" and timeframe == "M15"
 
     if family is None:
-        family = _weighted_choice(CORE_M15_FAMILY_WEIGHTS) if is_core_15m else random.choice(list(FAMILY_LIBRARY.keys()))
+        if is_core_15m:
+            family = _weighted_choice(CORE_M15_FAMILY_WEIGHTS)
+        elif is_xag_m15:
+            family = _weighted_choice(XAG_M15_FAMILY_WEIGHTS)
+        else:
+            family = random.choice(list(FAMILY_LIBRARY.keys()))
 
     family = _normalize_family_for_market(family, symbol)
     long_tpl, short_tpl, exit_tpl = _pick_family_templates(family, symbol=symbol)

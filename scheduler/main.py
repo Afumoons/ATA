@@ -572,6 +572,37 @@ def _is_challenger_family(family: str) -> bool:
     return family in CHALLENGER_FAMILIES or family.startswith("mixed:")
 
 
+def _passes_symbol_specific_mc_tail_relief(
+    *,
+    symbol: str,
+    family: str,
+    num_trades: float,
+    pf: float,
+    sharpe: float,
+    dd_abs: float,
+    wf_sharpe: float,
+    mc_p5: float,
+    mc_loss_prob: float,
+    mc_dd_p95: float,
+) -> bool:
+    sym_u = str(symbol or "").upper()
+    family = str(family or "unknown")
+    if "BTC" not in sym_u:
+        return False
+    if family not in {"mixed:ma_trend+rsi_range", "mixed:rsi_range+ma_trend"}:
+        return False
+    return (
+        num_trades >= 40
+        and pf >= 1.14
+        and sharpe >= 1.20
+        and dd_abs <= 5.0
+        and wf_sharpe >= 1.0
+        and mc_p5 > -650.0
+        and mc_loss_prob <= 0.36
+        and mc_dd_p95 <= 1000.0
+    )
+
+
 def _memory_dead_zone_penalty(candidate, memory: ResearchMemory, symbol: str, timeframe: str) -> tuple[float, dict]:
     try:
         params = getattr(candidate, "params", {}) or {}
@@ -932,7 +963,20 @@ def job_research_strategies() -> None:
                     _record_family_skip(family_skip_counts, family_skip_samples, family, "bootstrap_weak_wf_sharpe", f"{strat.name}:{wf_sharpe:.3f}")
                     continue
                 family_stage_counts[family]["wf_pass"] += 1
-                if mc_p5 <= 0.0:
+                mc_tail_relief = _passes_symbol_specific_mc_tail_relief(
+                    symbol=canon,
+                    family=family,
+                    num_trades=num_trades,
+                    pf=pf,
+                    sharpe=sharpe,
+                    dd_abs=dd_abs,
+                    wf_sharpe=wf_sharpe,
+                    mc_p5=mc_p5,
+                    mc_loss_prob=mc_loss_prob,
+                    mc_dd_p95=mc_dd_p95,
+                )
+                eval_result["research_mc_tail_relief"] = bool(mc_tail_relief)
+                if mc_p5 <= 0.0 and not mc_tail_relief:
                     family_stage_counts[family]["mc_fail"] += 1
                     research_skip_counts["mc_p5_non_positive"] += 1
                     if len(research_skip_samples["mc_p5_non_positive"]) < 3:
