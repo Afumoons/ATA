@@ -109,6 +109,7 @@ Per symbol/timeframe/family counts for:
 - [x] Add per-family counters inside `job_research_strategies()`
 - [x] Capture skip reasons grouped by family
 - [x] Emit compact family-stage summaries for `XAUUSDm M15`
+- [x] Emit compact family-stage summaries for `BTCUSDm M15`
 - [x] Emit compact family-stage summaries for `XAGUSDm M15`
 - [x] Decide where to persist these summaries (log only vs JSON artifact)
 - [x] Document the artifact/log format
@@ -117,8 +118,8 @@ Per symbol/timeframe/family counts for:
 - Status: implemented
 - Owner: Clio Nova
 - 2026-04-05: Added family-stage counters + family-grouped skip reasons in `scheduler/main.py`.
-- 2026-04-05: Family-stage summaries now log for all symbols; JSON artifacts are persisted for `XAUUSDm` and `XAGUSDm` under `tmp/research_family_stage_summaries/`.
-- 2026-04-05: Artifact/log format documented in `docs/clio/track-d-d1a-family-stage-instrumentation.md`.
+- 2026-04-05: Family-stage summaries now log for all symbols; JSON artifacts were first persisted for `XAUUSDm` and `XAGUSDm` under `tmp/research_family_stage_summaries/`.
+- 2026-04-05: BTC parity extension landed; Track D artifacts now cover `XAUUSDm`, `BTCUSDm`, and `XAGUSDm`, documented in `docs/clio/track-d-d1a-family-stage-instrumentation.md` and `docs/clio/track-d-d1b-btc-family-stage-parity.md`.
 
 ---
 
@@ -241,15 +242,17 @@ The after-run audit suggests:
 ### Tasks
 - [x] Verify symbol canonicalization and feature-path consistency for XAG
 - [x] Compare XAU vs XAG generated family behavior
-- [ ] Identify families that need different XAU/XAG parameter priors
-- [ ] Implement the first market-specific family prior split
+- [x] Identify families that need different XAU/XAG parameter priors
+- [x] Implement the first market-specific family prior split
 - [x] Re-run and compare outcomes across both metals
 
 ### Progress notes
-- Status: first rerun audit complete; prior split still pending
+- Status: first market-specific split implemented; follow-up rerun still pending
 - Owner: Clio Nova
 - 2026-04-05: No XAU/XAG separation changes yet; holding until D2/D3 findings identify where priors and playbooks are still leaking across metals.
-- 2026-04-05: Post-D4a rerun confirmed XAU-specialist families are no longer leaking into the new `XAGUSDm` generation batch, and XAU/XAG family mix behavior can now be compared cleanly from the family-stage artifacts. `XAGUSDm` still dies at cheap prescreen, so a market-specific prior split remains justified.
+- 2026-04-05: Post-D4a rerun confirmed `XAGUSDm` still dies at cheap prescreen, so a market-specific prior split remains justified.
+- 2026-04-05: Implemented the first XAG-specific prior split in `strategies/generator.py` and documented it in `docs/clio/track-d-d5b-xag-prior-and-continuity-repair.md`.
+- 2026-04-05: Also fixed non-XAU rebuild normalization persistence so stale `xau_*` family metadata cannot survive into rebuilt XAG/BTC params after normalization.
 
 ---
 
@@ -262,7 +265,7 @@ Keep Afu able to inspect progress without digging through logs.
 - [x] Update this file with checkmarks as work progresses
 - [x] Write short dated progress notes into this file or companion docs
 - [x] Create a compact results doc after each major rerun
-- [ ] Commit every coherent batch with clear commit messages
+- [x] Commit every coherent batch with clear commit messages
 
 ### Progress notes
 - Status: in progress
@@ -294,7 +297,7 @@ Keep Afu able to inspect progress without digging through logs.
 
 ## Batch D5a — XAU vs XAG separation
 - [x] verify symbol/canonical handling
-- [ ] split the first family priors by metal where justified
+- [x] split the first family priors by metal where justified
 
 ---
 
@@ -309,7 +312,9 @@ Keep Afu able to inspect progress without digging through logs.
 - [x] Started D4a first generator-prior repair patch and documented the landed batch.
 - [x] Reran Track D research and compared family-stage summaries before vs after D4a.
 - [x] Wrote the companion rerun results doc: `docs/clio/12-POST-D4A-RERUN-AUDIT.md`.
-- [ ] Next live implementation batch: extend family-stage observability to `BTCUSDm` and push the next XAG-specific prior/acceptance repair batch.
+- [x] Extended family-stage observability parity to `BTCUSDm` and documented the change in `docs/clio/track-d-d1b-btc-family-stage-parity.md`.
+- [x] Landed the next XAG-specific repair batch in `strategies/generator.py` and documented it in `docs/clio/track-d-d5b-xag-prior-and-continuity-repair.md`.
+- [ ] Next live checkpoint: run a fresh Track D rerun/audit to confirm BTC artifact emission and measure whether XAG cheap-prescreen survival/downstream continuity actually improved.
 
 ---
 

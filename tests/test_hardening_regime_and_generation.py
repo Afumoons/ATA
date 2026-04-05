@@ -91,6 +91,33 @@ def test_d4a_non_xau_generation_remaps_xau_specialist_families():
     assert strat2.params.get('playbook_type') == 'session_breakout'
 
 
+def test_d4b_rebuild_strategy_preserves_non_xau_family_normalization():
+    from autonomous_trading_ai.strategies.generator import rebuild_strategy_from_params
+
+    rebuilt = rebuild_strategy_from_params(
+        'XAGUSDm',
+        'M15',
+        params={
+            'family': 'xau_impulse_pullback',
+            'playbook_type': 'xau_impulse_pullback',
+            'preferred_symbols': ['XAGUSDm'],
+        },
+        name_prefix='xau_impulse_pullback',
+    )
+    assert rebuilt.params.get('family') == 'pullback_trend'
+    assert rebuilt.params.get('playbook_type') == 'pullback_trend'
+
+
+def test_d4b_xag_m15_family_priors_are_market_specific_and_conservative():
+    breakout = random_strategy('XAGUSDm', 'M15', family='session_breakout')
+    assert 0.40 <= float(breakout.params.get('vol_min', 0.0)) <= 0.80
+    assert 0.04 <= float(breakout.params.get('trend_min', 0.0)) <= 0.14
+
+    compression = random_strategy('XAGUSDm', 'M15', family='compression_breakout')
+    assert 0.28 <= float(compression.params.get('vol_max', 0.0)) <= 0.65
+    assert 0.03 <= float(compression.params.get('trend_min', 0.0)) <= 0.12
+
+
 def test_d4a_family_exit_pools_are_constrained_by_archetype():
     assert FAMILY_LIBRARY['ma_trend']['exit_templates'] != FAMILY_LIBRARY['rsi_range']['exit_templates']
     assert any('close < ma_short' in tpl for tpl in FAMILY_LIBRARY['pullback_trend']['exit_templates'])

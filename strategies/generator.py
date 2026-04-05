@@ -390,6 +390,37 @@ def _sample_family_params(family: str, symbol: str, timeframe: str) -> Dict[str,
         elif family == "rsi_range":
             params["vol_max"] = round(random.uniform(0.18, 0.35), 3)
 
+    if symbol == "XAGUSDm" and timeframe == "M15":
+        params["microstructure_profile"] = "xag_m15"
+        params["stop_loss_pips"] = random.choice([75, 100, 125, 150])
+        params["take_profit_pips"] = random.choice([100, 125, 150, 200])
+        if family == "compression_breakout":
+            params["vol_max"] = round(random.uniform(0.28, 0.65), 3)
+            params["trend_min"] = round(random.uniform(0.03, 0.12), 2)
+            params["time_stop_bars"] = random.choice([6, 8, 10])
+        elif family == "vol_breakout":
+            params["vol_min"] = round(random.uniform(0.40, 0.85), 3)
+            params["trend_min"] = round(random.uniform(0.05, 0.16), 2)
+            params["time_stop_bars"] = random.choice([4, 6, 8])
+        elif family == "session_breakout":
+            params["vol_min"] = round(random.uniform(0.40, 0.80), 3)
+            params["trend_min"] = round(random.uniform(0.04, 0.14), 2)
+            params["time_stop_bars"] = random.choice([4, 6, 8])
+        elif family == "pullback_trend":
+            params["trend_min"] = round(random.uniform(0.10, 0.20), 2)
+            params["trend_exit"] = round(random.uniform(-0.06, 0.02), 2)
+            params["time_stop_bars"] = random.choice([6, 8, 10])
+        elif family == "ma_trend":
+            params["trend_min"] = round(random.uniform(0.16, 0.26), 2)
+            params["trend_exit"] = round(random.uniform(-0.06, 0.03), 2)
+            params["time_stop_bars"] = random.choice([6, 8, 12])
+        elif family == "rsi_range":
+            params["trend_min"] = round(random.uniform(0.03, 0.08), 2)
+            params["trend_exit"] = round(random.uniform(-0.04, 0.04), 2)
+            params["rsi_exit"] = random.randint(50, 56)
+            params["vol_max"] = round(random.uniform(0.22, 0.45), 3)
+            params["time_stop_bars"] = random.choice([4, 6, 8])
+
     params["family"] = family
     params["playbook_type"] = str((FAMILY_LIBRARY.get(family, {}) or {}).get("playbook_type", family))
     params["primary_market_condition"] = str((FAMILY_LIBRARY.get(family, {}) or {}).get("regime_type", params.get("primary_market_condition", "unknown")))
@@ -521,6 +552,9 @@ def rebuild_strategy_from_params(
     base_params = _sample_family_params(family, symbol, timeframe)
     base_params.update(params)
     params = base_params
+    params["family"] = family
+    params["playbook_type"] = str((FAMILY_LIBRARY.get(family, {}) or {}).get("playbook_type", family))
+    params["primary_market_condition"] = str((FAMILY_LIBRARY.get(family, {}) or {}).get("regime_type", params.get("primary_market_condition", "unknown")))
 
     long_tpl, short_tpl, exit_tpl = _pick_family_templates(family, symbol=symbol)
 
