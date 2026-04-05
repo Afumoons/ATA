@@ -44,9 +44,10 @@ This is meant for quick bottleneck spotting inside scheduler logs.
 
 ### JSON artifacts
 
-For the two Track D focus symbols, the same cycle writes a structured artifact to:
+For the three Track D core-focus symbols, the same cycle writes a structured artifact to:
 
 - `tmp/research_family_stage_summaries/XAUUSDm_M15.json`
+- `tmp/research_family_stage_summaries/BTCUSDm_M15.json`
 - `tmp/research_family_stage_summaries/XAGUSDm_M15.json`
 
 Schema:
@@ -92,4 +93,4 @@ Schema:
 - **Log** = fast visual bottleneck scan during a live run.
 - **JSON artifact** = stable input for Track D2/D3 diagnosis and before/after comparisons.
 
-Artifacts are intentionally limited to XAU/XAG for now to keep the output conservative and focused on the repair track.
+Artifacts now cover the full Track D core-focus universe (XAU/BTC/XAG) while staying limited to those symbols so the repair track remains compact and comparable.
