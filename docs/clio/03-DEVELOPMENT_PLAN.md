@@ -17,6 +17,10 @@ home-field setup, see:
 - `06-M15_IMPROVEMENT_ROADMAP.md`
 - `07-ROUTING_LAYER_AUDIT_AND_TASKLIST.md`
 
+For the future-state architectural redesign target, see:
+
+- `16-AUTONOMOUS-TRADING-AI-V2-BLUEPRINT-2026-04-06.md`
+
 Treat this file as the **broad roadmap / status ledger**, not the detailed
 implementation checklist.
 
