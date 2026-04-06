@@ -52,7 +52,15 @@ def _strategy(name="probe", stop_loss_pips=100, take_profit_pips=200):
 def test_signal_pip_params_match_execution_engine_defaults():
     assert _pip_params("XAUUSDm") == (0.01, 1.0)
     assert _pip_params("XAGUSDm") == (0.01, 0.5)
-    assert _pip_params("BTCUSDm") == (1.0, 0.1)
+    assert _pip_params("BTCUSDm") == (1.0, 1.0)
+
+
+def test_btc_execution_engine_uses_one_dollar_per_point_pip_value():
+    from autonomous_trading_ai.execution.engine import _pip_value_for_symbol
+
+    assert _pip_value_for_symbol("BTCUSDm") == 1.0
+    assert _pip_value_for_symbol("BTCUSDc") == 1.0
+    assert _pip_value_for_symbol("BTCUSD") == 1.0
 
 
 def test_strategy_fingerprints_include_fixed_sl_tp_pips():

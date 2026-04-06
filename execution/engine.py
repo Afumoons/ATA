@@ -42,10 +42,11 @@ _DEFAULT_PIP_VALUE_PER_LOT: dict[str, float] = {
     "AUDUSD": 10.0,
     "USDCAD": 10.0,
     "USDCHF": 10.0,
-    "BTCUSDm": 0.1,
-    "BTCUSDT": 0.1,
-    "BTCUSD":  0.1,
-    "ETHUSDm": 0.1,
+    "BTCUSDm": 1.0,
+    "BTCUSDT": 1.0,
+    "BTCUSD":  1.0,
+    "BTCUSDc": 1.0,
+    "ETHUSDm": 1.0,
 }
 
 _METALS = {"XAU", "XAG"}

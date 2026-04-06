@@ -139,7 +139,7 @@ def _pip_params(symbol: str) -> tuple[float, float]:
     if "XAG" in sym:
         return 0.01, 0.5
     if "BTC" in sym or "ETH" in sym or "LTC" in sym or "XRP" in sym:
-        return 1.0, 0.1
+        return 1.0, 1.0
     return 0.0001, 10.0
 
 

@@ -1,5 +1,13 @@
 # Tasklist
 
+## 2026-04-06 - Live BTC risk sizing audit
+
+Completed in this checkpoint:
+- [x] audit reported ~10% live BTC risk spike using `execution/open_trades.json`, `execution/trades.log`, `execution/strategy_live_stats.json`, and `logs/system.log`
+- [x] confirm BTC live sizing used an incorrect pip-value constant (`0.1` instead of `1.0`), inflating real stop risk by about 10x
+- [x] patch BTC/crypto execution pip-value defaults in `execution/engine.py` and `execution/signals.py`
+- [x] add regression coverage for BTC pip-value defaults in `tests/test_bugfix_batch_20260406.py`
+
 ## 2026-04-06 - Track D next high-impact batch
 
 Completed in this checkpoint:
