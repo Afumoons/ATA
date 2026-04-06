@@ -126,14 +126,26 @@ def run_backtest(
 
     df = df.copy().reset_index(drop=True)
     if df.empty:
-        equity_series = pd.Series([initial_equity])
+        logger.warning(
+            "Backtest received empty dataframe for %s on %s %s; returning zero-trade stats",
+            strategy.name,
+            strategy.symbol,
+            strategy.timeframe,
+        )
+        equity_series = pd.Series([initial_equity], dtype=float)
+        stats = _compute_basic_stats(
+            equity_curve=equity_series,
+            trades=[],
+            initial_equity=initial_equity,
+            periods_per_year=periods_per_year or 252.0,
+        )
         return BacktestResult(
             strategy=strategy,
             symbol=strategy.symbol,
             timeframe=strategy.timeframe,
             trades=[],
             equity_curve=equity_series,
-            stats={"initial_equity": initial_equity, "final_equity": initial_equity, "num_trades": 0.0},
+            stats=stats,
         )
 
     equity = initial_equity

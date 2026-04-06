@@ -504,28 +504,39 @@ def _emit_family_stage_summary(
     logger.info("Research family-stage artifact written: %s", out_path)
 
 
-def _memory_is_clearly_bad(candidate, memory: ResearchMemory, symbol: str, timeframe: str) -> bool:
+def _memory_query_text(candidate, symbol: str, timeframe: str) -> str:
+    params = getattr(candidate, "params", {}) or {}
+    candidate_family = _strategy_family_from_params(params)
+    return "\n".join([
+        f"symbol={symbol}",
+        f"timeframe={timeframe}",
+        f"family={candidate_family}",
+        f"playbook={params.get('playbook_type', '')}",
+        f"long_entry={getattr(candidate, 'long_entry_rule', '')}",
+        f"short_entry={getattr(candidate, 'short_entry_rule', '')}",
+        f"exit={getattr(candidate, 'exit_rule', '')}",
+        f"sl_atr={getattr(candidate, 'sl_atr_mult', '')}",
+        f"tp_atr={getattr(candidate, 'tp_atr_mult', '')}",
+        f"regime={params.get('regime_type', '')}",
+    ])
+
+
+def _memory_neighbors(candidate, memory: ResearchMemory, symbol: str, timeframe: str, *, n_results: int = 12):
+    query_text = _memory_query_text(candidate, symbol, timeframe)
+    return memory.query_similar_strategies(symbol=symbol, timeframe=timeframe, text=query_text, n_results=n_results)
+
+
+def _memory_is_clearly_bad(candidate, memory: ResearchMemory, symbol: str, timeframe: str, *, neighbors=None) -> bool:
     try:
-        params = getattr(candidate, "params", {}) or {}
-        query_text = "\n".join([
-            f"symbol={symbol}",
-            f"timeframe={timeframe}",
-            f"family={params.get('family', '')}",
-            f"playbook={params.get('playbook_type', '')}",
-            f"long_entry={getattr(candidate, 'long_entry_rule', '')}",
-            f"short_entry={getattr(candidate, 'short_entry_rule', '')}",
-            f"exit={getattr(candidate, 'exit_rule', '')}",
-            f"sl_atr={getattr(candidate, 'sl_atr_mult', '')}",
-            f"tp_atr={getattr(candidate, 'tp_atr_mult', '')}",
-            f"regime={params.get('regime_type', '')}",
-        ])
-        neighbors = memory.query_similar_strategies(symbol=symbol, timeframe=timeframe, text=query_text, n_results=10)
+        neighbors = list(neighbors) if neighbors is not None else _memory_neighbors(candidate, memory, symbol, timeframe, n_results=12)
     except Exception as e:
         logger.exception("ResearchMemory veto query failed for %s: %s", getattr(candidate, "name", "?"), e)
         return False
 
     if not neighbors or len(neighbors) < 5:
         return False
+
+    neighbors = neighbors[:10]
 
     bad = 0
     for nb in neighbors:
@@ -603,23 +614,11 @@ def _passes_symbol_specific_mc_tail_relief(
     )
 
 
-def _memory_dead_zone_penalty(candidate, memory: ResearchMemory, symbol: str, timeframe: str) -> tuple[float, dict]:
+def _memory_dead_zone_penalty(candidate, memory: ResearchMemory, symbol: str, timeframe: str, *, neighbors=None) -> tuple[float, dict]:
+    params = getattr(candidate, "params", {}) or {}
+    candidate_family = _strategy_family_from_params(params)
     try:
-        params = getattr(candidate, "params", {}) or {}
-        candidate_family = _strategy_family_from_params(params)
-        query_text = "\n".join([
-            f"symbol={symbol}",
-            f"timeframe={timeframe}",
-            f"family={candidate_family}",
-            f"playbook={params.get('playbook_type', '')}",
-            f"long_entry={getattr(candidate, 'long_entry_rule', '')}",
-            f"short_entry={getattr(candidate, 'short_entry_rule', '')}",
-            f"exit={getattr(candidate, 'exit_rule', '')}",
-            f"sl_atr={getattr(candidate, 'sl_atr_mult', '')}",
-            f"tp_atr={getattr(candidate, 'tp_atr_mult', '')}",
-            f"regime={params.get('regime_type', '')}",
-        ])
-        neighbors = memory.query_similar_strategies(symbol=symbol, timeframe=timeframe, text=query_text, n_results=12)
+        neighbors = list(neighbors) if neighbors is not None else _memory_neighbors(candidate, memory, symbol, timeframe, n_results=12)
     except Exception as e:
         logger.exception("ResearchMemory dead-zone query failed for %s: %s", getattr(candidate, "name", "?"), e)
         return 0.0, {}
@@ -632,8 +631,6 @@ def _memory_dead_zone_penalty(candidate, memory: ResearchMemory, symbol: str, ti
     same_family = 0
     wf_vals = []
     pf_vals = []
-
-    candidate_family = _strategy_family_from_params(params)
     for nb in neighbors:
         nb_family = str(nb.get("meta_family") or nb.get("stat_family") or "")
         if candidate_family and nb_family == candidate_family:
@@ -817,7 +814,13 @@ def job_research_strategies() -> None:
                 family = _strategy_family_from_params(getattr(strat, "params", {}) or {})
                 family_stage_counts[family]["generated"] += 1
 
-                if _memory_is_clearly_bad(strat, memory, canon, TIMEFRAME):
+                memory_neighbors = None
+                try:
+                    memory_neighbors = _memory_neighbors(strat, memory, canon, TIMEFRAME, n_results=12)
+                except Exception as e:
+                    logger.exception("ResearchMemory prefetch failed for %s: %s", getattr(strat, "name", "?"), e)
+
+                if _memory_is_clearly_bad(strat, memory, canon, TIMEFRAME, neighbors=memory_neighbors):
                     research_skip_counts["memory_veto"] += 1
                     if len(research_skip_samples["memory_veto"]) < 3:
                         research_skip_samples["memory_veto"].append(strat.name)
@@ -848,7 +851,13 @@ def job_research_strategies() -> None:
                 eval_result = evaluate_strategy(result.stats)
                 family_stage_counts[family]["backtest_pass" if eval_result.get("accepted") else "backtest_fail"] += 1
 
-                dead_zone_penalty, dead_zone_meta = _memory_dead_zone_penalty(strat, memory, canon, TIMEFRAME)
+                dead_zone_penalty, dead_zone_meta = _memory_dead_zone_penalty(
+                    strat,
+                    memory,
+                    canon,
+                    TIMEFRAME,
+                    neighbors=memory_neighbors,
+                )
                 if dead_zone_penalty > 0.0:
                     eval_result["score"] = float(eval_result.get("score", 0.0) or 0.0) - dead_zone_penalty
                     eval_result["research_dead_zone_penalty"] = dead_zone_penalty

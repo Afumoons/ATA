@@ -6,6 +6,7 @@ import pandas as pd
 from autonomous_trading_ai.backtests.engine import run_backtest
 from autonomous_trading_ai.backtests.walkforward import WalkForwardConfig, _split_walkforward_indices
 from autonomous_trading_ai.execution.signals import Signal, _pip_params, execute_signals_for_symbol
+from autonomous_trading_ai.scheduler.main import _memory_dead_zone_penalty, _memory_is_clearly_bad
 from autonomous_trading_ai.strategies.base import StrategyDefinition
 from autonomous_trading_ai.strategies.evolution import _strategy_fingerprint
 from autonomous_trading_ai.strategies.pool import StrategyPool, StrategyRecord, _structural_fingerprint
@@ -127,6 +128,37 @@ def test_research_memory_store_clears_query_cache():
     assert mem._query_cache == {}
 
 
+def test_memory_veto_and_dead_zone_can_share_prefetched_neighbors():
+    strat = _strategy(name="memory_probe")
+    queried = []
+    neighbors = [
+        {
+            "stat_sharpe_ratio": -0.2,
+            "stat_profit_factor": 0.95,
+            "stat_return_pct": -8.0,
+            "stat_wf_overall_sharpe": 0.01,
+            "meta_family": "ma_trend",
+            "stat_family": "ma_trend",
+        }
+        for _ in range(12)
+    ]
+
+    class _QueryMemory:
+        def query_similar_strategies(self, **kwargs):
+            queried.append(kwargs)
+            return list(neighbors)
+
+    memory = _QueryMemory()
+    prefetched = memory.query_similar_strategies(symbol="BTCUSDm", timeframe="M15", text="probe", n_results=12)
+
+    assert _memory_is_clearly_bad(strat, memory, "BTCUSDm", "M15", neighbors=prefetched) is True
+    penalty, meta = _memory_dead_zone_penalty(strat, memory, "BTCUSDm", "M15", neighbors=prefetched)
+
+    assert penalty > 0.0
+    assert meta["same_family_ratio"] == 1.0
+    assert len(queried) == 1
+
+
 def test_execute_signals_refreshes_open_position_snapshot_after_success(monkeypatch):
     latest = pd.DataFrame([
         {
@@ -224,3 +256,17 @@ def test_execute_signals_refreshes_open_position_snapshot_after_success(monkeypa
 
     assert [reason for _, reason in results] == ["ok", "blocked_existing_position"]
     assert summary["blocked_existing_position"] is True
+
+
+def test_empty_backtest_returns_full_zero_trade_stats():
+    strat = _strategy(name="empty_df_probe")
+    df = pd.DataFrame(columns=["time", "open", "high", "low", "close"])
+
+    result = run_backtest(df, strat, initial_equity=1234.0)
+
+    assert result.stats["initial_equity"] == 1234.0
+    assert result.stats["final_equity"] == 1234.0
+    assert result.stats["return_pct"] == 0.0
+    assert result.stats["num_trades"] == 0.0
+    assert result.stats["profit_factor"] == 0.0
+    assert result.stats["max_drawdown_pct"] == 0.0
