@@ -264,44 +264,104 @@ def _update_daily_pnl_from_closed_deals() -> None:
                     )
             else:
                 comment = getattr(deal, "comment", "") or ""
-                manual_bucket = register_manual_bucket_pnl(
-                    symbol=getattr(deal, "symbol", "") or "",
-                    pnl=pnl,
-                    unmatched=True,
-                )
-                logger.warning(
-                    "No strategy attribution for closed deal ticket=%s order=%s position_id=%s comment=%s profit=%.2f -> bucket=%s",
-                    ticket,
-                    order_ticket,
-                    position_id,
-                    comment,
-                    pnl,
-                    manual_bucket,
-                )
-                append_unmatched_closed_deal({
-                    "deal_ticket": ticket,
-                    "order_ticket": order_ticket,
-                    "position_id": position_id,
-                    "comment": comment,
-                    "profit": pnl,
-                    "symbol": getattr(deal, "symbol", "") or "",
-                    "entry": getattr(deal, "entry", None),
-                    "reason": "ticket_map_miss",
-                    "manual_bucket": manual_bucket,
-                })
-                # Fallback: try comment (works on non-Exness brokers)
-                if comment.startswith("clio-auto-"):
-                    name_from_comment = comment[len("clio-auto-"):]
-                    if name_from_comment:
-                        try:
-                            register_strategy_pnl(
-                                strategy_name=name_from_comment, pnl=pnl
-                            )
-                        except Exception:
-                            logger.exception(
-                                "Failed to update StrategyLiveStats from comment for %s",
-                                name_from_comment,
-                            )
+                symbol_raw = getattr(deal, "symbol", "") or ""
+                symbol_canon = symbol_raw
+                try:
+                    from ..config import canonical_symbol
+                    symbol_canon = canonical_symbol(symbol_raw)
+                except Exception:
+                    symbol_canon = symbol_raw
+
+                resolved_from_candidates = None
+                candidate_matches: list[str] = []
+                try:
+                    from .signals import _load_ticket_map  # type: ignore
+                    ticket_map = _load_ticket_map()
+                    candidate_suffixes = []
+                    if order_ticket is not None:
+                        candidate_suffixes.append(str(order_ticket))
+                    if position_id is not None:
+                        candidate_suffixes.append(str(position_id))
+                    candidate_suffixes.append(str(ticket))
+
+                    comment_uid4 = ""
+                    if comment:
+                        compact_comment = "".join(ch for ch in str(comment) if ch.isalnum())
+                        if len(compact_comment) >= 4:
+                            comment_uid4 = compact_comment[-4:].lower()
+
+                    for mapped_ticket, mapped_name in ticket_map.items():
+                        mapped_name = str(mapped_name)
+                        mapped_upper = mapped_name.upper()
+                        mapped_uid4 = mapped_name.split("_")[-1][:4].lower() if "_" in mapped_name else mapped_name[-4:].lower()
+                        symbol_ok = not symbol_canon or symbol_canon.upper() in mapped_upper or symbol_raw.upper() in mapped_upper
+                        suffix_ok = any(sfx and mapped_ticket.endswith(sfx[-6:]) for sfx in candidate_suffixes if sfx)
+                        comment_ok = bool(comment_uid4 and mapped_uid4 == comment_uid4)
+                        if symbol_ok and (suffix_ok or comment_ok):
+                            candidate_matches.append(mapped_name)
+
+                    candidate_matches = list(dict.fromkeys(candidate_matches))
+                    if len(candidate_matches) == 1:
+                        resolved_from_candidates = candidate_matches[0]
+                except Exception:
+                    logger.exception("Failed heuristic attribution for closed deal %s", ticket)
+
+                if resolved_from_candidates:
+                    strategy_name = resolved_from_candidates
+                    try:
+                        register_strategy_pnl(strategy_name=strategy_name, pnl=pnl)
+                        logger.info(
+                            "Recovered strategy attribution heuristically for closed deal ticket=%s -> %s",
+                            ticket,
+                            strategy_name,
+                        )
+                    except Exception:
+                        logger.exception(
+                            "Failed to update StrategyLiveStats for heuristic attribution %s",
+                            strategy_name,
+                        )
+                else:
+                    manual_bucket = register_manual_bucket_pnl(
+                        symbol=symbol_canon,
+                        pnl=pnl,
+                        unmatched=True,
+                    )
+                    logger.warning(
+                        "No strategy attribution for closed deal ticket=%s order=%s position_id=%s comment=%s profit=%.2f -> bucket=%s",
+                        ticket,
+                        order_ticket,
+                        position_id,
+                        comment,
+                        pnl,
+                        manual_bucket,
+                    )
+                    append_unmatched_closed_deal({
+                        "deal_ticket": ticket,
+                        "order_ticket": order_ticket,
+                        "position_id": position_id,
+                        "comment": comment,
+                        "profit": pnl,
+                        "symbol": symbol_raw,
+                        "symbol_canonical": symbol_canon,
+                        "entry": getattr(deal, "entry", None),
+                        "reason": "ticket_map_miss",
+                        "candidate_matches": candidate_matches[:5],
+                        "comment_uid4": ("".join(ch for ch in str(comment) if ch.isalnum())[-4:].lower() if comment else ""),
+                        "manual_bucket": manual_bucket,
+                    })
+                    # Fallback: try comment (works on non-Exness brokers)
+                    if comment.startswith("clio-auto-"):
+                        name_from_comment = comment[len("clio-auto-"):]
+                        if name_from_comment:
+                            try:
+                                register_strategy_pnl(
+                                    strategy_name=name_from_comment, pnl=pnl
+                                )
+                            except Exception:
+                                logger.exception(
+                                    "Failed to update StrategyLiveStats from comment for %s",
+                                    name_from_comment,
+                                )
 
             processed_ids.add(ticket)
             trades_processed += 1

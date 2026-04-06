@@ -5,9 +5,10 @@ import os
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Tuple, Any, Dict, Optional
+from typing import List, Tuple, Any, Dict, Optional, Iterable
 
 from collections import Counter, defaultdict
+from types import SimpleNamespace
 import re
 
 import pandas as pd
@@ -19,6 +20,10 @@ from ..strategies.live_manifest import strategy_definition_from_manifest_entry
 from ..strategies.pool import StrategyPool
 from ..execution.engine import execute_trade
 from ..execution.live_state_utils import can_open_new_trade, strategy_has_open_position
+
+_MAX_SIGNALS_PER_DIRECTION = 2
+_MAX_SIGNALS_PER_FAMILY = 2
+_CORRELATED_SIGNAL_LOOKBACK = 12
 
 logger = get_logger(__name__)
 
@@ -231,6 +236,131 @@ def _regime_edge(stats: Dict[str, Any], regime_labels: List[str]) -> tuple[float
             best_edge = edge
             best_label = regime_label
     return best_edge, best_label
+
+
+def _family_label_from_strategy(strategy: StrategyDefinition) -> str:
+    params = getattr(strategy, "params", None) or {}
+    family = params.get("family") or params.get("playbook") or "unknown"
+    return str(family or "unknown")
+
+
+def _recent_signal_overlap_count(strategy_name: str, symbol: str, direction: str, *, lookback_lines: int = 500) -> int:
+    if not _TRADES_LOG_PATH.exists():
+        return 0
+
+    try:
+        with _TRADES_LOG_PATH.open("r", encoding="utf-8") as f:
+            lines = f.readlines()[-lookback_lines:]
+    except Exception:
+        logger.exception("Failed to read trades.log for recent overlap count")
+        return 0
+
+    count = 0
+    for line in reversed(lines):
+        if f"symbol={symbol}" not in line or f"dir={direction}" not in line:
+            continue
+        count += 1
+        if count >= _CORRELATED_SIGNAL_LOOKBACK:
+            break
+    return count
+
+
+def _active_directional_exposure(symbol: str) -> tuple[Counter[str], Counter[tuple[str, str]]]:
+    direction_counts: Counter[str] = Counter()
+    family_counts: Counter[tuple[str, str]] = Counter()
+
+    try:
+        import MetaTrader5 as mt5  # type: ignore
+    except Exception:
+        return direction_counts, family_counts
+
+    try:
+        positions = mt5.positions_get(symbol=symbol)
+    except Exception:
+        logger.exception("Failed to read open positions for active exposure guard")
+        return direction_counts, family_counts
+
+    if not positions:
+        return direction_counts, family_counts
+
+    buy_type = getattr(mt5, "POSITION_TYPE_BUY", 0)
+    sell_type = getattr(mt5, "POSITION_TYPE_SELL", 1)
+
+    for pos in positions:
+        ticket = getattr(pos, "ticket", None)
+        mapped_name = None
+        if ticket is not None:
+            try:
+                mapped_name = get_strategy_for_ticket(int(ticket))
+            except Exception:
+                mapped_name = None
+
+        if not mapped_name:
+            comment = str(getattr(pos, "comment", "") or "")
+            uid4 = comment[-4:].lower() if len(comment) >= 4 else ""
+            if uid4:
+                try:
+                    for candidate_name in _load_ticket_map().values():
+                        candidate_name = str(candidate_name)
+                        if candidate_name.split("_")[-1][:4].lower() == uid4:
+                            mapped_name = candidate_name
+                            break
+                except Exception:
+                    mapped_name = None
+
+        family = "unknown"
+        if mapped_name:
+            family = _family_label_from_strategy(
+                SimpleNamespace(name=mapped_name, params={"family": mapped_name.split("_")[0]})
+            )
+            try:
+                strategy_rec = StrategyPool.load().strategies.get(mapped_name)
+                if strategy_rec is not None:
+                    family = _family_label_from_strategy(strategy_rec)
+            except Exception:
+                pass
+
+        pos_type = getattr(pos, "type", None)
+        direction = "long" if pos_type == buy_type else "short" if pos_type == sell_type else None
+        if not direction:
+            continue
+
+        direction_counts[direction] += 1
+        family_counts[(direction, family)] += 1
+
+    return direction_counts, family_counts
+
+
+def _dedupe_correlated_signals(signals: Iterable[Signal], symbol: str) -> tuple[list[Signal], list[str]]:
+    kept: list[Signal] = []
+    blocked: list[str] = []
+    active_direction_counts, active_family_counts = _active_directional_exposure(symbol)
+    direction_counts: Counter[str] = Counter(active_direction_counts)
+    family_counts: Counter[tuple[str, str]] = Counter(active_family_counts)
+
+    for sig in signals:
+        family = _family_label_from_strategy(sig.strategy)
+        direction = sig.direction
+        dir_count = direction_counts[direction]
+        fam_key = (direction, family)
+        fam_count = family_counts[fam_key]
+        recent_overlap = _recent_signal_overlap_count(sig.strategy.name, symbol, direction)
+
+        if dir_count >= _MAX_SIGNALS_PER_DIRECTION:
+            blocked.append(f"{sig.strategy.name}:direction_cap:{direction}:active={dir_count}")
+            continue
+        if fam_count >= _MAX_SIGNALS_PER_FAMILY:
+            blocked.append(f"{sig.strategy.name}:family_cap:{family}:{direction}:active={fam_count}")
+            continue
+        if recent_overlap >= _CORRELATED_SIGNAL_LOOKBACK:
+            blocked.append(f"{sig.strategy.name}:recent_overlap:{direction}:{recent_overlap}")
+            continue
+
+        kept.append(sig)
+        direction_counts[direction] += 1
+        family_counts[fam_key] += 1
+
+    return kept, blocked
 
 
 def _current_session_from_row(row: pd.Series) -> str:
@@ -752,6 +882,23 @@ def execute_signals_for_symbol(
                 "No entry conditions met for %s strategies on %s %s (%d evaluated)",
                 tier, symbol, timeframe, len(strategies),
             )
+            summary[f"no_entry_{tier}"] = True
+            return
+
+        deduped_sigs, blocked_correlated = _dedupe_correlated_signals(sigs, symbol)
+        if blocked_correlated:
+            logger.info(
+                "Correlation gate %s %s [%s]: %d -> %d kept | blocked=%s sample=%s",
+                symbol,
+                timeframe,
+                tier,
+                len(sigs),
+                len(deduped_sigs),
+                dict(Counter(item.split(":", 2)[1] for item in blocked_correlated)),
+                blocked_correlated[:5],
+            )
+        sigs = deduped_sigs
+        if not sigs:
             summary[f"no_entry_{tier}"] = True
             return
 
