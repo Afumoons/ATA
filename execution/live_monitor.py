@@ -14,7 +14,7 @@ from ..logging_utils import get_logger
 from ..strategies.pool import load_pool, save_pool
 from ..config import risk_config
 from .live_state_utils import DailyState, save_daily_state, register_trade_pnl
-from .strategy_live_stats import register_strategy_pnl
+from .strategy_live_stats import register_manual_bucket_pnl, register_strategy_pnl
 from .audit_utils import append_unmatched_closed_deal, append_pool_audit
 
 logger = get_logger(__name__)
@@ -264,13 +264,19 @@ def _update_daily_pnl_from_closed_deals() -> None:
                     )
             else:
                 comment = getattr(deal, "comment", "") or ""
+                manual_bucket = register_manual_bucket_pnl(
+                    symbol=getattr(deal, "symbol", "") or "",
+                    pnl=pnl,
+                    unmatched=True,
+                )
                 logger.warning(
-                    "No strategy attribution for closed deal ticket=%s order=%s position_id=%s comment=%s profit=%.2f",
+                    "No strategy attribution for closed deal ticket=%s order=%s position_id=%s comment=%s profit=%.2f -> bucket=%s",
                     ticket,
                     order_ticket,
                     position_id,
                     comment,
                     pnl,
+                    manual_bucket,
                 )
                 append_unmatched_closed_deal({
                     "deal_ticket": ticket,
@@ -281,6 +287,7 @@ def _update_daily_pnl_from_closed_deals() -> None:
                     "symbol": getattr(deal, "symbol", "") or "",
                     "entry": getattr(deal, "entry", None),
                     "reason": "ticket_map_miss",
+                    "manual_bucket": manual_bucket,
                 })
                 # Fallback: try comment (works on non-Exness brokers)
                 if comment.startswith("clio-auto-"):

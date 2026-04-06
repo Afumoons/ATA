@@ -18,6 +18,8 @@ import json
 from pathlib import Path
 from typing import Dict, List, Any
 
+from autonomous_trading_ai.execution.strategy_live_stats import is_manual_strategy_bucket
+
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 EXECUTION_DIR = BASE_DIR / "execution"
@@ -114,12 +116,17 @@ def print_strategy_live_stats() -> None:
         return
 
     recs: List[Any] = []
+    manual_recs: List[Any] = []
     for name, rec in stats.items():
         total_pnl = float(rec.get("total_pnl", 0.0) or 0.0)
         num_trades = int(rec.get("num_trades", 0) or 0)
         recent_pnls = rec.get("recent_pnls", []) or []
         recent_avg = sum(recent_pnls) / len(recent_pnls) if recent_pnls else 0.0
-        recs.append((name, total_pnl, num_trades, recent_avg, len(recent_pnls)))
+        row = (name, total_pnl, num_trades, recent_avg, len(recent_pnls))
+        if is_manual_strategy_bucket(name):
+            manual_recs.append(row)
+        else:
+            recs.append(row)
 
     if not recs:
         print("No live stats recorded yet")
@@ -134,6 +141,16 @@ def print_strategy_live_stats() -> None:
             f"- {name}: total_pnl={_fmt_money(total_pnl)}, trades={num_trades}, "
             f"recent_avg_pnl={_fmt_money(recent_avg)} over {n_recent} trades"
         )
+
+    if manual_recs:
+        manual_recs.sort(key=lambda r: r[1])
+        print()
+        print("Manual/unmatched buckets:")
+        for name, total_pnl, num_trades, recent_avg, n_recent in manual_recs[:5]:
+            print(
+                f"- {name}: total_pnl={_fmt_money(total_pnl)}, trades={num_trades}, "
+                f"recent_avg_pnl={_fmt_money(recent_avg)} over {n_recent} trades"
+            )
 
     print()
 

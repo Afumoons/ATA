@@ -7,7 +7,7 @@ from typing import Dict, List, Optional
 from ..logging_utils import get_logger
 from ..strategies.pool import StrategyPool
 from .audit_utils import append_pool_audit
-from .strategy_live_stats import StrategyLiveStats
+from .strategy_live_stats import StrategyLiveStats, should_ignore_for_engine_governance
 
 logger = get_logger(__name__)
 
@@ -60,6 +60,20 @@ def _negative_ratio(recent_pnls: List[float]) -> float:
 
 
 def compute_live_decay_signal(strategy_name: str, current_status: str, stats: StrategyLiveStats) -> LiveDecaySignal:
+    if should_ignore_for_engine_governance(strategy_name):
+        return LiveDecaySignal(
+            strategy_name=strategy_name,
+            current_status=current_status,
+            signal_level="healthy",
+            reason="manual_bucket_ignored",
+            recent_count=0,
+            recent_sum_pnl=0.0,
+            recent_avg_pnl=0.0,
+            loss_streak=0,
+            negative_ratio=0.0,
+            total_trades=int(stats.num_trades or 0),
+        )
+
     recent = [float(x) for x in (stats.recent_pnls or [])]
     recent_count = len(recent)
     recent_sum = float(sum(recent)) if recent else 0.0

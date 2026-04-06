@@ -6,7 +6,11 @@ from datetime import datetime, timedelta, timezone
 import MetaTrader5 as mt5
 
 from autonomous_trading_ai.execution.signals import get_strategy_for_ticket
-from autonomous_trading_ai.execution.strategy_live_stats import StrategyLiveStats, save_all_strategy_stats
+from autonomous_trading_ai.execution.strategy_live_stats import (
+    StrategyLiveStats,
+    manual_bucket_name,
+    save_all_strategy_stats,
+)
 
 
 def main() -> None:
@@ -42,12 +46,22 @@ def main() -> None:
             strategy_name = comment[len("clio-auto-"):]
 
         if not strategy_name:
+            bucket_name = manual_bucket_name(getattr(deal, "symbol", "") or "", unmatched=True)
+            rec = stats.get(bucket_name) or StrategyLiveStats(name=bucket_name)
+            rec.total_pnl += pnl
+            rec.num_trades += 1
+            rec.last_update = now.isoformat()
+            rec.recent_pnls.append(pnl)
+            rec.recent_pnls = rec.recent_pnls[-30:]
+            stats[bucket_name] = rec
             unmatched.append({
                 "deal": deal_ticket,
                 "order": order_ticket,
                 "position_id": position_id,
                 "comment": comment,
                 "profit": pnl,
+                "symbol": getattr(deal, "symbol", "") or "",
+                "manual_bucket": bucket_name,
             })
             continue
 

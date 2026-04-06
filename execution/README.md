@@ -135,6 +135,18 @@ Typical fields include:
 
 These stats are used downstream by the scheduler’s degradation logic.
 
+Manual trades are now represented explicitly as `manual_*` buckets inside
+`strategy_live_stats.json` rather than being silently dropped or mistaken for
+engine strategies. The current convention is:
+
+- `manual_test_xau` for explicit manual test executions that were opened with that name
+- `manual_unmatched_<SYMBOL>` for closed MT5 deals that could not be matched back to the
+  engine ticket map (for example Afu's manual trades in `unmatched_closed_deals.json`)
+
+These manual buckets are bookkeeping-only. Engine governance / live decay /
+strategy-quality logic must ignore them so they do not contaminate automated
+strategy health decisions.
+
 ### `live_decay.py`
 
 Provides a lightweight proactive decay-assessment layer on top of realized live
@@ -197,6 +209,10 @@ attribution and monitoring flows.
 
 Audit artifact for closed MT5 deals that could not be mapped back to a strategy.
 Useful for diagnosing broker-id lineage mismatches.
+
+Each unmatched row may also include a `manual_bucket` field showing the
+explicit bucket name used in `strategy_live_stats.json` (for example
+`manual_unmatched_XAUUSDC`).
 
 ### `execution/pool_audit_trail.json`
 

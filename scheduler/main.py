@@ -25,7 +25,7 @@ from ..backtests.monte_carlo import monte_carlo_pnl
 from ..execution.live_monitor import update_live_stats
 from ..execution.live_decay import evaluate_live_decay, apply_live_decay_actions
 from ..execution.signals import execute_signals_for_symbol
-from ..execution.strategy_live_stats import load_all_strategy_stats, MAX_RECENT_TRADES
+from ..execution.strategy_live_stats import load_all_strategy_stats, MAX_RECENT_TRADES, should_ignore_for_engine_governance
 from ..vector_memory.research_memory import ResearchMemory
 
 logger = get_logger(__name__)
@@ -367,6 +367,8 @@ def _apply_live_degradation(pool) -> None:
         return
 
     for name, rec in live_stats.items():
+        if should_ignore_for_engine_governance(name):
+            continue
         pool_rec = pool.strategies.get(name)
         if not pool_rec or pool_rec.status != "active":
             continue

@@ -6,6 +6,7 @@ import tempfile
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
+import re
 from typing import Dict, List, Optional
 
 from ..logging_utils import get_logger
@@ -19,6 +20,8 @@ MAX_RECENT_TRADES = 30
 
 # MT5 comment prefix set by execution/engine.py
 _COMMENT_PREFIX = "clio-auto-"
+_MANUAL_PREFIX = "manual_"
+_SYMBOL_SANITIZE_RE = re.compile(r"[^A-Z0-9]+")
 
 # Cache: truncated_name (20 chars) → full strategy name
 # Rebuilt from disk on every load_all_strategy_stats() call.
@@ -49,6 +52,21 @@ def _now_iso() -> str:
 def _truncated_name(full_name: str) -> str:
     """20-char truncated name as stored in MT5 deal comment."""
     return full_name[:20]
+
+
+def is_manual_strategy_bucket(strategy_name: Optional[str]) -> bool:
+    return bool(strategy_name) and str(strategy_name).startswith(_MANUAL_PREFIX)
+
+
+def should_ignore_for_engine_governance(strategy_name: Optional[str]) -> bool:
+    return is_manual_strategy_bucket(strategy_name)
+
+
+def manual_bucket_name(symbol: Optional[str], *, unmatched: bool = True) -> str:
+    raw_symbol = str(symbol or "unknown").upper().strip()
+    clean_symbol = _SYMBOL_SANITIZE_RE.sub("", raw_symbol) or "UNKNOWN"
+    prefix = "manual_unmatched" if unmatched else "manual"
+    return f"{prefix}_{clean_symbol}"
 
 
 # ---------------------------------------------------------------------------
@@ -201,3 +219,15 @@ def register_strategy_pnl(
         rec.recent_avg_pnl,
         len(rec.recent_pnls),
     )
+
+
+def register_manual_bucket_pnl(
+    *,
+    symbol: Optional[str],
+    pnl: float,
+    unmatched: bool = True,
+    full_name: Optional[str] = None,
+) -> str:
+    bucket_name = full_name or manual_bucket_name(symbol, unmatched=unmatched)
+    register_strategy_pnl(strategy_name=bucket_name, pnl=pnl, full_name=bucket_name)
+    return bucket_name
