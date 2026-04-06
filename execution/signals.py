@@ -134,10 +134,12 @@ def get_strategy_for_ticket(ticket: int) -> Optional[str]:
 
 def _pip_params(symbol: str) -> tuple[float, float]:
     sym = symbol.upper()
-    if "XAU" in sym or "XAG" in sym:
+    if "XAU" in sym:
         return 0.01, 1.0
+    if "XAG" in sym:
+        return 0.01, 0.5
     if "BTC" in sym or "ETH" in sym or "LTC" in sym or "XRP" in sym:
-        return 1.0, 1.0
+        return 1.0, 0.1
     return 0.0001, 10.0
 
 
@@ -735,14 +737,16 @@ def execute_signals_for_symbol(
 
     def _execute_batch(strategies: List[StrategyDefinition], rp: float, tier: str) -> None:
         sigs = generate_signals_for_row(latest, strategies)
-        open_positions = None
-        if sigs:
+
+        def _snapshot_open_positions():
             try:
                 import MetaTrader5 as mt5
-                open_positions = mt5.positions_get(symbol=symbol)
+                return mt5.positions_get(symbol=symbol)
             except Exception:
                 logger.exception("Failed to snapshot open positions for %s %s", symbol, timeframe)
-                open_positions = None
+                return None
+
+        open_positions = _snapshot_open_positions() if sigs else None
         if not sigs:
             logger.info(
                 "No entry conditions met for %s strategies on %s %s (%d evaluated)",
@@ -849,6 +853,7 @@ def execute_signals_for_symbol(
                 results.append((sig, res.reason))
 
                 if res.success:
+                    open_positions = _snapshot_open_positions()
                     if res.ticket is not None:
                         try:
                             register_ticket(res.ticket, strat.name)

@@ -188,6 +188,7 @@ def run_backtest(
                 if hit_sl and hit_tp:
                     same_bar_ambiguity_count += 1
                     same_bar_ambiguity_stop_loss_count += 1
+                    same_bar_ambiguity_take_profit_count += 1
                 if hit_sl:
                     exit_price = pos["stop_loss"]
                     exit_reason = "stop_loss"
@@ -200,6 +201,7 @@ def run_backtest(
                 if hit_sl and hit_tp:
                     same_bar_ambiguity_count += 1
                     same_bar_ambiguity_stop_loss_count += 1
+                    same_bar_ambiguity_take_profit_count += 1
                 if hit_sl:
                     exit_price = pos["stop_loss"]
                     exit_reason = "stop_loss"

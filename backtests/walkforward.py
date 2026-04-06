@@ -16,14 +16,12 @@ logger = get_logger(__name__)
 @dataclass
 class WalkForwardConfig:
     n_splits: int = 6        # Tier 2: was 4 — more splits = more robust OOS estimate
-    train_ratio: float = 0.6 # Tier 2: was 0.7 — larger test windows per fold
     min_test_bars: int = 100 # Tier 2: was 50 — at least ~1 day of M15 bars per window
 
 
 def _split_walkforward_indices(
     n: int,
     n_splits: int,
-    train_ratio: float,
     min_test_bars: int = 100,
 ) -> List[Tuple[int, int, int]]:
     """Return (train_start, train_end, test_end) triples for expanding-window WF.
@@ -33,7 +31,7 @@ def _split_walkforward_indices(
     window is genuinely out-of-sample from all prior training.
 
     With 1950 bars and n_splits=6, fold_size ≈ 279 bars (~2.4 days M15).
-    Each test window gets ~279 bars — vs ~97 bars with n_splits=4, train_ratio=0.7.
+    Each test window gets ~279 bars — materially larger than the earlier 4-split setup.
     """
     if n_splits < 1:
         raise ValueError("n_splits must be >= 1")
@@ -71,10 +69,9 @@ def walk_forward_test(
 
     Tier 2 changes vs previous version:
     - n_splits default 4 → 6: more windows = more statistically robust OOS estimate
-    - train_ratio default 0.7 → 0.6: larger test window per fold (~279 bars vs ~97)
     - min_test_bars default 50 → 100: avoids near-empty windows on short datasets
 
-    These changes together mean WF Sharpe is computed on ~40% more OOS data,
+    These changes together mean WF Sharpe is computed on materially more OOS data,
     making the threshold gate in scheduler/main.py more meaningful.
 
     Still uses chained equity curve (no boundary artifacts) and per-symbol
@@ -87,7 +84,7 @@ def walk_forward_test(
     n = len(df)
 
     splits = _split_walkforward_indices(
-        n, cfg.n_splits, cfg.train_ratio, cfg.min_test_bars
+        n, cfg.n_splits, cfg.min_test_bars
     )
 
     if not splits:

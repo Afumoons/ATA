@@ -921,7 +921,7 @@ def job_research_strategies() -> None:
                     result.trades,
                     n_runs=300,
                     slippage_std_pips=max(0.5, bt_kwargs["slippage_pips"] * 0.5),
-                    pip_size=0.01 if "XAU" in canon else 1.0,
+                    pip_size=0.01 if ("XAU" in canon or "XAG" in canon) else 1.0,
                     method=mc_method,
                     block_size=mc_block_size,
                     initial_equity=float(eval_result.get("initial_equity", 10000.0) or 10000.0),
@@ -1116,7 +1116,7 @@ def job_research_strategies() -> None:
     if FAMILY_AWARE_GOVERNANCE_ENABLED:
         challenger_candidates = [
             rec for rec in pool.strategies.values()
-            if canonical_symbol(rec.symbol) == "XAUUSDm" and rec.timeframe == TIMEFRAME and rec.status == "candidate" and _is_challenger_family(_execution_family(rec))
+            if canonical_symbol(rec.symbol) in RESEARCH_FAMILY_SUMMARY_SYMBOLS and rec.timeframe == TIMEFRAME and rec.status == "candidate" and _is_challenger_family(_execution_family(rec))
         ]
         challenger_candidates.sort(key=lambda r: float(r.score or 0.0), reverse=True)
         for rec in challenger_candidates[:CHALLENGER_CANDIDATE_MIN_SLOTS]:
@@ -1124,7 +1124,7 @@ def job_research_strategies() -> None:
 
         challenger_exploratory = [
             rec for rec in pool.strategies.values()
-            if canonical_symbol(rec.symbol) == "XAUUSDm" and rec.timeframe == TIMEFRAME and rec.status == "exploratory" and _is_challenger_family(_execution_family(rec))
+            if canonical_symbol(rec.symbol) in RESEARCH_FAMILY_SUMMARY_SYMBOLS and rec.timeframe == TIMEFRAME and rec.status == "exploratory" and _is_challenger_family(_execution_family(rec))
         ]
         if len(challenger_exploratory) < CHALLENGER_EXPLORATORY_MIN_SLOTS:
             promotable = [

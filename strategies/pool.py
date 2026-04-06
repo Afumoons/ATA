@@ -89,6 +89,8 @@ def _structural_fingerprint(strategy: StrategyDefinition) -> str:
         str(strategy.exit_rule or ""),
         str(getattr(strategy, "sl_atr_mult", "") or ""),
         str(getattr(strategy, "tp_atr_mult", "") or ""),
+        str(getattr(strategy, "stop_loss_pips", "") or ""),
+        str(getattr(strategy, "take_profit_pips", "") or ""),
     ])
 
 
@@ -137,6 +139,8 @@ class StrategyPool:
                     str(strat_dict.get("exit_rule", "") or ""),
                     str(strat_dict.get("sl_atr_mult", "") or ""),
                     str(strat_dict.get("tp_atr_mult", "") or ""),
+                    str(strat_dict.get("stop_loss_pips", "") or ""),
+                    str(strat_dict.get("take_profit_pips", "") or ""),
                 ])
                 self._fp_map[fp] = name
 

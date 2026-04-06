@@ -130,6 +130,8 @@ def _strategy_fingerprint(strat: StrategyDefinition) -> str:
         str(strat.exit_rule or ""),
         str(getattr(strat, "sl_atr_mult", "")),
         str(getattr(strat, "tp_atr_mult", "")),
+        str(getattr(strat, "stop_loss_pips", "")),
+        str(getattr(strat, "take_profit_pips", "")),
     ])
 
 

@@ -163,10 +163,12 @@ class ResearchMemory:
 
         # upsert — idempotent, safe for repeated research cycles
         self.collection.upsert(ids=[doc_id], documents=[document], metadatas=[metadata])
+        self._query_cache.clear()
         logger.info(
-            "ResearchMemory: upserted result for %s (position_mode=%s)",
+            "ResearchMemory: upserted result for %s (position_mode=%s, cache_cleared=%s)",
             doc_id,
             position_mode,
+            True,
         )
 
     def query_similar(
