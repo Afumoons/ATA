@@ -193,8 +193,8 @@
       "wf_overall_max_drawdown_pct": 2.3965281110053804,
       "symbol": "BTCUSDm",
       "timeframe": "M15",
-      "family": "mixed:ma_trend+rsi_range",
-      "playbook_type": "unknown",
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
       "mc_final_pnl_mean": 217.68346677074445,
       "mc_final_pnl_p5": -550.5221861329909,
       "mc_final_pnl_p95": 1049.0390112146952,
@@ -218,8 +218,8 @@
         "tp_atr_mult": 4.0,
         "stop_loss_pips": 75.0,
         "take_profit_pips": 200.0,
-        "family": "unknown",
-        "playbook_type": "unknown",
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
         "params": {
           "rsi_exit": 56,
           "stop_loss_pips": 75,
@@ -238,9 +238,14 @@
           "short_family": "rsi_range",
           "regime_type_long": "trend",
           "regime_type_short": "range",
-          "regime_type": "mixed"
-        }
-      }
+          "regime_type": "mixed",
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "motif": "trend_continuation"
     }
   },
   "core15_BTCUSDm_M15_0338": {
@@ -420,8 +425,8 @@
       "wf_overall_max_drawdown_pct": 1.7891744529087372,
       "symbol": "BTCUSDm",
       "timeframe": "M15",
-      "family": "mixed:ma_trend+rsi_range",
-      "playbook_type": "unknown",
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
       "mc_final_pnl_mean": 432.567037690948,
       "mc_final_pnl_p5": -156.50599979595526,
       "mc_final_pnl_p95": 1082.6359192868197,
@@ -445,8 +450,8 @@
         "tp_atr_mult": 4.0,
         "stop_loss_pips": 75.0,
         "take_profit_pips": 200.0,
-        "family": "unknown",
-        "playbook_type": "unknown",
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
         "params": {
           "preferred_symbols": [
             "BTCUSDm"
@@ -465,9 +470,14 @@
           "short_family": "rsi_range",
           "regime_type_long": "trend",
           "regime_type_short": "range",
-          "regime_type": "mixed"
-        }
-      }
+          "regime_type": "mixed",
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "motif": "trend_continuation"
     }
   },
   "core15_BTCUSDm_M15_924b": {
@@ -661,8 +671,8 @@
       "wf_overall_max_drawdown_pct": 1.7891744529087372,
       "symbol": "BTCUSDm",
       "timeframe": "M15",
-      "family": "mixed:ma_trend+rsi_range",
-      "playbook_type": "unknown",
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
       "mc_final_pnl_mean": 304.5660580226432,
       "mc_final_pnl_p5": -249.2148766362902,
       "mc_final_pnl_p95": 946.6447904363553,
@@ -686,8 +696,8 @@
         "tp_atr_mult": 2.0,
         "stop_loss_pips": 100.0,
         "take_profit_pips": 200.0,
-        "family": "unknown",
-        "playbook_type": "unknown",
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
         "params": {
           "tp_atr_mult": 2.0,
           "trend_exit": 0.061,
@@ -706,9 +716,14 @@
           "short_family": "rsi_range",
           "regime_type_long": "trend",
           "regime_type_short": "range",
-          "regime_type": "mixed"
-        }
-      }
+          "regime_type": "mixed",
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "motif": "trend_continuation"
     }
   },
   "core15_BTCUSDm_M15_68f5": {
@@ -901,8 +916,8 @@
       "wf_overall_max_drawdown_pct": 2.3965281110053693,
       "symbol": "BTCUSDm",
       "timeframe": "M15",
-      "family": "mixed:ma_trend+rsi_range",
-      "playbook_type": "unknown",
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
       "mc_final_pnl_mean": 308.97321595844767,
       "mc_final_pnl_p5": -342.9047904262899,
       "mc_final_pnl_p95": 896.5708371792759,
@@ -926,8 +941,8 @@
         "tp_atr_mult": 2.0,
         "stop_loss_pips": 75.0,
         "take_profit_pips": 200.0,
-        "family": "unknown",
-        "playbook_type": "unknown",
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
         "params": {
           "preferred_symbols": [
             "BTCUSDm"
@@ -946,9 +961,14 @@
           "short_family": "rsi_range",
           "regime_type_long": "trend",
           "regime_type_short": "range",
-          "regime_type": "mixed"
-        }
-      }
+          "regime_type": "mixed",
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "motif": "trend_continuation"
     }
   },
   "core15_BTCUSDm_M15_f54c": {
@@ -1127,8 +1147,8 @@
       "wf_overall_max_drawdown_pct": 1.819906098928703,
       "symbol": "BTCUSDm",
       "timeframe": "M15",
-      "family": "mixed:ma_trend+rsi_range",
-      "playbook_type": "unknown",
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
       "mc_final_pnl_mean": 387.4717437062631,
       "mc_final_pnl_p5": -179.1840348720076,
       "mc_final_pnl_p95": 944.6225061028719,
@@ -1152,8 +1172,8 @@
         "tp_atr_mult": 2.0,
         "stop_loss_pips": 100.0,
         "take_profit_pips": 150.0,
-        "family": "unknown",
-        "playbook_type": "unknown",
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
         "params": {
           "rsi_exit": 56,
           "stop_loss_pips": 100,
@@ -1172,9 +1192,14 @@
           "short_family": "rsi_range",
           "regime_type_long": "trend",
           "regime_type_short": "range",
-          "regime_type": "mixed"
-        }
-      }
+          "regime_type": "mixed",
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "motif": "trend_continuation"
     }
   },
   "core15_BTCUSDm_M15_c3c7": {
@@ -1369,8 +1394,8 @@
       "wf_overall_max_drawdown_pct": 3.8267105522278744,
       "symbol": "BTCUSDm",
       "timeframe": "M15",
-      "family": "mixed:ma_trend+rsi_range",
-      "playbook_type": "unknown",
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
       "mc_final_pnl_mean": 482.0768405278453,
       "mc_final_pnl_p5": -410.3304529502818,
       "mc_final_pnl_p95": 1404.760450365045,
@@ -1394,8 +1419,8 @@
         "tp_atr_mult": 4.0,
         "stop_loss_pips": 100.0,
         "take_profit_pips": 150.0,
-        "family": "unknown",
-        "playbook_type": "unknown",
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
         "params": {
           "rsi_exit": 56,
           "stop_loss_pips": 100,
@@ -1414,9 +1439,14 @@
           "short_family": "rsi_range",
           "regime_type_long": "trend",
           "regime_type_short": "range",
-          "regime_type": "mixed"
-        }
-      }
+          "regime_type": "mixed",
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "motif": "trend_continuation"
     }
   },
   "core15_BTCUSDm_M15_b87f": {
@@ -1594,8 +1624,8 @@
       "wf_overall_max_drawdown_pct": 3.880413874491284,
       "symbol": "BTCUSDm",
       "timeframe": "M15",
-      "family": "mixed:ma_trend+rsi_range",
-      "playbook_type": "unknown",
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
       "mc_final_pnl_mean": 396.2859586808665,
       "mc_final_pnl_p5": -417.34594354918363,
       "mc_final_pnl_p95": 1136.0104769557806,
@@ -1619,8 +1649,8 @@
         "tp_atr_mult": 4.0,
         "stop_loss_pips": 100.0,
         "take_profit_pips": 150.0,
-        "family": "unknown",
-        "playbook_type": "unknown",
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
         "params": {
           "rsi_exit": 58,
           "stop_loss_pips": 100,
@@ -1639,9 +1669,14 @@
           "short_family": "rsi_range",
           "regime_type_long": "trend",
           "regime_type_short": "range",
-          "regime_type": "mixed"
-        }
-      }
+          "regime_type": "mixed",
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "motif": "trend_continuation"
     }
   },
   "core15_BTCUSDm_M15_ed19": {
@@ -1819,8 +1854,8 @@
       "wf_overall_max_drawdown_pct": 3.880413874491284,
       "symbol": "BTCUSDm",
       "timeframe": "M15",
-      "family": "mixed:ma_trend+rsi_range",
-      "playbook_type": "unknown",
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
       "mc_final_pnl_mean": 358.7228659371555,
       "mc_final_pnl_p5": -387.37470409109943,
       "mc_final_pnl_p95": 1171.5383515472329,
@@ -1844,8 +1879,8 @@
         "tp_atr_mult": 2.0,
         "stop_loss_pips": 100.0,
         "take_profit_pips": 50.0,
-        "family": "unknown",
-        "playbook_type": "unknown",
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
         "params": {
           "tp_atr_mult": 2.0,
           "trend_exit": 0.067,
@@ -1864,9 +1899,14 @@
           "short_family": "rsi_range",
           "regime_type_long": "trend",
           "regime_type_short": "range",
-          "regime_type": "mixed"
-        }
-      }
+          "regime_type": "mixed",
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "motif": "trend_continuation"
     }
   },
   "core15_BTCUSDm_M15_5b8a": {
@@ -2044,8 +2084,8 @@
       "wf_overall_max_drawdown_pct": 3.2167195536651594,
       "symbol": "BTCUSDm",
       "timeframe": "M15",
-      "family": "mixed:ma_trend+rsi_range",
-      "playbook_type": "unknown",
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
       "mc_final_pnl_mean": 350.5596978397611,
       "mc_final_pnl_p5": -366.496604896034,
       "mc_final_pnl_p95": 1102.5183080159386,
@@ -2069,8 +2109,8 @@
         "tp_atr_mult": 2.0,
         "stop_loss_pips": 100.0,
         "take_profit_pips": 150.0,
-        "family": "unknown",
-        "playbook_type": "unknown",
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
         "params": {
           "rsi_exit": 58,
           "take_profit_pips": 150,
@@ -2089,9 +2129,14 @@
           "short_family": "rsi_range",
           "regime_type_long": "trend",
           "regime_type_short": "range",
-          "regime_type": "mixed"
-        }
-      }
+          "regime_type": "mixed",
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "motif": "trend_continuation"
     }
   },
   "core15_BTCUSDm_M15_bcdf": {
@@ -2285,8 +2330,8 @@
       "wf_overall_max_drawdown_pct": 3.091347782822984,
       "symbol": "BTCUSDm",
       "timeframe": "M15",
-      "family": "mixed:ma_trend+rsi_range",
-      "playbook_type": "unknown",
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
       "mc_final_pnl_mean": 434.53964900943123,
       "mc_final_pnl_p5": -441.3718382912949,
       "mc_final_pnl_p95": 1379.5242783667898,
@@ -2310,8 +2355,8 @@
         "tp_atr_mult": 3.0,
         "stop_loss_pips": 150.0,
         "take_profit_pips": 100.0,
-        "family": "unknown",
-        "playbook_type": "unknown",
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
         "params": {
           "tp_atr_mult": 3.0,
           "trend_exit": 0.036,
@@ -2330,9 +2375,14 @@
           "short_family": "rsi_range",
           "regime_type_long": "trend",
           "regime_type_short": "range",
-          "regime_type": "mixed"
-        }
-      }
+          "regime_type": "mixed",
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "motif": "trend_continuation"
     }
   },
   "core15_BTCUSDm_M15_a7d1": {
@@ -2510,8 +2560,8 @@
       "wf_overall_max_drawdown_pct": 3.2167195536650928,
       "symbol": "BTCUSDm",
       "timeframe": "M15",
-      "family": "mixed:ma_trend+rsi_range",
-      "playbook_type": "unknown",
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
       "mc_final_pnl_mean": 271.6311887440737,
       "mc_final_pnl_p5": -471.00081589133197,
       "mc_final_pnl_p95": 1025.1020845161868,
@@ -2535,8 +2585,8 @@
         "tp_atr_mult": 4.0,
         "stop_loss_pips": 50.0,
         "take_profit_pips": 100.0,
-        "family": "unknown",
-        "playbook_type": "unknown",
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
         "params": {
           "rsi_exit": 57,
           "take_profit_pips": 100,
@@ -2555,9 +2605,14 @@
           "short_family": "rsi_range",
           "regime_type_long": "trend",
           "regime_type_short": "range",
-          "regime_type": "mixed"
-        }
-      }
+          "regime_type": "mixed",
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "motif": "trend_continuation"
     }
   },
   "core15_BTCUSDm_M15_0e38": {
@@ -2735,8 +2790,8 @@
       "wf_overall_max_drawdown_pct": 3.2167195536650928,
       "symbol": "BTCUSDm",
       "timeframe": "M15",
-      "family": "mixed:ma_trend+rsi_range",
-      "playbook_type": "unknown",
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
       "mc_final_pnl_mean": 273.7946309876401,
       "mc_final_pnl_p5": -520.2642108074208,
       "mc_final_pnl_p95": 993.2180167768945,
@@ -2760,8 +2815,8 @@
         "tp_atr_mult": 4.0,
         "stop_loss_pips": 150.0,
         "take_profit_pips": 150.0,
-        "family": "unknown",
-        "playbook_type": "unknown",
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
         "params": {
           "tp_atr_mult": 4.0,
           "trend_exit": 0.059,
@@ -2780,9 +2835,14 @@
           "short_family": "rsi_range",
           "regime_type_long": "trend",
           "regime_type_short": "range",
-          "regime_type": "mixed"
-        }
-      }
+          "regime_type": "mixed",
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "motif": "trend_continuation"
     }
   },
   "core15_BTCUSDm_M15_1182": {
@@ -2899,8 +2959,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "rsi < 56",
         "sl_atr_mult": 2.5,
-        "tp_atr_mult": 4.0
-      }
+        "tp_atr_mult": 4.0,
+        "family": "rsi_range",
+        "playbook_type": "rsi_range",
+        "params": {
+          "family": "rsi_range",
+          "playbook_type": "rsi_range",
+          "motif": "range_fade"
+        },
+        "motif": "range_fade"
+      },
+      "family": "rsi_range",
+      "playbook_type": "rsi_range",
+      "motif": "range_fade"
     }
   },
   "core15_BTCUSDm_M15_a82f": {
@@ -3078,8 +3149,8 @@
       "wf_overall_max_drawdown_pct": 2.8863090903066713,
       "symbol": "BTCUSDm",
       "timeframe": "M15",
-      "family": "mixed:ma_trend+rsi_range",
-      "playbook_type": "unknown",
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
       "mc_final_pnl_mean": 258.027984736208,
       "mc_final_pnl_p5": -450.8767622184297,
       "mc_final_pnl_p95": 934.3385632514016,
@@ -3103,8 +3174,8 @@
         "tp_atr_mult": 2.0,
         "stop_loss_pips": 50.0,
         "take_profit_pips": 50.0,
-        "family": "unknown",
-        "playbook_type": "unknown",
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
         "params": {
           "rsi_exit": 57,
           "stop_loss_pips": 50,
@@ -3123,9 +3194,14 @@
           "short_family": "rsi_range",
           "regime_type_long": "trend",
           "regime_type_short": "range",
-          "regime_type": "mixed"
-        }
-      }
+          "regime_type": "mixed",
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "motif": "trend_continuation"
     }
   },
   "core15_BTCUSDm_M15_02f2": {
@@ -3303,8 +3379,8 @@
       "wf_overall_max_drawdown_pct": 2.8863090903066713,
       "symbol": "BTCUSDm",
       "timeframe": "M15",
-      "family": "mixed:ma_trend+rsi_range",
-      "playbook_type": "unknown",
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
       "mc_final_pnl_mean": 236.32317429948364,
       "mc_final_pnl_p5": -520.6382507122958,
       "mc_final_pnl_p95": 991.2835259751281,
@@ -3328,8 +3404,8 @@
         "tp_atr_mult": 2.0,
         "stop_loss_pips": 50.0,
         "take_profit_pips": 150.0,
-        "family": "unknown",
-        "playbook_type": "unknown",
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
         "params": {
           "rsi_exit": 57,
           "stop_loss_pips": 50,
@@ -3348,9 +3424,14 @@
           "short_family": "rsi_range",
           "regime_type_long": "trend",
           "regime_type_short": "range",
-          "regime_type": "mixed"
-        }
-      }
+          "regime_type": "mixed",
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "motif": "trend_continuation"
     }
   },
   "core15_BTCUSDm_M15_e511": {
@@ -3467,8 +3548,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "rsi < 56",
         "sl_atr_mult": 2.5,
-        "tp_atr_mult": 2.0
-      }
+        "tp_atr_mult": 2.0,
+        "family": "rsi_range",
+        "playbook_type": "rsi_range",
+        "params": {
+          "family": "rsi_range",
+          "playbook_type": "rsi_range",
+          "motif": "range_fade"
+        },
+        "motif": "range_fade"
+      },
+      "family": "rsi_range",
+      "playbook_type": "rsi_range",
+      "motif": "range_fade"
     }
   },
   "core15_BTCUSDm_M15_e765": {
@@ -3585,8 +3677,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "rsi < 55",
         "sl_atr_mult": 2.5,
-        "tp_atr_mult": 2.0
-      }
+        "tp_atr_mult": 2.0,
+        "family": "rsi_range",
+        "playbook_type": "rsi_range",
+        "params": {
+          "family": "rsi_range",
+          "playbook_type": "rsi_range",
+          "motif": "range_fade"
+        },
+        "motif": "range_fade"
+      },
+      "family": "rsi_range",
+      "playbook_type": "rsi_range",
+      "motif": "range_fade"
     }
   },
   "core15_BTCUSDm_M15_a113": {
@@ -3703,8 +3806,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "rsi < 58",
         "sl_atr_mult": 2.5,
-        "tp_atr_mult": 2.0
-      }
+        "tp_atr_mult": 2.0,
+        "family": "rsi_range",
+        "playbook_type": "rsi_range",
+        "params": {
+          "family": "rsi_range",
+          "playbook_type": "rsi_range",
+          "motif": "range_fade"
+        },
+        "motif": "range_fade"
+      },
+      "family": "rsi_range",
+      "playbook_type": "rsi_range",
+      "motif": "range_fade"
     }
   },
   "core15_BTCUSDm_M15_e0c3": {
@@ -3821,8 +3935,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "rsi < 58",
         "sl_atr_mult": 2.5,
-        "tp_atr_mult": 4.0
-      }
+        "tp_atr_mult": 4.0,
+        "family": "rsi_range",
+        "playbook_type": "rsi_range",
+        "params": {
+          "family": "rsi_range",
+          "playbook_type": "rsi_range",
+          "motif": "range_fade"
+        },
+        "motif": "range_fade"
+      },
+      "family": "rsi_range",
+      "playbook_type": "rsi_range",
+      "motif": "range_fade"
     }
   },
   "core15_BTCUSDm_M15_1a73": {
@@ -3939,8 +4064,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "rsi < 55",
         "sl_atr_mult": 2.5,
-        "tp_atr_mult": 2.0
-      }
+        "tp_atr_mult": 2.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_BTCUSDm_M15_5e94": {
@@ -4057,8 +4193,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "rsi < 55",
         "sl_atr_mult": 2.5,
-        "tp_atr_mult": 2.0
-      }
+        "tp_atr_mult": 2.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_BTCUSDm_M15_5703": {
@@ -4175,8 +4322,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "rsi < 55",
         "sl_atr_mult": 2.5,
-        "tp_atr_mult": 2.0
-      }
+        "tp_atr_mult": 2.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_BTCUSDm_M15_86d2": {
@@ -4293,8 +4451,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "rsi < 55",
         "sl_atr_mult": 2.5,
-        "tp_atr_mult": 2.0
-      }
+        "tp_atr_mult": 2.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_BTCUSDm_M15_025e": {
@@ -4411,8 +4580,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "rsi < 53",
         "sl_atr_mult": 2.5,
-        "tp_atr_mult": 4.0
-      }
+        "tp_atr_mult": 4.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_BTCUSDm_M15_e3d7": {
@@ -4529,8 +4709,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "rsi < 57",
         "sl_atr_mult": 2.5,
-        "tp_atr_mult": 3.0
-      }
+        "tp_atr_mult": 3.0,
+        "family": "rsi_range",
+        "playbook_type": "rsi_range",
+        "params": {
+          "family": "rsi_range",
+          "playbook_type": "rsi_range",
+          "motif": "range_fade"
+        },
+        "motif": "range_fade"
+      },
+      "family": "rsi_range",
+      "playbook_type": "rsi_range",
+      "motif": "range_fade"
     }
   },
   "core15_BTCUSDm_M15_de11": {
@@ -4647,8 +4838,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "rsi < 53",
         "sl_atr_mult": 2.5,
-        "tp_atr_mult": 3.0
-      }
+        "tp_atr_mult": 3.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_BTCUSDm_M15_3ac7": {
@@ -4765,8 +4967,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "rsi < 55",
         "sl_atr_mult": 2.5,
-        "tp_atr_mult": 4.0
-      }
+        "tp_atr_mult": 4.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_BTCUSDm_M15_52e0": {
@@ -4883,8 +5096,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "rsi < 55",
         "sl_atr_mult": 2.5,
-        "tp_atr_mult": 4.0
-      }
+        "tp_atr_mult": 4.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_BTCUSDm_M15_80bf": {
@@ -5001,8 +5225,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "rsi < 55",
         "sl_atr_mult": 2.5,
-        "tp_atr_mult": 4.0
-      }
+        "tp_atr_mult": 4.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_BTCUSDm_M15_88fa": {
@@ -5119,8 +5354,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "rsi < 56",
         "sl_atr_mult": 2.0,
-        "tp_atr_mult": 2.0
-      }
+        "tp_atr_mult": 2.0,
+        "family": "rsi_range",
+        "playbook_type": "rsi_range",
+        "params": {
+          "family": "rsi_range",
+          "playbook_type": "rsi_range",
+          "motif": "range_fade"
+        },
+        "motif": "range_fade"
+      },
+      "family": "rsi_range",
+      "playbook_type": "rsi_range",
+      "motif": "range_fade"
     }
   },
   "core15_BTCUSDm_M15_563b": {
@@ -5229,7 +5475,20 @@
       "mc_final_pnl_p95": 2041.5241518585074,
       "mc_max_dd_mean": 293.0390265533166,
       "mc_max_dd_p5": 188.76512057997508,
-      "mc_max_dd_p95": 448.7224905744821
+      "mc_max_dd_p95": 448.7224905744821,
+      "family": "generic",
+      "playbook_type": "generic",
+      "motif": "generic",
+      "strategy": {
+        "family": "generic",
+        "playbook_type": "generic",
+        "params": {
+          "family": "generic",
+          "playbook_type": "generic",
+          "motif": "generic"
+        },
+        "motif": "generic"
+      }
     }
   },
   "core15_BTCUSDm_M15_1a09": {
@@ -5346,8 +5605,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "rsi < 55",
         "sl_atr_mult": 2.5,
-        "tp_atr_mult": 3.0
-      }
+        "tp_atr_mult": 3.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_BTCUSDm_M15_17ea": {
@@ -5464,8 +5734,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "rsi < 55",
         "sl_atr_mult": 2.5,
-        "tp_atr_mult": 3.0
-      }
+        "tp_atr_mult": 3.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_BTCUSDm_M15_8c9c": {
@@ -5582,8 +5863,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "rsi < 56",
         "sl_atr_mult": 2.0,
-        "tp_atr_mult": 4.0
-      }
+        "tp_atr_mult": 4.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_BTCUSDm_M15_76d1": {
@@ -5700,8 +5992,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "rsi < 56",
         "sl_atr_mult": 2.0,
-        "tp_atr_mult": 4.0
-      }
+        "tp_atr_mult": 4.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_BTCUSDm_M15_a1b1": {
@@ -5818,8 +6121,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "rsi < 59",
         "sl_atr_mult": 2.5,
-        "tp_atr_mult": 3.0
-      }
+        "tp_atr_mult": 3.0,
+        "family": "rsi_range",
+        "playbook_type": "rsi_range",
+        "params": {
+          "family": "rsi_range",
+          "playbook_type": "rsi_range",
+          "motif": "range_fade"
+        },
+        "motif": "range_fade"
+      },
+      "family": "rsi_range",
+      "playbook_type": "rsi_range",
+      "motif": "range_fade"
     }
   },
   "core15_BTCUSDm_M15_a2a0": {
@@ -5936,8 +6250,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "rsi < 56",
         "sl_atr_mult": 2.5,
-        "tp_atr_mult": 2.0
-      }
+        "tp_atr_mult": 2.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_BTCUSDm_M15_7621": {
@@ -6054,8 +6379,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "rsi < 56",
         "sl_atr_mult": 2.5,
-        "tp_atr_mult": 2.0
-      }
+        "tp_atr_mult": 2.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_BTCUSDm_M15_d420": {
@@ -6172,8 +6508,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "rsi < 57",
         "sl_atr_mult": 2.5,
-        "tp_atr_mult": 3.0
-      }
+        "tp_atr_mult": 3.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_BTCUSDm_M15_0ac9": {
@@ -6290,8 +6637,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "rsi < 53",
         "sl_atr_mult": 2.5,
-        "tp_atr_mult": 2.0
-      }
+        "tp_atr_mult": 2.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_BTCUSDm_M15_df0a": {
@@ -6408,8 +6766,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "rsi < 58",
         "sl_atr_mult": 2.0,
-        "tp_atr_mult": 4.0
-      }
+        "tp_atr_mult": 4.0,
+        "family": "rsi_range",
+        "playbook_type": "rsi_range",
+        "params": {
+          "family": "rsi_range",
+          "playbook_type": "rsi_range",
+          "motif": "range_fade"
+        },
+        "motif": "range_fade"
+      },
+      "family": "rsi_range",
+      "playbook_type": "rsi_range",
+      "motif": "range_fade"
     }
   },
   "core15_BTCUSDm_M15_025b": {
@@ -6526,8 +6895,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "rsi < 56",
         "sl_atr_mult": 2.5,
-        "tp_atr_mult": 3.0
-      }
+        "tp_atr_mult": 3.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_BTCUSDm_M15_f099": {
@@ -6644,8 +7024,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "rsi < 56",
         "sl_atr_mult": 2.5,
-        "tp_atr_mult": 3.0
-      }
+        "tp_atr_mult": 3.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_BTCUSDm_M15_e93f": {
@@ -6762,8 +7153,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "rsi < 56",
         "sl_atr_mult": 2.5,
-        "tp_atr_mult": 3.0
-      }
+        "tp_atr_mult": 3.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_BTCUSDm_M15_2e29": {
@@ -6880,8 +7282,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "rsi < 56",
         "sl_atr_mult": 2.5,
-        "tp_atr_mult": 3.0
-      }
+        "tp_atr_mult": 3.0,
+        "family": "rsi_range",
+        "playbook_type": "rsi_range",
+        "params": {
+          "family": "rsi_range",
+          "playbook_type": "rsi_range",
+          "motif": "range_fade"
+        },
+        "motif": "range_fade"
+      },
+      "family": "rsi_range",
+      "playbook_type": "rsi_range",
+      "motif": "range_fade"
     }
   },
   "core15_BTCUSDm_M15_4c29": {
@@ -6998,8 +7411,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "rsi < 58",
         "sl_atr_mult": 2.0,
-        "tp_atr_mult": 2.0
-      }
+        "tp_atr_mult": 2.0,
+        "family": "rsi_range",
+        "playbook_type": "rsi_range",
+        "params": {
+          "family": "rsi_range",
+          "playbook_type": "rsi_range",
+          "motif": "range_fade"
+        },
+        "motif": "range_fade"
+      },
+      "family": "rsi_range",
+      "playbook_type": "rsi_range",
+      "motif": "range_fade"
     }
   },
   "core15_BTCUSDm_M15_6fac": {
@@ -7116,8 +7540,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "trend_strength < 0.057",
         "sl_atr_mult": 2.0,
-        "tp_atr_mult": 2.0
-      }
+        "tp_atr_mult": 2.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_BTCUSDm_M15_530b": {
@@ -7234,8 +7669,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "rsi < 55",
         "sl_atr_mult": 2.5,
-        "tp_atr_mult": 2.0
-      }
+        "tp_atr_mult": 2.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_BTCUSDm_M15_b3b4": {
@@ -7352,8 +7798,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "rsi < 55",
         "sl_atr_mult": 2.5,
-        "tp_atr_mult": 3.0
-      }
+        "tp_atr_mult": 3.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_BTCUSDm_M15_63b6": {
@@ -7470,8 +7927,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "rsi < 55",
         "sl_atr_mult": 2.5,
-        "tp_atr_mult": 3.0
-      }
+        "tp_atr_mult": 3.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_BTCUSDm_M15_7e06": {
@@ -7588,8 +8056,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "rsi < 60",
         "sl_atr_mult": 2.0,
-        "tp_atr_mult": 3.0
-      }
+        "tp_atr_mult": 3.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_BTCUSDm_M15_8642": {
@@ -7706,8 +8185,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "rsi < 60",
         "sl_atr_mult": 2.0,
-        "tp_atr_mult": 3.0
-      }
+        "tp_atr_mult": 3.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_BTCUSDm_M15_f4f5": {
@@ -7824,8 +8314,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "rsi < 57",
         "sl_atr_mult": 2.0,
-        "tp_atr_mult": 4.0
-      }
+        "tp_atr_mult": 4.0,
+        "family": "rsi_range",
+        "playbook_type": "rsi_range",
+        "params": {
+          "family": "rsi_range",
+          "playbook_type": "rsi_range",
+          "motif": "range_fade"
+        },
+        "motif": "range_fade"
+      },
+      "family": "rsi_range",
+      "playbook_type": "rsi_range",
+      "motif": "range_fade"
     }
   },
   "core15_BTCUSDm_M15_f4bb": {
@@ -7942,8 +8443,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "rsi < 57",
         "sl_atr_mult": 2.0,
-        "tp_atr_mult": 2.0
-      }
+        "tp_atr_mult": 2.0,
+        "family": "rsi_range",
+        "playbook_type": "rsi_range",
+        "params": {
+          "family": "rsi_range",
+          "playbook_type": "rsi_range",
+          "motif": "range_fade"
+        },
+        "motif": "range_fade"
+      },
+      "family": "rsi_range",
+      "playbook_type": "rsi_range",
+      "motif": "range_fade"
     }
   },
   "core15_BTCUSDm_M15_81e5": {
@@ -8060,8 +8572,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "rsi < 55",
         "sl_atr_mult": 2.0,
-        "tp_atr_mult": 2.0
-      }
+        "tp_atr_mult": 2.0,
+        "family": "rsi_range",
+        "playbook_type": "rsi_range",
+        "params": {
+          "family": "rsi_range",
+          "playbook_type": "rsi_range",
+          "motif": "range_fade"
+        },
+        "motif": "range_fade"
+      },
+      "family": "rsi_range",
+      "playbook_type": "rsi_range",
+      "motif": "range_fade"
     }
   },
   "core15_BTCUSDm_M15_e052": {
@@ -8178,8 +8701,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "rsi < 57",
         "sl_atr_mult": 2.5,
-        "tp_atr_mult": 3.0
-      }
+        "tp_atr_mult": 3.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_BTCUSDm_M15_36ce": {
@@ -8296,8 +8830,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "rsi < 58",
         "sl_atr_mult": 2.0,
-        "tp_atr_mult": 3.0
-      }
+        "tp_atr_mult": 3.0,
+        "family": "rsi_range",
+        "playbook_type": "rsi_range",
+        "params": {
+          "family": "rsi_range",
+          "playbook_type": "rsi_range",
+          "motif": "range_fade"
+        },
+        "motif": "range_fade"
+      },
+      "family": "rsi_range",
+      "playbook_type": "rsi_range",
+      "motif": "range_fade"
     }
   },
   "core15_BTCUSDm_M15_0306": {
@@ -8414,8 +8959,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "rsi < 55",
         "sl_atr_mult": 2.5,
-        "tp_atr_mult": 4.0
-      }
+        "tp_atr_mult": 4.0,
+        "family": "rsi_range",
+        "playbook_type": "rsi_range",
+        "params": {
+          "family": "rsi_range",
+          "playbook_type": "rsi_range",
+          "motif": "range_fade"
+        },
+        "motif": "range_fade"
+      },
+      "family": "rsi_range",
+      "playbook_type": "rsi_range",
+      "motif": "range_fade"
     }
   },
   "core15_BTCUSDm_M15_0025": {
@@ -8532,8 +9088,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "rsi < 53",
         "sl_atr_mult": 2.0,
-        "tp_atr_mult": 4.0
-      }
+        "tp_atr_mult": 4.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_BTCUSDm_M15_8166": {
@@ -8650,8 +9217,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "rsi < 54",
         "sl_atr_mult": 2.5,
-        "tp_atr_mult": 2.0
-      }
+        "tp_atr_mult": 2.0,
+        "family": "rsi_range",
+        "playbook_type": "rsi_range",
+        "params": {
+          "family": "rsi_range",
+          "playbook_type": "rsi_range",
+          "motif": "range_fade"
+        },
+        "motif": "range_fade"
+      },
+      "family": "rsi_range",
+      "playbook_type": "rsi_range",
+      "motif": "range_fade"
     }
   },
   "core15_BTCUSDm_M15_c7e9": {
@@ -8768,8 +9346,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "rsi < 60",
         "sl_atr_mult": 2.5,
-        "tp_atr_mult": 3.0
-      }
+        "tp_atr_mult": 3.0,
+        "family": "rsi_range",
+        "playbook_type": "rsi_range",
+        "params": {
+          "family": "rsi_range",
+          "playbook_type": "rsi_range",
+          "motif": "range_fade"
+        },
+        "motif": "range_fade"
+      },
+      "family": "rsi_range",
+      "playbook_type": "rsi_range",
+      "motif": "range_fade"
     }
   },
   "core15_BTCUSDm_M15_3053": {
@@ -8886,8 +9475,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "rsi < 55",
         "sl_atr_mult": 2.0,
-        "tp_atr_mult": 4.0
-      }
+        "tp_atr_mult": 4.0,
+        "family": "rsi_range",
+        "playbook_type": "rsi_range",
+        "params": {
+          "family": "rsi_range",
+          "playbook_type": "rsi_range",
+          "motif": "range_fade"
+        },
+        "motif": "range_fade"
+      },
+      "family": "rsi_range",
+      "playbook_type": "rsi_range",
+      "motif": "range_fade"
     }
   },
   "core15_BTCUSDm_M15_bddd": {
@@ -9004,8 +9604,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "rsi < 53",
         "sl_atr_mult": 2.0,
-        "tp_atr_mult": 3.0
-      }
+        "tp_atr_mult": 3.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_BTCUSDm_M15_d6ab": {
@@ -9122,8 +9733,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "rsi < 60",
         "sl_atr_mult": 2.5,
-        "tp_atr_mult": 2.0
-      }
+        "tp_atr_mult": 2.0,
+        "family": "rsi_range",
+        "playbook_type": "rsi_range",
+        "params": {
+          "family": "rsi_range",
+          "playbook_type": "rsi_range",
+          "motif": "range_fade"
+        },
+        "motif": "range_fade"
+      },
+      "family": "rsi_range",
+      "playbook_type": "rsi_range",
+      "motif": "range_fade"
     }
   },
   "core15_BTCUSDm_M15_65e0": {
@@ -9240,8 +9862,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "rsi < 59",
         "sl_atr_mult": 2.5,
-        "tp_atr_mult": 4.0
-      }
+        "tp_atr_mult": 4.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_BTCUSDm_M15_3cdc": {
@@ -9358,8 +9991,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "trend_strength < 0.059",
         "sl_atr_mult": 2.0,
-        "tp_atr_mult": 4.0
-      }
+        "tp_atr_mult": 4.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_BTCUSDm_M15_b849": {
@@ -9476,8 +10120,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "rsi < 52",
         "sl_atr_mult": 2.0,
-        "tp_atr_mult": 2.0
-      }
+        "tp_atr_mult": 2.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_BTCUSDm_M15_1a34": {
@@ -9601,8 +10256,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "rsi > 59",
         "sl_atr_mult": 2.5,
-        "tp_atr_mult": 2.0
-      }
+        "tp_atr_mult": 2.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_BTCUSDm_M15_82f7": {
@@ -9719,8 +10385,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "trend_strength < 0.061",
         "sl_atr_mult": 2.0,
-        "tp_atr_mult": 2.0
-      }
+        "tp_atr_mult": 2.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_XAUUSDm_M15_48db": {
@@ -9851,8 +10528,19 @@
         "short_entry_rule": "ma_short < ma_long and trend_strength < -0.067",
         "exit_rule": "rsi > 47",
         "sl_atr_mult": 2.0,
-        "tp_atr_mult": 4.0
-      }
+        "tp_atr_mult": 4.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_XAUUSDm_M15_49e8": {
@@ -9962,8 +10650,19 @@
         "short_entry_rule": "ma_short < ma_long and trend_strength < -0.103",
         "exit_rule": "rsi > 47",
         "sl_atr_mult": 2.5,
-        "tp_atr_mult": 4.0
-      }
+        "tp_atr_mult": 4.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_BTCUSDm_M15_f3aa": {
@@ -10080,8 +10779,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "rsi < 52",
         "sl_atr_mult": 2.5,
-        "tp_atr_mult": 2.0
-      }
+        "tp_atr_mult": 2.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_BTCUSDm_M15_8288": {
@@ -10205,8 +10915,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "rsi < 59",
         "sl_atr_mult": 2.5,
-        "tp_atr_mult": 3.0
-      }
+        "tp_atr_mult": 3.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_BTCUSDm_M15_9d40": {
@@ -10323,8 +11044,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "rsi < 53",
         "sl_atr_mult": 2.0,
-        "tp_atr_mult": 2.0
-      }
+        "tp_atr_mult": 2.0,
+        "family": "rsi_range",
+        "playbook_type": "rsi_range",
+        "params": {
+          "family": "rsi_range",
+          "playbook_type": "rsi_range",
+          "motif": "range_fade"
+        },
+        "motif": "range_fade"
+      },
+      "family": "rsi_range",
+      "playbook_type": "rsi_range",
+      "motif": "range_fade"
     }
   },
   "core15_XAUUSDm_M15_75e6": {
@@ -10448,8 +11180,19 @@
         "short_entry_rule": "ma_short < ma_long and trend_strength < -0.05",
         "exit_rule": "trend_strength < -0.024",
         "sl_atr_mult": 1.5,
-        "tp_atr_mult": 2.0
-      }
+        "tp_atr_mult": 2.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_XAUUSDm_M15_c6d4": {
@@ -10573,8 +11316,19 @@
         "short_entry_rule": "ma_short < ma_long and trend_strength < -0.05",
         "exit_rule": "rsi > 43",
         "sl_atr_mult": 1.5,
-        "tp_atr_mult": 3.0
-      }
+        "tp_atr_mult": 3.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_XAUUSDm_M15_627c": {
@@ -10698,8 +11452,19 @@
         "short_entry_rule": "ma_short < ma_long and trend_strength < -0.05",
         "exit_rule": "trend_strength < -0.021",
         "sl_atr_mult": 1.5,
-        "tp_atr_mult": 2.0
-      }
+        "tp_atr_mult": 2.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_BTCUSDm_M15_8400": {
@@ -10816,8 +11581,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "rsi < 61",
         "sl_atr_mult": 2.0,
-        "tp_atr_mult": 3.0
-      }
+        "tp_atr_mult": 3.0,
+        "family": "rsi_range",
+        "playbook_type": "rsi_range",
+        "params": {
+          "family": "rsi_range",
+          "playbook_type": "rsi_range",
+          "motif": "range_fade"
+        },
+        "motif": "range_fade"
+      },
+      "family": "rsi_range",
+      "playbook_type": "rsi_range",
+      "motif": "range_fade"
     }
   },
   "core15_XAUUSDm_M15_81bf": {
@@ -10927,8 +11703,19 @@
         "short_entry_rule": "ma_short < ma_long and trend_strength < -0.08",
         "exit_rule": "rsi > 47",
         "sl_atr_mult": 1.5,
-        "tp_atr_mult": 4.0
-      }
+        "tp_atr_mult": 4.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_BTCUSDm_M15_1f27": {
@@ -11052,8 +11839,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "rsi < 63",
         "sl_atr_mult": 2.0,
-        "tp_atr_mult": 2.0
-      }
+        "tp_atr_mult": 2.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_XAUUSDm_M15_575d": {
@@ -11184,8 +11982,19 @@
         "short_entry_rule": "ma_short < ma_long and trend_strength < -0.05",
         "exit_rule": "rsi > 47",
         "sl_atr_mult": 2.5,
-        "tp_atr_mult": 4.0
-      }
+        "tp_atr_mult": 4.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_XAUUSDm_M15_20d0": {
@@ -11295,8 +12104,19 @@
         "short_entry_rule": "ma_short < ma_long and trend_strength < -0.119",
         "exit_rule": "rsi > 43",
         "sl_atr_mult": 2.5,
-        "tp_atr_mult": 3.0
-      }
+        "tp_atr_mult": 3.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_BTCUSDm_M15_c020": {
@@ -11413,8 +12233,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "rsi < 62",
         "sl_atr_mult": 2.0,
-        "tp_atr_mult": 3.0
-      }
+        "tp_atr_mult": 3.0,
+        "family": "rsi_range",
+        "playbook_type": "rsi_range",
+        "params": {
+          "family": "rsi_range",
+          "playbook_type": "rsi_range",
+          "motif": "range_fade"
+        },
+        "motif": "range_fade"
+      },
+      "family": "rsi_range",
+      "playbook_type": "rsi_range",
+      "motif": "range_fade"
     }
   },
   "core15_BTCUSDm_M15_0a8b": {
@@ -11531,8 +12362,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "rsi < 53",
         "sl_atr_mult": 2.5,
-        "tp_atr_mult": 3.0
-      }
+        "tp_atr_mult": 3.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_XAUUSDm_M15_ee2e": {
@@ -11642,8 +12484,19 @@
         "short_entry_rule": "ma_short < ma_long and trend_strength < -0.114",
         "exit_rule": "rsi > 47",
         "sl_atr_mult": 2.0,
-        "tp_atr_mult": 3.0
-      }
+        "tp_atr_mult": 3.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_XAUUSDm_M15_250c": {
@@ -11774,8 +12627,19 @@
         "short_entry_rule": "ma_short < ma_long and trend_strength < -0.071",
         "exit_rule": "rsi > 42",
         "sl_atr_mult": 1.5,
-        "tp_atr_mult": 2.0
-      }
+        "tp_atr_mult": 2.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_BTCUSDm_M15_2875": {
@@ -11899,8 +12763,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "rsi < 57",
         "sl_atr_mult": 2.5,
-        "tp_atr_mult": 2.0
-      }
+        "tp_atr_mult": 2.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_BTCUSDm_M15_316c": {
@@ -12017,8 +12892,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "trend_strength < 0.059",
         "sl_atr_mult": 2.5,
-        "tp_atr_mult": 4.0
-      }
+        "tp_atr_mult": 4.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_XAUUSDm_M15_94a8": {
@@ -12128,8 +13014,19 @@
         "short_entry_rule": "ma_short < ma_long and trend_strength < -0.086",
         "exit_rule": "rsi > 39",
         "sl_atr_mult": 2.5,
-        "tp_atr_mult": 4.0
-      }
+        "tp_atr_mult": 4.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_XAUUSDm_M15_7567": {
@@ -12239,8 +13136,19 @@
         "short_entry_rule": "ma_short < ma_long and trend_strength < -0.083",
         "exit_rule": "rsi > 47",
         "sl_atr_mult": 1.5,
-        "tp_atr_mult": 3.0
-      }
+        "tp_atr_mult": 3.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_XAUUSDm_M15_d81e": {
@@ -12371,8 +13279,19 @@
         "short_entry_rule": "ma_short < ma_long and trend_strength < -0.063",
         "exit_rule": "rsi > 47",
         "sl_atr_mult": 2.0,
-        "tp_atr_mult": 4.0
-      }
+        "tp_atr_mult": 4.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_XAUUSDm_M15_98d2": {
@@ -12482,8 +13401,19 @@
         "short_entry_rule": "ma_short < ma_long and trend_strength < -0.14",
         "exit_rule": "rsi > 44",
         "sl_atr_mult": 1.5,
-        "tp_atr_mult": 2.0
-      }
+        "tp_atr_mult": 2.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_XAUUSDm_M15_1f6e": {
@@ -12593,8 +13523,19 @@
         "short_entry_rule": "ma_short < ma_long and trend_strength < -0.117",
         "exit_rule": "rsi > 51",
         "sl_atr_mult": 2.0,
-        "tp_atr_mult": 4.0
-      }
+        "tp_atr_mult": 4.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_BTCUSDm_M15_8431": {
@@ -12711,8 +13652,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "trend_strength < 0.067",
         "sl_atr_mult": 2.0,
-        "tp_atr_mult": 4.0
-      }
+        "tp_atr_mult": 4.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_BTCUSDm_M15_4618": {
@@ -12829,8 +13781,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "trend_strength < 0.067",
         "sl_atr_mult": 2.0,
-        "tp_atr_mult": 4.0
-      }
+        "tp_atr_mult": 4.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_BTCUSDm_M15_de90": {
@@ -12947,8 +13910,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "trend_strength < 0.067",
         "sl_atr_mult": 2.0,
-        "tp_atr_mult": 2.0
-      }
+        "tp_atr_mult": 2.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_BTCUSDm_M15_21fd": {
@@ -13065,8 +14039,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "trend_strength < 0.067",
         "sl_atr_mult": 2.0,
-        "tp_atr_mult": 2.0
-      }
+        "tp_atr_mult": 2.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_XAUUSDm_M15_f1e7": {
@@ -13183,8 +14168,19 @@
         "short_entry_rule": "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
         "exit_rule": "rsi < 43",
         "sl_atr_mult": 2.0,
-        "tp_atr_mult": 4.0
-      }
+        "tp_atr_mult": 4.0,
+        "family": "rsi_range",
+        "playbook_type": "rsi_range",
+        "params": {
+          "family": "rsi_range",
+          "playbook_type": "rsi_range",
+          "motif": "range_fade"
+        },
+        "motif": "range_fade"
+      },
+      "family": "rsi_range",
+      "playbook_type": "rsi_range",
+      "motif": "range_fade"
     }
   },
   "core15_XAUUSDm_M15_6af4": {
@@ -13294,8 +14290,19 @@
         "short_entry_rule": "ma_short < ma_long and trend_strength < -0.107",
         "exit_rule": "rsi > 43",
         "sl_atr_mult": 2.0,
-        "tp_atr_mult": 3.0
-      }
+        "tp_atr_mult": 3.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_XAUUSDm_M15_1298": {
@@ -13405,8 +14412,19 @@
         "short_entry_rule": "ma_short < ma_long and trend_strength < -0.105",
         "exit_rule": "rsi > 43",
         "sl_atr_mult": 2.0,
-        "tp_atr_mult": 4.0
-      }
+        "tp_atr_mult": 4.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_XAUUSDm_M15_ee11": {
@@ -13516,8 +14534,19 @@
         "short_entry_rule": "ma_short < ma_long and trend_strength < -0.089",
         "exit_rule": "rsi > 46",
         "sl_atr_mult": 2.0,
-        "tp_atr_mult": 3.0
-      }
+        "tp_atr_mult": 3.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   },
   "core15_XAUUSDm_M15_8fd0": {
@@ -13641,8 +14670,19 @@
         "short_entry_rule": "ma_short < ma_long and trend_strength < -0.055",
         "exit_rule": "rsi > 42",
         "sl_atr_mult": 1.5,
-        "tp_atr_mult": 4.0
-      }
+        "tp_atr_mult": 4.0,
+        "family": "ma_trend",
+        "playbook_type": "ma_trend",
+        "params": {
+          "family": "ma_trend",
+          "playbook_type": "ma_trend",
+          "motif": "trend_continuation"
+        },
+        "motif": "trend_continuation"
+      },
+      "family": "ma_trend",
+      "playbook_type": "ma_trend",
+      "motif": "trend_continuation"
     }
   }
 }
