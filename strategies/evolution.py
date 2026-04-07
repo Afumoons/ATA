@@ -13,6 +13,7 @@ from .generator import (
     save_strategy,
     load_strategy,
     CORE_M15_FAMILY_WEIGHTS,
+    FAMILY_LIBRARY,
     _TREND_MIN_LOW,
     _TREND_MIN_HIGH,
     _TREND_EXIT_CLAMP_MIN,
@@ -33,6 +34,7 @@ class EvolutionConfig:
     mutation_rate: float = 0.4
     crossover_rate: float = 0.4
     min_family_share: int = 2
+    structural_mutation_rate: float = 0.25
 
 
 DEFAULT_EVOL_CONFIG = EvolutionConfig()
@@ -78,7 +80,36 @@ def _mutate_params(params: Dict[str, Any]) -> Dict[str, Any]:
     return p
 
 
-def _mutate_strategy(strat: StrategyDefinition) -> StrategyDefinition:
+def _mutate_structure(strat: StrategyDefinition) -> StrategyDefinition:
+    params = dict(getattr(strat, 'params', {}) or {})
+    current_family = str(params.get('family') or params.get('playbook_type') or 'ma_trend')
+    available_families = list(FAMILY_LIBRARY.keys())
+
+    roll = random.random()
+    if roll < 0.40:
+        sibling_pool = [f for f in available_families if f != current_family]
+        params['family'] = random.choice(sibling_pool or available_families)
+        params['playbook_type'] = params['family']
+    elif roll < 0.70:
+        params.pop('trend_min', None)
+        params['vol_min'] = round(max(0.05, min(3.0, float(params.get('vol_min', 0.6) or 0.6) + random.uniform(-0.2, 0.3))), 3)
+        params['vol_max'] = round(max(0.05, min(2.5, float(params.get('vol_max', 0.4) or 0.4) + random.uniform(-0.12, 0.12))), 3)
+    else:
+        params['time_stop_bars'] = random.choice([3, 4, 6, 8, 10, 12, 16])
+        params['rsi_exit'] = random.choice([45, 48, 50, 52, 55, 58, 60])
+        params['trend_exit'] = round(random.uniform(_TREND_EXIT_CLAMP_MIN, _TREND_EXIT_CLAMP_MAX), 3)
+
+    return rebuild_strategy_from_params(
+        symbol=strat.symbol,
+        timeframe=strat.timeframe,
+        params=params,
+    )
+
+
+
+def _mutate_strategy(strat: StrategyDefinition, structural_rate: float = 0.25) -> StrategyDefinition:
+    if random.random() < structural_rate:
+        return _mutate_structure(strat)
     mutated_params = _mutate_params(strat.params)
     return rebuild_strategy_from_params(
         symbol=strat.symbol,
@@ -193,7 +224,7 @@ def evolve_population(
             candidate = random_strategy(symbol, timeframe, family=forced_family)
         elif r < cfg.mutation_rate:
             parent = random.choice(elites)
-            candidate = _mutate_strategy(parent)
+            candidate = _mutate_strategy(parent, structural_rate=cfg.structural_mutation_rate)
         elif r < cfg.mutation_rate + cfg.crossover_rate:
             if len(elites) >= 2:
                 p1, p2 = random.sample(elites, 2)

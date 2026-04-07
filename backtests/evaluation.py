@@ -64,9 +64,21 @@ def compute_score(stats: Dict, cfg: EvaluationConfig = DEFAULT_EVAL_CONFIG) -> f
 
     regime_bonus = 0.0
     if trend_ret > 1.0:
-        regime_bonus += 0.15
-    if range_ret > 0.5:
         regime_bonus += 0.10
+    if range_ret > 0.5:
+        regime_bonus += 0.06
+
+    regime_rets = [
+        float((v or {}).get("return_pct", 0.0) or 0.0)
+        for v in regime_pnl.values()
+        if int((v or {}).get("num_trades", 0) or 0) >= 8
+    ]
+    best_regime_ret = max(regime_rets) if regime_rets else 0.0
+    worst_regime_ret = min(regime_rets) if regime_rets else 0.0
+    regime_sharpness_bonus = min(0.20, max(0.0, best_regime_ret / 20.0)) if regime_rets else 0.0
+    mediocre_everywhere_penalty = 0.0
+    if regime_rets and best_regime_ret < 2.0 and worst_regime_ret > -2.0:
+        mediocre_everywhere_penalty = 0.12
 
     sharpe_std = float(stability.get("sharpe_std", 0.0) or 0.0)
     stability_penalty = min(0.35, max(0.0, sharpe_std * 0.5))
@@ -127,10 +139,12 @@ def compute_score(stats: Dict, cfg: EvaluationConfig = DEFAULT_EVAL_CONFIG) -> f
         + specialist_bonus
         + routing_bonus
         + exit_bonus
+        + regime_sharpness_bonus
         - stability_penalty
         - news_penalty
         - session_penalty
         - fragility_penalty
+        - mediocre_everywhere_penalty
     )
 
     return float(max(-2.0, min(10.0, score)))

@@ -15,9 +15,9 @@ from ..research.features import compute_features, save_features
 from ..research.regime import add_regime_column
 from ..research.features import load_features
 from ..strategies.live_manifest import load_live_manifest, manifest_entries_for_slot, strategy_pool_from_manifest_entries
-from ..strategies.pool import load_pool, save_pool, summarize_status_counts
+from ..strategies.pool import load_pool, save_pool, summarize_status_counts, _structural_fingerprint
 from ..strategies.evolution import evolve_population, load_population, save_population
-from ..strategies.generator import load_strategy
+from ..strategies.generator import load_strategy, load_all_strategies
 from ..backtests.engine import run_backtest
 from ..backtests.evaluation import evaluate_strategy
 from ..backtests.walkforward import walk_forward_test
@@ -31,7 +31,7 @@ from ..vector_memory.research_memory import ResearchMemory
 logger = get_logger(__name__)
 BASE_DIR = Path(__file__).resolve().parents[1]
 
-MANAGED_SYMBOLS = ["XAUUSDc","BTCUSDc","XAGUSDc"]
+MANAGED_SYMBOLS = ["XAUUSDm","BTCUSDm","XAGUSDm"]
 TIMEFRAME = "M15"
 MINIMUM_EDGE_FOR_EXECUTION = 0.0
 
@@ -789,7 +789,25 @@ def job_research_strategies() -> None:
             bonus = _memory_bonus_for_parent(rec)
             scored_parents.append((rec.score + bonus, rec))
         scored_parents.sort(key=lambda x: x[0], reverse=True)
-        parent_records = [rec for _, rec in scored_parents[:20]]
+
+        family_buckets = defaultdict(list)
+        for score, rec in scored_parents:
+            family_buckets[_execution_family(rec)].append((score, rec))
+
+        parent_records = []
+        per_family_quota = max(2, 20 // max(len(family_buckets), 1))
+        for _, recs in family_buckets.items():
+            parent_records.extend([r for _, r in recs[:per_family_quota]])
+        if len(parent_records) < 20:
+            seen_parent_names = {rec.name for rec in parent_records}
+            for _, rec in scored_parents:
+                if rec.name in seen_parent_names:
+                    continue
+                parent_records.append(rec)
+                seen_parent_names.add(rec.name)
+                if len(parent_records) >= 20:
+                    break
+        parent_records = parent_records[:20]
 
         existing_strats = []
         for rec in parent_records:
@@ -811,10 +829,38 @@ def job_research_strategies() -> None:
         family_skip_counts: dict[str, dict[str, int]] = {}
         family_skip_samples: dict[str, dict[str, list[str]]] = {}
 
+        existing_generated_by_family = Counter(
+            _strategy_family_from_params(getattr(s, 'params', {}) or {})
+            for s in load_all_strategies()
+            if canonical_symbol(getattr(s, 'symbol', '')) == canon and getattr(s, 'timeframe', '') == TIMEFRAME
+        )
+        oversaturated_families = {fam for fam, count in existing_generated_by_family.items() if count > 300}
+        known_generated_fps = {
+            _structural_fingerprint(s)
+            for s in load_all_strategies()
+            if canonical_symbol(getattr(s, 'symbol', '')) == canon and getattr(s, 'timeframe', '') == TIMEFRAME
+        }
+
         for strat in new_population:
             try:
                 family = _strategy_family_from_params(getattr(strat, "params", {}) or {})
                 family_stage_counts[family]["generated"] += 1
+
+                if family in oversaturated_families:
+                    research_skip_counts["oversaturated_family"] += 1
+                    if len(research_skip_samples["oversaturated_family"]) < 3:
+                        research_skip_samples["oversaturated_family"].append(strat.name)
+                    _record_family_skip(family_skip_counts, family_skip_samples, family, "oversaturated_family", strat.name)
+                    continue
+
+                strat_fp = _structural_fingerprint(strat)
+                if strat_fp in pool._fp_map or strat_fp in known_generated_fps:
+                    family_stage_counts[family]["cheap_prescreen_fail"] += 1
+                    research_skip_counts["structural_duplicate"] += 1
+                    if len(research_skip_samples["structural_duplicate"]) < 3:
+                        research_skip_samples["structural_duplicate"].append(strat.name)
+                    _record_family_skip(family_skip_counts, family_skip_samples, family, "structural_duplicate", strat.name)
+                    continue
 
                 memory_neighbors = None
                 try:

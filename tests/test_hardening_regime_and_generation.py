@@ -6,7 +6,7 @@ from autonomous_trading_ai.backtests.explain import _derive_routing_confidence
 from autonomous_trading_ai.config import canonical_symbol
 from autonomous_trading_ai.scheduler.main import _challenger_research_min_trades, _passes_symbol_specific_mc_tail_relief
 from autonomous_trading_ai.strategies.base import StrategyDefinition
-from autonomous_trading_ai.strategies.generator import FAMILY_LIBRARY, XAG_M15_FAMILY_WEIGHTS, random_strategy
+from autonomous_trading_ai.strategies.generator import FAMILY_LIBRARY, XAG_M15_FAMILY_WEIGHTS, random_strategy, generated_family_counts
 from autonomous_trading_ai.strategies.pool import StrategyPool
 
 
@@ -197,6 +197,50 @@ def test_d4a_family_exit_pools_are_constrained_by_archetype():
     assert FAMILY_LIBRARY['ma_trend']['exit_templates'] != FAMILY_LIBRARY['rsi_range']['exit_templates']
     assert any('close < ma_short' in tpl for tpl in FAMILY_LIBRARY['pullback_trend']['exit_templates'])
     assert any('close < ma_short' in tpl or 'close > ma_short' in tpl for tpl in FAMILY_LIBRARY['vol_breakout']['exit_templates'])
+
+
+def test_generated_family_counts_returns_counter():
+    counts = generated_family_counts()
+    assert hasattr(counts, 'items')
+
+
+def test_structural_duplicate_pool_upsert_keeps_better_record():
+    pool = StrategyPool()
+    strat_a = random_strategy('BTCUSDm', 'M15', family='ma_trend')
+    stats = {
+        'family': 'ma_trend',
+        'playbook_type': 'ma_trend',
+        'strategy': {
+            'family': 'ma_trend',
+            'playbook_type': 'ma_trend',
+            'params': strat_a.params,
+            'long_entry_rule': strat_a.long_entry_rule,
+            'short_entry_rule': strat_a.short_entry_rule,
+            'exit_rule': strat_a.exit_rule,
+            'sl_atr_mult': strat_a.sl_atr_mult,
+            'tp_atr_mult': strat_a.tp_atr_mult,
+            'stop_loss_pips': strat_a.stop_loss_pips,
+            'take_profit_pips': strat_a.take_profit_pips,
+        },
+    }
+    pool.upsert_strategy(strat_a, stats=stats, score=1.0, status='candidate')
+
+    strat_b = StrategyDefinition(
+        name='better_clone',
+        symbol=strat_a.symbol,
+        timeframe=strat_a.timeframe,
+        long_entry_rule=strat_a.long_entry_rule,
+        short_entry_rule=strat_a.short_entry_rule,
+        exit_rule=strat_a.exit_rule,
+        stop_loss_pips=strat_a.stop_loss_pips,
+        take_profit_pips=strat_a.take_profit_pips,
+        sl_atr_mult=strat_a.sl_atr_mult,
+        tp_atr_mult=strat_a.tp_atr_mult,
+        params=dict(strat_a.params),
+    )
+    pool.upsert_strategy(strat_b, stats=stats, score=2.0, status='active')
+    assert 'better_clone' in pool.strategies
+    assert strat_a.name not in pool.strategies
 
 
 def test_backtest_tracks_same_bar_ambiguity_when_sl_and_tp_hit_in_same_candle():

@@ -5,6 +5,7 @@ import random
 import uuid
 from pathlib import Path
 from typing import List, Tuple, Dict, Any, Optional
+from collections import Counter
 
 from .base import StrategyDefinition
 from ..logging_utils import get_logger
@@ -462,6 +463,89 @@ def _sample_family_params(family: str, symbol: str, timeframe: str) -> Dict[str,
     return params
 
 
+def _weighted_template_choice(templates: List[str], weighted_terms: Dict[str, float]) -> str:
+    if not templates:
+        raise ValueError("templates must not be empty")
+    weights = []
+    for tpl in templates:
+        score = 1.0
+        for term, bonus in weighted_terms.items():
+            if term and term in tpl:
+                score += bonus
+        weights.append(max(0.05, score))
+    return random.choices(list(templates), weights=weights, k=1)[0]
+
+
+_EXIT_COMPATIBILITY_WEIGHTS: Dict[str, Dict[str, float]] = {
+    "ma_trend": {
+        "bars_since_entry": 1.2,
+        "trend_strength": 1.0,
+        "close < ma_short": 0.8,
+        "close > ma_short": 0.8,
+        "rsi >": -0.35,
+        "rsi <": -0.35,
+    },
+    "pullback_trend": {
+        "bars_since_entry": 1.1,
+        "close < ma_short": 1.1,
+        "close > ma_short": 1.1,
+        "trend_strength": 0.7,
+        "rsi >": -0.15,
+        "rsi <": -0.15,
+    },
+    "vol_breakout": {
+        "bars_since_entry": 1.0,
+        "trend_strength": 1.0,
+        "close < ma_short": 0.9,
+        "close > ma_short": 0.9,
+        "rsi >": -0.45,
+        "rsi <": -0.45,
+    },
+    "compression_breakout": {
+        "bars_since_entry": 1.0,
+        "trend_strength": 0.9,
+        "close < ma_short": 0.8,
+        "close > ma_short": 0.8,
+        "rsi >": -0.25,
+        "rsi <": -0.25,
+    },
+    "session_breakout": {
+        "bars_since_entry": 1.0,
+        "session_new_york": 0.6,
+        "session_asia": 0.6,
+        "trend_strength": 0.9,
+        "close < ma_short": 0.7,
+        "close > ma_short": 0.7,
+        "rsi >": -0.35,
+        "rsi <": -0.35,
+    },
+    "rsi_range": {
+        "rsi >": 1.0,
+        "rsi <": 1.0,
+        "bars_since_entry": 0.7,
+        "trend_strength": 0.4,
+        "close < ma_short": -0.2,
+        "close > ma_short": -0.2,
+    },
+    "xau_impulse_pullback": {
+        "bars_since_entry": 1.1,
+        "trend_strength": 1.0,
+        "close < ma_short": 1.0,
+        "close > ma_short": 1.0,
+        "rsi >": -0.25,
+        "rsi <": -0.25,
+    },
+    "xau_session_continuation": {
+        "bars_since_entry": 1.0,
+        "session_new_york": 0.8,
+        "session_asia": 0.8,
+        "trend_strength": 0.9,
+        "rsi >": -0.30,
+        "rsi <": -0.30,
+    },
+}
+
+
 def _pick_family_templates(family: str, symbol: Optional[str] = None) -> tuple[str, str, str]:
     if symbol is not None:
         family = _normalize_family_for_market(family, symbol)
@@ -477,7 +561,8 @@ def _pick_family_templates(family: str, symbol: Optional[str] = None) -> tuple[s
             "session_new_york == 1 and volatility > vol_min and close < ma_short and trend_strength < -{trend_min}",
         ]
         exit_templates = list(family_meta.get("exit_templates", EXIT_TEMPLATES))
-        return random.choice(long_templates), random.choice(short_templates), random.choice(exit_templates)
+        exit_tpl = _weighted_template_choice(exit_templates, _EXIT_COMPATIBILITY_WEIGHTS.get(family, {}))
+        return random.choice(long_templates), random.choice(short_templates), exit_tpl
 
     if symbol == "XAGUSDm" and family == "vol_breakout":
         long_templates = [
@@ -489,11 +574,12 @@ def _pick_family_templates(family: str, symbol: Optional[str] = None) -> tuple[s
             "volatility > vol_min and close < ma_short and trend_strength < -{trend_min}",
         ]
         exit_templates = list(family_meta.get("exit_templates", EXIT_TEMPLATES))
-        return random.choice(long_templates), random.choice(short_templates), random.choice(exit_templates)
+        exit_tpl = _weighted_template_choice(exit_templates, _EXIT_COMPATIBILITY_WEIGHTS.get(family, {}))
+        return random.choice(long_templates), random.choice(short_templates), exit_tpl
 
     long_tpl = random.choice(list(family_meta.get("long", _LIGHT_LONG_TEMPLATES)))
     short_tpl = random.choice(list(family_meta.get("short", _LIGHT_SHORT_TEMPLATES)))
-    exit_tpl = random.choice(list(family_meta.get("exit_templates", EXIT_TEMPLATES)))
+    exit_tpl = _weighted_template_choice(list(family_meta.get("exit_templates", EXIT_TEMPLATES)), _EXIT_COMPATIBILITY_WEIGHTS.get(family, {}))
     return long_tpl, short_tpl, exit_tpl
 
 
@@ -661,3 +747,14 @@ def load_all_strategies() -> List[StrategyDefinition]:
         except Exception:
             logger.exception("Failed to load strategy from %s", path)
     return out
+
+
+def generated_family_counts(symbol: Optional[str] = None, timeframe: Optional[str] = None) -> Counter:
+    counts: Counter = Counter()
+    for strat in load_all_strategies():
+        if symbol is not None and strat.symbol != symbol:
+            continue
+        if timeframe is not None and strat.timeframe != timeframe:
+            continue
+        counts[str((getattr(strat, 'params', {}) or {}).get('family') or (getattr(strat, 'params', {}) or {}).get('playbook_type') or 'unknown')] += 1
+    return counts
