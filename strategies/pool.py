@@ -16,6 +16,7 @@ logger = get_logger(__name__)
 POOL_DIR = Path(__file__).resolve().parent
 POOL_STATE_PATH = POOL_DIR / "pool_state.json"
 
+_VALID_STATUSES = {"active", "exploratory", "candidate", "disabled", "retired"}
 _LIVE_STATUSES = {"active", "exploratory"}
 _MAX_INACTIVE_STRATEGIES = 200
 
@@ -27,6 +28,25 @@ _STATUS_RANK = {
     "disabled":    1,
     "retired":     0,
 }
+
+
+def normalize_status(status: Any, default: str = "candidate") -> str:
+    raw = str(status or "").strip().lower()
+    if raw in _VALID_STATUSES:
+        return raw
+    return default
+
+
+def summarize_status_counts(records: Dict[str, "StrategyRecord"]) -> Dict[str, int]:
+    counts = {status: 0 for status in ("active", "exploratory", "candidate", "disabled", "retired")}
+    counts["other"] = 0
+    for rec in records.values():
+        status = normalize_status(getattr(rec, "status", None), default="candidate")
+        if status in counts:
+            counts[status] += 1
+        else:
+            counts["other"] += 1
+    return counts
 
 
 def _normalize_family(value: Any) -> str:
@@ -112,7 +132,7 @@ class StrategyRecord:
             name=data["name"],
             symbol=data["symbol"],
             timeframe=data["timeframe"],
-            status=data.get("status", "candidate"),
+            status=normalize_status(data.get("status", "candidate"), default="candidate"),
             score=float(data.get("score", 0.0)),
             stats=data.get("stats", {}),
         )
@@ -244,8 +264,8 @@ class StrategyPool:
         if not rec:
             logger.warning("Pool set_status: strategy %s not found", name)
             return
-        rec.status = status
-        logger.info("Pool set_status: %s -> %s", name, status)
+        rec.status = normalize_status(status, default=rec.status or "candidate")
+        logger.info("Pool set_status: %s -> %s", name, rec.status)
 
     def top_strategies(
         self,

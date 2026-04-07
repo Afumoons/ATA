@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Dict, List, Any
 
 from autonomous_trading_ai.execution.strategy_live_stats import is_manual_strategy_bucket
+from autonomous_trading_ai.strategies.pool import normalize_status
 
 
 BASE_DIR = Path(__file__).resolve().parents[1]
@@ -73,11 +74,11 @@ def print_pool_summary(top_n: int = 5) -> None:
     # counts by status
     status_counts: Dict[str, int] = {}
     for rec in data.values():
-        status = rec.get("status", "unknown")
+        status = normalize_status(rec.get("status", "candidate"), default="candidate")
         status_counts[status] = status_counts.get(status, 0) + 1
 
-    for status in sorted(status_counts.keys()):
-        print(f"{status:9s}: {status_counts[status]}")
+    for status in ["active", "exploratory", "candidate", "disabled", "retired"]:
+        print(f"{status:11s}: {status_counts.get(status, 0)}")
 
     # top-N active by score
     active = [rec for rec in data.values() if rec.get("status") == "active"]

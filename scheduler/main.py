@@ -15,7 +15,7 @@ from ..research.features import compute_features, save_features
 from ..research.regime import add_regime_column
 from ..research.features import load_features
 from ..strategies.live_manifest import load_live_manifest, manifest_entries_for_slot, strategy_pool_from_manifest_entries
-from ..strategies.pool import load_pool, save_pool
+from ..strategies.pool import load_pool, save_pool, summarize_status_counts
 from ..strategies.evolution import evolve_population, load_population, save_population
 from ..strategies.generator import load_strategy
 from ..backtests.engine import run_backtest
@@ -1095,7 +1095,7 @@ def job_research_strategies() -> None:
                 ):
                     status = "exploratory"
                 else:
-                    status = "disabled"
+                    status = "candidate"
 
                 strat_params = dict(getattr(strat, "params", {}) or {})
                 eval_result["family_aware_governance"] = bool(FAMILY_AWARE_GOVERNANCE_ENABLED)
@@ -1149,7 +1149,10 @@ def job_research_strategies() -> None:
 
     pool.prune(max_inactive=200, min_family_keep=8)
     save_pool(pool)
-    logger.info("Scheduler: job_research_strategies done")
+    logger.info(
+        "Scheduler: job_research_strategies done | status_counts=%s",
+        summarize_status_counts(pool.strategies),
+    )
 
 
 def _execution_family(rec) -> str:
