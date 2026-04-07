@@ -50,16 +50,17 @@ Typical flow:
 1. load features
 2. load strategy pool
 3. query research memory for neighbor guidance
-4. rank/select parents with hybrid scoring
+4. rank/select parents with family-aware stratification
 5. evolve/generate candidate strategies
-6. cheap-prescreen candidates before heavier checks
-7. backtest and evaluate each candidate
-8. apply memory-guided dead-zone penalties and stricter exit-fragility checks
-9. run robustness checks
-10. assign pool status
-11. persist results into pool + vector memory
-12. run live-degradation pass on current active strategies
-13. save/prune pool
+6. reject structural duplicates and semantic near-duplicates before heavier checks
+7. cheap-prescreen candidates before heavier checks
+8. backtest and evaluate each candidate
+9. apply memory-guided dead-zone penalties, novelty metadata, and stricter exit-fragility checks
+10. run robustness checks
+11. assign pool status
+12. persist results into pool + vector memory
+13. run live-degradation pass on current active strategies
+14. save/prune pool
 
 Recent adjacent hardening around this job family also added:
 
@@ -68,7 +69,7 @@ Recent adjacent hardening around this job family also added:
 
 This job is especially important because it persists routing-related metadata
 from `strategy_explain.meta`, not just raw performance stats, and now also
-includes stricter research gating from Track A / Track C.
+includes stricter research gating, novelty metrics, and motif metadata.
 
 ### `job_execute_signals()`
 
@@ -80,7 +81,7 @@ Typical flow:
 2. compute effective live risk cap
 3. load latest features for each symbol
 4. skip execution if `in_news_lockout` is active
-5. build a diversified execution-stage candidate pool so runtime selection is less clustered by family/regime
+5. build a diversified execution-stage candidate pool so runtime selection is less clustered by family/regime/motif
 6. hand off to `execution.signals.execute_signals_for_symbol(...)`
 7. log detailed trade / skip / reject reasons
 
@@ -199,6 +200,7 @@ usually the first file to inspect.
 
 ## Changelog (Docs)
 
+- 2026-04-08: Updated for structural/semantic dedup, family-stratified parent selection, novelty metadata, and motif-aware runtime diversification.
 - 2026-04-04: Updated for execution-stage concentration control and proactive live decay assessment.
 - 2026-04-03: Updated for Track A / C research-gating behavior (cheap prescreen, dead-zone penalties, and stricter exit-fragility checks).
 

@@ -43,15 +43,22 @@ not executable strategy classes.
 
 Creates fresh strategy definitions.
 
-Current strategy-generation bias includes:
+Current strategy-generation behavior now includes explicit anti-collapse
+hardening.
+
+Generation/evolution now supports:
 
 - MA-based trend rules
 - RSI/range-style rules
 - legacy Ichimoku/Fibonacci-based templates
 - explicit XAU specialist families such as impulse/pullback and session continuation
+- family-compatible weighted exit-template sampling
+- structural mutation in addition to parameter mutation
+- family oversaturation awareness
 
-For core 15m markets, generation is biased toward simpler, more interpretable
-families with more explicit family/playbook metadata.
+For core 15m markets, generation is still biased toward simpler,
+more interpretable families, but the pipeline now explicitly tries to reduce
+semantic clone production and improve archetype breadth over time.
 
 The generator also stores lightweight family metadata in `params`, such as:
 
@@ -71,8 +78,10 @@ Important capabilities:
 
 - elite retention
 - parameter mutation
+- structural mutation
 - crossover between parents
 - fallback fresh-random generation
+- minimum family-share enforcement in generated populations
 
 Used by the scheduler’s research loop to build new candidate populations from
 higher-quality pool members.
@@ -94,7 +103,8 @@ Each record includes:
 - `stats`
 
 The `stats` blob now matters a lot because it can include the full
-`strategy_explain`, including pass 3 routing metadata.
+`strategy_explain`, pass 3 routing metadata, plus newer research metadata such
+as novelty and motif annotations.
 
 Important capabilities include:
 
@@ -103,6 +113,9 @@ Important capabilities include:
 - `top_strategies(...)`
 - `prune(...)`
 - `load_pool()` / `save_pool()`
+- structural fingerprinting
+- semantic similarity scoring
+- canonical motif mapping
 
 ### `live_manifest.py`
 
@@ -114,7 +127,16 @@ live workflows.
 
 Recent hardening adds light concentration control here, so manifest creation is
 no longer a pure top-N rank cut. It now tries to reduce obvious clustering by
-regime/family before filling remaining slots pragmatically.
+regime/family/motif before filling remaining slots pragmatically.
+
+Live selection is also now bucketed across:
+
+- specialist candidates
+- novel candidates
+- robust candidates
+
+That means the live-facing inventory is increasingly treated as a portfolio of
+ideas, not just a scalar score ranking.
 
 ## Strategy Status Model
 
@@ -241,6 +263,7 @@ Useful during manual maintenance or recovery.
 
 ## Changelog (Docs)
 
+- 2026-04-08: Updated for structural dedup, semantic novelty control, motif mapping, and bucketed live selection.
 - 2026-04-04: Updated for live-manifest concentration control and tighter linkage to live decay governance.
 - 2026-04-03: Updated for Track A / C generator changes, explicit XAU playbooks, and exit-archetype metadata.
 

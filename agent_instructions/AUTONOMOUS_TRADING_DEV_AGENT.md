@@ -22,12 +22,16 @@ As of the current state, the following are already materially in place:
 - same-bar ambiguity instrumentation in backtests
 - proactive live decay detection v1
 - concentration control in live-manifest and execution-stage selection
+- structural dedup and semantic novelty gating in research
+- motif-aware multi-objective live selection
+- pool-state dedup and family/motif metadata rebuild
 - documentation refresh across root/module/runbook files
 
 That means the default posture now should be:
 
 - **maintain and refine conservatively**
 - fix clear bugs
+- preserve novelty/dedup/motif-governance behavior unless there is evidence to change it
 - improve doc/runbook fidelity
 - tune only when there is evidence
 - avoid architecture churn without explicit human instruction
@@ -153,6 +157,7 @@ Never:
 
 ## Changelog (Docs)
 
+- 2026-04-08: Updated current-state guidance for structural dedup, semantic novelty gating, motif-aware selection, and pool metadata repair.
 - 2026-04-04: Updated current-state guidance for fallback guard, same-bar ambiguity instrumentation, live decay detection, and concentration control.
 - 2026-04-03: Updated current-state guidance to include Track A / B / C as implemented practical work.
 

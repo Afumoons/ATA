@@ -71,6 +71,10 @@ python -c "from autonomous_trading_ai.scheduler.main import job_research_strateg
 
 This helps ensure the system starts from fresh feature data and current pool state.
 
+If the pool was recently cleaned or metadata was repaired, this step is even
+more important because it allows the upgraded research loop to start from a
+consistent baseline.
+
 ## 5. Start The Main Scheduler
 
 ```powershell
@@ -101,6 +105,7 @@ That means it is normal for the system to skip trades because of:
 - no eligible specialist
 - negative-edge exploratory fallback being blocked instead of force-kept
 - concentration-aware selection reducing clustered runtime picks
+- motif-aware selection reducing clustered runtime picks
 - no entry trigger on eligible specialists
 
 So:
@@ -154,6 +159,7 @@ If in doubt, stop the scheduler first and inspect before restarting.
 
 ## Changelog (Docs)
 
+- 2026-04-08: Updated start runbook for novelty/motif-aware runtime behavior and post-cleanup pool consistency.
 - 2026-04-04: Updated start runbook for concentration-aware runtime selection and live decay review signals.
 - 2026-04-03: Expanded troubleshooting file references to include unmatched closed-deal and pool-audit artifacts.
 

@@ -13,8 +13,9 @@ system built around:
 - **optional macro-news awareness and WhatsApp alerts**
 
 This README is the **top-level map** for the current system state after the
-recent Track A / Track B / Track C hardening work. Each major submodule also has
-its own `README.md` with implementation-level detail.
+recent Track A / Track B / Track C hardening work plus the 2026-04-08
+search-diversity / novelty / motif-governance upgrade. Each major submodule also
+has its own `README.md` with implementation-level detail.
 
 ## Current Architecture
 
@@ -106,6 +107,7 @@ The live execution path now combines:
 - explicit negative-edge fallback guard for exploratory routing
 - edge-based ranking for `active` and `exploratory` tiers
 - light concentration control in both manifest construction and execution-stage pool selection
+- motif-aware live selection that balances specialist, novel, and robust candidates
 
 ### 4) Live monitoring maturity
 
@@ -150,10 +152,13 @@ of the system.
 4. New candidates are generated/evolved.
 5. Research gating now includes:
    - cheap pre-screening,
+   - pre-backtest structural dedup against pool + generated archive,
+   - semantic near-duplicate rejection,
    - stronger dead-zone / family-memory penalties,
    - stricter exit-fragility checks,
    - more selective specialist bootstrap handling,
-   - stronger Monte Carlo robustness checks using block-bootstrap for larger trade sets.
+   - stronger Monte Carlo robustness checks using block-bootstrap for larger trade sets,
+   - novelty-aware scoring inputs and motif tagging.
 6. Each surviving candidate is:
    - backtested,
    - explained,
@@ -201,7 +206,7 @@ of the system.
 - `data/README.md` – MT5 OHLC ingestion and Forex Factory news ingestion.
 - `research/README.md` – features, news-aware context, structured regimes.
 - `strategies/README.md` – strategy definitions, generation, pool, manifests,
-  concentration control, and live-aware governance.
+  concentration control, semantic novelty control, motif metadata, and live-aware governance.
 - `backtests/README.md` – bar simulation, explainability, scoring, robustness,
   same-bar ambiguity diagnostics, and upgraded Monte Carlo assessment.
 - `risk/README.md` – account-level risk checks and config relationships.
@@ -246,6 +251,25 @@ Typical runtime flow:
 ```powershell
 python -m autonomous_trading_ai.scheduler.main
 ```
+
+## 2026-04-08 Search Diversity / Novelty / Motif Snapshot
+
+Implemented practical upgrades include:
+
+- pre-backtest structural dedup
+- semantic near-duplicate gating
+- family-stratified parent selection
+- structural mutation in evolution
+- family-compatible exit sampling
+- specialist-aware scoring with mediocre-everywhere penalties
+- canonical motif mapping
+- motif-aware live manifest / strategy index
+- bucketed multi-objective live selection
+- pool cleanup and metadata repair for `family` / `motif`
+
+See also:
+
+- `docs/clio/20-SEARCH-DIVERSITY-AND-NOVELTY-HARDENING-2026-04-08.md`
 
 ## Track A / B / C Snapshot
 

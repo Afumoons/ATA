@@ -108,6 +108,7 @@ higher-level context such as:
 That means this module now affects:
 
 - candidate evaluation quality
+- semantic motif inference quality
 - live gating quality
 - specialist-regime matching
 - news-aware execution safety
@@ -126,6 +127,8 @@ That means this module now affects:
 - loads saved features
 - uses the data for backtests and strategy evaluation
 - benefits from both legacy regime labels and richer context inside explainability
+- indirectly feeds semantic novelty and motif classification because strategy
+  families rely on feature-driven rule semantics
 
 ### `scheduler.job_execute_signals()` / `execution.signals`
 
@@ -167,6 +170,7 @@ News joins are designed to degrade gracefully:
 
 ## Changelog (Docs)
 
+- 2026-04-08: Clarified the role of research features/regimes as inputs to semantic motif inference and novelty-aware selection.
 - 2026-03-21: Documented features, ATR-normalized trend strength, news context,
   and structured regime outputs.
 - 2026-03-27: Updated for pass 3 with stronger framing of `research/` as the
