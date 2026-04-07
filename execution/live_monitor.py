@@ -15,7 +15,7 @@ from ..strategies.pool import load_pool, save_pool
 from ..config import risk_config
 from .live_state_utils import DailyState, save_daily_state, register_trade_pnl
 from .strategy_live_stats import register_manual_bucket_pnl, register_strategy_pnl
-from .audit_utils import append_unmatched_closed_deal, append_pool_audit
+from .audit_utils import append_unmatched_closed_deal, append_pool_audit, append_circuit_breaker_event
 
 logger = get_logger(__name__)
 
@@ -478,18 +478,33 @@ def update_live_stats() -> None:
         if dd_pct > threshold:
             pool = load_pool()
             disabled_entries = []
+            disabled_names = []
+            now_iso = datetime.now(timezone.utc).isoformat()
             for rec in pool.strategies.values():
                 if rec.status in {"active", "exploratory"}:
-                    disabled_entries.append(f"{rec.name}:{rec.status}")
+                    previous_status = rec.status
+                    disabled_entries.append(f"{rec.name}:{previous_status}")
+                    disabled_names.append(rec.name)
                     rec.status = "disabled"
+                    rec.stats = rec.stats or {}
+                    rec.stats["circuit_breaker_disabled_at"] = now_iso
+                    rec.stats["circuit_breaker_previous_status"] = previous_status
+                    rec.stats["circuit_breaker_dd_pct"] = dd_pct
+                    rec.stats["circuit_breaker_threshold"] = threshold
             if disabled_entries:
                 save_pool(pool)
-                append_pool_audit({
+                audit_payload = {
                     "event": "circuit_breaker_disable",
                     "dd_pct": dd_pct,
                     "threshold": threshold,
                     "disabled_entries": disabled_entries,
-                })
+                    "disabled_count": len(disabled_entries),
+                    "recovery_hint": "restore_to_exploratory_then_re-promote_selectively",
+                    "baseline_created_at": stats.baseline_created_at,
+                    "account_identity": stats.account_identity,
+                }
+                append_pool_audit(audit_payload)
+                append_circuit_breaker_event(audit_payload)
                 logger.warning(
                     "Circuit breaker: portfolio DD %.2f%% > %.2f%% — "
                     "disabled %d live-tier strategies (active/exploratory): %s",

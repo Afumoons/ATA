@@ -13,6 +13,7 @@ logger = get_logger(__name__)
 BASE_DIR = Path(__file__).resolve().parent
 UNMATCHED_CLOSED_DEALS_PATH = BASE_DIR / "unmatched_closed_deals.json"
 POOL_AUDIT_TRAIL_PATH = BASE_DIR / "pool_audit_trail.json"
+CIRCUIT_BREAKER_EVENTS_PATH = BASE_DIR / "circuit_breaker_events.json"
 
 
 def _safe_write_json(path: Path, data: Any) -> None:
@@ -69,3 +70,17 @@ def append_pool_audit(item: dict, keep: int = 500) -> None:
         _safe_write_json(POOL_AUDIT_TRAIL_PATH, rows)
     except Exception:
         logger.exception("Failed to append pool audit row")
+
+
+def append_circuit_breaker_event(item: dict, keep: int = 100) -> None:
+    rows = _load_json_list(CIRCUIT_BREAKER_EVENTS_PATH)
+    enriched = {
+        "recorded_at": datetime.now(timezone.utc).isoformat(),
+        **item,
+    }
+    rows.append(enriched)
+    rows = rows[-keep:]
+    try:
+        _safe_write_json(CIRCUIT_BREAKER_EVENTS_PATH, rows)
+    except Exception:
+        logger.exception("Failed to append circuit breaker event row")

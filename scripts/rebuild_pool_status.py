@@ -13,6 +13,12 @@ Tiers after this script:
 - candidate   : acceptable but not priority
 - disabled    : clearly weak or under-specified
 
+Important:
+- This is NOT the preferred recovery tool after a portfolio circuit-breaker mass disable.
+- For that case, use:
+
+    python -m autonomous_trading_ai.scripts.restore_after_circuit_breaker
+
 Run once from repo root:
 
     python -m autonomous_trading_ai.scripts.rebuild_pool_status
