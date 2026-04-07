@@ -146,6 +146,31 @@ def _semantic_fingerprint(strategy: StrategyDefinition) -> str:
 
 
 
+def strategy_motif(strategy: StrategyDefinition) -> str:
+    params = getattr(strategy, "params", {}) or {}
+    family = str(params.get("family") or params.get("playbook_type") or "unknown")
+    all_tokens = _rule_token_set(getattr(strategy, "long_entry_rule", "")) | _rule_token_set(getattr(strategy, "short_entry_rule", "")) | _rule_token_set(getattr(strategy, "exit_rule", ""))
+
+    if family in {"rsi_range"}:
+        return "range_fade"
+    if family in {"session_breakout"}:
+        return "session_breakout"
+    if family in {"compression_breakout"}:
+        return "compression_expansion"
+    if family in {"vol_breakout"}:
+        return "volatility_breakout"
+    if family in {"pullback_trend", "xau_impulse_pullback"}:
+        return "trend_pullback"
+    if family in {"ma_trend", "xau_session_continuation"}:
+        return "trend_continuation"
+    if "fib_zone" in all_tokens or "tenkan_sen" in all_tokens or "kijun_sen" in all_tokens:
+        return "structure_confluence"
+    if "rsi" in all_tokens and "trend_strength" in all_tokens:
+        return "hybrid_regime"
+    return family
+
+
+
 def semantic_similarity(a: StrategyDefinition, b: StrategyDefinition) -> float:
     a_params = getattr(a, "params", {}) or {}
     b_params = getattr(b, "params", {}) or {}
@@ -173,7 +198,8 @@ def semantic_similarity(a: StrategyDefinition, b: StrategyDefinition) -> float:
             pass
     numeric_similarity = (close / compared) if compared else 0.5
     family_bonus = 1.0 if a_family == b_family else 0.0
-    return 0.55 * token_jaccard + 0.25 * numeric_similarity + 0.20 * family_bonus
+    motif_bonus = 1.0 if strategy_motif(a) == strategy_motif(b) else 0.0
+    return 0.45 * token_jaccard + 0.20 * numeric_similarity + 0.15 * family_bonus + 0.20 * motif_bonus
 
 
 @dataclass

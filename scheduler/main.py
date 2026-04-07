@@ -15,7 +15,7 @@ from ..research.features import compute_features, save_features
 from ..research.regime import add_regime_column
 from ..research.features import load_features
 from ..strategies.live_manifest import load_live_manifest, manifest_entries_for_slot, strategy_pool_from_manifest_entries
-from ..strategies.pool import load_pool, save_pool, summarize_status_counts, _structural_fingerprint, semantic_similarity
+from ..strategies.pool import load_pool, save_pool, summarize_status_counts, _structural_fingerprint, semantic_similarity, strategy_motif
 from ..strategies.evolution import evolve_population, load_population, save_population
 from ..strategies.generator import load_strategy, load_all_strategies
 from ..backtests.engine import run_backtest
@@ -869,6 +869,7 @@ def job_research_strategies() -> None:
                     except Exception:
                         continue
                 novelty_score = 1.0 - nearest_similarity
+                motif = strategy_motif(strat)
                 if nearest_similarity >= 0.88:
                     family_stage_counts[family]["cheap_prescreen_fail"] += 1
                     research_skip_counts["semantic_duplicate"] += 1
@@ -913,9 +914,11 @@ def job_research_strategies() -> None:
                 result = run_backtest(feat, strat, regime_column="regime", **bt_kwargs)
                 result.stats["research_novelty_score"] = novelty_score
                 result.stats["research_nearest_similarity"] = nearest_similarity
+                result.stats["research_motif"] = motif
                 eval_result = evaluate_strategy(result.stats)
                 eval_result["research_novelty_score"] = novelty_score
                 eval_result["research_nearest_similarity"] = nearest_similarity
+                eval_result["research_motif"] = motif
                 family_stage_counts[family]["backtest_pass" if eval_result.get("accepted") else "backtest_fail"] += 1
 
                 dead_zone_penalty, dead_zone_meta = _memory_dead_zone_penalty(

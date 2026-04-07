@@ -7,7 +7,7 @@ from autonomous_trading_ai.config import canonical_symbol
 from autonomous_trading_ai.scheduler.main import _challenger_research_min_trades, _passes_symbol_specific_mc_tail_relief
 from autonomous_trading_ai.strategies.base import StrategyDefinition
 from autonomous_trading_ai.strategies.generator import FAMILY_LIBRARY, XAG_M15_FAMILY_WEIGHTS, random_strategy, generated_family_counts
-from autonomous_trading_ai.strategies.pool import StrategyPool, semantic_similarity
+from autonomous_trading_ai.strategies.pool import StrategyPool, semantic_similarity, strategy_motif
 
 
 def test_routing_confidence_penalizes_leakage():
@@ -260,6 +260,12 @@ def test_semantic_similarity_detects_near_duplicates():
     )
     c = random_strategy('BTCUSDm', 'M15', family='rsi_range')
     assert semantic_similarity(a, b) > semantic_similarity(a, c)
+
+
+def test_strategy_motif_maps_core_families_to_canonical_motifs():
+    assert strategy_motif(random_strategy('BTCUSDm', 'M15', family='ma_trend')) == 'trend_continuation'
+    assert strategy_motif(random_strategy('BTCUSDm', 'M15', family='pullback_trend')) == 'trend_pullback'
+    assert strategy_motif(random_strategy('BTCUSDm', 'M15', family='rsi_range')) == 'range_fade'
 
 
 def test_backtest_tracks_same_bar_ambiguity_when_sl_and_tp_hit_in_same_candle():

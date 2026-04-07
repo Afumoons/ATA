@@ -11,7 +11,7 @@ from typing import Any, Dict, Iterable, List, Optional
 from ..logging_utils import get_logger
 from .base import StrategyDefinition
 from .generator import _classify_template
-from .pool import StrategyPool, StrategyRecord
+from .pool import StrategyPool, StrategyRecord, strategy_motif
 
 logger = get_logger(__name__)
 
@@ -35,6 +35,7 @@ class LiveManifestEntry:
     status: str
     score: float
     family: str
+    motif: str
     long_entry_rule: Optional[str]
     short_entry_rule: Optional[str]
     exit_rule: str
@@ -60,6 +61,7 @@ class StrategyIndexEntry:
     tier: str
     score: float
     family: str
+    motif: str
     archived: bool
     has_strategy_payload: bool
     last_manifest_rank: Optional[int] = None
@@ -143,9 +145,11 @@ def _rank_key(rec: StrategyRecord) -> tuple:
     meta = (((rec.stats or {}).get("strategy_explain", {}) or {}).get("meta", {}) or {})
     specialist_score = float(meta.get("specialist_score", 0.0) or 0.0)
     wf = float((rec.stats or {}).get("wf_overall_sharpe", 0.0) or 0.0)
+    novelty = float((rec.stats or {}).get("research_novelty_score", 0.0) or 0.0)
     return (
         1 if rec.status == "active" else 0,
         specialist_score,
+        novelty,
         wf,
         float(rec.score or 0.0),
     )
@@ -169,36 +173,81 @@ def _select_diversified_live_records(
     selected: List[StrategyRecord] = []
     regime_counts: Dict[str, int] = defaultdict(int)
     family_counts: Dict[str, int] = defaultdict(int)
+    motif_counts: Dict[str, int] = defaultdict(int)
 
-    remaining = list(ranked)
+    buckets = {
+        'specialist': [],
+        'novel': [],
+        'robust': [],
+    }
+    for rec in ranked:
+        meta = (((rec.stats or {}).get("strategy_explain", {}) or {}).get("meta", {}) or {})
+        if float(meta.get("specialist_score", 0.0) or 0.0) >= 0.65:
+            buckets['specialist'].append(rec)
+        if float((rec.stats or {}).get("research_novelty_score", 0.0) or 0.0) >= 0.35:
+            buckets['novel'].append(rec)
+        if float((rec.stats or {}).get("wf_overall_sharpe", 0.0) or 0.0) >= 0.75:
+            buckets['robust'].append(rec)
 
-    def _take(pass_name: str, allow_family_overflow: bool, allow_regime_overflow: bool) -> None:
+    ordered_candidates: List[StrategyRecord] = []
+    seen = set()
+    round_robin = [buckets['specialist'], buckets['novel'], buckets['robust'], ranked]
+    cursor = 0
+    while len(ordered_candidates) < len(ranked):
+        added = False
+        for bucket in round_robin:
+            if cursor < len(bucket):
+                rec = bucket[cursor]
+                if rec.name not in seen:
+                    ordered_candidates.append(rec)
+                    seen.add(rec.name)
+                    added = True
+        if not added and cursor >= len(ranked):
+            break
+        cursor += 1
+
+    remaining = list(ordered_candidates)
+
+    def _take(allow_family_overflow: bool, allow_regime_overflow: bool, allow_motif_overflow: bool) -> None:
         nonlocal remaining
         next_remaining: List[StrategyRecord] = []
         for rec in remaining:
             if len(selected) >= max_live_per_slot:
                 next_remaining.append(rec)
                 continue
-            family = _strategy_block(rec)["family"]
+            block = _strategy_block(rec)
+            family = block["family"]
+            motif = strategy_motif(StrategyDefinition(
+                name=rec.name,
+                symbol=rec.symbol,
+                timeframe=rec.timeframe,
+                long_entry_rule=block["long_entry_rule"],
+                short_entry_rule=block["short_entry_rule"],
+                exit_rule=block["exit_rule"],
+                stop_loss_pips=block["stop_loss_pips"],
+                take_profit_pips=block["take_profit_pips"],
+                sl_atr_mult=block["sl_atr_mult"],
+                tp_atr_mult=block["tp_atr_mult"],
+                params=block["params"],
+            ))
             regime = _best_regime(rec)
             family_blocked = family_counts[family] >= max_per_family
             regime_blocked = regime_counts[regime] >= max_per_best_regime
-            if (family_blocked and not allow_family_overflow) or (regime_blocked and not allow_regime_overflow):
+            motif_blocked = motif_counts[motif] >= 3
+            if (family_blocked and not allow_family_overflow) or (regime_blocked and not allow_regime_overflow) or (motif_blocked and not allow_motif_overflow):
                 next_remaining.append(rec)
                 continue
             selected.append(rec)
             regime_counts[regime] += 1
             family_counts[family] += 1
+            motif_counts[motif] += 1
         remaining = next_remaining
 
-    # Pass 1: respect both caps.
-    _take("strict", allow_family_overflow=False, allow_regime_overflow=False)
-    # Pass 2: if we still have room, allow family overflow but still respect regime cap.
+    _take(allow_family_overflow=False, allow_regime_overflow=False, allow_motif_overflow=False)
     if len(selected) < max_live_per_slot:
-        _take("family_overflow", allow_family_overflow=True, allow_regime_overflow=False)
-    # Pass 3: only if still underfilled, allow any remaining ranked records.
+        _take(allow_family_overflow=True, allow_regime_overflow=False, allow_motif_overflow=False)
     if len(selected) < max_live_per_slot:
-        _take("final_fill", allow_family_overflow=True, allow_regime_overflow=True)
+        _take(allow_family_overflow=True, allow_regime_overflow=True, allow_motif_overflow=True)
 
     return selected[:max_live_per_slot]
 
@@ -219,6 +268,19 @@ def build_live_manifest(
         ranked = _select_diversified_live_records(records, max_live_per_slot=max_live_per_slot)
         for idx, rec in enumerate(ranked, start=1):
             block = _strategy_block(rec)
+            motif = strategy_motif(StrategyDefinition(
+                name=rec.name,
+                symbol=rec.symbol,
+                timeframe=rec.timeframe,
+                long_entry_rule=block["long_entry_rule"],
+                short_entry_rule=block["short_entry_rule"],
+                exit_rule=block["exit_rule"],
+                stop_loss_pips=block["stop_loss_pips"],
+                take_profit_pips=block["take_profit_pips"],
+                sl_atr_mult=block["sl_atr_mult"],
+                tp_atr_mult=block["tp_atr_mult"],
+                params=block["params"],
+            ))
             entries.append(
                 LiveManifestEntry(
                     name=rec.name,
@@ -227,6 +289,7 @@ def build_live_manifest(
                     status=rec.status,
                     score=float(rec.score or 0.0),
                     family=block["family"],
+                    motif=motif,
                     long_entry_rule=block["long_entry_rule"],
                     short_entry_rule=block["short_entry_rule"],
                     exit_rule=block["exit_rule"],
@@ -276,6 +339,19 @@ def build_strategy_index(
             block = _strategy_block(rec)
             archived = rec.status in ARCHIVE_STATUSES or (rec.status not in LIVE_STATUSES and rec.name not in index_names)
             tier = "live" if rec.name in working_names else ("index" if rec.name in index_names and not archived else "archive")
+            motif = strategy_motif(StrategyDefinition(
+                name=rec.name,
+                symbol=rec.symbol,
+                timeframe=rec.timeframe,
+                long_entry_rule=block["long_entry_rule"],
+                short_entry_rule=block["short_entry_rule"],
+                exit_rule=block["exit_rule"],
+                stop_loss_pips=block["stop_loss_pips"],
+                take_profit_pips=block["take_profit_pips"],
+                sl_atr_mult=block["sl_atr_mult"],
+                tp_atr_mult=block["tp_atr_mult"],
+                params=block["params"],
+            ))
             entries.append(
                 StrategyIndexEntry(
                     name=rec.name,
@@ -285,6 +361,7 @@ def build_strategy_index(
                     tier=tier,
                     score=float(rec.score or 0.0),
                     family=block["family"],
+                    motif=motif,
                     archived=archived,
                     has_strategy_payload=bool(block["long_entry_rule"] or block["short_entry_rule"] or block["params"]),
                     last_manifest_rank=manifest_ranks.get(rec.name),
