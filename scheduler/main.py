@@ -15,7 +15,7 @@ from ..research.features import compute_features, save_features
 from ..research.regime import add_regime_column
 from ..research.features import load_features
 from ..strategies.live_manifest import load_live_manifest, manifest_entries_for_slot, strategy_pool_from_manifest_entries
-from ..strategies.pool import load_pool, save_pool, summarize_status_counts, _structural_fingerprint
+from ..strategies.pool import load_pool, save_pool, summarize_status_counts, _structural_fingerprint, semantic_similarity
 from ..strategies.evolution import evolve_population, load_population, save_population
 from ..strategies.generator import load_strategy, load_all_strategies
 from ..backtests.engine import run_backtest
@@ -829,17 +829,16 @@ def job_research_strategies() -> None:
         family_skip_counts: dict[str, dict[str, int]] = {}
         family_skip_samples: dict[str, dict[str, list[str]]] = {}
 
+        archive_strategies = [
+            s for s in load_all_strategies()
+            if canonical_symbol(getattr(s, 'symbol', '')) == canon and getattr(s, 'timeframe', '') == TIMEFRAME
+        ]
         existing_generated_by_family = Counter(
             _strategy_family_from_params(getattr(s, 'params', {}) or {})
-            for s in load_all_strategies()
-            if canonical_symbol(getattr(s, 'symbol', '')) == canon and getattr(s, 'timeframe', '') == TIMEFRAME
+            for s in archive_strategies
         )
         oversaturated_families = {fam for fam, count in existing_generated_by_family.items() if count > 300}
-        known_generated_fps = {
-            _structural_fingerprint(s)
-            for s in load_all_strategies()
-            if canonical_symbol(getattr(s, 'symbol', '')) == canon and getattr(s, 'timeframe', '') == TIMEFRAME
-        }
+        known_generated_fps = {_structural_fingerprint(s) for s in archive_strategies}
 
         for strat in new_population:
             try:
@@ -860,6 +859,22 @@ def job_research_strategies() -> None:
                     if len(research_skip_samples["structural_duplicate"]) < 3:
                         research_skip_samples["structural_duplicate"].append(strat.name)
                     _record_family_skip(family_skip_counts, family_skip_samples, family, "structural_duplicate", strat.name)
+                    continue
+
+                nearest_similarity = 0.0
+                comparison_universe = archive_strategies[:200] + [s for s, _ in existing_strats[:20]]
+                for other in comparison_universe:
+                    try:
+                        nearest_similarity = max(nearest_similarity, semantic_similarity(strat, other))
+                    except Exception:
+                        continue
+                novelty_score = 1.0 - nearest_similarity
+                if nearest_similarity >= 0.88:
+                    family_stage_counts[family]["cheap_prescreen_fail"] += 1
+                    research_skip_counts["semantic_duplicate"] += 1
+                    if len(research_skip_samples["semantic_duplicate"]) < 3:
+                        research_skip_samples["semantic_duplicate"].append(f"{strat.name}:sim={nearest_similarity:.2f}")
+                    _record_family_skip(family_skip_counts, family_skip_samples, family, "semantic_duplicate", f"{strat.name}:sim={nearest_similarity:.2f}")
                     continue
 
                 memory_neighbors = None
@@ -896,7 +911,11 @@ def job_research_strategies() -> None:
                 family_stage_counts[family]["cheap_prescreen_pass"] += 1
 
                 result = run_backtest(feat, strat, regime_column="regime", **bt_kwargs)
+                result.stats["research_novelty_score"] = novelty_score
+                result.stats["research_nearest_similarity"] = nearest_similarity
                 eval_result = evaluate_strategy(result.stats)
+                eval_result["research_novelty_score"] = novelty_score
+                eval_result["research_nearest_similarity"] = nearest_similarity
                 family_stage_counts[family]["backtest_pass" if eval_result.get("accepted") else "backtest_fail"] += 1
 
                 dead_zone_penalty, dead_zone_meta = _memory_dead_zone_penalty(

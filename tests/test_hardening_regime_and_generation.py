@@ -7,7 +7,7 @@ from autonomous_trading_ai.config import canonical_symbol
 from autonomous_trading_ai.scheduler.main import _challenger_research_min_trades, _passes_symbol_specific_mc_tail_relief
 from autonomous_trading_ai.strategies.base import StrategyDefinition
 from autonomous_trading_ai.strategies.generator import FAMILY_LIBRARY, XAG_M15_FAMILY_WEIGHTS, random_strategy, generated_family_counts
-from autonomous_trading_ai.strategies.pool import StrategyPool
+from autonomous_trading_ai.strategies.pool import StrategyPool, semantic_similarity
 
 
 def test_routing_confidence_penalizes_leakage():
@@ -241,6 +241,25 @@ def test_structural_duplicate_pool_upsert_keeps_better_record():
     pool.upsert_strategy(strat_b, stats=stats, score=2.0, status='active')
     assert 'better_clone' in pool.strategies
     assert strat_a.name not in pool.strategies
+
+
+def test_semantic_similarity_detects_near_duplicates():
+    a = random_strategy('BTCUSDm', 'M15', family='ma_trend')
+    b = StrategyDefinition(
+        name='near_dup',
+        symbol=a.symbol,
+        timeframe=a.timeframe,
+        long_entry_rule=a.long_entry_rule,
+        short_entry_rule=a.short_entry_rule,
+        exit_rule=a.exit_rule,
+        stop_loss_pips=a.stop_loss_pips,
+        take_profit_pips=a.take_profit_pips,
+        sl_atr_mult=a.sl_atr_mult,
+        tp_atr_mult=a.tp_atr_mult,
+        params={**a.params, 'trend_min': float(a.params.get('trend_min', 0.1) or 0.1) + 0.03},
+    )
+    c = random_strategy('BTCUSDm', 'M15', family='rsi_range')
+    assert semantic_similarity(a, b) > semantic_similarity(a, c)
 
 
 def test_backtest_tracks_same_bar_ambiguity_when_sl_and_tp_hit_in_same_candle():

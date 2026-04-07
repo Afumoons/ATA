@@ -4,6 +4,7 @@ import json
 from dataclasses import dataclass, asdict, field
 from pathlib import Path
 from typing import Dict, List, Optional, Any
+import re
 from collections import Counter, defaultdict
 from tempfile import NamedTemporaryFile
 
@@ -112,6 +113,67 @@ def _structural_fingerprint(strategy: StrategyDefinition) -> str:
         str(getattr(strategy, "stop_loss_pips", "") or ""),
         str(getattr(strategy, "take_profit_pips", "") or ""),
     ])
+
+
+
+def _rule_token_set(rule: Any) -> set[str]:
+    text = str(rule or "").lower()
+    normalized = re.sub(r"[^a-z0-9_><=]+", " ", text)
+    return {tok for tok in normalized.split() if tok and not tok.replace('.', '', 1).isdigit()}
+
+
+
+def _semantic_fingerprint(strategy: StrategyDefinition) -> str:
+    params = getattr(strategy, "params", {}) or {}
+    family = str(params.get("family") or params.get("playbook_type") or "unknown")
+    long_tokens = sorted(_rule_token_set(getattr(strategy, "long_entry_rule", "")))
+    short_tokens = sorted(_rule_token_set(getattr(strategy, "short_entry_rule", "")))
+    exit_tokens = sorted(_rule_token_set(getattr(strategy, "exit_rule", "")))
+    topology = {
+        "long_has_or": " or " in str(getattr(strategy, "long_entry_rule", "") or "").lower(),
+        "short_has_or": " or " in str(getattr(strategy, "short_entry_rule", "") or "").lower(),
+        "exit_has_or": " or " in str(getattr(strategy, "exit_rule", "") or "").lower(),
+    }
+    return json.dumps({
+        "family": family,
+        "long": long_tokens,
+        "short": short_tokens,
+        "exit": exit_tokens,
+        "topology": topology,
+        "has_time_stop": bool(params.get("time_stop_bars")),
+        "has_session_exit_guard": bool(params.get("has_session_exit_guard", False)),
+    }, sort_keys=True)
+
+
+
+def semantic_similarity(a: StrategyDefinition, b: StrategyDefinition) -> float:
+    a_params = getattr(a, "params", {}) or {}
+    b_params = getattr(b, "params", {}) or {}
+    a_family = str(a_params.get("family") or a_params.get("playbook_type") or "unknown")
+    b_family = str(b_params.get("family") or b_params.get("playbook_type") or "unknown")
+
+    a_tokens = _rule_token_set(getattr(a, "long_entry_rule", "")) | _rule_token_set(getattr(a, "short_entry_rule", "")) | _rule_token_set(getattr(a, "exit_rule", ""))
+    b_tokens = _rule_token_set(getattr(b, "long_entry_rule", "")) | _rule_token_set(getattr(b, "short_entry_rule", "")) | _rule_token_set(getattr(b, "exit_rule", ""))
+    union = a_tokens | b_tokens
+    token_jaccard = (len(a_tokens & b_tokens) / len(union)) if union else 1.0
+
+    numeric_keys = ["trend_min", "trend_exit", "rsi_exit", "vol_min", "vol_max", "time_stop_bars"]
+    compared = 0
+    close = 0
+    for key in numeric_keys:
+        av = a_params.get(key)
+        bv = b_params.get(key)
+        if av is None or bv is None:
+            continue
+        compared += 1
+        try:
+            if abs(float(av) - float(bv)) <= (0.1 if key != "time_stop_bars" else 2.0):
+                close += 1
+        except Exception:
+            pass
+    numeric_similarity = (close / compared) if compared else 0.5
+    family_bonus = 1.0 if a_family == b_family else 0.0
+    return 0.55 * token_jaccard + 0.25 * numeric_similarity + 0.20 * family_bonus
 
 
 @dataclass

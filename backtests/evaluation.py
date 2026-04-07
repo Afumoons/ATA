@@ -132,6 +132,9 @@ def compute_score(stats: Dict, cfg: EvaluationConfig = DEFAULT_EVAL_CONFIG) -> f
     if exit_archetype in {"time_stop", "session_guard"} and tp_hit_ratio >= 0.10:
         exit_bonus += 0.04
 
+    novelty_bonus = 0.08 * float(stats.get("research_novelty_score", 0.0) or 0.0)
+    clone_penalty = 0.10 * max(0.0, float(stats.get("research_nearest_similarity", 0.0) or 0.0) - 0.75)
+
     score = (
         base_score
         + regime_bonus
@@ -140,11 +143,13 @@ def compute_score(stats: Dict, cfg: EvaluationConfig = DEFAULT_EVAL_CONFIG) -> f
         + routing_bonus
         + exit_bonus
         + regime_sharpness_bonus
+        + novelty_bonus
         - stability_penalty
         - news_penalty
         - session_penalty
         - fragility_penalty
         - mediocre_everywhere_penalty
+        - clone_penalty
     )
 
     return float(max(-2.0, min(10.0, score)))
