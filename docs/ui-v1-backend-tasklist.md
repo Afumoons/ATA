@@ -54,4 +54,4 @@ If blocked by missing dependency or ambiguous design choice, mark the item `bloc
 - tests or smoke checks for core endpoints pass
 - task statuses updated honestly
 
-STATUS: INCOMPLETE
+STATUS: COMPLETE
