@@ -304,6 +304,40 @@ Important nuance:
 - session-aware exits are **not** globally mandatory
 - true native partial-TP engine support is still not implemented
 
+## UI v1 Frontend
+
+A read-only operator dashboard now lives in `ui/`.
+
+What it includes:
+- overview page
+- execution diagnostics page
+- pool overview page
+- manifest viewer page
+- audit timeline page
+
+Run it locally:
+
+```powershell
+cd ui
+npm install
+npm run dev
+```
+
+Default frontend URL:
+- `http://127.0.0.1:4173`
+
+Backend expectation:
+- frontend requests the UI API at `/api`
+- Vite dev server proxies `/api` to `http://127.0.0.1:8000`
+- set `VITE_UI_API_BASE` if the UI API is hosted elsewhere
+
+Production build:
+
+```powershell
+cd ui
+npm run build
+```
+
 ## Current Limitations
 
 - The system is still heavily oriented around **single-symbol / per-symbol**

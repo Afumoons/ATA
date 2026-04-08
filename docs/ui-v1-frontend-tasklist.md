@@ -39,8 +39,8 @@ If blocked by missing dependency/tooling problem, mark the item `blocked` with a
 - [done] Add Audit Timeline page
 - [done] Add reusable status badges/cards/table components
 - [done] Add loading/error/empty states
-- [in_progress] Add build verification
-- [pending] Add README/run instructions for frontend UI
+- [done] Add build verification
+- [done] Add README/run instructions for frontend UI
 
 ## Phase C — optional after MVP
 - [pending] Add Strategy Detail page
@@ -58,4 +58,4 @@ If blocked by missing dependency/tooling problem, mark the item `blocked` with a
 - design clearly reflects `C:\laragon\www\awesome-design-md` cues and Apple-like operator-dashboard aesthetics
 - task statuses updated honestly
 
-STATUS: INCOMPLETE
+STATUS: COMPLETE
