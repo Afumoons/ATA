@@ -52,17 +52,17 @@ If blocked by missing dependency/tooling problem, mark the item `blocked` with a
 - [done] Add light/dark theme system and switcher
 - [done] Add app shell (layout/sidebar/header)
 - [done] Add API client helper for backend UI API
-- [in_progress] Add Overview page
-- [in_progress] Add Execution Diagnostics page
+- [done] Add Overview page
+- [done] Add Execution Diagnostics page
 
 ## Phase B — operator views
-- [pending] Add Pool Overview page
-- [pending] Add Manifest Viewer page
-- [pending] Add Audit Timeline page
+- [done] Add Pool Overview page
+- [done] Add Manifest Viewer page
+- [done] Add Audit Timeline page
 - [done] Add reusable premium dashboard components (cards, badges, tables, section headers)
 - [done] Add loading / error / empty states
-- [in_progress] Add build verification
-- [pending] Add README/run instructions for `ui-front`
+- [done] Add build verification
+- [done] Add README/run instructions for `ui-front`
 
 ## Phase C — optional after MVP
 - [pending] Add Strategy Detail page
@@ -81,4 +81,4 @@ If blocked by missing dependency/tooling problem, mark the item `blocked` with a
 - design clearly reflects `awesome-design-md` cues and premium operator-dashboard quality
 - task statuses updated honestly
 
-STATUS: INCOMPLETE
+STATUS: COMPLETE

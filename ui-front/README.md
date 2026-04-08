@@ -1,36 +1,72 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# UI Frontend — Operator UI v1
 
-## Getting Started
+Read-only Next.js operator dashboard for `autonomous_trading_ai`.
 
-First, run the development server:
+## Design direction
+
+The frontend follows a restrained premium dashboard direction inspired mainly by the calmer operator-facing cues in `awesome-design-md`, especially the clarity and surface discipline of references like Linear, IBM, and Revolut:
+
+- typography-first hierarchy
+- low-noise surfaces
+- calm blue accenting instead of neon trading visuals
+- generous spacing and strong readability
+- coherent dark and light themes
+
+## Routes
+
+- `/` — Overview
+- `/execution` — Execution Diagnostics
+- `/pool` — Pool Overview
+- `/manifest` — Manifest Viewer
+- `/audit` — Audit Timeline
+
+## Requirements
+
+- Node.js 20+
+- npm
+
+## Install
+
+```bash
+npm install
+```
+
+## Run locally
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Default dev URL:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- `http://localhost:3000`
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Production build verification
 
-## Learn More
+```bash
+npm run build
+npm run start
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Backend API configuration
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+The UI expects the backend UI API base URL via:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- `NEXT_PUBLIC_UI_API_BASE`
 
-## Deploy on Vercel
+If unset, it defaults to:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- `/api`
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Example:
+
+```bash
+set NEXT_PUBLIC_UI_API_BASE=http://localhost:8010/api
+npm run dev
+```
+
+## Notes
+
+- The older `ui/` frontend is legacy/reference only.
+- This app is intentionally read-only.
+- Theme preference is stored locally in the browser and can be toggled from the sidebar.

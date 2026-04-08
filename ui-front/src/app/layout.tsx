@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Mono, Instrument_Sans } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
+import { DashboardFrame } from "@/components/dashboard-frame";
 import "./globals.css";
 
 const instrumentSans = Instrument_Sans({
@@ -27,7 +28,9 @@ export default function RootLayout({
   return (
     <html lang="en" data-theme="dark" className={`${instrumentSans.variable} ${plexMono.variable}`}>
       <body>
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          <DashboardFrame>{children}</DashboardFrame>
+        </ThemeProvider>
       </body>
     </html>
   );
