@@ -30,14 +30,14 @@ If blocked by missing dependency or ambiguous design choice, mark the item `bloc
 - [done] Add live-state adapter
 - [done] Add pool adapter
 - [done] Add manifest/index adapter
-- [pending] Add execution diagnostics adapter
-- [pending] Add audit/log adapter
-- [pending] Add `/api/execution/summary`
-- [pending] Add `/api/pool/summary`
-- [pending] Add `/api/manifest`
-- [pending] Add `/api/strategies`
-- [pending] Add `/api/strategies/{name}`
-- [pending] Add `/api/audit/timeline`
+- [done] Add execution diagnostics adapter
+- [done] Add audit/log adapter
+- [done] Add `/api/execution/summary`
+- [done] Add `/api/pool/summary`
+- [done] Add `/api/manifest`
+- [done] Add `/api/strategies`
+- [done] Add `/api/strategies/{name}`
+- [done] Add `/api/audit/timeline`
 
 ## Phase C — verification/docs
 - [pending] Add smoke tests for API imports and core endpoints
