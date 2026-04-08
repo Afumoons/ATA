@@ -167,8 +167,15 @@ Check these files first:
 
 If in doubt, stop the scheduler first and inspect before restarting.
 
+## Repo / Commit Workflow
+
+- `autonomous_trading_ai` is a separate git repository from the OpenClaw workspace root.
+- When editing files inside `autonomous_trading_ai`, run git add/commit from inside that repo (or with `git -C C:\Users\afusi\.openclaw\workspace\autonomous_trading_ai ...`).
+- Do not assume workspace-root git commands will track changes inside `autonomous_trading_ai`.
+
 ## Changelog (Docs)
 
+- 2026-04-09: Added repo/commit workflow note: `autonomous_trading_ai` must be committed directly in its own repo, not from the workspace root.
 - 2026-04-09: Added operator UI note and clarified that `ui-front` is the active frontend target.
 - 2026-04-08: Updated start runbook for novelty/motif-aware runtime behavior and post-cleanup pool consistency.
 - 2026-04-04: Updated start runbook for concentration-aware runtime selection and live decay review signals.
