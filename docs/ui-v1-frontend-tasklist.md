@@ -45,23 +45,23 @@ When **all Phase A and Phase B tasks are `done`** and acceptance criteria pass:
 If blocked by missing dependency/tooling problem, mark the item `blocked` with a reason and stop.
 
 ## Phase A — foundation in `ui-front`
-- [pending] Inspect `C:\laragon\www\awesome-design-md` and extract reusable design cues
-- [pending] Audit existing Next.js structure in `ui-front`
-- [pending] Define frontend information architecture and route structure
-- [pending] Add or confirm styling/token system in `ui-front`
-- [pending] Add light/dark theme system and switcher
-- [pending] Add app shell (layout/sidebar/header)
-- [pending] Add API client helper for backend UI API
-- [pending] Add Overview page
-- [pending] Add Execution Diagnostics page
+- [done] Inspect `C:\laragon\www\awesome-design-md` and extract reusable design cues
+- [done] Audit existing Next.js structure in `ui-front`
+- [done] Define frontend information architecture and route structure
+- [done] Add or confirm styling/token system in `ui-front`
+- [done] Add light/dark theme system and switcher
+- [done] Add app shell (layout/sidebar/header)
+- [done] Add API client helper for backend UI API
+- [in_progress] Add Overview page
+- [in_progress] Add Execution Diagnostics page
 
 ## Phase B — operator views
 - [pending] Add Pool Overview page
 - [pending] Add Manifest Viewer page
 - [pending] Add Audit Timeline page
-- [pending] Add reusable premium dashboard components (cards, badges, tables, section headers)
-- [pending] Add loading / error / empty states
-- [pending] Add build verification
+- [done] Add reusable premium dashboard components (cards, badges, tables, section headers)
+- [done] Add loading / error / empty states
+- [in_progress] Add build verification
 - [pending] Add README/run instructions for `ui-front`
 
 ## Phase C — optional after MVP
