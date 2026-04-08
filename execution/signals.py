@@ -332,13 +332,15 @@ def _active_directional_exposure(symbol: str) -> tuple[Counter[str], Counter[tup
 
 
 def _dedupe_correlated_signals(signals: Iterable[Signal], symbol: str) -> tuple[list[Signal], list[str]]:
+    ordered_signals = list(signals)
     kept: list[Signal] = []
     blocked: list[str] = []
+    overlap_blocked_by_direction: dict[str, list[tuple[Signal, int]]] = defaultdict(list)
     active_direction_counts, active_family_counts = _active_directional_exposure(symbol)
     direction_counts: Counter[str] = Counter(active_direction_counts)
     family_counts: Counter[tuple[str, str]] = Counter(active_family_counts)
 
-    for sig in signals:
+    for sig in ordered_signals:
         family = _family_label_from_strategy(sig.strategy)
         direction = sig.direction
         dir_count = direction_counts[direction]
@@ -354,11 +356,38 @@ def _dedupe_correlated_signals(signals: Iterable[Signal], symbol: str) -> tuple[
             continue
         if recent_overlap >= _CORRELATED_SIGNAL_LOOKBACK:
             blocked.append(f"{sig.strategy.name}:recent_overlap:{direction}:{recent_overlap}")
+            overlap_blocked_by_direction[direction].append((sig, recent_overlap))
             continue
 
         kept.append(sig)
         direction_counts[direction] += 1
         family_counts[fam_key] += 1
+
+    # Failsafe: correlation control should reduce clustering, not hard-zero every
+    # otherwise-valid candidate on a side. If a direction has zero survivors and
+    # all remaining candidates were only blocked by recent-overlap, keep the best
+    # fallback survivor (lowest overlap, preserving original ordering).
+    kept_directions = {sig.direction for sig in kept}
+    all_candidate_directions = {sig.direction for sig in ordered_signals}
+    for direction in all_candidate_directions:
+        if direction in kept_directions:
+            continue
+        overlap_blocked = overlap_blocked_by_direction.get(direction) or []
+        if not overlap_blocked:
+            continue
+        survivor, overlap = sorted(overlap_blocked, key=lambda item: item[1])[0]
+        kept.append(survivor)
+        family = _family_label_from_strategy(survivor.strategy)
+        direction_counts[direction] += 1
+        family_counts[(direction, family)] += 1
+        blocked.append(f"{survivor.strategy.name}:correlation_fallback_survivor:{direction}:{overlap}")
+        logger.info(
+            "Correlation fallback survivor kept for %s: strategy=%s direction=%s overlap=%d",
+            symbol,
+            survivor.strategy.name,
+            direction,
+            overlap,
+        )
 
     return kept, blocked
 
