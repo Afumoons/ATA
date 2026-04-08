@@ -26,6 +26,7 @@ As of the current state, the following are already materially in place:
 - motif-aware multi-objective live selection
 - pool-state dedup and family/motif metadata rebuild
 - documentation refresh across root/module/runbook files
+- operator UI work split into read-only backend API + active Next.js frontend (`ui-front`)
 
 That means the default posture now should be:
 
@@ -75,6 +76,7 @@ On each invocation:
 - threshold tuning only when backed by clear evidence
 - operator visibility improvements
 - safe refactors that improve legibility without changing posture
+- read-only UI/API improvements that increase observability without changing live-trading posture
 
 ### Tasks that require explicit human approval first
 
@@ -157,6 +159,7 @@ Never:
 
 ## Changelog (Docs)
 
+- 2026-04-09: Updated current-state guidance for operator UI surfaces, with `ui-front` as the active frontend target and UI/API work treated as observability-first.
 - 2026-04-08: Updated current-state guidance for structural dedup, semantic novelty gating, motif-aware selection, and pool metadata repair.
 - 2026-04-04: Updated current-state guidance for fallback guard, same-bar ambiguity instrumentation, live decay detection, and concentration control.
 - 2026-04-03: Updated current-state guidance to include Track A / B / C as implemented practical work.

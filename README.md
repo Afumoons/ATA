@@ -11,6 +11,7 @@ system built around:
 - **proactive per-strategy live decay detection**
 - **vector-backed research memory**
 - **optional macro-news awareness and WhatsApp alerts**
+- **operator UI surfaces via read-only backend API + frontend dashboard**
 
 This README is the **top-level map** for the current system state after the
 recent Track A / Track B / Track C hardening work plus the 2026-04-08
@@ -60,6 +61,11 @@ The project is organized into a few core loops:
    - `vector_memory/research_memory.py` stores and queries strategy research in Chroma.
    - `notifications/whatsapp_notifier.py` sends best-effort alerts via webhook.
    - `webhook_server.py` provides a small FastAPI receiver for outbound alerts.
+
+8. **Expose operator-facing UI surfaces**
+   - `ui_api/` provides the read-only backend API for diagnostics/overview data.
+   - `ui-front/` is the active Next.js frontend for the operator dashboard.
+   - legacy `ui/` should be treated as reference-only unless explicitly revived.
 
 ## Current Highlights
 
@@ -128,8 +134,23 @@ The execution layer now has a clearer separation between:
 ### 5) Better doc coverage for operations
 
 The module READMEs now document not just the main research loop, but also the
-live-state artifacts, helper scripts, alert paths, and the current limitations
-of the system.
+live-state artifacts, helper scripts, alert paths, UI surfaces, and the current
+limitations of the system.
+
+### 6) Operator UI is now an official surface
+
+The system now includes an operator-facing UI split into:
+
+- a read-only backend API (`ui_api/`)
+- an active Next.js frontend (`ui-front/`)
+
+Current intent:
+- improve observability
+- explain no-trade decisions quickly
+- surface pool/runtime state without manual log spelunking
+
+The Next.js frontend should be treated as the active implementation target.
+The older React UI in `ui/` is legacy/reference unless explicitly reactivated.
 
 ## End-to-End Flow
 
@@ -237,6 +258,8 @@ Operational folders you will likely touch:
 - `tests/`
 - `logs/`
 - `tmp/`
+- `ui_api/`
+- `ui-front/`
 
 ## Runtime Notes
 
@@ -251,6 +274,16 @@ Typical runtime flow:
 ```powershell
 python -m autonomous_trading_ai.scheduler.main
 ```
+
+## 2026-04-09 UI / Operator Surface Snapshot
+
+Implemented and in-progress practical upgrades include:
+
+- read-only operator backend API work under `ui_api/`
+- active frontend rebuild in `ui-front/` using Next.js
+- explicit tasklists for backend/frontend UI work
+- frontend design direction aligned to `C:\laragon\www\awesome-design-md`
+- Next.js frontend is the active target; legacy `ui/` is reference-only
 
 ## 2026-04-08 Search Diversity / Novelty / Motif Snapshot
 

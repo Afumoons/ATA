@@ -8,12 +8,33 @@ Status legend:
 - deferred
 
 ## Goal
-Build the read-only operator dashboard frontend for v1 (`autonomous_trading_ai`) using React + TypeScript + Vite.
+Rebuild the read-only operator dashboard frontend for v1 (`autonomous_trading_ai`) in the existing Next.js app at:
+`C:\Users\afusi\.openclaw\workspace\autonomous_trading_ai\ui-front`
+
+Treat the older React UI in `ui/` as a reference / legacy implementation, not as the active target.
 
 ## Design source of truth
-Adopt the design language from `C:\laragon\www\awesome-design-md`.
-Target aesthetic: Apple-like, calm, premium, minimal, spacious, typography-first, soft depth, and low visual noise.
-Avoid generic noisy trading-dashboard aesthetics.
+Primary reference:
+- `C:\laragon\www\awesome-design-md`
+
+Design direction:
+- premium
+- calm
+- high-clarity
+- low-noise
+- spacious
+- typography-first
+- operator-dashboard appropriate
+
+You may choose a design direction **better than Apple-like** if it is more suitable for a serious operator dashboard, as long as it remains premium, restrained, and highly legible.
+
+Required visual feature:
+- include a **light / dark theme switch** with a coherent palette in both modes
+
+Avoid:
+- generic noisy trading-dashboard aesthetics
+- cluttered neon crypto-dashboard vibes
+- overuse of glassmorphism or decorative motion
 
 ## Hard stop rule
 When **all Phase A and Phase B tasks are `done`** and acceptance criteria pass:
@@ -23,39 +44,41 @@ When **all Phase A and Phase B tasks are `done`** and acceptance criteria pass:
 
 If blocked by missing dependency/tooling problem, mark the item `blocked` with a reason and stop.
 
-## Phase A — frontend shell
-- [done] Inspect `C:\laragon\www\awesome-design-md` and extract reusable design language cues
-- [done] Create frontend app scaffold (recommended: `ui/`)
-- [done] Add TypeScript + Vite config
-- [done] Add Tailwind or lightweight styling setup
-- [done] Add app layout/sidebar/header shell
-- [done] Add API client helper
-- [done] Add Overview page
-- [done] Add Execution Diagnostics page
+## Phase A — foundation in `ui-front`
+- [pending] Inspect `C:\laragon\www\awesome-design-md` and extract reusable design cues
+- [pending] Audit existing Next.js structure in `ui-front`
+- [pending] Define frontend information architecture and route structure
+- [pending] Add or confirm styling/token system in `ui-front`
+- [pending] Add light/dark theme system and switcher
+- [pending] Add app shell (layout/sidebar/header)
+- [pending] Add API client helper for backend UI API
+- [pending] Add Overview page
+- [pending] Add Execution Diagnostics page
 
 ## Phase B — operator views
-- [done] Add Pool Overview page
-- [done] Add Manifest Viewer page
-- [done] Add Audit Timeline page
-- [done] Add reusable status badges/cards/table components
-- [done] Add loading/error/empty states
-- [done] Add build verification
-- [done] Add README/run instructions for frontend UI
+- [pending] Add Pool Overview page
+- [pending] Add Manifest Viewer page
+- [pending] Add Audit Timeline page
+- [pending] Add reusable premium dashboard components (cards, badges, tables, section headers)
+- [pending] Add loading / error / empty states
+- [pending] Add build verification
+- [pending] Add README/run instructions for `ui-front`
 
 ## Phase C — optional after MVP
 - [pending] Add Strategy Detail page
-- [pending] Add charts (only if cheap and useful)
-- [pending] Add config view (read-only)
+- [pending] Add restrained charts if clearly useful
+- [pending] Add read-only config view
 
 ## Acceptance criteria
-- frontend installs/builds successfully
+- Next.js frontend in `ui-front` installs/builds successfully
 - overview page renders
 - execution diagnostics page renders
 - pool overview page renders
 - manifest viewer page renders
 - audit timeline page renders
 - API client points to backend UI API cleanly
-- design clearly reflects `C:\laragon\www\awesome-design-md` cues and Apple-like operator-dashboard aesthetics
+- light/dark switch works with coherent palettes
+- design clearly reflects `awesome-design-md` cues and premium operator-dashboard quality
 - task statuses updated honestly
 
-STATUS: COMPLETE
+STATUS: INCOMPLETE

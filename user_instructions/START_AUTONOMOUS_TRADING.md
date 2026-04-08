@@ -113,7 +113,17 @@ So:
 - **low trade count does not automatically mean something is broken**
 - the correct question is whether the skip reason is sensible
 
-## 7. Quick Inspection Commands
+## 7. Optional Operator UI
+
+If the operator UI stack is present, the current intended split is:
+
+- backend UI API: `ui_api/`
+- active frontend: `ui-front/` (Next.js)
+
+Use the UI for observability and diagnosis, not for uncontrolled live execution.
+The older `ui/` frontend should be treated as legacy/reference unless explicitly revived.
+
+## 8. Quick Inspection Commands
 
 ### Show current system summary
 
@@ -135,14 +145,14 @@ python -m autonomous_trading_ai.scripts.debug_signals_for_latest_bar
 
 Warning: that debug script can interact with real execution code.
 
-## 8. Emergency Stop
+## 9. Emergency Stop
 
 To stop automated trading:
 
 1. stop the scheduler terminal with `Ctrl + C`
 2. disable MT5 AutoTrading or close MT5
 
-## 9. If Something Looks Wrong
+## 10. If Something Looks Wrong
 
 Check these files first:
 
@@ -159,6 +169,7 @@ If in doubt, stop the scheduler first and inspect before restarting.
 
 ## Changelog (Docs)
 
+- 2026-04-09: Added operator UI note and clarified that `ui-front` is the active frontend target.
 - 2026-04-08: Updated start runbook for novelty/motif-aware runtime behavior and post-cleanup pool consistency.
 - 2026-04-04: Updated start runbook for concentration-aware runtime selection and live decay review signals.
 - 2026-04-03: Expanded troubleshooting file references to include unmatched closed-deal and pool-audit artifacts.
