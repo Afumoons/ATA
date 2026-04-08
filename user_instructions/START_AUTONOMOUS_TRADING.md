@@ -167,15 +167,64 @@ Check these files first:
 
 If in doubt, stop the scheduler first and inspect before restarting.
 
-## Repo / Commit Workflow
+## 7.1 How To Run The Active Operator UI So It Actually Works
 
-- `autonomous_trading_ai` is a separate git repository from the OpenClaw workspace root.
-- When editing files inside `autonomous_trading_ai`, run git add/commit from inside that repo (or with `git -C C:\Users\afusi\.openclaw\workspace\autonomous_trading_ai ...`).
-- Do not assume workspace-root git commands will track changes inside `autonomous_trading_ai`.
+The active operator UI is split into two processes:
+
+1. backend UI API (`ui_api/` via FastAPI)
+2. frontend UI (`ui-front/` via Next.js)
+
+The frontend expects `/api/*` to resolve to the backend UI API.
+`ui-front/next.config.ts` now rewrites `/api/:path*` to `http://127.0.0.1:8000/api/:path*` by default.
+
+### Start the backend UI API
+
+From the `autonomous_trading_ai` repo root:
+
+```powershell
+cd C:\Users\afusi\.openclaw\workspace\autonomous_trading_ai
+.\.venv\Scripts\activate
+uvicorn ui_api.app:app --host 127.0.0.1 --port 8000
+```
+
+Quick check:
+
+```powershell
+Invoke-WebRequest http://127.0.0.1:8000/api/health
+```
+
+### Start the frontend UI
+
+In a second terminal:
+
+```powershell
+cd C:\Users\afusi\.openclaw\workspace\autonomous_trading_ai\ui-front
+npm run dev
+```
+
+Then open the frontend URL shown by Next.js.
+
+### If the backend runs on a different host/port
+
+Set `UI_API_ORIGIN` before starting the frontend:
+
+```powershell
+$env:UI_API_ORIGIN = "http://127.0.0.1:9000"
+npm run dev
+```
+
+### If you still see API errors
+
+Check in this order:
+
+1. `http://127.0.0.1:8000/api/health` responds
+2. the backend terminal has no FastAPI import/runtime errors
+3. the frontend dev server was restarted after config changes
+4. the frontend request path is `/api/...`, not a hardcoded old URL
 
 ## Changelog (Docs)
 
-- 2026-04-09: Added repo/commit workflow note: `autonomous_trading_ai` must be committed directly in its own repo, not from the workspace root.
+- 2026-04-09: Added explicit runbook for starting `ui_api` + `ui-front` together so the active operator UI works correctly.
 - 2026-04-09: Added operator UI note and clarified that `ui-front` is the active frontend target.
 - 2026-04-08: Updated start runbook for novelty/motif-aware runtime behavior and post-cleanup pool consistency.
 - 2026-04-04: Updated start runbook for concentration-aware runtime selection and live decay review signals.
