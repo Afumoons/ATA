@@ -477,7 +477,8 @@
         },
         "motif": "trend_continuation"
       },
-      "motif": "trend_continuation"
+      "motif": "trend_continuation",
+      "family_governance_protected": true
     }
   },
   "core15_BTCUSDm_M15_924b": {
@@ -2382,7 +2383,8 @@
         },
         "motif": "trend_continuation"
       },
-      "motif": "trend_continuation"
+      "motif": "trend_continuation",
+      "family_governance_protected": true
     }
   },
   "core15_BTCUSDm_M15_a7d1": {
