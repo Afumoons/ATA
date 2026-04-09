@@ -7,11 +7,18 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Tuple
 
-from execution.audit_utils import POOL_AUDIT_TRAIL_PATH, UNMATCHED_CLOSED_DEALS_PATH
-from execution.live_state_utils import LIVE_STATE_PATH
-from execution.strategy_live_stats import STATS_PATH
-from strategies.live_manifest import LIVE_MANIFEST_PATH, STRATEGY_INDEX_PATH, load_live_manifest, load_strategy_index
-from strategies.pool import POOL_STATE_PATH, load_pool, summarize_status_counts
+try:
+    from ..execution.audit_utils import POOL_AUDIT_TRAIL_PATH, UNMATCHED_CLOSED_DEALS_PATH
+    from ..execution.live_state_utils import LIVE_STATE_PATH
+    from ..execution.strategy_live_stats import STATS_PATH
+    from ..strategies.live_manifest import LIVE_MANIFEST_PATH, STRATEGY_INDEX_PATH, load_live_manifest, load_strategy_index
+    from ..strategies.pool import POOL_STATE_PATH, load_pool, summarize_status_counts
+except ImportError:
+    from execution.audit_utils import POOL_AUDIT_TRAIL_PATH, UNMATCHED_CLOSED_DEALS_PATH
+    from execution.live_state_utils import LIVE_STATE_PATH
+    from execution.strategy_live_stats import STATS_PATH
+    from strategies.live_manifest import LIVE_MANIFEST_PATH, STRATEGY_INDEX_PATH, load_live_manifest, load_strategy_index
+    from strategies.pool import POOL_STATE_PATH, load_pool, summarize_status_counts
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 EXECUTION_DIR = BASE_DIR / "execution"

@@ -7,7 +7,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, List
 
-from logging_utils import get_logger
+try:
+    from ..logging_utils import get_logger
+except ImportError:
+    from logging_utils import get_logger
 
 logger = get_logger(__name__)
 BASE_DIR = Path(__file__).resolve().parent

@@ -10,7 +10,10 @@ from typing import Optional, Iterable, Any
 
 import MetaTrader5 as mt5
 
-from logging_utils import get_logger
+try:
+    from ..logging_utils import get_logger
+except ImportError:
+    from logging_utils import get_logger
 
 logger = get_logger(__name__)
 

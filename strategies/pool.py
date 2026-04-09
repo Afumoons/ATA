@@ -8,9 +8,14 @@ import re
 from collections import Counter, defaultdict
 from tempfile import NamedTemporaryFile
 
-from logging_utils import get_logger
-from strategies.base import StrategyDefinition
-from execution.audit_utils import append_pool_audit
+try:
+    from ..logging_utils import get_logger
+    from .base import StrategyDefinition
+    from ..execution.audit_utils import append_pool_audit
+except ImportError:
+    from logging_utils import get_logger
+    from strategies.base import StrategyDefinition
+    from execution.audit_utils import append_pool_audit
 
 logger = get_logger(__name__)
 
