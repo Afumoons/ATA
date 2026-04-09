@@ -1,35 +1,87 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
-export function useQuery<T>(key: string, queryFn: () => Promise<T>) {
+interface UseQueryOptions {
+  enabled?: boolean;
+  refetchIntervalMs?: number;
+}
+
+type QueryStatus = "idle" | "loading" | "success" | "refreshing" | "error";
+
+export function useQuery<T>(
+  key: string,
+  queryFn: () => Promise<T>,
+  options: UseQueryOptions = {},
+) {
+  const { enabled = true, refetchIntervalMs } = options;
+  const queryFnRef = useRef(queryFn);
+  const hasDataRef = useRef(false);
   const [data, setData] = useState<T | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<unknown>(null);
+  const [status, setStatus] = useState<QueryStatus>(enabled ? "loading" : "idle");
+  const [lastSuccessAt, setLastSuccessAt] = useState<number | null>(null);
+  const [lastAttemptAt, setLastAttemptAt] = useState<number | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
+    queryFnRef.current = queryFn;
+  }, [queryFn]);
 
-    async function run() {
-      setLoading(true);
-      setError(null);
-      try {
-        const result = await queryFn();
-        if (!cancelled) setData(result);
-      } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Unknown error");
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
+  useEffect(() => {
+    hasDataRef.current = data !== null;
+  }, [data]);
+
+  const run = useCallback(async () => {
+    if (!enabled) return;
+
+    setLastAttemptAt(Date.now());
+    setError(null);
+    setStatus(hasDataRef.current ? "refreshing" : "loading");
+
+    try {
+      const result = await queryFnRef.current();
+      setData(result);
+      setLastSuccessAt(Date.now());
+      setStatus("success");
+    } catch (nextError) {
+      setError(nextError);
+      setStatus("error");
     }
+  }, [enabled]);
 
-    void run();
+  useEffect(() => {
+    if (!enabled) return;
+
+    const timeout = window.setTimeout(() => {
+      void run();
+    }, 0);
+
     return () => {
-      cancelled = true;
+      window.clearTimeout(timeout);
     };
-  }, [key, queryFn]);
+  }, [enabled, key, run]);
 
-  return { data, loading, error };
+  useEffect(() => {
+    if (!enabled || !refetchIntervalMs) return;
+
+    const interval = window.setInterval(() => {
+      void run();
+    }, refetchIntervalMs);
+
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, [enabled, refetchIntervalMs, run]);
+
+  return {
+    data,
+    error,
+    status,
+    loading: status === "loading",
+    refreshing: status === "refreshing",
+    hasData: data !== null,
+    lastSuccessAt,
+    lastAttemptAt,
+    refresh: run,
+  };
 }

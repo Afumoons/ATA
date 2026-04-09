@@ -1,4 +1,4 @@
-export type StatusTone = "neutral" | "positive" | "warning" | "danger" | "info";
+export type StatusTone = "neutral" | "info" | "success" | "warning" | "critical";
 
 export interface OverviewResponse {
   generated_at: string;
@@ -55,6 +55,30 @@ export interface ManifestResponse {
   source: string;
   entry_count: number;
   entries: Array<Record<string, unknown>>;
+}
+
+export interface StrategySummaryResponse {
+  name: string;
+  symbol?: string;
+  timeframe?: string;
+  status?: string;
+  tier?: string;
+  score?: number | null;
+  family?: string | null;
+  motif?: string | null;
+  archived?: boolean;
+  has_strategy_payload?: boolean;
+  last_manifest_rank?: number | null;
+  in_manifest?: boolean;
+  pool_score?: number | null;
+}
+
+export interface StrategyDetailResponse {
+  name: string;
+  manifest_entry?: Record<string, unknown> | null;
+  index_entry?: Record<string, unknown> | null;
+  pool_record?: Record<string, unknown> | null;
+  live_stats?: Record<string, unknown> | null;
 }
 
 export interface AuditTimelineResponse {
