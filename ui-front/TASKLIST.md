@@ -105,13 +105,13 @@ The UI should feel dependable during real use, especially when the backend is do
 - [x] Add safe rendering for optional nested data.
 
 ### 4.3 Basic QA pass
-- [ ] Verify all routes render with:
-  - [ ] healthy backend
+- [x] Verify all routes render with:
+  - [x] healthy backend
   - [x] backend offline
   - [x] empty artifacts
   - [x] partial data present
 
-Status note: offline/empty/partial rendering paths are now implemented and build/lint-clean. A final live-data QA pass against a healthy backend should still be done when the backend is available.
+Status note: offline/empty/partial rendering paths are implemented and build/lint-clean. Healthy-backend QA was completed against the local read-only UI API plus active frontend routes, and the repeatable verification flow now lives in `npm run qa:healthy-backend`.
 
 ---
 

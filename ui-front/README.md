@@ -48,6 +48,24 @@ npm run build
 npm run start
 ```
 
+## Healthy-backend QA pass
+
+Once the read-only UI API is running and the frontend is serving locally, run:
+
+```bash
+set UI_API_BASE=http://127.0.0.1:8010/api
+set UI_FRONT_BASE=http://127.0.0.1:3000
+npm run qa:healthy-backend
+```
+
+What it checks:
+
+- the UI API health endpoint responds
+- overview, execution, pool, manifest, strategy, and audit payloads parse and expose the expected operator-facing fields
+- the primary frontend routes return healthy HTML shells
+
+This gives a repeatable basic QA pass for the final Phase 1 reliability checkbox.
+
 ## Backend API configuration
 
 The UI expects the backend UI API base URL via:
@@ -70,3 +88,4 @@ npm run dev
 - The older `ui/` frontend is legacy/reference only.
 - This app is intentionally read-only.
 - Theme preference is stored locally in the browser and can be toggled from the sidebar.
+- For the roadmap completion sweep, use `npm run qa:healthy-backend` after the API and frontend are both up.
