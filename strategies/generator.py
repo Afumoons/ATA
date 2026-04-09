@@ -7,8 +7,8 @@ from pathlib import Path
 from typing import List, Tuple, Dict, Any, Optional
 from collections import Counter
 
-from .base import StrategyDefinition
-from ..logging_utils import get_logger
+from strategies.base import StrategyDefinition
+from logging_utils import get_logger
 
 logger = get_logger(__name__)
 
