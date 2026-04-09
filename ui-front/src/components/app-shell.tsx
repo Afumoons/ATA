@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { ThemeToggle } from "./theme-toggle";
+import { Card } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 const navItems = [
   ["/", "Overview", "Capital, health strip, freshness, runtime posture"],
@@ -18,7 +20,7 @@ export function AppShell({
 }) {
   return (
     <div className="app-shell">
-      <aside className="sidebar panel">
+      <Card className="sidebar">
         <div className="sidebar-brand">
           <div className="eyebrow">Autonomous Trading AI</div>
           <h1>Operator UI</h1>
@@ -32,7 +34,7 @@ export function AppShell({
           {navItems.map(([href, label, detail]) => {
             const active = pathname === href;
             return (
-              <Link key={href} href={href} className={`nav-item${active ? " is-active" : ""}`}>
+              <Link key={href} href={href} className={cn("nav-item", active && "is-active")}>
                 <span className="nav-label">{label}</span>
                 <span className="nav-detail">{detail}</span>
               </Link>
@@ -47,7 +49,7 @@ export function AppShell({
           </div>
           <ThemeToggle />
         </div>
-      </aside>
+      </Card>
       <div className="content-column">{children}</div>
     </div>
   );
@@ -65,7 +67,7 @@ export function PageHeader({
   action?: React.ReactNode;
 }) {
   return (
-    <header className="page-header panel panel-hero">
+    <header className="page-header panel-hero">
       <div>
         <div className="eyebrow">Operator dashboard</div>
         <h2>{title}</h2>

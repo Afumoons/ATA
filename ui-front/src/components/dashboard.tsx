@@ -1,7 +1,11 @@
 import type { ReactNode } from "react";
-import { compactValue, formatDateTime, truncateMiddle, prettifyKey } from "@/lib/format";
-import { attentionToneForEvent, describeQueryError, getFreshnessState, getEventTimestamp, summarizeEvent } from "@/lib/ui-state";
+import { compactValue, formatDateTime, prettifyKey, truncateMiddle } from "@/lib/format";
+import { attentionToneForEvent, describeQueryError, getEventTimestamp, getFreshnessState, summarizeEvent } from "@/lib/ui-state";
 import type { StatusTone } from "@/lib/types";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 export function Section({
   title,
@@ -40,16 +44,16 @@ export function StatCard({
   tone?: StatusTone;
 }) {
   return (
-    <article className={`stat-card tone-${tone}`}>
+    <Card className={cn("stat-card", `tone-${tone}`)}>
       <span className="stat-label">{label}</span>
       <strong className="stat-value">{value}</strong>
       {hint ? <span className="stat-hint">{hint}</span> : null}
-    </article>
+    </Card>
   );
 }
 
 export function StatusBadge({ label, tone = "neutral" }: { label: string; tone?: StatusTone }) {
-  return <span className={`status-badge tone-${tone}`}>{label}</span>;
+  return <Badge variant={tone === "neutral" ? "neutral" : tone}>{label}</Badge>;
 }
 
 export function ToolbarButton({
@@ -64,9 +68,9 @@ export function ToolbarButton({
   tone?: StatusTone;
 }) {
   return (
-    <button type="button" className={`toolbar-button tone-${tone}`} onClick={onClick} disabled={busy}>
+    <Button type="button" variant="toolbar" className={cn(`tone-${tone}`)} onClick={onClick} disabled={busy}>
       {busy ? "Refreshing…" : label}
-    </button>
+    </Button>
   );
 }
 
@@ -93,13 +97,13 @@ export function InlineNotice({
   action?: ReactNode;
 }) {
   return (
-    <div className={`panel inline-notice tone-${tone}`}>
+    <Card className={cn("inline-notice", `tone-${tone}`)}>
       <div>
         <h4>{title}</h4>
         <p>{description}</p>
       </div>
       {action ? <div className="inline-notice-action">{action}</div> : null}
-    </div>
+    </Card>
   );
 }
 
@@ -109,7 +113,7 @@ export function StatusStrip({
   items: Array<{ label: string; value: string; tone?: StatusTone; detail?: string }>;
 }) {
   return (
-    <div className="status-strip panel">
+    <Card className="status-strip">
       {items.map((item) => (
         <div key={`${item.label}-${item.value}`} className="status-strip-item">
           <div className="status-strip-topline">
@@ -119,7 +123,7 @@ export function StatusStrip({
           {item.detail ? <p>{item.detail}</p> : null}
         </div>
       ))}
-    </div>
+    </Card>
   );
 }
 
@@ -135,7 +139,7 @@ export function DataTable({
   emptyDescription?: string;
 }) {
   return (
-    <div className="panel table-panel">
+    <Card className="table-panel">
       <div className="table-wrap">
         <table>
           <thead>
@@ -164,7 +168,7 @@ export function DataTable({
           </tbody>
         </table>
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -183,14 +187,14 @@ export function KeyValueGrid({
   }
 
   return (
-    <div className="panel kv-grid">
+    <Card className="kv-grid">
       {entries.map(([key, value]) => (
         <div key={key} className="kv-item">
           <span className="kv-key">{prettifyKey(key)}</span>
           <strong className="kv-value">{compactValue(value)}</strong>
         </div>
       ))}
-    </div>
+    </Card>
   );
 }
 
@@ -216,7 +220,7 @@ export function Timeline({
         const leadingEntries = expanded ? entries.slice(0, 12) : entries.slice(0, 6);
 
         return (
-          <article key={`${String(timestamp)}-${index}`} className={`panel timeline-item tone-${tone}`}>
+          <Card key={`${String(timestamp)}-${index}`} className={cn("timeline-item", `tone-${tone}`)}>
             <div className="timeline-topline">
               <div className="timeline-heading-block">
                 <StatusBadge label={String(item.source ?? "event")} tone={tone === "neutral" ? "info" : tone} />
@@ -234,10 +238,8 @@ export function Timeline({
                 </div>
               ))}
             </div>
-            {showRaw && item.raw ? (
-              <pre className="raw-block">{String(item.raw)}</pre>
-            ) : null}
-          </article>
+            {showRaw && item.raw ? <pre className="raw-block">{String(item.raw)}</pre> : null}
+          </Card>
         );
       })}
     </div>
@@ -246,11 +248,13 @@ export function Timeline({
 
 export function LoadingState({ title = "Loading view", description }: { title?: string; description?: string }) {
   return (
-    <div className="panel state-panel">
-      <div className="loading-dot" />
-      <h3>{title}</h3>
-      <p>{description ?? "Fetching the latest operator snapshot from the UI API."}</p>
-    </div>
+    <Card className="state-panel">
+      <CardHeader className="pb-2">
+        <div className="loading-dot" />
+        <CardTitle>{title}</CardTitle>
+        <CardDescription>{description ?? "Fetching the latest operator snapshot from the UI API."}</CardDescription>
+      </CardHeader>
+    </Card>
   );
 }
 
@@ -264,12 +268,18 @@ export function ErrorState({
   const state = describeQueryError(error, resourceLabel);
 
   return (
-    <div className="panel state-panel state-error">
-      <StatusBadge label={state.badge} tone={state.tone} />
-      <h3>{state.title}</h3>
-      <p>{state.description}</p>
-      {state.detail ? <code className="inline-code">{truncateMiddle(state.detail, 180)}</code> : null}
-    </div>
+    <Card className="state-panel state-error">
+      <CardHeader className="pb-2">
+        <StatusBadge label={state.badge} tone={state.tone} />
+        <CardTitle>{state.title}</CardTitle>
+        <CardDescription>{state.description}</CardDescription>
+      </CardHeader>
+      {state.detail ? (
+        <CardContent>
+          <code className="inline-code">{truncateMiddle(state.detail, 180)}</code>
+        </CardContent>
+      ) : null}
+    </Card>
   );
 }
 
@@ -283,9 +293,11 @@ export function EmptyState({
   compact?: boolean;
 }) {
   return (
-    <div className={`state-panel${compact ? " is-compact" : ""}`}>
-      <h3>{title}</h3>
-      <p>{description}</p>
-    </div>
+    <Card className={cn("state-panel", compact && "is-compact")}>
+      <CardHeader className="pb-2">
+        <CardTitle>{title}</CardTitle>
+        <CardDescription>{description}</CardDescription>
+      </CardHeader>
+    </Card>
   );
 }
