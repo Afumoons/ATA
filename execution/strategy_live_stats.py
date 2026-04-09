@@ -9,7 +9,7 @@ from pathlib import Path
 import re
 from typing import Dict, List, Optional
 
-from ..logging_utils import get_logger
+from logging_utils import get_logger
 
 logger = get_logger(__name__)
 

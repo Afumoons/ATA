@@ -8,10 +8,10 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Any, Dict, Iterable, List, Optional
 
-from ..logging_utils import get_logger
-from .base import StrategyDefinition
-from .generator import _classify_template
-from .pool import StrategyPool, StrategyRecord, strategy_motif
+from logging_utils import get_logger
+from strategies.base import StrategyDefinition
+from strategies.generator import _classify_template
+from strategies.pool import StrategyPool, StrategyRecord, strategy_motif
 
 logger = get_logger(__name__)
 
