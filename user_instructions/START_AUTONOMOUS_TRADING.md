@@ -187,6 +187,10 @@ cd C:\Users\afusi\.openclaw\workspace\autonomous_trading_ai
 uvicorn ui_api.app:app --host 127.0.0.1 --port 8000
 ```
 
+Important:
+- run this from the repo root (`...\autonomous_trading_ai`)
+- the UI API imports project modules like `execution.*` and `strategies.*`, so launching from another working directory can break imports
+
 Quick check:
 
 ```powershell
