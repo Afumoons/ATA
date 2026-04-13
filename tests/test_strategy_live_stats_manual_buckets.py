@@ -73,3 +73,42 @@ def test_reconcile_unmatched_manual_buckets_rolls_audit_rows_into_stats(tmp_path
     assert rec.num_trades == 2
     assert rec.recent_pnls == [-124.0, 55.0]
     assert rec.last_update == "2026-04-06T08:19:28+00:00"
+
+
+def test_reconcile_unmatched_manual_buckets_is_idempotent_for_existing_stats(tmp_path, monkeypatch):
+    unmatched_path = tmp_path / "unmatched_closed_deals.json"
+    unmatched_rows = [
+        {
+            "recorded_at": "2026-04-06T08:14:28+00:00",
+            "manual_bucket": "manual_unmatched_XAUUSDC",
+            "profit": -124.0,
+        },
+        {
+            "recorded_at": "2026-04-06T08:19:28+00:00",
+            "manual_bucket": "manual_unmatched_XAUUSDC",
+            "profit": 55.0,
+        },
+    ]
+    unmatched_path.write_text(json.dumps(unmatched_rows), encoding="utf-8")
+    monkeypatch.setattr(audit_utils, "UNMATCHED_CLOSED_DEALS_PATH", unmatched_path)
+    monkeypatch.setattr(
+        "autonomous_trading_ai.scripts.reconcile_strategy_live_stats.UNMATCHED_CLOSED_DEALS_PATH",
+        unmatched_path,
+    )
+
+    stats = {
+        "manual_unmatched_XAUUSDC": sls.StrategyLiveStats(
+            name="manual_unmatched_XAUUSDC",
+            total_pnl=9999.0,
+            num_trades=999,
+            last_update="stale",
+            recent_pnls=[1.0, 2.0, 3.0],
+        )
+    }
+
+    _reconcile_unmatched_manual_buckets(stats)
+    rec = stats["manual_unmatched_XAUUSDC"]
+    assert rec.total_pnl == -69.0
+    assert rec.num_trades == 2
+    assert rec.recent_pnls == [-124.0, 55.0]
+    assert rec.last_update == "2026-04-06T08:19:28+00:00"
