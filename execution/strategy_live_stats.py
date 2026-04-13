@@ -11,15 +11,20 @@ from typing import Dict, List, Optional
 
 try:
     from ..logging_utils import get_logger
+    from ..config import live_decay_config
 except ImportError:
     from logging_utils import get_logger
+    from config import live_decay_config
 
 logger = get_logger(__name__)
 
+# Persistent per-strategy live-performance ledger consumed by scheduler and
+# live-decay governance.
 STATS_PATH = Path(__file__).resolve().parent / "strategy_live_stats.json"
 
-# Rolling window size — exported so scheduler/main.py can import it directly
-MAX_RECENT_TRADES = 30
+# Rolling window size used for recent-performance governance.
+# Exported so scheduler/main.py can stay aligned with the same horizon.
+MAX_RECENT_TRADES = live_decay_config.max_recent_trades
 
 # MT5 comment prefix set by execution/engine.py
 _COMMENT_PREFIX = "clio-auto-"
@@ -33,6 +38,7 @@ _NAME_MAP: Dict[str, str] = {}
 
 @dataclass
 class StrategyLiveStats:
+    """Aggregated realized live-trading stats for one strategy."""
     name: str
     total_pnl: float = 0.0
     num_trades: int = 0
@@ -58,14 +64,17 @@ def _truncated_name(full_name: str) -> str:
 
 
 def is_manual_strategy_bucket(strategy_name: Optional[str]) -> bool:
+    """Return True when the stats bucket belongs to manual/non-engine trading."""
     return bool(strategy_name) and str(strategy_name).startswith(_MANUAL_PREFIX)
 
 
 def should_ignore_for_engine_governance(strategy_name: Optional[str]) -> bool:
+    """Exclude manual buckets from automated promotion/degradation decisions."""
     return is_manual_strategy_bucket(strategy_name)
 
 
 def manual_bucket_name(symbol: Optional[str], *, unmatched: bool = True) -> str:
+    """Build a stable synthetic bucket name for manual trades by symbol."""
     raw_symbol = str(symbol or "unknown").upper().strip()
     clean_symbol = _SYMBOL_SANITIZE_RE.sub("", raw_symbol) or "UNKNOWN"
     prefix = "manual_unmatched" if unmatched else "manual"

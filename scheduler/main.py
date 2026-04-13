@@ -31,112 +31,67 @@ from ..vector_memory.research_memory import ResearchMemory
 logger = get_logger(__name__)
 BASE_DIR = Path(__file__).resolve().parents[1]
 
-MANAGED_SYMBOLS = ["XAUUSDm","BTCUSDm","XAGUSDm"]
-TIMEFRAME = "M15"
-MINIMUM_EDGE_FOR_EXECUTION = 0.0
+# Local aliases to centralized config keep the code readable while ensuring the
+# actual values still come from config.py. When adjusting behavior, prefer
+# changing config first and only add new aliases here if they are reused often.
+MANAGED_SYMBOLS = scheduler_config.managed_symbols
+TIMEFRAME = scheduler_config.timeframe
+MINIMUM_EDGE_FOR_EXECUTION = scheduler_config.minimum_edge_for_execution
 
 # Keep execution quality gating aligned with active-promotion requirements:
 # an `active` strategy should not be routinely promoted into a live tier that
 # can never pass execution gating solely because WF Sharpe uses a much harsher cutoff.
-EXEC_MIN_WF_SHARPE = 0.75
-EXEC_MAX_DD_PCT = 12.0
-EXEC_MIN_TRADES = 160
-EXEC_MAX_CONSEC_LOSS = 15
-MAX_EXECUTION_POOL = 10
-MAX_EXECUTION_PER_BEST_REGIME = 5
-MAX_EXECUTION_PER_FAMILY = 4
+EXEC_MIN_WF_SHARPE = scheduler_config.exec_min_wf_sharpe
+EXEC_MAX_DD_PCT = scheduler_config.exec_max_dd_pct
+EXEC_MIN_TRADES = scheduler_config.exec_min_trades
+EXEC_MAX_CONSEC_LOSS = scheduler_config.exec_max_consec_loss
+MAX_EXECUTION_POOL = scheduler_config.max_execution_pool
+MAX_EXECUTION_PER_BEST_REGIME = scheduler_config.max_execution_per_best_regime
+MAX_EXECUTION_PER_FAMILY = scheduler_config.max_execution_per_family
 
-FAMILY_AWARE_GOVERNANCE_ENABLED = True
-CHALLENGER_FAMILIES = {
-    "ma_trend",
-    "compression_breakout",
-    "pullback_trend",
-    "session_breakout",
-    "vol_breakout",
-    "rsi_range",
-    "ichifib",
-    "mixed:ma_trend+rsi_range",
-    "mixed:rsi_range+ma_trend",
-}
-CHALLENGER_EXPLORATORY_MIN_SLOTS = 2
-CHALLENGER_CANDIDATE_MIN_SLOTS = 2
+FAMILY_AWARE_GOVERNANCE_ENABLED = scheduler_config.family_aware_governance_enabled
+CHALLENGER_FAMILIES = scheduler_config.challenger_families
+CHALLENGER_EXPLORATORY_MIN_SLOTS = scheduler_config.challenger_exploratory_min_slots
+CHALLENGER_CANDIDATE_MIN_SLOTS = scheduler_config.challenger_candidate_min_slots
 
-SPECIALIST_EXEC_MIN_TRADES = 120
-EXPLORATORY_SPECIALIST_MIN_TRADES = 100
-BTC_EXEC_MIN_TRADES = 100
-BTC_SPECIALIST_EXEC_MIN_TRADES = 80
-BTC_EXPLORATORY_SPECIALIST_MIN_TRADES = 70
-XAG_EXEC_MIN_TRADES = 80
-XAG_SPECIALIST_EXEC_MIN_TRADES = 60
-XAG_EXPLORATORY_SPECIALIST_MIN_TRADES = 50
-XAG_BOOTSTRAP_MIN_TRADES = 20
-XAG_BOOTSTRAP_MIN_PF = 1.01
-XAG_BOOTSTRAP_MIN_SHARPE = 0.05
-XAG_BOOTSTRAP_MIN_WF_SHARPE = 0.05
+SPECIALIST_EXEC_MIN_TRADES = scheduler_config.specialist_exec_min_trades
+EXPLORATORY_SPECIALIST_MIN_TRADES = scheduler_config.exploratory_specialist_min_trades
+BTC_EXEC_MIN_TRADES = scheduler_config.btc_exec_min_trades
+BTC_SPECIALIST_EXEC_MIN_TRADES = scheduler_config.btc_specialist_exec_min_trades
+BTC_EXPLORATORY_SPECIALIST_MIN_TRADES = scheduler_config.btc_exploratory_specialist_min_trades
+XAG_EXEC_MIN_TRADES = scheduler_config.xag_exec_min_trades
+XAG_SPECIALIST_EXEC_MIN_TRADES = scheduler_config.xag_specialist_exec_min_trades
+XAG_EXPLORATORY_SPECIALIST_MIN_TRADES = scheduler_config.xag_exploratory_specialist_min_trades
+XAG_BOOTSTRAP_MIN_TRADES = scheduler_config.xag_bootstrap_min_trades
+XAG_BOOTSTRAP_MIN_PF = scheduler_config.xag_bootstrap_min_pf
+XAG_BOOTSTRAP_MIN_SHARPE = scheduler_config.xag_bootstrap_min_sharpe
+XAG_BOOTSTRAP_MIN_WF_SHARPE = scheduler_config.xag_bootstrap_min_wf_sharpe
 
 RESEARCH_FAMILY_SUMMARY_DIR = BASE_DIR / "tmp" / "research_family_stage_summaries"
-RESEARCH_FAMILY_SUMMARY_SYMBOLS = {"XAUUSDm", "BTCUSDm", "XAGUSDm"}
-RESEARCH_FAMILY_STAGE_KEYS = (
-    "generated",
-    "cheap_prescreen_pass",
-    "cheap_prescreen_fail",
-    "backtest_pass",
-    "backtest_fail",
-    "wf_pass",
-    "wf_fail",
-    "mc_pass",
-    "mc_fail",
-    "accepted",
-    "candidate",
-    "exploratory",
-    "active",
-)
+RESEARCH_FAMILY_SUMMARY_SYMBOLS = scheduler_config.research_family_summary_symbols
+RESEARCH_FAMILY_STAGE_KEYS = scheduler_config.research_family_stage_keys
 
-REGIME_SORT_NORM = 20.0
-SESSION_SORT_NORM = 10.0
+REGIME_SORT_NORM = scheduler_config.regime_sort_norm
+SESSION_SORT_NORM = scheduler_config.session_sort_norm
 
-STATUS_SORT_BONUS = {
-    "active": 1.15,
-    "exploratory": 0.95,
-    "candidate": 0.75,
-    "disabled": 0.50,
-}
+STATUS_SORT_BONUS = scheduler_config.status_sort_bonus
 
-DEFAULT_BACKTEST_KWARGS = {
-    "spread": 0.35,
-    "commission_per_lot": 7.0,
-    "slippage_pips": 2.0,
-    "max_positions_total": 1,
-    "max_positions_per_strategy": 1,
-}
+DEFAULT_BACKTEST_KWARGS = scheduler_config.default_backtest_kwargs
 
-CHEAP_PRESCREEN_BACKTEST_KWARGS = {
-    "spread": 0.25,
-    "commission_per_lot": 0.0,
-    "slippage_pips": 0.0,
-    "max_positions_total": 1,
-    "max_positions_per_strategy": 1,
-}
+CHEAP_PRESCREEN_BACKTEST_KWARGS = scheduler_config.cheap_prescreen_backtest_kwargs
 
-CHEAP_PRESCREEN_MIN_TRADES = 20
-CHEAP_PRESCREEN_MIN_PF = 0.95
-CHEAP_PRESCREEN_MIN_SHARPE = -0.10
-CHEAP_PRESCREEN_MAX_DD_PCT = 35.0
+CHEAP_PRESCREEN_MIN_TRADES = scheduler_config.cheap_prescreen_min_trades
+CHEAP_PRESCREEN_MIN_PF = scheduler_config.cheap_prescreen_min_pf
+CHEAP_PRESCREEN_MIN_SHARPE = scheduler_config.cheap_prescreen_min_sharpe
+CHEAP_PRESCREEN_MAX_DD_PCT = scheduler_config.cheap_prescreen_max_dd_pct
 
-XAU_BACKTEST_KWARGS = {
-    "spread": 0.60,
-    "commission_per_lot": 7.0,
-    "slippage_pips": 4.0,
-}
+XAU_BACKTEST_KWARGS = scheduler_config.xau_backtest_kwargs
 
-BTC_BACKTEST_KWARGS = {
-    "spread": 8.0,
-    "commission_per_lot": 0.0,
-    "slippage_pips": 12.0,
-}
+BTC_BACKTEST_KWARGS = scheduler_config.btc_backtest_kwargs
 
 
 def _current_session() -> str:
+    """Map current UTC hour to the coarse trading session label used by routing."""
     from datetime import datetime, timezone
     hour = datetime.now(timezone.utc).hour
     if 0 <= hour < 7:
@@ -147,6 +102,11 @@ def _current_session() -> str:
 
 
 def _hybrid_regime_score(rec, current_regime: str, current_session: str = "") -> float:
+    """Rank strategies using walk-forward quality plus context-specific bonuses.
+
+    The score is intentionally multiplicative so a weak core quality metric is
+    not fully masked by one strong contextual bonus.
+    """
     s = rec.stats or {}
     wf = float(s.get("wf_overall_sharpe", 0) or 0)
     ex = s.get("strategy_explain", {}) or {}
@@ -245,6 +205,7 @@ def _execution_min_trades(symbol: str, *, bounded_specialist: bool, exploratory:
 
 
 def _research_backtest_kwargs(symbol: str) -> dict:
+    """Return realistic research cost assumptions for the given symbol family."""
     params = dict(DEFAULT_BACKTEST_KWARGS)
     sym_u = symbol.upper()
     if "XAU" in sym_u:
@@ -262,6 +223,7 @@ def _research_backtest_kwargs(symbol: str) -> dict:
 
 
 def _cheap_prescreen_backtest_kwargs(symbol: str) -> dict:
+    """Return lighter-cost backtest settings for fast prescreen rejection."""
     params = dict(CHEAP_PRESCREEN_BACKTEST_KWARGS)
     sym_u = symbol.upper()
     if "XAU" in sym_u:
@@ -1565,12 +1527,12 @@ def start_scheduler() -> BackgroundScheduler:
     initialize_mt5()
 
     sched = BackgroundScheduler(timezone="UTC")
-    sched.add_job(job_update_data, "interval", minutes=5, id="update_data")
-    sched.add_job(job_research_strategies, "interval", minutes=30, id="research_strategies")
-    sched.add_job(job_execute_signals, "interval", minutes=5, id="execute_signals")
-    sched.add_job(job_live_monitor, "interval", minutes=5, id="live_monitor")
-    sched.add_job(job_update_news, "cron", hour=6, minute=0, id="update_news")
-    sched.add_job(job_news_alert, "interval", minutes=5, id="news_alert")
+    sched.add_job(job_update_data, "interval", minutes=scheduler_config.update_data_interval_minutes, id="update_data")
+    sched.add_job(job_research_strategies, "interval", minutes=scheduler_config.research_interval_minutes, id="research_strategies")
+    sched.add_job(job_execute_signals, "interval", minutes=scheduler_config.execute_signals_interval_minutes, id="execute_signals")
+    sched.add_job(job_live_monitor, "interval", minutes=scheduler_config.live_monitor_interval_minutes, id="live_monitor")
+    sched.add_job(job_update_news, "cron", hour=scheduler_config.update_news_hour_utc, minute=scheduler_config.update_news_minute_utc, id="update_news")
+    sched.add_job(job_news_alert, "interval", minutes=scheduler_config.news_alert_interval_minutes, id="news_alert")
 
     sched.start()
     logger.info("Scheduler started with %d jobs", len(sched.get_jobs()))

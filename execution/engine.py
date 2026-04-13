@@ -8,60 +8,31 @@ import MetaTrader5 as mt5
 
 from ..logging_utils import get_logger
 from ..risk.manager import AccountState, TradeRequest, RiskDecision, validate_trade
+from ..config import execution_config
 
 logger = get_logger(__name__)
 
-TRADES_LOG_PATH = Path(__file__).resolve().parent / "trades.log"
+# Execution logs remain file-based for easy post-mortem inspection outside MT5.
+TRADES_LOG_PATH = Path(__file__).resolve().parent / execution_config.trades_log_filename
 
 # ---------------------------------------------------------------------------
 # Pip value per standard lot, per instrument family.
-#
-# The original code used: volume = risk_amount / (sl_distance * 100_000)
-# which is the forex formula (1 lot = 100k units, pip value ≈ $10/pip/lot).
-#
-# For gold (XAUUSDm):
-#   1 lot = 100 troy oz
-#   pip size = 0.01 (1 cent)
-#   pip value = 100 oz * $0.01 = $1.00 per pip per lot
-#
-# Using the forex formula on gold underestimates volume by ~10x, forcing
-# every trade to clamp at 0.01 lot regardless of risk settings.
-#
-# Override pip_value_per_lot in execute_trade() if your broker differs.
+# These are fallback estimates used when broker metadata is incomplete.
 # ---------------------------------------------------------------------------
-
-_DEFAULT_PIP_VALUE_PER_LOT: dict[str, float] = {
-    "XAUUSDm": 1.0,
-    "XAGUSDm": 0.5,
-    "XAUUSD":  1.0,
-    "XAUUSDc": 1.0,
-    "XAGUSD":  0.5,
-    "EURUSD": 10.0,
-    "GBPUSD": 10.0,
-    "USDJPY": 10.0,
-    "AUDUSD": 10.0,
-    "USDCAD": 10.0,
-    "USDCHF": 10.0,
-    "BTCUSDm": 1.0,
-    "BTCUSDT": 1.0,
-    "BTCUSD":  1.0,
-    "BTCUSDc": 1.0,
-    "ETHUSDm": 1.0,
-}
-
-_METALS = {"XAU", "XAG"}
 
 
 def _pip_value_for_symbol(symbol: str) -> float:
-    if symbol in _DEFAULT_PIP_VALUE_PER_LOT:
-        return _DEFAULT_PIP_VALUE_PER_LOT[symbol]
-    for prefix in _METALS:
+    """Return configured pip value fallback for sizing calculations."""
+    if symbol in execution_config.default_pip_value_per_lot:
+        return execution_config.default_pip_value_per_lot[symbol]
+    for prefix in execution_config.metals_prefixes:
         if symbol.startswith(prefix):
             return 1.0
     return 10.0
 
 
 def _clamp_volume(volume: float, symbol: str) -> float:
+    """Clamp requested lot size to the broker's min/max/step constraints."""
     info = mt5.symbol_info(symbol)
     if info is None:
         return max(volume, 0.01)
@@ -85,7 +56,7 @@ def _build_comment(strategy_name: str, symbol: str, timeframe: str) -> str:
     uid4 = strategy_name.split("_")[-1][:4] if "_" in strategy_name else strategy_name[-4:]
     tf_clean = "".join(c for c in timeframe if c.isalnum())
     sym_clean = "".join(c for c in symbol if c.isalnum())
-    return f"{tf_clean}{sym_clean}{uid4}"[:31]
+    return f"{tf_clean}{sym_clean}{uid4}"[:execution_config.order_comment_max_length]
 
 
 @dataclass
@@ -143,13 +114,20 @@ def execute_trade(
     equity_peak: Optional[float] = None,
     timeframe: str = "M15",
 ) -> ExecutionResult:
-    """Validate and execute a market order via MetaTrader 5.
+    """Validate governance constraints, size risk, then send an MT5 market order.
 
-    Tier 1 additions vs previous version:
-    - _build_comment(): comment now M15XAUUSDm9fb8 format for readability in MT5
-    - Filling mode retry: if order_send() returns None, retry with next filling mode
-      before giving up. Handles Exness edge cases silently returning None.
-    - timeframe param added for comment generation.
+    Flow summary:
+    1. Reject malformed or duplicate-position requests.
+    2. Pull live account/tick state from MT5.
+    3. Size the position from risk percentage and stop distance.
+    4. Run the portfolio risk manager.
+    5. Submit the order, retrying filling modes when the broker is picky.
+
+    Notes:
+    - The MT5 comment is intentionally compact and alphanumeric for broker
+      compatibility.
+    - Filling-mode retries exist mainly for brokers such as Exness that can
+      return `None` instead of a structured rejection for some modes.
     """
     if direction not in {"long", "short"}:
         return ExecutionResult(success=False, reason=f"invalid direction: {direction}")
@@ -265,8 +243,15 @@ def execute_trade(
     # when the symbol is tradeable. We try up to 3 modes before giving up.#
     # Order: start with detected mode, then try alternatives.            #
     # ------------------------------------------------------------------ #
-    all_modes = [mt5.ORDER_FILLING_IOC, mt5.ORDER_FILLING_FOK, mt5.ORDER_FILLING_RETURN]
-    # Put detected mode first, then remaining modes in order
+    mode_map = {
+        "IOC": mt5.ORDER_FILLING_IOC,
+        "FOK": mt5.ORDER_FILLING_FOK,
+        "RETURN": mt5.ORDER_FILLING_RETURN,
+    }
+    all_modes = [mode_map[name] for name in execution_config.filling_retry_order if name in mode_map]
+    if initial_filling not in all_modes:
+        all_modes = [initial_filling] + all_modes
+    # Put detected mode first, then remaining modes in configured order
     retry_modes = [initial_filling] + [m for m in all_modes if m != initial_filling]
 
     comment = _build_comment(strategy_name, symbol, timeframe)
@@ -279,8 +264,8 @@ def execute_trade(
         "price":     price,
         "sl":        round(sl_price, 5),
         "tp":        round(tp_price, 5),
-        "deviation": 10,
-        "magic":     987654,
+        "deviation": execution_config.order_deviation,
+        "magic":     execution_config.order_magic,
         "comment":   comment,
     }
 

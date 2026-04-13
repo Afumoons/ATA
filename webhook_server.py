@@ -1,10 +1,20 @@
+"""Minimal inbound webhook surface for outbound WhatsApp notifications.
+
+This server currently validates the shared token and payload shape, then logs
+accepted requests as a placeholder. It is intended as the local bridge point
+for wiring OpenClaw-native delivery later.
+"""
+
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 import os
 
+from .config import notification_config
+
 app = FastAPI()
 
-WEBHOOK_TOKEN = os.getenv("WEBHOOK_TOKEN", "clio-autotrading-hooks")
+# Shared-secret token for simple webhook authentication.
+WEBHOOK_TOKEN = os.getenv("WEBHOOK_TOKEN", notification_config.webhook_token)
 
 
 @app.post("/hooks/whatsapp_outbound")
@@ -33,8 +43,10 @@ async def whatsapp_outbound(request: Request):
     if not to or not message:
         raise HTTPException(status_code=400, detail="'to' and 'message' are required")
 
-    # 3) TODO: kirim via OpenClaw / WhatsApp.
-    # Untuk sekarang, kita log ke stdout dulu sebagai placeholder.
+    # 3) Placeholder delivery layer.
+    # Saat ini request hanya dilog supaya endpoint dan auth flow bisa diuji
+    # tanpa side effect eksternal. Integrasi pengiriman aktual bisa disambung
+    # ke OpenClaw pada tahap berikutnya.
     print(f"[WEBHOOK WHATSAPP] to={to} message={message!r}")
 
     # Di langkah berikutnya, fungsi ini akan dipasangi integrasi ke OpenClaw

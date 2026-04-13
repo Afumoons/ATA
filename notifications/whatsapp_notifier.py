@@ -23,6 +23,7 @@ from typing import Optional, List
 import requests
 
 from ..logging_utils import get_logger
+from ..config import notification_config
 
 logger = get_logger(__name__)
 
@@ -32,6 +33,7 @@ logger = get_logger(__name__)
 
 @dataclass
 class NotifierConfig:
+    """Runtime settings for outbound WhatsApp alerts via OpenClaw webhook."""
     # OpenClaw outbound WhatsApp webhook URL
     # Set via environment variable OPENCLAW_WHATSAPP_WEBHOOK or hardcode here
     webhook_url: str = field(
@@ -41,35 +43,38 @@ class NotifierConfig:
     # Optional shared-secret token for the webhook, passed as ?token=...
     # This is kept in a separate env var so the raw URL can be reused safely.
     webhook_token: str = field(
-        default_factory=lambda: os.environ.get("WEBHOOK_TOKEN", "clio-autotrading-hooks")
+        default_factory=lambda: os.environ.get("WEBHOOK_TOKEN", notification_config.webhook_token)
     )
 
     # WhatsApp recipient number (international format, no +)
     # Default: Afu's number for this deployment (Indonesia, 62...)
     recipient: str = field(
-        default_factory=lambda: os.environ.get("OPENCLAW_WHATSAPP_RECIPIENT", "628170090022")
+        default_factory=lambda: os.environ.get("OPENCLAW_WHATSAPP_RECIPIENT", notification_config.recipient)
     )
 
     # Minimum impact level to send alert (2=medium, 3=high only)
-    min_impact_for_alert: int = 3
+    min_impact_for_alert: int = notification_config.min_impact_for_alert
 
     # Cooldown — don't re-alert same event within N minutes
-    alert_cooldown_minutes: int = 60
+    alert_cooldown_minutes: int = notification_config.alert_cooldown_minutes
 
     # Alert N minutes before the event
-    alert_before_minutes: int = 30
+    alert_before_minutes: int = notification_config.alert_before_minutes
 
-    request_timeout: int = 10
-    retry_attempts: int = 2
+    request_timeout: int = notification_config.request_timeout
+    retry_attempts: int = notification_config.retry_attempts
 
 
+# Single default instance used by the notifier helpers below.
 DEFAULT_CONFIG = NotifierConfig()
 
 # In-memory cooldown tracker: event_key → last_alert_time (UTC ISO)
+# This suppresses duplicate alerts during one process lifetime.
 _alerted_events: dict[str, str] = {}
 
 
 def _event_key(event_name: str, event_time: str) -> str:
+    """Create a deterministic cooldown key for one scheduled event."""
     return f"{event_name}::{event_time}"
 
 
@@ -78,6 +83,7 @@ def _format_impact_emoji(impact: int) -> str:
 
 
 def _build_message(events: list[dict], account_info: Optional[dict] = None) -> str:
+    """Render a user-facing WhatsApp alert for one or more upcoming events."""
     """Build WhatsApp message text for upcoming high-impact events."""
     lines = ["📊 *Autonomous Trading AI — News Alert*", ""]
 
@@ -104,7 +110,9 @@ def _build_message(events: list[dict], account_info: Optional[dict] = None) -> s
         )
         lines.append("")
 
-    lines.append("🔒 *Trading will be paused 30 min before / 15 min after each event.*")
+    lines.append(
+        f"🔒 *Trading will be paused {notification_config.trading_pause_before_minutes} min before / {notification_config.trading_pause_after_minutes} min after each event.*"
+    )
 
     if account_info:
         equity = account_info.get("equity", 0)

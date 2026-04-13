@@ -6,20 +6,16 @@ from typing import Dict, List, Optional
 
 from ..logging_utils import get_logger
 from ..strategies.pool import StrategyPool
+from ..config import live_decay_config
 from .audit_utils import append_pool_audit
 from .strategy_live_stats import StrategyLiveStats, should_ignore_for_engine_governance
 
 logger = get_logger(__name__)
 
-MIN_TRADES_FOR_DECAY = 8
-MIN_RECENT_FOR_WARNING = 8
-MIN_RECENT_FOR_DEGRADE = 10
-WARNING_LOSS_STREAK = 4
-DEGRADE_LOSS_STREAK = 5
-
 
 @dataclass
 class LiveDecaySignal:
+    """Computed health snapshot for one strategy's recent live performance."""
     strategy_name: str
     current_status: str
     signal_level: str  # healthy | warning | degrade
@@ -34,6 +30,7 @@ class LiveDecaySignal:
 
 @dataclass
 class LiveDecayAction:
+    """Concrete governance action derived from a live-decay signal."""
     strategy_name: str
     current_status: str
     new_status: Optional[str]
@@ -60,6 +57,7 @@ def _negative_ratio(recent_pnls: List[float]) -> float:
 
 
 def compute_live_decay_signal(strategy_name: str, current_status: str, stats: StrategyLiveStats) -> LiveDecaySignal:
+    """Classify a strategy as healthy, warning, or degrade from recent PnL."""
     if should_ignore_for_engine_governance(strategy_name):
         return LiveDecaySignal(
             strategy_name=strategy_name,
@@ -85,13 +83,13 @@ def compute_live_decay_signal(strategy_name: str, current_status: str, stats: St
     level = "healthy"
     reason = "insufficient_data"
 
-    if total_trades >= MIN_TRADES_FOR_DECAY and recent_count >= MIN_RECENT_FOR_WARNING:
+    if total_trades >= live_decay_config.min_trades_for_decay and recent_count >= live_decay_config.min_recent_for_warning:
         level = "warning"
         reason = "recent_avg_negative" if recent_avg < 0 else "monitoring"
 
-        if loss_streak >= WARNING_LOSS_STREAK:
+        if loss_streak >= live_decay_config.warning_loss_streak:
             level = "warning"
-            reason = f"loss_streak>={WARNING_LOSS_STREAK}"
+            reason = f"loss_streak>={live_decay_config.warning_loss_streak}"
         elif negative_ratio >= 0.70 and recent_avg < 0:
             level = "warning"
             reason = "negative_ratio_high_and_recent_avg_negative"
@@ -99,10 +97,10 @@ def compute_live_decay_signal(strategy_name: str, current_status: str, stats: St
             level = "healthy"
             reason = "recent_performance_ok"
 
-    if total_trades >= MIN_TRADES_FOR_DECAY and recent_count >= MIN_RECENT_FOR_DEGRADE:
-        if recent_avg < 0 and recent_sum < 0 and loss_streak >= DEGRADE_LOSS_STREAK:
+    if total_trades >= live_decay_config.min_trades_for_decay and recent_count >= live_decay_config.min_recent_for_degrade:
+        if recent_avg < 0 and recent_sum < 0 and loss_streak >= live_decay_config.degrade_loss_streak:
             level = "degrade"
-            reason = f"recent_avg_negative_and_loss_streak>={DEGRADE_LOSS_STREAK}"
+            reason = f"recent_avg_negative_and_loss_streak>={live_decay_config.degrade_loss_streak}"
 
     return LiveDecaySignal(
         strategy_name=strategy_name,
@@ -119,6 +117,7 @@ def compute_live_decay_signal(strategy_name: str, current_status: str, stats: St
 
 
 def evaluate_live_decay(pool: StrategyPool, live_stats: Dict[str, StrategyLiveStats]) -> List[LiveDecayAction]:
+    """Scan active/exploratory strategies and produce decay actions if needed."""
     actions: List[LiveDecayAction] = []
     for name, rec in pool.strategies.items():
         if rec.status not in {"active", "exploratory"}:
@@ -164,6 +163,7 @@ def evaluate_live_decay(pool: StrategyPool, live_stats: Dict[str, StrategyLiveSt
 
 
 def apply_live_decay_actions(pool: StrategyPool, actions: List[LiveDecayAction]) -> int:
+    """Persist live-decay metadata and apply any status demotions to the pool."""
     changed = 0
     now_iso = datetime.now(timezone.utc).isoformat()
 
