@@ -1,43 +1,57 @@
 from __future__ import annotations
 
+import json
 import re
+from collections import defaultdict
 from pathlib import Path
 
 from autonomous_trading_ai.execution.signals import get_strategy_for_ticket
-from autonomous_trading_ai.execution.strategy_live_stats import StrategyLiveStats, load_all_strategy_stats, save_all_strategy_stats
+from autonomous_trading_ai.execution.strategy_live_stats import MAX_RECENT_TRADES, StrategyLiveStats, load_all_strategy_stats, save_all_strategy_stats
 from autonomous_trading_ai.execution.audit_utils import UNMATCHED_CLOSED_DEALS_PATH
 
 
+def _load_unmatched_rows() -> list[dict]:
+    if not UNMATCHED_CLOSED_DEALS_PATH.exists():
+        return []
+    try:
+        with UNMATCHED_CLOSED_DEALS_PATH.open("r", encoding="utf-8") as f:
+            data = json.load(f)
+        if isinstance(data, list):
+            return [row for row in data if isinstance(row, dict)]
+    except Exception:
+        return []
+    return []
+
+
 def _reconcile_unmatched_manual_buckets(stats: dict[str, StrategyLiveStats]) -> int:
-    rows = []
-    if UNMATCHED_CLOSED_DEALS_PATH.exists():
-        try:
-            import json
-
-            with UNMATCHED_CLOSED_DEALS_PATH.open("r", encoding="utf-8") as f:
-                data = json.load(f)
-            if isinstance(data, list):
-                rows = data
-        except Exception:
-            rows = []
-
-    applied = 0
+    rows = _load_unmatched_rows()
+    grouped: dict[str, list[dict]] = defaultdict(list)
     for row in rows:
-        if not isinstance(row, dict):
-            continue
         bucket_name = str(row.get("manual_bucket") or "").strip()
         if not bucket_name:
             continue
-        pnl = float(row.get("profit", 0.0) or 0.0)
+        grouped[bucket_name].append(row)
+
+    applied = 0
+    for bucket_name, bucket_rows in grouped.items():
+        ordered_rows = sorted(bucket_rows, key=lambda r: str(r.get("recorded_at") or ""))
+        pnls: list[float] = []
+        last_update = ""
+        total_pnl = 0.0
+        for row in ordered_rows:
+            pnl = float(row.get("profit", 0.0) or 0.0)
+            total_pnl += pnl
+            pnls.append(pnl)
+            if row.get("recorded_at"):
+                last_update = str(row.get("recorded_at"))
+
         rec = stats.get(bucket_name) or StrategyLiveStats(name=bucket_name)
-        rec.total_pnl += pnl
-        rec.num_trades += 1
-        if row.get("recorded_at"):
-            rec.last_update = str(row.get("recorded_at"))
-        rec.recent_pnls.append(pnl)
-        rec.recent_pnls = rec.recent_pnls[-30:]
+        rec.total_pnl = total_pnl
+        rec.num_trades = len(ordered_rows)
+        rec.last_update = last_update
+        rec.recent_pnls = pnls[-MAX_RECENT_TRADES:]
         stats[bucket_name] = rec
-        applied += 1
+        applied += len(ordered_rows)
     return applied
 
 TRADES_LOG_PATH = Path(__file__).resolve().parents[1] / "execution" / "trades.log"
