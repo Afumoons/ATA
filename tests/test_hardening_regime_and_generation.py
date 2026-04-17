@@ -3,7 +3,14 @@ import pandas as pd
 from autonomous_trading_ai.backtests.engine import run_backtest
 from autonomous_trading_ai.backtests.evaluation import evaluate_strategy
 from autonomous_trading_ai.backtests.explain import _derive_routing_confidence
-from autonomous_trading_ai.config import canonical_symbol
+from autonomous_trading_ai.config import (
+    SYMBOL_EXECUTION_VARIANTS,
+    canonical_symbol,
+    execution_variants_for,
+    is_canonical_symbol,
+    normalize_symbol_token,
+    same_canonical_symbol,
+)
 from autonomous_trading_ai.scheduler.main import _challenger_research_min_trades, _passes_symbol_specific_mc_tail_relief
 from autonomous_trading_ai.strategies.base import StrategyDefinition
 from autonomous_trading_ai.strategies.generator import FAMILY_LIBRARY, XAG_M15_FAMILY_WEIGHTS, random_strategy, generated_family_counts
@@ -47,6 +54,42 @@ def test_canonical_symbol_maps_btc_execution_aliases_to_research_symbol():
     assert canonical_symbol('BTCUSD') == 'BTCUSDm'
     assert canonical_symbol('BTCUSDT') == 'BTCUSDm'
     assert canonical_symbol('BTCUSDc') == 'BTCUSDm'
+
+
+def test_symbol_normalization_handles_case_and_whitespace():
+    assert normalize_symbol_token(' btcusdc ') == 'BTCUSDC'
+    assert canonical_symbol(' btcusdc ') == 'BTCUSDm'
+    assert canonical_symbol(' btcusdt ') == 'BTCUSDm'
+    assert canonical_symbol(' xauusdc ') == 'XAUUSDm'
+    assert canonical_symbol('xagusd') == 'XAGUSDm'
+
+
+def test_canonical_symbol_is_idempotent_for_known_and_unknown_symbols():
+    for symbol in ['BTCUSDm', 'BTCUSD', 'BTCUSDT', 'BTCUSDc', 'XAUUSD', ' xagusdc ', 'ETHUSDm', ' custom_symbol ']:
+        canon = canonical_symbol(symbol)
+        assert canonical_symbol(canon) == canon
+
+
+def test_execution_variants_round_trip_back_to_their_canonical_symbol():
+    for canon, variants in SYMBOL_EXECUTION_VARIANTS.items():
+        assert is_canonical_symbol(canon) is True
+        assert canon in execution_variants_for(canon)
+        for variant in variants:
+            assert canonical_symbol(variant) == canon
+            assert canonical_symbol(variant.lower()) == canon
+            assert canonical_symbol(f' {variant} ') == canon
+
+
+def test_same_canonical_symbol_matches_aliases_and_rejects_different_markets():
+    assert same_canonical_symbol('BTCUSD', 'BTCUSDm') is True
+    assert same_canonical_symbol(' btcusdt ', 'BTCUSDc') is True
+    assert same_canonical_symbol('XAUUSD', 'XAGUSD') is False
+    assert same_canonical_symbol('ETHUSDm', ' ethusdm ') is True
+
+
+def test_execution_variants_for_unknown_symbol_falls_back_to_normalized_singleton():
+    assert execution_variants_for(' ethusdm ') == ['ETHUSDM']
+    assert execution_variants_for(None) == []
 
 
 def test_core_m15_generation_produces_broader_families():

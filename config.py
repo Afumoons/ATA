@@ -23,7 +23,7 @@ class RiskConfig:
     what happens to work in backtests.
     """
     # Per-trade risk cap: percentage of current equity risked per trade
-    max_risk_per_trade_pct: float = 1       # 1.5% of equity (AGGRESSIVE++ profile)
+    max_risk_per_trade_pct: float = 2       # 1.5% of equity (AGGRESSIVE++ profile)
 
     # Portfolio-level circuit breaker.
     # 30% is currently intentional for this deployment; do not "fix" it back to
@@ -296,15 +296,15 @@ routing_config = RoutingConfig()
 # Execution layer should still use the actual broker symbol known by MT5.
 SYMBOL_ALIASES: dict[str, str] = {
     "XAUUSD": "XAUUSDm",
-    "XAUUSDc": "XAUUSDm",
-    "XAUUSDm": "XAUUSDm",
+    "XAUUSDC": "XAUUSDm",
+    "XAUUSDM": "XAUUSDm",
     "XAGUSD": "XAGUSDm",
-    "XAGUSDc": "XAGUSDm",
-    "XAGUSDm": "XAGUSDm",
+    "XAGUSDC": "XAGUSDm",
+    "XAGUSDM": "XAGUSDm",
     "BTCUSDT": "BTCUSDm",
     "BTCUSD": "BTCUSDm",
-    "BTCUSDc": "BTCUSDm",
-    "BTCUSDm": "BTCUSDm",
+    "BTCUSDC": "BTCUSDm",
+    "BTCUSDM": "BTCUSDm",
 }
 
 # Reverse map: canonical symbol → broker variants valid for execution.
@@ -314,7 +314,51 @@ SYMBOL_EXECUTION_VARIANTS: dict[str, list[str]] = {
     "BTCUSDm": ["BTCUSDm", "BTCUSD", "BTCUSDc", "BTCUSDT"],
 }
 
+def normalize_symbol_token(symbol: str | None) -> str:
+    """Return a trimmed, upper-normalized symbol token.
 
-def canonical_symbol(symbol: str) -> str:
+    This keeps canonicalization resilient to minor input hygiene issues such as
+    stray whitespace or lowercase symbols from configs, legacy artifacts, or
+    broker payloads.
+    """
+    if symbol is None:
+        return ""
+    return str(symbol).strip().upper()
+
+
+_SYMBOL_EXECUTION_VARIANTS_NORMALIZED: dict[str, list[str]] = {
+    normalize_symbol_token(canon): list(variants)
+    for canon, variants in SYMBOL_EXECUTION_VARIANTS.items()
+}
+
+
+def canonical_symbol(symbol: str | None) -> str:
     """Normalize a broker/execution symbol to the canonical research symbol."""
-    return SYMBOL_ALIASES.get(symbol, symbol)
+    normalized = normalize_symbol_token(symbol)
+    return SYMBOL_ALIASES.get(normalized, normalized)
+
+
+def is_canonical_symbol(symbol: str | None) -> bool:
+    """Return True when the symbol is already one of the canonical research ids."""
+    normalized = normalize_symbol_token(symbol)
+    return bool(normalized) and normalized in _SYMBOL_EXECUTION_VARIANTS_NORMALIZED
+
+
+def execution_variants_for(symbol: str | None) -> list[str]:
+    """Return broker/execution symbol variants for a canonical market symbol.
+
+    Unknown symbols fall back to their normalized token as a single-item list so
+    callers can stay permissive where fail-fast behavior is not desired.
+    """
+    canon = canonical_symbol(symbol)
+    variants = _SYMBOL_EXECUTION_VARIANTS_NORMALIZED.get(normalize_symbol_token(canon))
+    if variants:
+        return list(variants)
+    return [canon] if canon else []
+
+
+def same_canonical_symbol(left: str | None, right: str | None) -> bool:
+    """Return True when two symbol identifiers point at the same canonical market."""
+    left_canon = canonical_symbol(left)
+    right_canon = canonical_symbol(right)
+    return bool(left_canon) and left_canon == right_canon

@@ -13,7 +13,7 @@ import re
 
 import pandas as pd
 
-from ..config import routing_config, canonical_symbol
+from ..config import routing_config, canonical_symbol, same_canonical_symbol
 from ..logging_utils import get_logger
 from ..strategies.base import StrategyDefinition
 from ..strategies.live_manifest import strategy_definition_from_manifest_entry
@@ -621,13 +621,13 @@ def execute_signals_for_symbol(
     active_records = [
         rec for rec in pool.strategies.values()
         if rec.status == "active"
-        and canonical_symbol(rec.symbol) == canonical_symbol(symbol)
+        and same_canonical_symbol(rec.symbol, symbol)
         and rec.timeframe == timeframe
     ]
     exploratory_records = [
         rec for rec in pool.strategies.values()
         if rec.status == "exploratory"
-        and canonical_symbol(rec.symbol) == canonical_symbol(symbol)
+        and same_canonical_symbol(rec.symbol, symbol)
         and rec.timeframe == timeframe
     ]
 

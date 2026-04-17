@@ -2,14 +2,14 @@ from __future__ import annotations
 
 import json
 import time as _time
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from collections import Counter, defaultdict
 
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from ..logging_utils import get_logger
-from ..config import scheduler_config, risk_config, canonical_symbol
+from ..config import scheduler_config, risk_config, canonical_symbol, same_canonical_symbol
 from ..data.collector_mt5 import initialize_mt5, shutdown_mt5, fetch_ohlc, save_ohlc
 from ..research.features import compute_features, save_features
 from ..research.regime import add_regime_column
@@ -414,7 +414,7 @@ def _family_stage_summary_payload(
     return {
         "symbol": symbol,
         "timeframe": timeframe,
-        "generated_at": datetime.utcnow().isoformat(timespec="seconds") + "Z",
+        "generated_at": datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z"),
         "families": {
             family: {
                 "stages": dict(family_stage_counts.get(family, _new_family_stage_row())),
@@ -744,7 +744,7 @@ def job_research_strategies() -> None:
 
         parent_candidates = [
             rec for rec in pool.strategies.values()
-            if canonical_symbol(rec.symbol) == canon and rec.timeframe == TIMEFRAME
+            if same_canonical_symbol(rec.symbol, canon) and rec.timeframe == TIMEFRAME
         ]
         scored_parents = []
         for rec in parent_candidates:
@@ -793,7 +793,7 @@ def job_research_strategies() -> None:
 
         archive_strategies = [
             s for s in load_all_strategies()
-            if canonical_symbol(getattr(s, 'symbol', '')) == canon and getattr(s, 'timeframe', '') == TIMEFRAME
+            if same_canonical_symbol(getattr(s, 'symbol', ''), canon) and getattr(s, 'timeframe', '') == TIMEFRAME
         ]
         existing_generated_by_family = Counter(
             _strategy_family_from_params(getattr(s, 'params', {}) or {})
@@ -1289,7 +1289,7 @@ def job_execute_signals() -> None:
         if not live_tier_strats:
             live_tier_strats = [
                 rec for rec in pool.strategies.values()
-                if canonical_symbol(rec.symbol) == canon and rec.timeframe == TIMEFRAME and rec.status in {"active", "exploratory"}
+                if same_canonical_symbol(rec.symbol, canon) and rec.timeframe == TIMEFRAME and rec.status in {"active", "exploratory"}
             ]
             if live_tier_strats:
                 logger.warning(
