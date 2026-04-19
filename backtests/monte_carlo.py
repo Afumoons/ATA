@@ -14,17 +14,23 @@ def _random_permutation_indices(rng: np.random.Generator, n_runs: int, n_trades:
     return np.argsort(rng.random((n_runs, n_trades)), axis=1)
 
 
-def _block_bootstrap_indices(rng: np.random.Generator, n_runs: int, n_trades: int, block_size: int) -> np.ndarray:
+def _block_bootstrap_indices(rng, n_runs, n_trades, block_size):
     block = max(1, min(int(block_size), n_trades))
+    n_blocks = int(np.ceil(n_trades / block))
+    
+    # Vectorized: generate semua starting positions sekaligus
+    starts = rng.integers(0, n_trades, size=(n_runs, n_blocks))
+    
     out = np.empty((n_runs, n_trades), dtype=int)
-    for run in range(n_runs):
-        cursor = 0
-        while cursor < n_trades:
-            start = int(rng.integers(0, n_trades))
-            take = min(block, n_trades - cursor)
-            idx = (start + np.arange(take)) % n_trades
-            out[run, cursor:cursor + take] = idx
-            cursor += take
+    for b in range(n_blocks):
+        start_col = b * block
+        end_col = min(start_col + block, n_trades)
+        take = end_col - start_col
+        offsets = np.arange(take)
+        # (n_runs, take): setiap row = (start[run,b] + offset) % n_trades
+        indices = (starts[:, b:b+1] + offsets[None, :]) % n_trades
+        out[:, start_col:end_col] = indices
+    
     return out
 
 

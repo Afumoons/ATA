@@ -283,6 +283,8 @@ def _weighted_choice(weights: Dict[str, float]) -> str:
 
 
 def _normalize_family_for_market(family: str, symbol: str) -> str:
+    from ..config import canonical_symbol
+    symbol = canonical_symbol(symbol)  # tambahkan baris ini
     family_meta = FAMILY_LIBRARY.get(family, {})
     allowed_symbols = set(family_meta.get("allowed_symbols", []) or [])
     if allowed_symbols and symbol not in allowed_symbols:
@@ -313,6 +315,8 @@ def _classify_template(tpl: str) -> Tuple[str, str]:
 
 
 def _sample_family_params(family: str, symbol: str, timeframe: str) -> Dict[str, Any]:
+    from ..config import canonical_symbol
+    symbol = canonical_symbol(symbol)  # tambahkan baris ini
     family = _normalize_family_for_market(family, symbol)
     params: Dict[str, Any] = {
         "trend_min": round(random.uniform(_TREND_MIN_LOW, _TREND_MIN_HIGH), 2),
@@ -652,12 +656,15 @@ def _build_strategy_from_templates(
 # Public API
 # ---------------------------------------------------------------------------
 
+from ..config import canonical_symbol as _canon
+
 def random_strategy(symbol: str, timeframe: str, family: Optional[str] = None) -> StrategyDefinition:
     """Generate a deterministic-rule strategy.
 
     Core M15 markets use a broader but still deterministic family set so the
     search space contains genuinely different playbooks, not just MA/RSI cousins.
     """
+    symbol = _canon(symbol)  # normalize sebelum semua cek
     is_core_15m = symbol in {"XAUUSDm", "BTCUSDm"} and timeframe == "M15"
     is_xag_m15 = symbol == "XAGUSDm" and timeframe == "M15"
 

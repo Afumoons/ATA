@@ -201,10 +201,14 @@ def semantic_similarity(a: StrategyDefinition, b: StrategyDefinition) -> float:
                 close += 1
         except Exception:
             pass
-    numeric_similarity = (close / compared) if compared else 0.5
     family_bonus = 1.0 if a_family == b_family else 0.0
     motif_bonus = 1.0 if strategy_motif(a) == strategy_motif(b) else 0.0
-    return 0.45 * token_jaccard + 0.20 * numeric_similarity + 0.15 * family_bonus + 0.20 * motif_bonus
+    if compared == 0:
+        # Hanya gunakan token jaccard + family/motif components
+        return 0.45 * token_jaccard + 0.35 * family_bonus + 0.20 * motif_bonus
+    else:
+        numeric_similarity = close / compared
+        return 0.45 * token_jaccard + 0.20 * numeric_similarity + 0.15 * family_bonus + 0.20 * motif_bonus
 
 
 @dataclass
@@ -240,22 +244,31 @@ class StrategyPool:
     _fp_map: Dict[str, str] = field(default_factory=dict, repr=False, compare=False)
 
     def _rebuild_fp_map(self) -> None:
-        """Rebuild fingerprint map from stored strategy stats."""
         self._fp_map = {}
         for name, rec in self.strategies.items():
             strat_dict = (rec.stats or {}).get("strategy") or {}
-            if strat_dict:
-                fp = "|".join([
-                    _family_from_strategy_payload(strat_dict),
-                    str(strat_dict.get("long_entry_rule", "") or ""),
-                    str(strat_dict.get("short_entry_rule", "") or ""),
-                    str(strat_dict.get("exit_rule", "") or ""),
-                    str(strat_dict.get("sl_atr_mult", "") or ""),
-                    str(strat_dict.get("tp_atr_mult", "") or ""),
-                    str(strat_dict.get("stop_loss_pips", "") or ""),
-                    str(strat_dict.get("take_profit_pips", "") or ""),
-                ])
-                self._fp_map[fp] = name
+            if not strat_dict:
+                continue
+            # Gunakan logic yang sama dengan _structural_fingerprint
+            params = strat_dict.get("params") or {}
+            family = str(
+                params.get("family")
+                or params.get("playbook_type")
+                or strat_dict.get("family")
+                or strat_dict.get("playbook_type")
+                or "unknown"
+            )
+            fp = "|".join([
+                family,
+                str(strat_dict.get("long_entry_rule", "") or ""),
+                str(strat_dict.get("short_entry_rule", "") or ""),
+                str(strat_dict.get("exit_rule", "") or ""),
+                str(strat_dict.get("sl_atr_mult", "") or ""),
+                str(strat_dict.get("tp_atr_mult", "") or ""),
+                str(strat_dict.get("stop_loss_pips", "") or ""),
+                str(strat_dict.get("take_profit_pips", "") or ""),
+            ])
+            self._fp_map[fp] = name
 
     def to_dict(self) -> Dict[str, Dict[str, Any]]:
         return {name: rec.to_dict() for name, rec in self.strategies.items()}

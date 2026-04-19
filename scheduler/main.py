@@ -332,7 +332,7 @@ def _apply_live_degradation(pool) -> None:
         if should_ignore_for_engine_governance(name):
             continue
         pool_rec = pool.strategies.get(name)
-        if not pool_rec or pool_rec.status != "active":
+        if not pool_rec or pool_rec.status not in {"active", "exploratory"}:  # ← tambah exploratory
             continue
 
         stats = pool_rec.stats or {}
@@ -357,10 +357,12 @@ def _apply_live_degradation(pool) -> None:
         )
 
         if severe_recent_break or sustained_underperformance:
-            pool_rec.status = "candidate"
+            # Active → candidate, exploratory → disabled (lebih agresif untuk exploratory)
+            new_status = "candidate" if pool_rec.status == "active" else "disabled"
+            pool_rec.status = new_status
             logger.warning(
-                "Degradation: demoting %s to candidate (bt_ret=%.2f%% bt_sharpe=%.2f live_total=%.2f%% live_recent=%.2f%% recent_avg_pnl=%.2f trades=%d severe=%s sustained=%s)",
-                name, bt_ret, bt_sharpe, live_ret_total_pct, live_ret_recent_pct, recent_avg_pnl, rec.num_trades, severe_recent_break, sustained_underperformance,
+                "Degradation: demoting %s (%s→%s) ...",
+                name, pool_rec.status, new_status,
             )
             try:
                 from ..notifications.whatsapp_notifier import send_strategy_degradation_alert
@@ -653,6 +655,7 @@ def _memory_dead_zone_penalty(candidate, memory: ResearchMemory, symbol: str, ti
 def job_research_strategies() -> None:
     logger.info("Scheduler: job_research_strategies start")
     pool = load_pool()
+    pool_modified = False   # ← tambahkan flag
     memory = ResearchMemory()
     researched_canonicals: set[str] = set()
 
@@ -852,8 +855,6 @@ def job_research_strategies() -> None:
                         research_skip_samples["memory_veto"].append(strat.name)
                     _record_family_skip(family_skip_counts, family_skip_samples, family, "memory_veto", strat.name)
                     continue
-
-                feat.attrs["strategy_params"] = getattr(strat, "params", {}) or {}
 
                 prescreen_ok, prescreen_stats = _passes_cheap_prescreen(feat, strat, canon)
                 if not prescreen_ok:
@@ -1145,7 +1146,10 @@ def job_research_strategies() -> None:
 
                 family_stage_counts[family]["accepted"] += int(bool(eval_result.get("accepted")))
                 family_stage_counts[family][status] += 1
+                prev_count = len(pool.strategies)
                 pool.upsert_strategy(strategy=strat, stats=eval_result, score=eval_result.get("score", 0.0), status=status)
+                if len(pool.strategies) != prev_count or True:  # upsert selalu modifikasi
+                    pool_modified = True
                 memory.store_strategy_result(strategy_name=strat.name, symbol=strat.symbol, timeframe=strat.timeframe, stats=eval_result)
             except Exception as e:
                 logger.exception("Research error for %s: %s", strat.name, e)
@@ -1155,6 +1159,7 @@ def job_research_strategies() -> None:
 
     _apply_live_degradation(pool)
     if FAMILY_AWARE_GOVERNANCE_ENABLED:
+        pool_modified = True  
         challenger_candidates = [
             rec for rec in pool.strategies.values()
             if canonical_symbol(rec.symbol) in RESEARCH_FAMILY_SUMMARY_SYMBOLS and rec.timeframe == TIMEFRAME and rec.status == "candidate" and _is_challenger_family(_execution_family(rec))
@@ -1178,7 +1183,10 @@ def job_research_strategies() -> None:
                 rec.stats["family_governance_reason"] = "challenger_slot_bootstrap"
 
     pool.prune(max_inactive=200, min_family_keep=8)
-    save_pool(pool)
+    if pool_modified:   # ← hanya save jika ada perubahan
+        save_pool(pool)
+    else:
+        logger.info("job_research_strategies: no pool changes, skipping save")
     logger.info(
         "Scheduler: job_research_strategies done | status_counts=%s",
         summarize_status_counts(pool.strategies),

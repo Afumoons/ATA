@@ -159,10 +159,10 @@ def _strategy_fingerprint(strat: StrategyDefinition) -> str:
         str(strat.long_entry_rule or ""),
         str(strat.short_entry_rule or ""),
         str(strat.exit_rule or ""),
-        str(getattr(strat, "sl_atr_mult", "")),
-        str(getattr(strat, "tp_atr_mult", "")),
-        str(getattr(strat, "stop_loss_pips", "")),
-        str(getattr(strat, "take_profit_pips", "")),
+        str(getattr(strat, "sl_atr_mult", "") or ""),   # ← tambah "or """
+        str(getattr(strat, "tp_atr_mult", "") or ""),   # ← tambah "or """
+        str(getattr(strat, "stop_loss_pips", "") or ""),
+        str(getattr(strat, "take_profit_pips", "") or ""),
     ])
 
 

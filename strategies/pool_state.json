@@ -2851,7 +2851,7 @@
     "name": "core15_BTCUSDm_M15_1182",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "active",
+    "status": "disabled",
     "score": 5.393520267014231,
     "stats": {
       "initial_equity": 10000.0,
@@ -2973,7 +2973,18 @@
       },
       "family": "rsi_range",
       "playbook_type": "rsi_range",
-      "motif": "range_fade"
+      "motif": "range_fade",
+      "live_decay": {
+        "signal_level": "degrade",
+        "reason": "recent_avg_negative_and_loss_streak>=5",
+        "updated_at": "2026-04-13T14:50:34.196375+00:00",
+        "recent_count": 12,
+        "recent_sum_pnl": -941.74,
+        "recent_avg_pnl": -78.47833333333334,
+        "loss_streak": 5,
+        "negative_ratio": 0.75,
+        "total_trades": 12
+      }
     }
   },
   "core15_BTCUSDm_M15_a82f": {
@@ -10270,7 +10281,18 @@
       },
       "family": "ma_trend",
       "playbook_type": "ma_trend",
-      "motif": "trend_continuation"
+      "motif": "trend_continuation",
+      "live_decay": {
+        "signal_level": "warning",
+        "reason": "recent_avg_negative",
+        "updated_at": "2026-04-19T01:01:52.926837+00:00",
+        "recent_count": 14,
+        "recent_sum_pnl": -335.76,
+        "recent_avg_pnl": -23.982857142857142,
+        "loss_streak": 2,
+        "negative_ratio": 0.5714285714285714,
+        "total_trades": 14
+      }
     }
   },
   "core15_BTCUSDm_M15_82f7": {
@@ -14548,7 +14570,18 @@
       },
       "family": "ma_trend",
       "playbook_type": "ma_trend",
-      "motif": "trend_continuation"
+      "motif": "trend_continuation",
+      "live_decay": {
+        "signal_level": "warning",
+        "reason": "negative_ratio_high_and_recent_avg_negative",
+        "updated_at": "2026-04-19T01:01:52.926837+00:00",
+        "recent_count": 15,
+        "recent_sum_pnl": -287.33,
+        "recent_avg_pnl": -19.15533333333333,
+        "loss_streak": 3,
+        "negative_ratio": 0.7333333333333333,
+        "total_trades": 15
+      }
     }
   },
   "core15_XAUUSDm_M15_8fd0": {

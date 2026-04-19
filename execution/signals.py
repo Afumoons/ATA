@@ -265,12 +265,12 @@ def _recent_signal_overlap_count(strategy_name: str, symbol: str, direction: str
     return count
 
 
-def _active_directional_exposure(symbol: str) -> tuple[Counter[str], Counter[tuple[str, str]]]:
+def _active_directional_exposure(symbol: str, pool_cache: Optional[Dict] = None) -> tuple[Counter[str], Counter[tuple[str, str]]]:
     direction_counts: Counter[str] = Counter()
     family_counts: Counter[tuple[str, str]] = Counter()
-
+    
     try:
-        import MetaTrader5 as mt5  # type: ignore
+        import MetaTrader5 as mt5
     except Exception:
         return direction_counts, family_counts
 
@@ -282,6 +282,14 @@ def _active_directional_exposure(symbol: str) -> tuple[Counter[str], Counter[tup
 
     if not positions:
         return direction_counts, family_counts
+
+    # Load pool sekali, bukan per-position
+    _strategies: Dict = {}
+    try:
+        from ..strategies.pool import load_pool as _load_pool
+        _strategies = _load_pool().strategies
+    except Exception:
+        pass
 
     buy_type = getattr(mt5, "POSITION_TYPE_BUY", 0)
     sell_type = getattr(mt5, "POSITION_TYPE_SELL", 1)
@@ -295,30 +303,12 @@ def _active_directional_exposure(symbol: str) -> tuple[Counter[str], Counter[tup
             except Exception:
                 mapped_name = None
 
-        if not mapped_name:
-            comment = str(getattr(pos, "comment", "") or "")
-            uid4 = comment[-4:].lower() if len(comment) >= 4 else ""
-            if uid4:
-                try:
-                    for candidate_name in _load_ticket_map().values():
-                        candidate_name = str(candidate_name)
-                        if candidate_name.split("_")[-1][:4].lower() == uid4:
-                            mapped_name = candidate_name
-                            break
-                except Exception:
-                    mapped_name = None
-
         family = "unknown"
-        if mapped_name:
-            family = _family_label_from_strategy(
-                SimpleNamespace(name=mapped_name, params={"family": mapped_name.split("_")[0]})
-            )
-            try:
-                strategy_rec = StrategyPool.load().strategies.get(mapped_name)
-                if strategy_rec is not None:
-                    family = _family_label_from_strategy(strategy_rec)
-            except Exception:
-                pass
+        if mapped_name and mapped_name in _strategies:
+            rec = _strategies[mapped_name]
+            st = (rec.stats or {}).get("strategy", {}) or {}
+            params = (st.get("params") if isinstance(st, dict) else {}) or {}
+            family = str(st.get("family") or params.get("family") or params.get("playbook_type") or "unknown")
 
         pos_type = getattr(pos, "type", None)
         direction = "long" if pos_type == buy_type else "short" if pos_type == sell_type else None
@@ -393,10 +383,19 @@ def _dedupe_correlated_signals(signals: Iterable[Signal], symbol: str) -> tuple[
 
 
 def _current_session_from_row(row: pd.Series) -> str:
-    ts = pd.to_datetime(row.get("time"))
-    if getattr(ts, "tzinfo", None) is not None:
-        ts = ts.tz_convert("UTC")
-    hour = int(ts.hour)
+    try:
+        ts = pd.to_datetime(row.get("time"))
+        if ts is None or pd.isna(ts):
+            raise ValueError("missing time")
+        if getattr(ts, "tzinfo", None) is not None:
+            ts = ts.tz_convert("UTC")
+        hour = int(ts.hour)
+    except Exception:
+        # Fallback ke UTC now jika time tidak tersedia
+        from datetime import datetime, timezone
+        hour = datetime.now(timezone.utc).hour
+        logger.warning("_current_session_from_row: could not parse time, using current UTC hour=%d", hour)
+    
     if 0 <= hour < 7:
         return "asia"
     if 7 <= hour < 13:

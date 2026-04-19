@@ -55,7 +55,7 @@ class SchedulerConfig:
     cadence and most strategy-selection thresholds used by the engine.
     """
     enable_scheduler: bool = True
-    managed_symbols: list[str] = field(default_factory=lambda: ["XAUUSD", "BTCUSD", "XAGUSD"])
+    managed_symbols: list[str] = field(default_factory=lambda: ["XAUUSDm", "BTCUSDm", "XAGUSDm"])
     timeframe: str = "M15"
     minimum_edge_for_execution: float = 0.0
 

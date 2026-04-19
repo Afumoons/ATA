@@ -324,8 +324,10 @@ def build_strategy_index(
     pool: StrategyPool,
     *,
     max_archive_per_slot: int = DEFAULT_MAX_ARCHIVE_PER_SLOT,
+    _prebuilt_manifest: Optional[Dict[str, Any]] = None,  # tambahkan parameter ini
 ) -> Dict[str, Any]:
-    live_manifest = build_live_manifest(pool)
+    # Gunakan manifest yang sudah ada, atau build jika tidak ada
+    live_manifest = _prebuilt_manifest if _prebuilt_manifest is not None else build_live_manifest(pool)
     manifest_ranks = {entry["name"]: entry["manifest_rank"] for entry in live_manifest["entries"]}
 
     grouped: Dict[tuple[str, str], List[StrategyRecord]] = defaultdict(list)
@@ -476,7 +478,7 @@ def rebuild_runtime_artifacts(
     max_archive_per_slot: int = DEFAULT_MAX_ARCHIVE_PER_SLOT,
 ) -> Dict[str, Dict[str, Any]]:
     manifest = build_live_manifest(pool, max_live_per_slot=max_live_per_slot)
-    index = build_strategy_index(pool, max_archive_per_slot=max_archive_per_slot)
+    index = build_strategy_index(pool, max_archive_per_slot=max_archive_per_slot, _prebuilt_manifest=manifest)  # reuse!
     save_live_manifest(manifest, manifest_path)
     save_strategy_index(index, index_path)
     return {"manifest": manifest, "index": index}
