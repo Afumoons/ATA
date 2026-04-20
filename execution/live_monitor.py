@@ -224,25 +224,22 @@ def _update_daily_pnl_from_closed_deals() -> None:
         return
 
     close_entry_code: Optional[int] = getattr(mt5, "DEAL_ENTRY_OUT", None)
-    trades_processed = 0
+    if close_entry_code is None:
+        logger.warning("MT5 DEAL_ENTRY_OUT constant not found — using fallback filter")
 
     for deal in deals:
+        # Filter deal type DULU, sebelum cek ticket
+        if close_entry_code is not None:
+            if getattr(deal, "entry", None) != close_entry_code:
+                continue
+        else:
+            # Fallback: skip deals tanpa profit dan tanpa position context
+            if float(getattr(deal, "profit", 0.0)) == 0.0 and getattr(deal, "position_id", None) is None:
+                continue
+
         ticket = getattr(deal, "ticket", None)
         if ticket is None or ticket in processed_ids:
             continue
-
-        if close_entry_code is None:
-            logger.warning("MT5 DEAL_ENTRY_OUT constant not found — deal filtering disabled, may double-count")
-            # Fallback: coba filter berdasarkan profit != 0 atau entry field string
-
-        for deal in deals:
-            if close_entry_code is not None:
-                if getattr(deal, "entry", None) != close_entry_code:
-                    continue
-            else:
-                # Fallback filter: skip deals dengan profit 0 dan tanpa position context
-                if float(getattr(deal, "profit", 0.0)) == 0.0 and getattr(deal, "position_id", None) is None:
-                    continue            
 
         pnl = float(getattr(deal, "profit", 0.0))
 
