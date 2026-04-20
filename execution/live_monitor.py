@@ -216,6 +216,7 @@ def _update_daily_pnl_from_closed_deals() -> None:
         return
 
     processed_ids = set(state.get("processed_deal_ids") or [])
+    trades_processed = 0
 
     try:
         equity_now = _get_account_equity()
