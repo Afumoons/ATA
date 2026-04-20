@@ -8,7 +8,7 @@ import MetaTrader5 as mt5
 
 from ..logging_utils import get_logger
 from ..risk.manager import AccountState, TradeRequest, RiskDecision, validate_trade
-from ..config import execution_config
+from ..config import execution_config, execution_variants_for
 
 logger = get_logger(__name__)
 
@@ -29,6 +29,24 @@ def _pip_value_for_symbol(symbol: str) -> float:
         if symbol.startswith(prefix):
             return 1.0
     return 10.0
+
+
+def _resolve_execution_symbol(symbol: str) -> str:
+    """Resolve canonical symbol to the first execution-ready broker symbol."""
+    variants = execution_variants_for(symbol) or [symbol]
+    for variant in variants:
+        info = mt5.symbol_info(variant)
+        if info is None:
+            continue
+        if not bool(getattr(info, "visible", False)):
+            selected = mt5.symbol_select(variant, True)
+            logger.info("Execution symbol %s not visible; symbol_select -> %s", variant, selected)
+            info = mt5.symbol_info(variant)
+        if info is not None:
+            if variant != symbol:
+                logger.info("Resolved execution symbol %s -> %s", symbol, variant)
+            return variant
+    return symbol
 
 
 def _clamp_volume(volume: float, symbol: str) -> float:
@@ -135,6 +153,8 @@ def execute_trade(
     if stop_loss_pips <= 0:
         return ExecutionResult(success=False, reason=f"non-positive stop_loss_pips: {stop_loss_pips}")
 
+    resolved_symbol = _resolve_execution_symbol(symbol)
+
     try:
         from .live_state_utils import strategy_has_open_position
     except Exception:
@@ -143,20 +163,20 @@ def execute_trade(
 
     if strategy_has_open_position is not None and strategy_has_open_position(
         strategy_name=strategy_name,
-        symbol=symbol,
+        symbol=resolved_symbol,
         timeframe=timeframe,
     ):
         return ExecutionResult(
             success=False,
             reason=(
                 "existing_open_position: "
-                f"strategy={strategy_name} symbol={symbol} timeframe={timeframe}"
+                f"strategy={strategy_name} symbol={resolved_symbol} timeframe={timeframe}"
             ),
         )
 
-    tick = mt5.symbol_info_tick(symbol)
+    tick = mt5.symbol_info_tick(resolved_symbol)
     if tick is None:
-        return ExecutionResult(success=False, reason=f"no tick data for {symbol}")
+        return ExecutionResult(success=False, reason=f"no tick data for {resolved_symbol}")
 
     price = float(tick.ask if direction == "long" else tick.bid)
 
@@ -172,24 +192,24 @@ def execute_trade(
             strategy_name,
         )
 
-    pv = pip_value_per_lot if pip_value_per_lot is not None else _pip_value_for_symbol(symbol)
+    pv = pip_value_per_lot if pip_value_per_lot is not None else _pip_value_for_symbol(resolved_symbol)
     if pv <= 0:
         return ExecutionResult(success=False, reason=f"invalid pip_value_per_lot: {pv}")
 
     risk_amount = account.equity * (risk_perc / 100.0)
     raw_volume = risk_amount / (stop_loss_pips * pv)
-    volume = _clamp_volume(raw_volume, symbol)
+    volume = _clamp_volume(raw_volume, resolved_symbol)
 
     logger.debug(
         "Sizing: strategy=%s symbol=%s equity=%.2f risk_pct=%.3f "
         "sl_pips=%.1f pip_val=%.4f raw_vol=%.4f clamped_vol=%.4f",
-        strategy_name, symbol, account.equity, risk_perc,
+        strategy_name, resolved_symbol, account.equity, risk_perc,
         stop_loss_pips, pv, raw_volume, volume,
     )
 
     req = TradeRequest(
         strategy_name=strategy_name,
-        symbol=symbol,
+        symbol=resolved_symbol,
         direction=direction,
         volume=volume,
         risk_perc=risk_perc,
@@ -222,7 +242,7 @@ def execute_trade(
     # ------------------------------------------------------------------ #
     # Exness returns filling_mode=0 — use IOC as default for Hedge accounts.
     # If broker exposes the bitmask, prefer FOK → IOC → RETURN.
-    sym_info = mt5.symbol_info(symbol)
+    sym_info = mt5.symbol_info(resolved_symbol)
     if sym_info is not None:
         fm = int(sym_info.filling_mode)
         if fm == 0:
@@ -254,11 +274,11 @@ def execute_trade(
     # Put detected mode first, then remaining modes in configured order
     retry_modes = [initial_filling] + [m for m in all_modes if m != initial_filling]
 
-    comment = _build_comment(strategy_name, symbol, timeframe)
+    comment = _build_comment(strategy_name, resolved_symbol, timeframe)
 
     base_request = {
         "action":    mt5.TRADE_ACTION_DEAL,
-        "symbol":    symbol,
+        "symbol":    resolved_symbol,
         "volume":    float(volume),
         "type":      order_type,
         "price":     price,
@@ -284,7 +304,7 @@ def execute_trade(
         logger.warning(
             "order_send() returned None with filling=%s for %s %s — "
             "retrying next mode (last_error=%s)",
-            filling_mode, strategy_name, symbol, last_err,
+            filling_mode, strategy_name, resolved_symbol, last_err,
         )
 
     if result is None:
@@ -292,7 +312,7 @@ def execute_trade(
         logger.error(
             "order_send() returned None after all filling modes: "
             "strategy=%s symbol=%s dir=%s vol=%.4f last_error=%s",
-            strategy_name, symbol, direction, volume, last_err,
+            strategy_name, resolved_symbol, direction, volume, last_err,
         )
         return ExecutionResult(
             success=False,
@@ -304,7 +324,7 @@ def execute_trade(
     if result.retcode != mt5.TRADE_RETCODE_DONE:
         logger.warning(
             "Order failed: strategy=%s symbol=%s dir=%s retcode=%s filling=%s deal=%s",
-            strategy_name, symbol, direction, result.retcode, used_filling, res_dict,
+            strategy_name, resolved_symbol, direction, result.retcode, used_filling, res_dict,
         )
         return ExecutionResult(
             success=False,
@@ -313,7 +333,7 @@ def execute_trade(
         )
 
     ticket = int(result.order)
-    _log_trade(strategy_name, symbol, direction, volume, price, sl_price, tp_price, ticket, "executed")
+    _log_trade(strategy_name, resolved_symbol, direction, volume, price, sl_price, tp_price, ticket, "executed")
 
     return ExecutionResult(
         success=True,

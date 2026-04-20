@@ -7,7 +7,7 @@ import MetaTrader5 as mt5
 import pandas as pd
 
 from ..logging_utils import get_logger
-from ..config import data_config
+from ..config import data_config, execution_variants_for
 
 logger = get_logger(__name__)
 
@@ -39,6 +39,37 @@ def shutdown_mt5() -> None:
     logger.info("Shutdown MetaTrader5 connection")
 
 
+def _resolve_mt5_symbol(symbol: str) -> str:
+    """Resolve canonical symbol to the first broker-visible MT5 symbol variant."""
+    variants = execution_variants_for(symbol) or [symbol]
+    for variant in variants:
+        info = mt5.symbol_info(variant)
+        if info is None:
+            continue
+        if not bool(getattr(info, "visible", False)):
+            selected = mt5.symbol_select(variant, True)
+            logger.info("Symbol %s not visible; symbol_select -> %s", variant, selected)
+            info = mt5.symbol_info(variant)
+        if info is not None and bool(getattr(info, "visible", False)):
+            if variant != symbol:
+                logger.info("Resolved MT5 symbol %s -> %s", symbol, variant)
+            return variant
+
+    available = []
+    try:
+        probe = symbol[:3] if symbol else ""
+        matches = mt5.symbols_get(f"*{probe}*") or []
+        available = [s.name for s in matches[:20]]
+    except Exception:
+        pass
+    raise RuntimeError(
+        f"MT5 symbol not found/available: {symbol}. "
+        f"Tried variants={variants}. "
+        f"Make sure the correct broker account/terminal is logged in and the symbol is visible in Market Watch. "
+        f"Sample matches={available}"
+    )
+
+
 def fetch_ohlc(
     symbol: str,
     timeframe: str | None = None,
@@ -64,52 +95,29 @@ def fetch_ohlc(
     if tf not in TIMEFRAME_MAP:
         raise ValueError(f"Unsupported timeframe: {tf}")
 
-    logger.info("Fetching %d bars for %s %s", n_bars, symbol, tf)
-
-    info = mt5.symbol_info(symbol)
-    if info is None:
-        available = []
-        try:
-            matches = mt5.symbols_get(f"*{symbol[:3]}*") or []
-            available = [s.name for s in matches[:20]]
-        except Exception:
-            pass
-        raise RuntimeError(
-            f"MT5 symbol not found/available: {symbol}. "
-            f"Make sure the correct broker account/terminal is logged in and the symbol is visible in Market Watch. "
-            f"Sample matches={available}"
-        )
-
-    if not bool(getattr(info, "visible", False)):
-        selected = mt5.symbol_select(symbol, True)
-        logger.info("Symbol %s not visible; symbol_select -> %s", symbol, selected)
-        info = mt5.symbol_info(symbol)
-        if info is None or not bool(getattr(info, "visible", False)):
-            raise RuntimeError(
-                f"MT5 symbol unavailable after symbol_select: {symbol}. "
-                f"Check Market Watch / broker symbol name."
-            )
+    resolved_symbol = _resolve_mt5_symbol(symbol)
+    logger.info("Fetching %d bars for %s %s via %s", n_bars, symbol, tf, resolved_symbol)
 
     now_utc = datetime.now(timezone.utc)
 
-    rates = mt5.copy_rates_from(symbol, TIMEFRAME_MAP[tf], now_utc, n_bars)
+    rates = mt5.copy_rates_from(resolved_symbol, TIMEFRAME_MAP[tf], now_utc, n_bars)
 
     if rates is None:
         err = mt5.last_error()
         logger.warning(
-            "copy_rates_from returned None for %s %s (bars=%d) last_error=%s",
-            symbol, tf, n_bars, err,
+            "copy_rates_from returned None for %s (%s) %s (bars=%d) last_error=%s",
+            symbol, resolved_symbol, tf, n_bars, err,
         )
         fallback_bars = min(500, n_bars)
         logger.info(
-            "Fallback: copy_rates_from_pos for %s %s (bars=%d)",
-            symbol, tf, fallback_bars,
+            "Fallback: copy_rates_from_pos for %s (%s) %s (bars=%d)",
+            symbol, resolved_symbol, tf, fallback_bars,
         )
-        rates = mt5.copy_rates_from_pos(symbol, TIMEFRAME_MAP[tf], 0, fallback_bars)
+        rates = mt5.copy_rates_from_pos(resolved_symbol, TIMEFRAME_MAP[tf], 0, fallback_bars)
         if rates is None:
             err2 = mt5.last_error()
             raise RuntimeError(
-                f"MT5 history fetch failed for {symbol} {tf}: "
+                f"MT5 history fetch failed for {symbol} ({resolved_symbol}) {tf}: "
                 f"copy_rates_from=None (err={err}), "
                 f"copy_rates_from_pos=None (err={err2})"
             )
