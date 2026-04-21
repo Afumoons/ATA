@@ -9,7 +9,7 @@ from collections import Counter, defaultdict
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from ..logging_utils import get_logger
-from ..config import scheduler_config, risk_config, canonical_symbol, same_canonical_symbol
+from ..config import scheduler_config, risk_config, execution_config, canonical_symbol, same_canonical_symbol
 from ..data.collector_mt5 import initialize_mt5, shutdown_mt5, fetch_ohlc, save_ohlc
 from ..research.features import compute_features, save_features
 from ..research.regime import add_regime_column
@@ -24,7 +24,7 @@ from ..backtests.walkforward import walk_forward_test
 from ..backtests.monte_carlo import monte_carlo_pnl
 from ..execution.live_monitor import update_live_stats
 from ..execution.live_decay import evaluate_live_decay, apply_live_decay_actions
-from ..execution.signals import execute_signals_for_symbol
+from ..execution.signals import execute_signals_for_symbol, get_strategy_for_ticket
 from ..execution.strategy_live_stats import load_all_strategy_stats, MAX_RECENT_TRADES, should_ignore_for_engine_governance
 from ..vector_memory.research_memory import ResearchMemory
 
@@ -1495,8 +1495,168 @@ def job_execute_signals() -> None:
     logger.info("Scheduler: job_execute_signals done")
 
 
+def _timeframe_to_seconds(timeframe: str) -> int:
+    tf = str(timeframe or "").upper()
+    mapping = {
+        "M1": 60,
+        "M5": 300,
+        "M15": 900,
+        "M30": 1800,
+        "H1": 3600,
+        "H4": 14400,
+        "D1": 86400,
+    }
+    return mapping.get(tf, 900)
+
+
+def _close_live_position(*, position, strategy_name: str, timeframe: str) -> tuple[bool, str]:
+    import MetaTrader5 as mt5
+
+    symbol = str(getattr(position, "symbol", "") or "")
+    volume = float(getattr(position, "volume", 0.0) or 0.0)
+    ticket = int(getattr(position, "ticket", 0) or 0)
+    pos_type = getattr(position, "type", None)
+
+    tick = mt5.symbol_info_tick(symbol)
+    if tick is None:
+        return False, f"no_tick:{symbol}"
+
+    if pos_type == mt5.POSITION_TYPE_BUY:
+        close_type = mt5.ORDER_TYPE_SELL
+        price = float(tick.bid)
+    elif pos_type == mt5.POSITION_TYPE_SELL:
+        close_type = mt5.ORDER_TYPE_BUY
+        price = float(tick.ask)
+    else:
+        return False, f"unknown_position_type:{pos_type}"
+
+    request = {
+        "action": mt5.TRADE_ACTION_DEAL,
+        "symbol": symbol,
+        "volume": volume,
+        "type": close_type,
+        "position": ticket,
+        "price": price,
+        "deviation": execution_config.order_deviation,
+        "magic": execution_config.order_magic,
+        "comment": f"EXIT{timeframe}{symbol}"[:execution_config.order_comment_max_length],
+    }
+
+    result = mt5.order_send(request)
+    if result is None:
+        return False, f"close_order_none:{mt5.last_error()}"
+    if result.retcode != mt5.TRADE_RETCODE_DONE:
+        return False, f"close_retcode:{result.retcode}"
+    return True, "ok"
+
+
+def job_evaluate_open_positions_exit() -> None:
+    logger.info("Scheduler: job_evaluate_open_positions_exit start")
+    import MetaTrader5 as mt5
+    from ..backtests.engine import _eval_rule
+    from ..execution.audit_utils import append_pool_audit
+
+    try:
+        positions = mt5.positions_get()
+    except Exception:
+        logger.exception("job_evaluate_open_positions_exit: positions_get failed")
+        return
+
+    if not positions:
+        logger.info("job_evaluate_open_positions_exit: no open positions")
+        return
+
+    pool = load_pool()
+    feature_cache = {}
+    tf_seconds = _timeframe_to_seconds(TIMEFRAME)
+    now_ts = datetime.now(UTC).timestamp()
+    evaluated = 0
+    closed = 0
+
+    for pos in positions:
+        try:
+            ticket = int(getattr(pos, "ticket", 0) or 0)
+            strategy_name = get_strategy_for_ticket(ticket)
+            if not strategy_name:
+                continue
+
+            rec = pool.strategies.get(strategy_name)
+            if not rec:
+                continue
+
+            strategy_payload = ((rec.stats or {}).get("strategy") or {})
+            exit_rule = strategy_payload.get("exit_rule") or ""
+            if not str(exit_rule).strip():
+                continue
+
+            symbol = canonical_symbol(str(getattr(pos, "symbol", rec.symbol) or rec.symbol))
+            cache_key = (symbol, TIMEFRAME)
+            feat = feature_cache.get(cache_key)
+            if feat is None:
+                try:
+                    feat = load_features(symbol, TIMEFRAME)
+                except FileNotFoundError:
+                    feat = load_features(str(getattr(pos, "symbol", rec.symbol) or rec.symbol), TIMEFRAME)
+                feature_cache[cache_key] = feat
+
+            if feat is None or len(feat) < 2:
+                continue
+
+            latest = feat.sort_values("time").iloc[-2]
+            open_time_raw = getattr(pos, "time", None)
+            if open_time_raw is None:
+                bars_since_entry = 0
+            else:
+                bars_since_entry = max(0, int((now_ts - float(open_time_raw)) // tf_seconds))
+
+            should_exit = _eval_rule(latest, exit_rule, bars_since_entry=bars_since_entry)
+            evaluated += 1
+            if not should_exit:
+                continue
+
+            ok, reason = _close_live_position(position=pos, strategy_name=strategy_name, timeframe=TIMEFRAME)
+            if ok:
+                closed += 1
+                append_pool_audit({
+                    "event": "live_exit_rule_close",
+                    "strategy": strategy_name,
+                    "ticket": ticket,
+                    "symbol": str(getattr(pos, "symbol", "") or ""),
+                    "timeframe": TIMEFRAME,
+                    "bars_since_entry": bars_since_entry,
+                    "exit_rule": exit_rule,
+                })
+                logger.info(
+                    "Live exit-rule close: strategy=%s ticket=%s symbol=%s bars_since_entry=%d",
+                    strategy_name,
+                    ticket,
+                    getattr(pos, "symbol", ""),
+                    bars_since_entry,
+                )
+            else:
+                logger.warning(
+                    "Live exit-rule close failed: strategy=%s ticket=%s reason=%s",
+                    strategy_name,
+                    ticket,
+                    reason,
+                )
+        except Exception:
+            logger.exception("job_evaluate_open_positions_exit: failed for one position")
+
+    logger.info(
+        "Scheduler: job_evaluate_open_positions_exit done evaluated=%d closed=%d",
+        evaluated,
+        closed,
+    )
+
+
 def job_live_monitor() -> None:
     logger.info("Scheduler: job_live_monitor start")
+    try:
+        job_evaluate_open_positions_exit()
+    except Exception as e:
+        logger.exception("job_live_monitor exit_rule_eval error: %s", e)
+
     try:
         update_live_stats()
     except Exception as e:

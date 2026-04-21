@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
+from datetime import datetime, timezone
 
 import MetaTrader5 as mt5
 
@@ -14,6 +15,10 @@ logger = get_logger(__name__)
 
 # Execution logs remain file-based for easy post-mortem inspection outside MT5.
 TRADES_LOG_PATH = Path(__file__).resolve().parent / execution_config.trades_log_filename
+
+
+def _now_utc_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
 
 # ---------------------------------------------------------------------------
 # Pip value per standard lot, per instrument family.
@@ -112,7 +117,7 @@ def _log_trade(
     reason: str,
 ) -> None:
     line = (
-        f"strategy={strategy_name} symbol={symbol} dir={direction} vol={volume:.4f} "
+        f"ts={_now_utc_iso()} strategy={strategy_name} symbol={symbol} dir={direction} vol={volume:.4f} "
         f"price={price:.5f} sl={sl:.5f} tp={tp:.5f} ticket={ticket} reason={reason}\n"
     )
     with TRADES_LOG_PATH.open("a", encoding="utf-8") as f:
