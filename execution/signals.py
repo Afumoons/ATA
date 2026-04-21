@@ -14,6 +14,43 @@ import re
 import pandas as pd
 
 from ..config import routing_config, canonical_symbol, same_canonical_symbol
+
+
+def _timeframe_to_pandas_delta(timeframe: str) -> pd.Timedelta:
+    tf = str(timeframe or "").upper()
+    mapping = {
+        "M1": pd.Timedelta(minutes=1),
+        "M5": pd.Timedelta(minutes=5),
+        "M15": pd.Timedelta(minutes=15),
+        "M30": pd.Timedelta(minutes=30),
+        "H1": pd.Timedelta(hours=1),
+        "H4": pd.Timedelta(hours=4),
+        "D1": pd.Timedelta(days=1),
+    }
+    return mapping.get(tf, pd.Timedelta(minutes=15))
+
+
+def _latest_closed_row(features_df: pd.DataFrame, timeframe: str) -> pd.Series:
+    feat_sorted = features_df.sort_values("time").reset_index(drop=True)
+    if feat_sorted.empty:
+        raise ValueError("features_df is empty")
+    if len(feat_sorted) == 1:
+        return feat_sorted.iloc[0]
+
+    latest_time = pd.to_datetime(feat_sorted.iloc[-1]["time"], utc=True)
+    expected_close = latest_time + _timeframe_to_pandas_delta(timeframe)
+    now_utc = pd.Timestamp.now(tz="UTC")
+
+    if now_utc < expected_close:
+        logger.info(
+            "Using last CLOSED bar for signal evaluation on %s: current bar %s still open until %s",
+            timeframe,
+            latest_time,
+            expected_close,
+        )
+        return feat_sorted.iloc[-2]
+
+    return feat_sorted.iloc[-1]
 from ..logging_utils import get_logger
 from ..strategies.base import StrategyDefinition
 from ..strategies.live_manifest import strategy_definition_from_manifest_entry
@@ -542,7 +579,7 @@ def execute_signals_for_symbol(
         summary["no_strategies_with_edge"] = True
         return [], summary
 
-    latest = features_df.sort_values("time").iloc[-1]
+    latest = _latest_closed_row(features_df, timeframe)
     context = _build_routing_context(latest)
     current_regime = context.regime_label
     current_session = context.session

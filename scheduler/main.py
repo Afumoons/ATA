@@ -24,7 +24,7 @@ from ..backtests.walkforward import walk_forward_test
 from ..backtests.monte_carlo import monte_carlo_pnl
 from ..execution.live_monitor import update_live_stats
 from ..execution.live_decay import evaluate_live_decay, apply_live_decay_actions
-from ..execution.signals import execute_signals_for_symbol, get_strategy_for_ticket
+from ..execution.signals import execute_signals_for_symbol, get_strategy_for_ticket, _latest_closed_row
 from ..execution.strategy_live_stats import load_all_strategy_stats, MAX_RECENT_TRADES, should_ignore_for_engine_governance
 from ..vector_memory.research_memory import ResearchMemory
 
@@ -1270,7 +1270,7 @@ def job_execute_signals() -> None:
             continue
 
         try:
-            latest = feat.iloc[-1]
+            latest = _latest_closed_row(feat, TIMEFRAME)
             if bool(latest.get("in_news_lockout", False)):
                 logger.warning("News lockout active for %s %s — skipping signal generation", symbol, TIMEFRAME)
                 continue
@@ -1443,7 +1443,7 @@ def job_execute_signals() -> None:
         current_regime = "unknown"
         current_session = _current_session()
         try:
-            current_regime = str(feat.iloc[-1].get("regime", "unknown"))
+            current_regime = str(_latest_closed_row(feat, TIMEFRAME).get("regime", "unknown"))
         except Exception:
             pass
 
