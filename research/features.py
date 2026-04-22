@@ -159,6 +159,18 @@ def compute_fib_zones(df: pd.DataFrame, window: int = 100) -> pd.DataFrame:
     return df
 
 
+def add_session_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """Add binary UTC session flags used by session-aware strategy rules."""
+    df = df.copy()
+    times = pd.to_datetime(df["time"], utc=True)
+    hours = times.dt.hour
+
+    df["session_asia"] = ((hours >= 0) & (hours < 7)).astype(int)
+    df["session_london"] = ((hours >= 7) & (hours < 13)).astype(int)
+    df["session_new_york"] = ((hours >= 13) & (hours < 22)).astype(int)
+    return df
+
+
 # ---------------------------------------------------------------------------
 # News features — backed by data/news_collector.py
 # ---------------------------------------------------------------------------
@@ -346,6 +358,9 @@ def compute_features(
 
     # Fibonacci zones
     df = compute_fib_zones(df, window=100)
+
+    # Session flags used by session-aware strategy rules
+    df = add_session_columns(df)
 
     # News features — degrades gracefully if news_events.parquet not available
     news = _load_news_events()
