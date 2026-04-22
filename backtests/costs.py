@@ -5,6 +5,40 @@ from ..logging_utils import get_logger
 logger = get_logger(__name__)
 
 
+def dynamic_spread_multiplier(*, news_delta_min: float, news_impact: int, vol_regime: str) -> float:
+    """Approximate spread expansion under news proximity and high-vol regimes."""
+    multiplier = 1.0
+    delta = abs(float(news_delta_min))
+    regime = str(vol_regime or "").lower()
+
+    if news_impact >= 3 and delta < 30.0:
+        multiplier = max(multiplier, 3.0 + (30.0 - delta) / 10.0)
+    elif news_impact >= 2 and delta < 60.0:
+        multiplier = max(multiplier, 1.5)
+
+    if regime in {"high", "high_vol", "volatility_spike", "event_driven"}:
+        multiplier *= 1.3
+
+    return multiplier
+
+
+def dynamic_slippage_multiplier(*, news_delta_min: float, news_impact: int, vol_regime: str) -> float:
+    """Approximate adverse slippage expansion in stressed conditions."""
+    multiplier = 1.0
+    delta = abs(float(news_delta_min))
+    regime = str(vol_regime or "").lower()
+
+    if news_impact >= 3 and delta < 30.0:
+        multiplier = max(multiplier, 2.5 + (30.0 - delta) / 20.0)
+    elif news_impact >= 2 and delta < 60.0:
+        multiplier = max(multiplier, 1.4)
+
+    if regime in {"high", "high_vol", "volatility_spike", "event_driven"}:
+        multiplier *= 1.25
+
+    return multiplier
+
+
 def apply_costs(
     direction: str,
     entry_price: float,

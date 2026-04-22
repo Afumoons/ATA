@@ -9,7 +9,7 @@ import pandas as pd
 
 from ..logging_utils import get_logger
 from ..strategies.base import StrategyDefinition
-from .costs import apply_costs
+from .costs import apply_costs, dynamic_spread_multiplier, dynamic_slippage_multiplier
 
 logger = get_logger(__name__)
 
@@ -179,12 +179,25 @@ def run_backtest(
         high = float(row["high"])
         low = float(row["low"])
 
-        row_spread = float(row.get("spread", spread) or spread) if has_spread_col else float(spread)
-        effective_slippage_pips = float(slippage_pips)
+        base_row_spread = float(row.get("spread", spread) or spread) if has_spread_col else float(spread)
+        news_delta_min = float(row.get("news_time_delta_min", 9999.0) or 9999.0)
+        news_impact = int(row.get("news_impact_level", 0) or 0)
+        vol_regime = str(row.get("vol_regime", row.get("regime", "")) or "")
+
+        spread_mult = dynamic_spread_multiplier(
+            news_delta_min=news_delta_min,
+            news_impact=news_impact,
+            vol_regime=vol_regime,
+        )
+        row_spread = base_row_spread * spread_mult
+
+        effective_slippage_pips = float(slippage_pips) * dynamic_slippage_multiplier(
+            news_delta_min=news_delta_min,
+            news_impact=news_impact,
+            vol_regime=vol_regime,
+        )
         if bool(row.get("in_news_lockout", False)):
             effective_slippage_pips += max(1.0, float(slippage_pips) * 1.5)
-        if str(row.get("vol_regime", "")) == "high" or str(row.get("regime", "")) == "high_vol":
-            effective_slippage_pips += max(0.5, float(slippage_pips) * 0.5)
 
         local_vars = _build_local_vars(row)
 
