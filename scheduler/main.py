@@ -1602,12 +1602,25 @@ def job_evaluate_open_positions_exit() -> None:
             if feat is None or len(feat) < 2:
                 continue
 
-            latest = feat.sort_values("time").iloc[-2]
+            latest = _latest_closed_row(feat, TIMEFRAME)
             open_time_raw = getattr(pos, "time", None)
             if open_time_raw is None:
-                bars_since_entry = 0
-            else:
-                bars_since_entry = max(0, int((now_ts - float(open_time_raw)) // tf_seconds))
+                logger.debug(
+                    "Skip exit eval for %s ticket=%s: missing position open time",
+                    strategy_name,
+                    ticket,
+                )
+                continue
+
+            bars_since_entry = max(0, int((now_ts - float(open_time_raw)) // tf_seconds))
+            if bars_since_entry < 1:
+                logger.debug(
+                    "Skip exit eval for %s ticket=%s: position too new (%d bars)",
+                    strategy_name,
+                    ticket,
+                    bars_since_entry,
+                )
+                continue
 
             should_exit = _eval_rule(latest, exit_rule, bars_since_entry=bars_since_entry)
             evaluated += 1
