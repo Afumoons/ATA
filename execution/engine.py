@@ -87,6 +87,8 @@ class ExecutionResult:
     success: bool
     reason: str
     ticket: Optional[int] = None
+    deal_ticket: Optional[int] = None
+    position_id: Optional[int] = None
     volume: Optional[float] = None
     price: Optional[float] = None
     raw_result: Optional[dict] = None
@@ -338,12 +340,16 @@ def execute_trade(
         )
 
     ticket = int(result.order)
+    deal_ticket = int(result.deal) if getattr(result, "deal", None) else None
+    position_id = int(getattr(result, "order", 0) or 0)
     _log_trade(strategy_name, resolved_symbol, direction, volume, price, sl_price, tp_price, ticket, "executed")
 
     return ExecutionResult(
         success=True,
         reason="ok",
         ticket=ticket,
+        deal_ticket=deal_ticket,
+        position_id=position_id,
         volume=volume,
         price=price,
         raw_result=res_dict,

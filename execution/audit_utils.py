@@ -53,6 +53,19 @@ def append_unmatched_closed_deal(item: dict, keep: int = 300) -> None:
         "recorded_at": datetime.now(timezone.utc).isoformat(),
         **item,
     }
+
+    dedupe_keys = [
+        "deal_ticket",
+        "order_ticket",
+        "position_id",
+        "symbol",
+        "reason",
+    ]
+    rows = [
+        row for row in rows
+        if not all(row.get(k) == enriched.get(k) for k in dedupe_keys)
+    ]
+
     rows.append(enriched)
     rows = rows[-keep:]
     try:

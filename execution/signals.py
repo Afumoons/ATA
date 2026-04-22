@@ -159,15 +159,26 @@ def _save_ticket_map(mapping: Dict[str, str]) -> None:
         logger.exception("Failed to save ticket_strategy_map")
 
 
-def register_ticket(ticket: int, strategy_name: str) -> None:
+def register_ticket(ticket: int, strategy_name: str, *aliases: int | str | None) -> None:
     mapping = _load_ticket_map()
-    mapping[str(ticket)] = strategy_name
+    registered: list[str] = []
+    for candidate in (ticket, *aliases):
+        if candidate is None:
+            continue
+        key = str(candidate).strip()
+        if not key or key == "0":
+            continue
+        mapping[key] = strategy_name
+        registered.append(key)
     _save_ticket_map(mapping)
-    logger.debug("Registered ticket %s → %s", ticket, strategy_name)
+    logger.debug("Registered ticket aliases for %s -> %s", strategy_name, registered)
 
 
-def get_strategy_for_ticket(ticket: int) -> Optional[str]:
-    return _load_ticket_map().get(str(ticket))
+def get_strategy_for_ticket(ticket: int | str) -> Optional[str]:
+    key = str(ticket).strip()
+    if not key:
+        return None
+    return _load_ticket_map().get(key)
 
 
 # ---------------------------------------------------------------------------
@@ -1068,10 +1079,19 @@ def execute_signals_for_symbol(
                     open_positions = _snapshot_open_positions()
                     if res.ticket is not None:
                         try:
-                            register_ticket(res.ticket, strat.name)
+                            register_ticket(
+                                res.ticket,
+                                strat.name,
+                                res.deal_ticket,
+                                res.position_id,
+                            )
                         except Exception:
                             logger.exception(
-                                "Failed to register ticket %s → %s", res.ticket, strat.name
+                                "Failed to register ticket aliases for %s -> %s/%s/%s",
+                                strat.name,
+                                res.ticket,
+                                res.deal_ticket,
+                                res.position_id,
                             )
                     logger.info(
                         "Trade placed (%s): strategy=%s symbol=%s dir=%s vol=%s ticket=%s",

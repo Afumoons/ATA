@@ -269,6 +269,15 @@ def _update_daily_pnl_from_closed_deals() -> None:
             if strategy_name:
                 try:
                     register_strategy_pnl(strategy_name=strategy_name, pnl=pnl)
+                    try:
+                        from .signals import register_ticket  # type: ignore
+                        register_ticket(ticket, strategy_name, order_ticket, position_id)
+                    except Exception:
+                        logger.exception(
+                            "Failed to refresh ticket aliases for closed deal %s -> %s",
+                            ticket,
+                            strategy_name,
+                        )
                 except Exception:
                     logger.exception(
                         "Failed to update StrategyLiveStats for %s", strategy_name
@@ -321,6 +330,15 @@ def _update_daily_pnl_from_closed_deals() -> None:
                     strategy_name = resolved_from_candidates
                     try:
                         register_strategy_pnl(strategy_name=strategy_name, pnl=pnl)
+                        try:
+                            from .signals import register_ticket  # type: ignore
+                            register_ticket(ticket, strategy_name, order_ticket, position_id)
+                        except Exception:
+                            logger.exception(
+                                "Failed to persist recovered ticket aliases for closed deal %s -> %s",
+                                ticket,
+                                strategy_name,
+                            )
                         logger.info(
                             "Recovered strategy attribution heuristically for closed deal ticket=%s -> %s",
                             ticket,
