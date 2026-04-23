@@ -9193,13 +9193,13 @@
       "live_decay": {
         "signal_level": "warning",
         "reason": "recent_avg_negative",
-        "updated_at": "2026-04-22T04:48:06.934841+00:00",
-        "recent_count": 8,
-        "recent_sum_pnl": -2.169999999999984,
-        "recent_avg_pnl": -0.271249999999998,
-        "loss_streak": 1,
-        "negative_ratio": 0.625,
-        "total_trades": 8
+        "updated_at": "2026-04-23T04:44:07.781920+00:00",
+        "recent_count": 9,
+        "recent_sum_pnl": -170.61999999999998,
+        "recent_avg_pnl": -18.957777777777775,
+        "loss_streak": 2,
+        "negative_ratio": 0.6666666666666666,
+        "total_trades": 9
       }
     }
   },
@@ -10752,7 +10752,7 @@
       "live_decay": {
         "signal_level": "warning",
         "reason": "negative_ratio_high_and_recent_avg_negative",
-        "updated_at": "2026-04-22T04:48:06.934841+00:00",
+        "updated_at": "2026-04-23T04:44:07.781920+00:00",
         "recent_count": 11,
         "recent_sum_pnl": -300.59,
         "recent_avg_pnl": -27.326363636363634,
@@ -12705,13 +12705,13 @@
       "live_decay": {
         "signal_level": "warning",
         "reason": "recent_avg_negative",
-        "updated_at": "2026-04-22T04:48:06.934841+00:00",
-        "recent_count": 24,
-        "recent_sum_pnl": -417.04999999999995,
-        "recent_avg_pnl": -17.37708333333333,
-        "loss_streak": 2,
-        "negative_ratio": 0.5833333333333334,
-        "total_trades": 24
+        "updated_at": "2026-04-23T04:44:07.781920+00:00",
+        "recent_count": 25,
+        "recent_sum_pnl": -282.36999999999995,
+        "recent_avg_pnl": -11.294799999999999,
+        "loss_streak": 0,
+        "negative_ratio": 0.56,
+        "total_trades": 25
       }
     }
   },
@@ -17163,7 +17163,7 @@
       "live_decay": {
         "signal_level": "warning",
         "reason": "recent_avg_negative",
-        "updated_at": "2026-04-22T04:48:06.934841+00:00",
+        "updated_at": "2026-04-23T04:44:07.781920+00:00",
         "recent_count": 17,
         "recent_sum_pnl": -278.9,
         "recent_avg_pnl": -16.405882352941177,
