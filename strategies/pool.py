@@ -182,12 +182,23 @@ def semantic_similarity(a: StrategyDefinition, b: StrategyDefinition) -> float:
     a_family = str(a_params.get("family") or a_params.get("playbook_type") or "unknown")
     b_family = str(b_params.get("family") or b_params.get("playbook_type") or "unknown")
 
-    a_tokens = _rule_token_set(getattr(a, "long_entry_rule", "")) | _rule_token_set(getattr(a, "short_entry_rule", "")) | _rule_token_set(getattr(a, "exit_rule", ""))
-    b_tokens = _rule_token_set(getattr(b, "long_entry_rule", "")) | _rule_token_set(getattr(b, "short_entry_rule", "")) | _rule_token_set(getattr(b, "exit_rule", ""))
-    union = a_tokens | b_tokens
-    token_jaccard = (len(a_tokens & b_tokens) / len(union)) if union else 1.0
+    a_long = _rule_token_set(getattr(a, "long_entry_rule", ""))
+    a_short = _rule_token_set(getattr(a, "short_entry_rule", ""))
+    a_exit = _rule_token_set(getattr(a, "exit_rule", ""))
+    b_long = _rule_token_set(getattr(b, "long_entry_rule", ""))
+    b_short = _rule_token_set(getattr(b, "short_entry_rule", ""))
+    b_exit = _rule_token_set(getattr(b, "exit_rule", ""))
 
-    numeric_keys = ["trend_min", "trend_exit", "rsi_exit", "vol_min", "vol_max", "time_stop_bars"]
+    def _jaccard(x: set[str], y: set[str]) -> float:
+        union = x | y
+        return (len(x & y) / len(union)) if union else 1.0
+
+    long_jaccard = _jaccard(a_long, b_long)
+    short_jaccard = _jaccard(a_short, b_short)
+    exit_jaccard = _jaccard(a_exit, b_exit)
+    token_jaccard = 0.4 * long_jaccard + 0.4 * short_jaccard + 0.2 * exit_jaccard
+
+    numeric_keys = ["trend_min", "trend_exit", "rsi_exit", "vol_min", "vol_max", "time_stop_bars", "stop_loss_pips", "take_profit_pips", "sl_atr_mult", "tp_atr_mult"]
     compared = 0
     close = 0
     for key in numeric_keys:
@@ -197,18 +208,36 @@ def semantic_similarity(a: StrategyDefinition, b: StrategyDefinition) -> float:
             continue
         compared += 1
         try:
-            if abs(float(av) - float(bv)) <= (0.1 if key != "time_stop_bars" else 2.0):
+            tolerance = 0.1
+            if key == "time_stop_bars":
+                tolerance = 1.0
+            elif key in {"stop_loss_pips", "take_profit_pips"}:
+                tolerance = 10.0
+            elif key in {"sl_atr_mult", "tp_atr_mult"}:
+                tolerance = 0.2
+            if abs(float(av) - float(bv)) <= tolerance:
                 close += 1
         except Exception:
             pass
+
     family_bonus = 1.0 if a_family == b_family else 0.0
     motif_bonus = 1.0 if strategy_motif(a) == strategy_motif(b) else 0.0
-    if compared == 0:
-        # Hanya gunakan token jaccard + family/motif components
-        return 0.45 * token_jaccard + 0.35 * family_bonus + 0.20 * motif_bonus
-    else:
-        numeric_similarity = close / compared
-        return 0.45 * token_jaccard + 0.20 * numeric_similarity + 0.15 * family_bonus + 0.20 * motif_bonus
+    session_guard_bonus = 1.0 if bool(a_params.get("has_session_exit_guard", False)) == bool(b_params.get("has_session_exit_guard", False)) else 0.0
+    exit_archetype_bonus = 1.0 if str(a_params.get("exit_archetype", "")) == str(b_params.get("exit_archetype", "")) else 0.0
+
+    numeric_similarity = (close / compared) if compared else 0.0
+    score = (
+        0.35 * token_jaccard
+        + 0.20 * numeric_similarity
+        + 0.15 * family_bonus
+        + 0.10 * motif_bonus
+        + 0.10 * session_guard_bonus
+        + 0.10 * exit_archetype_bonus
+    )
+
+    if a_family == b_family and token_jaccard <= 0.85:
+        score = min(score, 0.84)
+    return score
 
 
 @dataclass

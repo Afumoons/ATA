@@ -341,15 +341,26 @@ def run_backtest(
         final_time = pd.to_datetime(final_row["time"])
         final_close = float(final_row["close"])
         final_spread = float(final_row.get("spread", spread) or spread) if has_spread_col else float(spread)
+        final_effective_slippage_pips = float(slippage_pips) * dynamic_slippage_multiplier(
+            news_delta_min=float(final_row.get("news_time_delta_min", 9999.0) or 9999.0),
+            news_impact=int(final_row.get("news_impact_level", 0) or 0),
+            vol_regime=str(final_row.get("vol_regime", final_row.get("regime", "")) or ""),
+        )
+        if bool(final_row.get("in_news_lockout", False)):
+            final_effective_slippage_pips += max(1.0, float(slippage_pips) * 1.5)
         for pos in positions:
+            if pos["direction"] == "long":
+                final_exit_price = final_close - (final_spread / 2.0)
+            else:
+                final_exit_price = final_close + (final_spread / 2.0)
             pnl = apply_costs(
                 direction=pos["direction"],
                 entry_price=pos["entry_price"],
-                exit_price=final_close,
+                exit_price=final_exit_price,
                 size=pos["size"],
                 spread=final_spread,
                 commission_per_lot=commission_per_lot,
-                slippage_pips=slippage_pips,
+                slippage_pips=final_effective_slippage_pips,
                 pip_size=pip_size,
             )
             equity += pnl
@@ -358,7 +369,7 @@ def run_backtest(
                 exit_time=final_time,
                 direction=pos["direction"],
                 entry_price=pos["entry_price"],
-                exit_price=final_close,
+                exit_price=final_exit_price,
                 stop_loss=pos["stop_loss"],
                 take_profit=pos["take_profit"],
                 size=pos["size"],

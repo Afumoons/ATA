@@ -241,18 +241,45 @@ def _passes_cheap_prescreen(feat, strat, symbol: str) -> tuple[bool, dict]:
     pf = float(stats.get("profit_factor", 0.0) or 0.0)
     sharpe = float(stats.get("sharpe_ratio", 0.0) or 0.0)
     dd = abs(float(stats.get("max_drawdown_pct", 0.0) or 0.0))
+    params = getattr(strat, "params", {}) or {}
+    family = str(params.get("family", "") or "")
+    playbook_type = str(params.get("playbook_type", "") or "")
+    sym_u = symbol.upper()
+
+    xau_bootstrap_relief = (
+        "XAU" in sym_u
+        and playbook_type in {"xau_impulse_pullback", "xau_session_continuation"}
+        and num_trades >= 2
+        and pf >= 1.20
+        and sharpe >= 0.50
+        and dd <= 5.0
+    )
+    xag_trend_relief = (
+        "XAG" in sym_u
+        and family in {"ma_trend", "pullback_trend"}
+        and num_trades >= 20
+        and pf >= 0.90
+        and sharpe >= -0.05
+        and dd <= 12.0
+    )
 
     passed = (
-        num_trades >= CHEAP_PRESCREEN_MIN_TRADES
-        and pf >= CHEAP_PRESCREEN_MIN_PF
-        and sharpe >= CHEAP_PRESCREEN_MIN_SHARPE
-        and dd <= CHEAP_PRESCREEN_MAX_DD_PCT
+        (
+            num_trades >= CHEAP_PRESCREEN_MIN_TRADES
+            and pf >= CHEAP_PRESCREEN_MIN_PF
+            and sharpe >= CHEAP_PRESCREEN_MIN_SHARPE
+            and dd <= CHEAP_PRESCREEN_MAX_DD_PCT
+        )
+        or xau_bootstrap_relief
+        or xag_trend_relief
     )
     return passed, {
         "num_trades": num_trades,
         "profit_factor": pf,
         "sharpe_ratio": sharpe,
         "max_drawdown_pct": dd,
+        "xau_bootstrap_relief": xau_bootstrap_relief,
+        "xag_trend_relief": xag_trend_relief,
     }
 
 
@@ -564,20 +591,30 @@ def _passes_symbol_specific_mc_tail_relief(
 ) -> bool:
     sym_u = str(symbol or "").upper()
     family = str(family or "unknown")
-    if "BTC" not in sym_u:
-        return False
-    if family not in {"mixed:ma_trend+rsi_range", "mixed:rsi_range+ma_trend"}:
-        return False
-    return (
-        num_trades >= 40
-        and pf >= 1.14
-        and sharpe >= 1.20
-        and dd_abs <= 5.0
-        and wf_sharpe >= 1.0
-        and mc_p5 > -650.0
-        and mc_loss_prob <= 0.36
-        and mc_dd_p95 <= 1000.0
-    )
+    if "BTC" in sym_u:
+        if family in {"mixed:ma_trend+rsi_range", "mixed:rsi_range+ma_trend"}:
+            return (
+                num_trades >= 40
+                and pf >= 1.14
+                and sharpe >= 1.20
+                and dd_abs <= 5.0
+                and wf_sharpe >= 1.0
+                and mc_p5 > -650.0
+                and mc_loss_prob <= 0.36
+                and mc_dd_p95 <= 1000.0
+            )
+        if family in {"pullback_trend", "ma_trend"}:
+            return (
+                num_trades >= 60
+                and pf >= 1.10
+                and sharpe >= 0.80
+                and dd_abs <= 4.0
+                and wf_sharpe >= 1.25
+                and mc_p5 > -650.0
+                and mc_loss_prob <= 0.45
+                and mc_dd_p95 <= 1200.0
+            )
+    return False
 
 
 def _memory_dead_zone_penalty(candidate, memory: ResearchMemory, symbol: str, timeframe: str, *, neighbors=None) -> tuple[float, dict]:
@@ -803,7 +840,9 @@ def job_research_strategies() -> None:
             for s in archive_strategies
         )
         oversaturated_families = {fam for fam, count in existing_generated_by_family.items() if count > 300}
-        known_generated_fps = {_structural_fingerprint(s) for s in archive_strategies}
+
+        pool_fps = set(getattr(pool, "_fp_map", {}).keys())
+        known_generated_fps = set(pool_fps)
 
         for strat in new_population:
             try:
@@ -818,7 +857,7 @@ def job_research_strategies() -> None:
                     continue
 
                 strat_fp = _structural_fingerprint(strat)
-                if strat_fp in pool._fp_map or strat_fp in known_generated_fps:
+                if strat_fp in known_generated_fps:
                     family_stage_counts[family]["cheap_prescreen_fail"] += 1
                     research_skip_counts["structural_duplicate"] += 1
                     if len(research_skip_samples["structural_duplicate"]) < 3:
@@ -826,8 +865,13 @@ def job_research_strategies() -> None:
                     _record_family_skip(family_skip_counts, family_skip_samples, family, "structural_duplicate", strat.name)
                     continue
 
+                known_generated_fps.add(strat_fp)
+
                 nearest_similarity = 0.0
-                comparison_universe = archive_strategies[:200] + [s for s, _ in existing_strats[:20]]
+                comparison_universe = [
+                    other for other in (archive_strategies[:200] + [s for s, _ in existing_strats[:20]])
+                    if _structural_fingerprint(other) != strat_fp
+                ]
                 for other in comparison_universe:
                     try:
                         nearest_similarity = max(nearest_similarity, semantic_similarity(strat, other))
@@ -835,7 +879,7 @@ def job_research_strategies() -> None:
                         continue
                 novelty_score = 1.0 - nearest_similarity
                 motif = strategy_motif(strat)
-                if nearest_similarity >= 0.88:
+                if nearest_similarity >= 0.94:
                     family_stage_counts[family]["cheap_prescreen_fail"] += 1
                     research_skip_counts["semantic_duplicate"] += 1
                     if len(research_skip_samples["semantic_duplicate"]) < 3:
@@ -923,7 +967,18 @@ def job_research_strategies() -> None:
                 base_min_trades = _base_research_min_trades(canon)
                 if FAMILY_AWARE_GOVERNANCE_ENABLED and _is_challenger_family(family):
                     base_min_trades = _challenger_research_min_trades(canon)
-                if num_trades < base_min_trades and not bootstrap_candidate:
+                low_trade_pf = float(eval_result.get("profit_factor", 0.0) or 0.0)
+                low_trade_sharpe = float(eval_result.get("sharpe_ratio", 0.0) or 0.0)
+                low_trade_relief = (
+                    "BTC" in canon.upper()
+                    and family in {"pullback_trend", "ma_trend"}
+                    and num_trades >= 20
+                    and low_trade_pf >= 1.15
+                    and low_trade_sharpe >= 1.80
+                    and float(eval_result.get("return_pct", 0.0) or 0.0) > 0.0
+                )
+                eval_result["research_low_trade_relief"] = bool(low_trade_relief)
+                if num_trades < base_min_trades and not bootstrap_candidate and not low_trade_relief:
                     research_skip_counts["low_trade_count"] += 1
                     if len(research_skip_samples["low_trade_count"]) < 3:
                         research_skip_samples["low_trade_count"].append(f"{strat.name}:{num_trades:.0f}")
@@ -1051,11 +1106,25 @@ def job_research_strategies() -> None:
                     _record_family_skip(family_skip_counts, family_skip_samples, family, "exit_rule_dependency", strat.name)
                     continue
                 if exit_rule_ratio > 0.88:
-                    research_skip_counts["extreme_exit_rule_dependency"] += 1
-                    if len(research_skip_samples["extreme_exit_rule_dependency"]) < 3:
-                        research_skip_samples["extreme_exit_rule_dependency"].append(strat.name)
-                    _record_family_skip(family_skip_counts, family_skip_samples, family, "extreme_exit_rule_dependency", strat.name)
-                    continue
+                    exit_dependency_relief = (
+                        "BTC" in canon
+                        and family in {"pullback_trend", "ma_trend"}
+                        and eval_result.get("accepted")
+                        and num_trades >= 50
+                        and pf >= 1.18
+                        and sharpe >= 1.80
+                        and wf_sharpe >= 1.00
+                        and mc_loss_prob <= 0.25
+                        and dd_abs <= 5.0
+                        and tp_hit_ratio >= 0.0
+                    )
+                    eval_result["research_exit_dependency_relief"] = bool(exit_dependency_relief)
+                    if not exit_dependency_relief:
+                        research_skip_counts["extreme_exit_rule_dependency"] += 1
+                        if len(research_skip_samples["extreme_exit_rule_dependency"]) < 3:
+                            research_skip_samples["extreme_exit_rule_dependency"].append(strat.name)
+                        _record_family_skip(family_skip_counts, family_skip_samples, family, "extreme_exit_rule_dependency", strat.name)
+                        continue
                 if tp_hit_ratio < 0.08 and exit_rule_ratio > 0.75 and not has_session_exit_guard:
                     research_skip_counts["weak_exit_signature"] += 1
                     if len(research_skip_samples["weak_exit_signature"]) < 3:

@@ -169,21 +169,21 @@ SHORT_ENTRY_TEMPLATES = (
 )
 
 XAU_IMPULSE_PULLBACK_LONG_TEMPLATES = [
-    "session_london == 1 and close > ma_short and ma_short > ma_long and trend_strength > {trend_min} and volatility > vol_min",
-    "close > ma_short and ma_short > ma_long and trend_strength > {trend_min} and fib_zone_382 == 1",
+    "session_london == 1 and ma_short > ma_long and close > ma_short and trend_strength > {trend_min} and volatility > vol_min and fib_zone_382 == 1",
+    "session_new_york == 1 and ma_short > ma_long and close > ma_short and trend_strength > {trend_min} and volatility > vol_min and fib_zone_382 == 1",
 ]
 XAU_IMPULSE_PULLBACK_SHORT_TEMPLATES = [
-    "session_london == 1 and close < ma_short and ma_short < ma_long and trend_strength < -{trend_min} and volatility > vol_min",
-    "close < ma_short and ma_short < ma_long and trend_strength < -{trend_min} and fib_zone_618 == 1",
+    "session_london == 1 and ma_short < ma_long and close < ma_short and trend_strength < -{trend_min} and volatility > vol_min and fib_zone_618 == 1",
+    "session_new_york == 1 and ma_short < ma_long and close < ma_short and trend_strength < -{trend_min} and volatility > vol_min and fib_zone_618 == 1",
 ]
 
 XAU_SESSION_CONTINUATION_LONG_TEMPLATES = [
-    "session_london == 1 and ma_short > ma_long and close > ma_short and trend_strength > {trend_min}",
-    "session_new_york == 1 and ma_short > ma_long and close > ma_short and volatility > vol_min",
+    "session_london == 1 and ma_short > ma_long and close > ma_short and trend_strength > {trend_min} and volatility > vol_min",
+    "session_new_york == 1 and ma_short > ma_long and close > ma_short and trend_strength > {trend_min} and volatility > vol_min",
 ]
 XAU_SESSION_CONTINUATION_SHORT_TEMPLATES = [
-    "session_london == 1 and ma_short < ma_long and close < ma_short and trend_strength < -{trend_min}",
-    "session_new_york == 1 and ma_short < ma_long and close < ma_short and volatility > vol_min",
+    "session_london == 1 and ma_short < ma_long and close < ma_short and trend_strength < -{trend_min} and volatility > vol_min",
+    "session_new_york == 1 and ma_short < ma_long and close < ma_short and trend_strength < -{trend_min} and volatility > vol_min",
 ]
 
 FAMILY_LIBRARY: Dict[str, Dict[str, Any]] = {
@@ -385,15 +385,15 @@ def _sample_family_params(family: str, symbol: str, timeframe: str) -> Dict[str,
 
     if symbol == "XAUUSDm" and timeframe == "M15":
         params["microstructure_profile"] = "xau_m15"
-        params["stop_loss_pips"] = random.choice([150, 200, 250, 300])
-        params["take_profit_pips"] = random.choice([200, 250, 300, 400, 500])
+        params["stop_loss_pips"] = random.choice([150, 200, 250])
+        params["take_profit_pips"] = random.choice([250, 300, 400])
         if family in {"xau_impulse_pullback", "xau_session_continuation"}:
-            params["trend_min"] = round(random.uniform(0.08, 0.18), 2)
-            params["trend_exit"] = round(random.uniform(-0.08, 0.03), 2)
-            params["vol_min"] = round(random.uniform(0.55, 1.05), 3)
-            params["time_stop_bars"] = random.choice([3, 4, 6, 8])
-            params["sl_atr_mult"] = random.choice([1.8, 2.0, 2.2, 2.5])
-            params["tp_atr_mult"] = random.choice([2.5, 3.0, 3.5, 4.0])
+            params["trend_min"] = round(random.uniform(0.06, 0.14), 2)
+            params["trend_exit"] = round(random.uniform(-0.05, 0.01), 2)
+            params["vol_min"] = round(random.uniform(0.35, 0.75), 3)
+            params["time_stop_bars"] = random.choice([6, 8, 10])
+            params["sl_atr_mult"] = random.choice([1.5, 1.8, 2.0])
+            params["tp_atr_mult"] = random.choice([2.5, 3.0, 3.5])
         elif family == "pullback_trend":
             params["trend_min"] = round(random.uniform(0.10, 0.20), 2)
             params["time_stop_bars"] = random.choice([4, 6, 8])
