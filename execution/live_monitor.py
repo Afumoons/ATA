@@ -16,6 +16,7 @@ from ..config import risk_config
 from .live_state_utils import DailyState, save_daily_state, register_trade_pnl
 from .strategy_live_stats import register_manual_bucket_pnl, register_strategy_pnl
 from .audit_utils import append_unmatched_closed_deal, append_pool_audit, append_circuit_breaker_event
+from .trade_context_journal import register_trade_exit_context
 
 logger = get_logger(__name__)
 
@@ -243,6 +244,13 @@ def _update_daily_pnl_from_closed_deals() -> None:
             continue
 
         pnl = float(getattr(deal, "profit", 0.0))
+        symbol_raw = getattr(deal, "symbol", "") or ""
+        symbol_canon = symbol_raw
+        try:
+            from ..config import canonical_symbol
+            symbol_canon = canonical_symbol(symbol_raw)
+        except Exception:
+            symbol_canon = symbol_raw
 
         try:
             # Pass equity_now hanya untuk update equity_current di state,
@@ -270,6 +278,18 @@ def _update_daily_pnl_from_closed_deals() -> None:
                 try:
                     register_strategy_pnl(strategy_name=strategy_name, pnl=pnl)
                     try:
+                        register_trade_exit_context(
+                            ticket=ticket,
+                            symbol=symbol_canon,
+                            pnl=pnl,
+                        )
+                    except Exception:
+                        logger.exception(
+                            "Failed to register trade exit context for %s deal=%s",
+                            strategy_name,
+                            ticket,
+                        )
+                    try:
                         from .signals import register_ticket  # type: ignore
                         register_ticket(ticket, strategy_name, order_ticket, position_id)
                     except Exception:
@@ -284,13 +304,6 @@ def _update_daily_pnl_from_closed_deals() -> None:
                     )
             else:
                 comment = getattr(deal, "comment", "") or ""
-                symbol_raw = getattr(deal, "symbol", "") or ""
-                symbol_canon = symbol_raw
-                try:
-                    from ..config import canonical_symbol
-                    symbol_canon = canonical_symbol(symbol_raw)
-                except Exception:
-                    symbol_canon = symbol_raw
 
                 resolved_from_candidates = None
                 candidate_matches: list[str] = []

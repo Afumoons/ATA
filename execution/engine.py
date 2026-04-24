@@ -10,6 +10,7 @@ import MetaTrader5 as mt5
 from ..logging_utils import get_logger
 from ..risk.manager import AccountState, TradeRequest, RiskDecision, validate_trade
 from ..config import execution_config, execution_variants_for
+from .trade_context_journal import register_trade_entry_context
 
 logger = get_logger(__name__)
 
@@ -343,6 +344,15 @@ def execute_trade(
     deal_ticket = int(result.deal) if getattr(result, "deal", None) else None
     position_id = int(getattr(result, "order", 0) or 0)
     _log_trade(strategy_name, resolved_symbol, direction, volume, price, sl_price, tp_price, ticket, "executed")
+    try:
+        register_trade_entry_context(
+            ticket=ticket,
+            strategy_name=strategy_name,
+            symbol=resolved_symbol,
+            timeframe=timeframe,
+        )
+    except Exception:
+        logger.exception("Failed to register trade entry context for %s ticket=%s", strategy_name, ticket)
 
     return ExecutionResult(
         success=True,

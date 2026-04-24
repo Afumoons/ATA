@@ -636,6 +636,59 @@
           "is_range_trader": false,
           "total_pnl": 876.1541200655554,
           "total_return_pct": 8.761541200655554
+        },
+        "live_regime_pnl": {
+          "trending_up": {
+            "total_pnl": 3.64,
+            "num_trades": 1,
+            "avg_pnl": 3.64
+          }
+        },
+        "live_regime_class_pnl": {
+          "trend": {
+            "total_pnl": 3.64,
+            "num_trades": 1,
+            "avg_pnl": 3.64
+          }
+        },
+        "live_regime_type_pnl": {
+          "uptrend_weak": {
+            "total_pnl": 3.64,
+            "num_trades": 1,
+            "avg_pnl": 3.64
+          }
+        },
+        "live_vol_regime_pnl": {
+          "normal": {
+            "total_pnl": 3.64,
+            "num_trades": 1,
+            "avg_pnl": 3.64
+          }
+        },
+        "live_session_pnl": {
+          "new_york": {
+            "total_pnl": 3.64,
+            "num_trades": 1,
+            "avg_pnl": 3.64
+          }
+        },
+        "live_meta": {
+          "total_live_trades": 1,
+          "total_live_pnl": 3.64,
+          "best_regime": null,
+          "worst_regime": null,
+          "best_regime_pnl": 0.0,
+          "worst_regime_pnl": 0.0,
+          "best_session": null,
+          "worst_session": null,
+          "best_session_pnl": 0.0,
+          "worst_session_pnl": 0.0,
+          "allowed_regimes": [],
+          "blocked_regimes": [],
+          "allowed_sessions": [],
+          "blocked_sessions": [],
+          "routing_confidence": 0.015,
+          "min_trades_per_bucket": 3
         }
       },
       "research_novelty_score": 0.08000000000000007,
@@ -9644,6 +9697,101 @@
           "worst_session": "asia",
           "best_session_return_pct": 10.089918541896132,
           "worst_session_return_pct": 4.640705190962427
+        },
+        "live_regime_pnl": {
+          "high_vol": {
+            "total_pnl": -142.48,
+            "num_trades": 2,
+            "avg_pnl": -71.24
+          },
+          "ranging": {
+            "total_pnl": 12.26,
+            "num_trades": 2,
+            "avg_pnl": 6.13
+          },
+          "trending_up": {
+            "total_pnl": -39.04,
+            "num_trades": 2,
+            "avg_pnl": -19.52
+          }
+        },
+        "live_regime_class_pnl": {
+          "range": {
+            "total_pnl": 12.26,
+            "num_trades": 2,
+            "avg_pnl": 6.13
+          },
+          "trend": {
+            "total_pnl": -39.04,
+            "num_trades": 2,
+            "avg_pnl": -19.52
+          },
+          "volatility_spike": {
+            "total_pnl": -142.48,
+            "num_trades": 2,
+            "avg_pnl": -71.24
+          }
+        },
+        "live_regime_type_pnl": {
+          "range_wide": {
+            "total_pnl": 12.26,
+            "num_trades": 2,
+            "avg_pnl": 6.13
+          },
+          "uptrend_weak": {
+            "total_pnl": -39.04,
+            "num_trades": 2,
+            "avg_pnl": -19.52
+          },
+          "vol_spike_down": {
+            "total_pnl": -142.48,
+            "num_trades": 2,
+            "avg_pnl": -71.24
+          }
+        },
+        "live_vol_regime_pnl": {
+          "high": {
+            "total_pnl": -142.48,
+            "num_trades": 2,
+            "avg_pnl": -71.24
+          },
+          "normal": {
+            "total_pnl": -26.78,
+            "num_trades": 4,
+            "avg_pnl": -6.695
+          }
+        },
+        "live_session_pnl": {
+          "asia": {
+            "total_pnl": -39.04,
+            "num_trades": 2,
+            "avg_pnl": -19.52
+          },
+          "new_york": {
+            "total_pnl": -130.22,
+            "num_trades": 4,
+            "avg_pnl": -32.555
+          }
+        },
+        "live_meta": {
+          "total_live_trades": 6,
+          "total_live_pnl": -169.26,
+          "best_regime": null,
+          "worst_regime": null,
+          "best_regime_pnl": 0.0,
+          "worst_regime_pnl": 0.0,
+          "best_session": "new_york",
+          "worst_session": "new_york",
+          "best_session_pnl": -130.22,
+          "worst_session_pnl": -130.22,
+          "allowed_regimes": [],
+          "blocked_regimes": [],
+          "allowed_sessions": [],
+          "blocked_sessions": [
+            "new_york"
+          ],
+          "routing_confidence": 0.14,
+          "min_trades_per_bucket": 3
         }
       },
       "score": 4.4997190568359375,
@@ -9679,7 +9827,7 @@
       "live_decay": {
         "signal_level": "warning",
         "reason": "recent_avg_negative",
-        "updated_at": "2026-04-24T04:37:13.486401+00:00",
+        "updated_at": "2026-04-24T05:22:13.425144+00:00",
         "recent_count": 13,
         "recent_sum_pnl": -114.95999999999995,
         "recent_avg_pnl": -8.84307692307692,
@@ -11419,6 +11567,63 @@
           "worst_session": "asia",
           "best_session_return_pct": 10.21383079785567,
           "worst_session_return_pct": 4.642084428905635
+        },
+        "live_regime_pnl": {
+          "high_vol": {
+            "total_pnl": -319.8,
+            "num_trades": 4,
+            "avg_pnl": -79.95
+          }
+        },
+        "live_regime_class_pnl": {
+          "volatility_spike": {
+            "total_pnl": -319.8,
+            "num_trades": 4,
+            "avg_pnl": -79.95
+          }
+        },
+        "live_regime_type_pnl": {
+          "vol_spike_down": {
+            "total_pnl": -319.8,
+            "num_trades": 4,
+            "avg_pnl": -79.95
+          }
+        },
+        "live_vol_regime_pnl": {
+          "high": {
+            "total_pnl": -319.8,
+            "num_trades": 4,
+            "avg_pnl": -79.95
+          }
+        },
+        "live_session_pnl": {
+          "new_york": {
+            "total_pnl": -311.41,
+            "num_trades": 3,
+            "avg_pnl": -103.803333
+          }
+        },
+        "live_meta": {
+          "total_live_trades": 4,
+          "total_live_pnl": -319.8,
+          "best_regime": "high_vol",
+          "worst_regime": "high_vol",
+          "best_regime_pnl": -319.8,
+          "worst_regime_pnl": -319.8,
+          "best_session": "new_york",
+          "worst_session": "new_york",
+          "best_session_pnl": -311.41,
+          "worst_session_pnl": -311.41,
+          "allowed_regimes": [],
+          "blocked_regimes": [
+            "high_vol"
+          ],
+          "allowed_sessions": [],
+          "blocked_sessions": [
+            "new_york"
+          ],
+          "routing_confidence": 0.0,
+          "min_trades_per_bucket": 3
         }
       },
       "score": 4.403492899796225,
@@ -11454,7 +11659,7 @@
       "live_decay": {
         "signal_level": "warning",
         "reason": "negative_ratio_high_and_recent_avg_negative",
-        "updated_at": "2026-04-24T04:37:13.486401+00:00",
+        "updated_at": "2026-04-24T05:22:13.425144+00:00",
         "recent_count": 11,
         "recent_sum_pnl": -300.59,
         "recent_avg_pnl": -27.326363636363634,
@@ -13643,6 +13848,78 @@
           "worst_session": "new_york",
           "best_session_return_pct": 13.534702207515968,
           "worst_session_return_pct": -4.123358586626546
+        },
+        "live_regime_pnl": {
+          "ranging": {
+            "total_pnl": -97.37,
+            "num_trades": 1,
+            "avg_pnl": -97.37
+          },
+          "trending_up": {
+            "total_pnl": -235.44,
+            "num_trades": 6,
+            "avg_pnl": -39.24
+          }
+        },
+        "live_regime_class_pnl": {
+          "range": {
+            "total_pnl": -97.37,
+            "num_trades": 1,
+            "avg_pnl": -97.37
+          },
+          "trend": {
+            "total_pnl": -235.44,
+            "num_trades": 6,
+            "avg_pnl": -39.24
+          }
+        },
+        "live_regime_type_pnl": {
+          "range_wide": {
+            "total_pnl": -97.37,
+            "num_trades": 1,
+            "avg_pnl": -97.37
+          },
+          "uptrend_weak": {
+            "total_pnl": -235.44,
+            "num_trades": 6,
+            "avg_pnl": -39.24
+          }
+        },
+        "live_vol_regime_pnl": {
+          "normal": {
+            "total_pnl": -332.81,
+            "num_trades": 7,
+            "avg_pnl": -47.544286
+          }
+        },
+        "live_session_pnl": {
+          "asia": {
+            "total_pnl": -235.44,
+            "num_trades": 6,
+            "avg_pnl": -39.24
+          }
+        },
+        "live_meta": {
+          "total_live_trades": 7,
+          "total_live_pnl": -332.81,
+          "best_regime": "trending_up",
+          "worst_regime": "trending_up",
+          "best_regime_pnl": -235.44,
+          "worst_regime_pnl": -235.44,
+          "best_session": "asia",
+          "worst_session": "asia",
+          "best_session_pnl": -235.44,
+          "worst_session_pnl": -235.44,
+          "allowed_regimes": [],
+          "blocked_regimes": [
+            "trending_up"
+          ],
+          "allowed_sessions": [],
+          "blocked_sessions": [
+            "asia"
+          ],
+          "routing_confidence": 0.005,
+          "min_trades_per_bucket": 3
         }
       },
       "score": 3.784246270390499,
@@ -13678,7 +13955,7 @@
       "live_decay": {
         "signal_level": "warning",
         "reason": "recent_avg_negative",
-        "updated_at": "2026-04-24T04:37:13.486401+00:00",
+        "updated_at": "2026-04-24T05:22:13.425144+00:00",
         "recent_count": 26,
         "recent_sum_pnl": -251.21999999999997,
         "recent_avg_pnl": -9.66230769230769,
@@ -14703,6 +14980,63 @@
           "worst_session": "new_york",
           "best_session_return_pct": 13.066537028524024,
           "worst_session_return_pct": 4.903825424187581
+        },
+        "live_regime_pnl": {
+          "trending_down": {
+            "total_pnl": -165.35,
+            "num_trades": 30,
+            "avg_pnl": -5.511667
+          }
+        },
+        "live_regime_class_pnl": {
+          "trend": {
+            "total_pnl": -165.35,
+            "num_trades": 30,
+            "avg_pnl": -5.511667
+          }
+        },
+        "live_regime_type_pnl": {
+          "downtrend_weak": {
+            "total_pnl": -165.35,
+            "num_trades": 30,
+            "avg_pnl": -5.511667
+          }
+        },
+        "live_vol_regime_pnl": {
+          "high": {
+            "total_pnl": -165.35,
+            "num_trades": 30,
+            "avg_pnl": -5.511667
+          }
+        },
+        "live_session_pnl": {
+          "new_york": {
+            "total_pnl": -93.89,
+            "num_trades": 15,
+            "avg_pnl": -6.259333
+          }
+        },
+        "live_meta": {
+          "total_live_trades": 30,
+          "total_live_pnl": -165.35,
+          "best_regime": "trending_down",
+          "worst_regime": "trending_down",
+          "best_regime_pnl": -165.35,
+          "worst_regime_pnl": -165.35,
+          "best_session": "new_york",
+          "worst_session": "new_york",
+          "best_session_pnl": -93.89,
+          "worst_session_pnl": -93.89,
+          "allowed_regimes": [],
+          "blocked_regimes": [
+            "trending_down"
+          ],
+          "allowed_sessions": [],
+          "blocked_sessions": [
+            "new_york"
+          ],
+          "routing_confidence": 0.35,
+          "min_trades_per_bucket": 3
         }
       },
       "score": 3.6450729594709497,
@@ -15036,6 +15370,99 @@
           "worst_session": "new_york",
           "best_session_return_pct": 12.14534152058203,
           "worst_session_return_pct": 6.0348346005943085
+        },
+        "live_regime_pnl": {
+          "low_vol": {
+            "total_pnl": -47.44,
+            "num_trades": 1,
+            "avg_pnl": -47.44
+          },
+          "ranging": {
+            "total_pnl": -520.24,
+            "num_trades": 7,
+            "avg_pnl": -74.32
+          },
+          "trending_down": {
+            "total_pnl": 155.4,
+            "num_trades": 1,
+            "avg_pnl": 155.4
+          }
+        },
+        "live_regime_class_pnl": {
+          "range": {
+            "total_pnl": -567.68,
+            "num_trades": 8,
+            "avg_pnl": -70.96
+          },
+          "trend": {
+            "total_pnl": 155.4,
+            "num_trades": 1,
+            "avg_pnl": 155.4
+          }
+        },
+        "live_regime_type_pnl": {
+          "downtrend_weak": {
+            "total_pnl": 155.4,
+            "num_trades": 1,
+            "avg_pnl": 155.4
+          },
+          "range_tight": {
+            "total_pnl": -47.44,
+            "num_trades": 1,
+            "avg_pnl": -47.44
+          },
+          "range_wide": {
+            "total_pnl": -520.24,
+            "num_trades": 7,
+            "avg_pnl": -74.32
+          }
+        },
+        "live_vol_regime_pnl": {
+          "low": {
+            "total_pnl": -47.44,
+            "num_trades": 1,
+            "avg_pnl": -47.44
+          },
+          "normal": {
+            "total_pnl": -364.84,
+            "num_trades": 8,
+            "avg_pnl": -45.605
+          }
+        },
+        "live_session_pnl": {
+          "asia": {
+            "total_pnl": -154.55,
+            "num_trades": 6,
+            "avg_pnl": -25.758333
+          },
+          "london": {
+            "total_pnl": -257.73,
+            "num_trades": 3,
+            "avg_pnl": -85.91
+          }
+        },
+        "live_meta": {
+          "total_live_trades": 9,
+          "total_live_pnl": -412.28,
+          "best_regime": "ranging",
+          "worst_regime": "ranging",
+          "best_regime_pnl": -520.24,
+          "worst_regime_pnl": -520.24,
+          "best_session": "asia",
+          "worst_session": "london",
+          "best_session_pnl": -154.55,
+          "worst_session_pnl": -257.73,
+          "allowed_regimes": [],
+          "blocked_regimes": [
+            "ranging"
+          ],
+          "allowed_sessions": [],
+          "blocked_sessions": [
+            "asia",
+            "london"
+          ],
+          "routing_confidence": 0.085,
+          "min_trades_per_bucket": 3
         }
       },
       "score": 3.6393664220074786,
@@ -15071,7 +15498,7 @@
       "live_decay": {
         "signal_level": "warning",
         "reason": "negative_ratio_high_and_recent_avg_negative",
-        "updated_at": "2026-04-24T04:37:13.486401+00:00",
+        "updated_at": "2026-04-24T05:22:13.425144+00:00",
         "recent_count": 9,
         "recent_sum_pnl": -412.28,
         "recent_avg_pnl": -45.80888888888889,
@@ -18285,6 +18712,71 @@
           "worst_session": "new_york",
           "best_session_return_pct": 18.34316690645251,
           "worst_session_return_pct": 12.281725305962407
+        },
+        "live_regime_pnl": {
+          "trending_down": {
+            "total_pnl": 9.16,
+            "num_trades": 3,
+            "avg_pnl": 3.053333
+          }
+        },
+        "live_regime_class_pnl": {
+          "trend": {
+            "total_pnl": 9.16,
+            "num_trades": 3,
+            "avg_pnl": 3.053333
+          }
+        },
+        "live_regime_type_pnl": {
+          "downtrend_weak": {
+            "total_pnl": 9.16,
+            "num_trades": 3,
+            "avg_pnl": 3.053333
+          }
+        },
+        "live_vol_regime_pnl": {
+          "high": {
+            "total_pnl": -187.67,
+            "num_trades": 1,
+            "avg_pnl": -187.67
+          },
+          "normal": {
+            "total_pnl": 196.83,
+            "num_trades": 2,
+            "avg_pnl": 98.415
+          }
+        },
+        "live_session_pnl": {
+          "asia": {
+            "total_pnl": 196.83,
+            "num_trades": 2,
+            "avg_pnl": 98.415
+          },
+          "new_york": {
+            "total_pnl": -187.67,
+            "num_trades": 1,
+            "avg_pnl": -187.67
+          }
+        },
+        "live_meta": {
+          "total_live_trades": 3,
+          "total_live_pnl": 9.16,
+          "best_regime": "trending_down",
+          "worst_regime": "trending_down",
+          "best_regime_pnl": 9.16,
+          "worst_regime_pnl": 9.16,
+          "best_session": null,
+          "worst_session": null,
+          "best_session_pnl": 0.0,
+          "worst_session_pnl": 0.0,
+          "allowed_regimes": [
+            "trending_down"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [],
+          "blocked_sessions": [],
+          "routing_confidence": 0.095,
+          "min_trades_per_bucket": 3
         }
       },
       "score": 3.3955944995566414,
@@ -18729,6 +19221,116 @@
           "worst_session": "new_york",
           "best_session_return_pct": 12.530512975693155,
           "worst_session_return_pct": 5.867086933914284
+        },
+        "live_regime_pnl": {
+          "high_vol": {
+            "total_pnl": 163.4,
+            "num_trades": 8,
+            "avg_pnl": 20.425
+          },
+          "ranging": {
+            "total_pnl": -44.39,
+            "num_trades": 3,
+            "avg_pnl": -14.796667
+          },
+          "trending_down": {
+            "total_pnl": 58.4,
+            "num_trades": 10,
+            "avg_pnl": 5.84
+          }
+        },
+        "live_regime_class_pnl": {
+          "range": {
+            "total_pnl": -44.39,
+            "num_trades": 3,
+            "avg_pnl": -14.796667
+          },
+          "trend": {
+            "total_pnl": 58.4,
+            "num_trades": 10,
+            "avg_pnl": 5.84
+          },
+          "volatility_spike": {
+            "total_pnl": 163.4,
+            "num_trades": 8,
+            "avg_pnl": 20.425
+          }
+        },
+        "live_regime_type_pnl": {
+          "downtrend_weak": {
+            "total_pnl": 58.4,
+            "num_trades": 10,
+            "avg_pnl": 5.84
+          },
+          "range_wide": {
+            "total_pnl": -44.39,
+            "num_trades": 3,
+            "avg_pnl": -14.796667
+          },
+          "vol_spike_down": {
+            "total_pnl": -82.26,
+            "num_trades": 7,
+            "avg_pnl": -11.751429
+          },
+          "vol_spike_up": {
+            "total_pnl": 245.66,
+            "num_trades": 1,
+            "avg_pnl": 245.66
+          }
+        },
+        "live_vol_regime_pnl": {
+          "high": {
+            "total_pnl": 32.87,
+            "num_trades": 16,
+            "avg_pnl": 2.054375
+          },
+          "normal": {
+            "total_pnl": 144.54,
+            "num_trades": 5,
+            "avg_pnl": 28.908
+          }
+        },
+        "live_session_pnl": {
+          "asia": {
+            "total_pnl": 138.18,
+            "num_trades": 11,
+            "avg_pnl": 12.561818
+          },
+          "london": {
+            "total_pnl": -62.75,
+            "num_trades": 1,
+            "avg_pnl": -62.75
+          },
+          "new_york": {
+            "total_pnl": 245.66,
+            "num_trades": 1,
+            "avg_pnl": 245.66
+          }
+        },
+        "live_meta": {
+          "total_live_trades": 21,
+          "total_live_pnl": 177.41,
+          "best_regime": "high_vol",
+          "worst_regime": "ranging",
+          "best_regime_pnl": 163.4,
+          "worst_regime_pnl": -44.39,
+          "best_session": "asia",
+          "worst_session": "asia",
+          "best_session_pnl": 138.18,
+          "worst_session_pnl": 138.18,
+          "allowed_regimes": [
+            "high_vol",
+            "trending_down"
+          ],
+          "blocked_regimes": [
+            "ranging"
+          ],
+          "allowed_sessions": [
+            "asia"
+          ],
+          "blocked_sessions": [],
+          "routing_confidence": 0.765,
+          "min_trades_per_bucket": 3
         }
       },
       "score": 3.377802872057716,
@@ -18764,7 +19366,7 @@
       "live_decay": {
         "signal_level": "warning",
         "reason": "recent_avg_negative",
-        "updated_at": "2026-04-24T04:37:13.486401+00:00",
+        "updated_at": "2026-04-24T04:59:07.771324+00:00",
         "recent_count": 20,
         "recent_sum_pnl": -44.87999999999998,
         "recent_avg_pnl": -2.243999999999999,
