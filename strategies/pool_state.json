@@ -5339,7 +5339,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 2365.6188937954835,
-          "total_return_pct": 23.656188937954834
+          "total_return_pct": 23.656188937954834,
+          "routing_confidence": 0.9094,
+          "specialist_score": 0.5002,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "london",
+          "worst_session": "new_york",
+          "best_session_return_pct": 9.547091659993304,
+          "worst_session_return_pct": 6.53711591943842
         }
       },
       "score": 5.393520267014231,
@@ -5939,7 +5957,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 2175.88030271313,
-          "total_return_pct": 21.758803027131297
+          "total_return_pct": 21.758803027131297,
+          "routing_confidence": 0.89,
+          "specialist_score": 0.4895,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "london",
+          "worst_session": "asia",
+          "best_session_return_pct": 9.705586215812149,
+          "worst_session_return_pct": 5.403725231386262
         }
       },
       "score": 5.298573785539994,
@@ -6068,7 +6104,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 2029.9708812910046,
-          "total_return_pct": 20.299708812910044
+          "total_return_pct": 20.299708812910044,
+          "routing_confidence": 0.8978,
+          "specialist_score": 0.4938,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "london",
+          "worst_session": "asia",
+          "best_session_return_pct": 8.62823353243277,
+          "worst_session_return_pct": 5.1826516382946375
         }
       },
       "score": 5.071183831034098,
@@ -6197,7 +6251,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 1897.9436037478156,
-          "total_return_pct": 18.979436037478155
+          "total_return_pct": 18.979436037478155,
+          "routing_confidence": 0.8762,
+          "specialist_score": 0.4819,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "london",
+          "worst_session": "asia",
+          "best_session_return_pct": 9.552986414350231,
+          "worst_session_return_pct": 3.6265700341947644
         }
       },
       "score": 4.893643909051183,
@@ -6326,7 +6398,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 1902.0581550499833,
-          "total_return_pct": 19.02058155049983
+          "total_return_pct": 19.02058155049983,
+          "routing_confidence": 0.8651,
+          "specialist_score": 0.4758,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "london",
+          "worst_session": "asia",
+          "best_session_return_pct": 9.38510391217286,
+          "worst_session_return_pct": 3.8787096404274255
         }
       },
       "score": 4.887599707991499,
@@ -6455,7 +6545,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 1810.7681442664548,
-          "total_return_pct": 18.10768144266455
+          "total_return_pct": 18.10768144266455,
+          "routing_confidence": 0.5971,
+          "specialist_score": 0.3284,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "new_york",
+          "worst_session": "asia",
+          "best_session_return_pct": 6.462673256405865,
+          "worst_session_return_pct": 5.182806346245338
         }
       },
       "score": 4.820017416731334,
@@ -6584,7 +6692,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 1810.7681442664548,
-          "total_return_pct": 18.10768144266455
+          "total_return_pct": 18.10768144266455,
+          "routing_confidence": 0.5971,
+          "specialist_score": 0.3284,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "new_york",
+          "worst_session": "asia",
+          "best_session_return_pct": 6.462673256405865,
+          "worst_session_return_pct": 5.182806346245338
         }
       },
       "score": 4.820017416731334,
@@ -6713,7 +6839,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 1810.7681442664548,
-          "total_return_pct": 18.10768144266455
+          "total_return_pct": 18.10768144266455,
+          "routing_confidence": 0.5971,
+          "specialist_score": 0.3284,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "new_york",
+          "worst_session": "asia",
+          "best_session_return_pct": 6.462673256405865,
+          "worst_session_return_pct": 5.182806346245338
         }
       },
       "score": 4.820017416731334,
@@ -6842,7 +6986,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 1810.7681442664548,
-          "total_return_pct": 18.10768144266455
+          "total_return_pct": 18.10768144266455,
+          "routing_confidence": 0.5971,
+          "specialist_score": 0.3284,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "new_york",
+          "worst_session": "asia",
+          "best_session_return_pct": 6.462673256405865,
+          "worst_session_return_pct": 5.182806346245338
         }
       },
       "score": 4.820017416731334,
@@ -6971,7 +7133,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 1896.3541864997158,
-          "total_return_pct": 18.963541864997158
+          "total_return_pct": 18.963541864997158,
+          "routing_confidence": 0.6072,
+          "specialist_score": 0.334,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "london",
+          "worst_session": "new_york",
+          "best_session_return_pct": 10.151791974342888,
+          "worst_session_return_pct": 1.6905285242913695
         }
       },
       "score": 4.77323542954524,
@@ -7100,7 +7280,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 1859.1575280982302,
-          "total_return_pct": 18.5915752809823
+          "total_return_pct": 18.5915752809823,
+          "routing_confidence": 0.8653,
+          "specialist_score": 0.4759,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "london",
+          "worst_session": "asia",
+          "best_session_return_pct": 9.707569024032754,
+          "worst_session_return_pct": 3.5307113104821903
         }
       },
       "score": 4.757137299098774,
@@ -7229,7 +7427,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 1834.7033793933235,
-          "total_return_pct": 18.347033793933235
+          "total_return_pct": 18.347033793933235,
+          "routing_confidence": 0.5954,
+          "specialist_score": 0.3275,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "london",
+          "worst_session": "new_york",
+          "best_session_return_pct": 10.435197992170446,
+          "worst_session_return_pct": 1.6919713221706316
         }
       },
       "score": 4.720572874029881,
@@ -7358,7 +7574,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 1877.3227887128846,
-          "total_return_pct": 18.773227887128847
+          "total_return_pct": 18.773227887128847,
+          "routing_confidence": 0.6028,
+          "specialist_score": 0.3315,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "asia",
+          "worst_session": "london",
+          "best_session_return_pct": 7.204995651616344,
+          "worst_session_return_pct": 5.121950037892275
         }
       },
       "score": 4.640386677693398,
@@ -7487,7 +7721,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 1877.3227041209136,
-          "total_return_pct": 18.773227041209136
+          "total_return_pct": 18.773227041209136,
+          "routing_confidence": 0.6028,
+          "specialist_score": 0.3315,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "asia",
+          "worst_session": "london",
+          "best_session_return_pct": 7.204995600301349,
+          "worst_session_return_pct": 5.1219492891988905
         }
       },
       "score": 4.640386547575095,
@@ -7616,7 +7868,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 1877.3227041209136,
-          "total_return_pct": 18.773227041209136
+          "total_return_pct": 18.773227041209136,
+          "routing_confidence": 0.6028,
+          "specialist_score": 0.3315,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "asia",
+          "worst_session": "london",
+          "best_session_return_pct": 7.204995600301349,
+          "worst_session_return_pct": 5.1219492891988905
         }
       },
       "score": 4.640386547575095,
@@ -7745,7 +8015,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 2421.0504148952455,
-          "total_return_pct": 24.210504148952452
+          "total_return_pct": 24.210504148952452,
+          "routing_confidence": 0.9338,
+          "specialist_score": 0.5136,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "london",
+          "worst_session": "asia",
+          "best_session_return_pct": 10.413340620690182,
+          "worst_session_return_pct": 5.689874120508709
         }
       },
       "score": 4.6211921804751634,
@@ -7874,7 +8162,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 2041.5241518585067,
-          "total_return_pct": 20.415241518585066
+          "total_return_pct": 20.415241518585066,
+          "routing_confidence": 0.8725,
+          "specialist_score": 0.4799,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "new_york",
+          "worst_session": "london",
+          "best_session_return_pct": 8.721721279165216,
+          "worst_session_return_pct": 5.703596580350552
         }
       },
       "score": 4.6057686322450655,
@@ -7996,7 +8302,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 1810.058161239885,
-          "total_return_pct": 18.10058161239885
+          "total_return_pct": 18.10058161239885,
+          "routing_confidence": 0.5902,
+          "specialist_score": 0.3246,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "new_york",
+          "worst_session": "london",
+          "best_session_return_pct": 6.4598514520086106,
+          "worst_session_return_pct": 5.336725958566537
         }
       },
       "score": 4.579887047126472,
@@ -8125,7 +8449,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 1810.058161239885,
-          "total_return_pct": 18.10058161239885
+          "total_return_pct": 18.10058161239885,
+          "routing_confidence": 0.5902,
+          "specialist_score": 0.3246,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "new_york",
+          "worst_session": "london",
+          "best_session_return_pct": 6.4598514520086106,
+          "worst_session_return_pct": 5.336725958566537
         }
       },
       "score": 4.579887047126472,
@@ -8254,7 +8596,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 2387.9682216284696,
-          "total_return_pct": 23.879682216284696
+          "total_return_pct": 23.879682216284696,
+          "routing_confidence": 0.6336,
+          "specialist_score": 0.3485,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "new_york",
+          "worst_session": "london",
+          "best_session_return_pct": 8.43786438351002,
+          "worst_session_return_pct": 7.089941875102484
         }
       },
       "score": 4.573667896142184,
@@ -8383,7 +8743,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 2387.9682216284696,
-          "total_return_pct": 23.879682216284696
+          "total_return_pct": 23.879682216284696,
+          "routing_confidence": 0.6336,
+          "specialist_score": 0.3485,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "new_york",
+          "worst_session": "london",
+          "best_session_return_pct": 8.43786438351002,
+          "worst_session_return_pct": 7.089941875102484
         }
       },
       "score": 4.573667896142184,
@@ -8512,7 +8890,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 1585.4424315052001,
-          "total_return_pct": 15.854424315052002
+          "total_return_pct": 15.854424315052002,
+          "routing_confidence": 0.8432,
+          "specialist_score": 0.4638,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "london",
+          "worst_session": "asia",
+          "best_session_return_pct": 7.2697008615254815,
+          "worst_session_return_pct": 3.7433005507695074
         }
       },
       "score": 4.527488722406254,
@@ -8641,7 +9037,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 1738.9669117099813,
-          "total_return_pct": 17.389669117099814
+          "total_return_pct": 17.389669117099814,
+          "routing_confidence": 0.6,
+          "specialist_score": 0.33,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "london",
+          "worst_session": "asia",
+          "best_session_return_pct": 6.392186107414352,
+          "worst_session_return_pct": 4.827575155900286
         }
       },
       "score": 4.513964828822928,
@@ -8770,7 +9184,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 1738.9669117099813,
-          "total_return_pct": 17.389669117099814
+          "total_return_pct": 17.389669117099814,
+          "routing_confidence": 0.6,
+          "specialist_score": 0.33,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "london",
+          "worst_session": "asia",
+          "best_session_return_pct": 6.392186107414352,
+          "worst_session_return_pct": 4.827575155900286
         }
       },
       "score": 4.513964828822928,
@@ -8899,7 +9331,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 1660.227916298175,
-          "total_return_pct": 16.60227916298175
+          "total_return_pct": 16.60227916298175,
+          "routing_confidence": 0.5837,
+          "specialist_score": 0.321,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "london",
+          "worst_session": "asia",
+          "best_session_return_pct": 7.517530742423455,
+          "worst_session_return_pct": 3.5828528470818006
         }
       },
       "score": 4.511221196675637,
@@ -9028,7 +9478,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 1637.1300097333092,
-          "total_return_pct": 16.371300097333094
+          "total_return_pct": 16.371300097333094,
+          "routing_confidence": 0.5676,
+          "specialist_score": 0.3122,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "london",
+          "worst_session": "new_york",
+          "best_session_return_pct": 8.416977541553619,
+          "worst_session_return_pct": 2.5912977421238725
         }
       },
       "score": 4.508445096418094,
@@ -9157,7 +9625,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 2222.599705287647,
-          "total_return_pct": 22.22599705287647
+          "total_return_pct": 22.22599705287647,
+          "routing_confidence": 0.9075,
+          "specialist_score": 0.4991,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "london",
+          "worst_session": "asia",
+          "best_session_return_pct": 10.089918541896132,
+          "worst_session_return_pct": 4.640705190962427
         }
       },
       "score": 4.4997190568359375,
@@ -9193,13 +9679,13 @@
       "live_decay": {
         "signal_level": "warning",
         "reason": "recent_avg_negative",
-        "updated_at": "2026-04-23T04:44:07.781920+00:00",
-        "recent_count": 9,
-        "recent_sum_pnl": -170.61999999999998,
-        "recent_avg_pnl": -18.957777777777775,
-        "loss_streak": 2,
-        "negative_ratio": 0.6666666666666666,
-        "total_trades": 9
+        "updated_at": "2026-04-24T04:37:13.486401+00:00",
+        "recent_count": 13,
+        "recent_sum_pnl": -114.95999999999995,
+        "recent_avg_pnl": -8.84307692307692,
+        "loss_streak": 0,
+        "negative_ratio": 0.6153846153846154,
+        "total_trades": 13
       }
     }
   },
@@ -9297,7 +9783,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 1787.609096091375,
-          "total_return_pct": 17.87609096091375
+          "total_return_pct": 17.87609096091375,
+          "routing_confidence": 0.6151,
+          "specialist_score": 0.3383,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "new_york",
+          "worst_session": "london",
+          "best_session_return_pct": 6.238053219545656,
+          "worst_session_return_pct": 5.630982753030672
         }
       },
       "score": 4.4967473305839105,
@@ -9426,7 +9930,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 1787.609096091375,
-          "total_return_pct": 17.87609096091375
+          "total_return_pct": 17.87609096091375,
+          "routing_confidence": 0.6151,
+          "specialist_score": 0.3383,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "new_york",
+          "worst_session": "london",
+          "best_session_return_pct": 6.238053219545656,
+          "worst_session_return_pct": 5.630982753030672
         }
       },
       "score": 4.4967473305839105,
@@ -9555,7 +10077,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 1787.609096091375,
-          "total_return_pct": 17.87609096091375
+          "total_return_pct": 17.87609096091375,
+          "routing_confidence": 0.6151,
+          "specialist_score": 0.3383,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "new_york",
+          "worst_session": "london",
+          "best_session_return_pct": 6.238053219545656,
+          "worst_session_return_pct": 5.630982753030672
         }
       },
       "score": 4.4967473305839105,
@@ -9684,7 +10224,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 1958.8507009464179,
-          "total_return_pct": 19.58850700946418
+          "total_return_pct": 19.58850700946418,
+          "routing_confidence": 0.87,
+          "specialist_score": 0.4785,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "new_york",
+          "worst_session": "asia",
+          "best_session_return_pct": 7.2142465044581625,
+          "worst_session_return_pct": 5.906870853959443
         }
       },
       "score": 4.493856214524182,
@@ -9813,7 +10371,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 2208.6095158393678,
-          "total_return_pct": 22.08609515839368
+          "total_return_pct": 22.08609515839368,
+          "routing_confidence": 0.8961,
+          "specialist_score": 0.4929,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "london",
+          "worst_session": "asia",
+          "best_session_return_pct": 10.212845869011597,
+          "worst_session_return_pct": 4.328403458478665
         }
       },
       "score": 4.493750647387616,
@@ -9942,7 +10518,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 1172.591504889375,
-          "total_return_pct": 11.72591504889375
+          "total_return_pct": 11.72591504889375,
+          "routing_confidence": 0.5741,
+          "specialist_score": 0.3158,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "london",
+          "worst_session": "asia",
+          "best_session_return_pct": 6.124104604444446,
+          "worst_session_return_pct": 2.2439049437282503
         }
       },
       "score": 4.4686864599634015,
@@ -10071,7 +10665,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 1689.0072196041654,
-          "total_return_pct": 16.890072196041654
+          "total_return_pct": 16.890072196041654,
+          "routing_confidence": 0.5872,
+          "specialist_score": 0.323,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "new_york",
+          "worst_session": "asia",
+          "best_session_return_pct": 6.396047524541656,
+          "worst_session_return_pct": 5.129375165025278
         }
       },
       "score": 4.4470416645696496,
@@ -10200,7 +10812,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 1726.8197755703193,
-          "total_return_pct": 17.268197755703195
+          "total_return_pct": 17.268197755703195,
+          "routing_confidence": 0.6009,
+          "specialist_score": 0.3305,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "new_york",
+          "worst_session": "london",
+          "best_session_return_pct": 6.459851585489631,
+          "worst_session_return_pct": 4.504341838129142
         }
       },
       "score": 4.417856992664059,
@@ -10329,7 +10959,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 1726.8197755703193,
-          "total_return_pct": 17.268197755703195
+          "total_return_pct": 17.268197755703195,
+          "routing_confidence": 0.6009,
+          "specialist_score": 0.3305,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "new_york",
+          "worst_session": "london",
+          "best_session_return_pct": 6.459851585489631,
+          "worst_session_return_pct": 4.504341838129142
         }
       },
       "score": 4.417856992664059,
@@ -10458,7 +11106,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 1662.4468996680716,
-          "total_return_pct": 16.62446899668072
+          "total_return_pct": 16.62446899668072,
+          "routing_confidence": 0.5619,
+          "specialist_score": 0.309,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "london",
+          "worst_session": "asia",
+          "best_session_return_pct": 6.702376446794427,
+          "worst_session_return_pct": 3.8151589756740614
         }
       },
       "score": 4.4046426852516385,
@@ -10587,7 +11253,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 1662.4467099367873,
-          "total_return_pct": 16.624467099367873
+          "total_return_pct": 16.624467099367873,
+          "routing_confidence": 0.5619,
+          "specialist_score": 0.309,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "london",
+          "worst_session": "asia",
+          "best_session_return_pct": 6.702374710899804,
+          "worst_session_return_pct": 3.815158913606897
         }
       },
       "score": 4.404642331733307,
@@ -10716,7 +11400,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 2194.0781395397476,
-          "total_return_pct": 21.940781395397476
+          "total_return_pct": 21.940781395397476,
+          "routing_confidence": 0.9028,
+          "specialist_score": 0.4965,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "london",
+          "worst_session": "asia",
+          "best_session_return_pct": 10.21383079785567,
+          "worst_session_return_pct": 4.642084428905635
         }
       },
       "score": 4.403492899796225,
@@ -10752,7 +11454,7 @@
       "live_decay": {
         "signal_level": "warning",
         "reason": "negative_ratio_high_and_recent_avg_negative",
-        "updated_at": "2026-04-23T04:44:07.781920+00:00",
+        "updated_at": "2026-04-24T04:37:13.486401+00:00",
         "recent_count": 11,
         "recent_sum_pnl": -300.59,
         "recent_avg_pnl": -27.326363636363634,
@@ -10856,7 +11558,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 2180.082938518649,
-          "total_return_pct": 21.80082938518649
+          "total_return_pct": 21.80082938518649,
+          "routing_confidence": 0.9068,
+          "specialist_score": 0.4987,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "london",
+          "worst_session": "asia",
+          "best_session_return_pct": 10.33620220388437,
+          "worst_session_return_pct": 4.329769513922356
         }
       },
       "score": 4.39969457572842,
@@ -10985,7 +11705,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 2317.710233122644,
-          "total_return_pct": 23.17710233122644
+          "total_return_pct": 23.17710233122644,
+          "routing_confidence": 0.9185,
+          "specialist_score": 0.5052,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "london",
+          "worst_session": "asia",
+          "best_session_return_pct": 8.717262231401744,
+          "worst_session_return_pct": 6.072954093776884
         }
       },
       "score": 4.385052631620051,
@@ -11114,7 +11852,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 1578.0455520602568,
-          "total_return_pct": 15.780455520602569
+          "total_return_pct": 15.780455520602569,
+          "routing_confidence": 0.5666,
+          "specialist_score": 0.3116,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "london",
+          "worst_session": "asia",
+          "best_session_return_pct": 6.695706909214278,
+          "worst_session_return_pct": 3.5828529223415395
         }
       },
       "score": 4.339370349153063,
@@ -11243,7 +11999,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 2158.3786010067797,
-          "total_return_pct": 21.583786010067797
+          "total_return_pct": 21.583786010067797,
+          "routing_confidence": 0.901,
+          "specialist_score": 0.4956,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "london",
+          "worst_session": "asia",
+          "best_session_return_pct": 10.375793128285355,
+          "worst_session_return_pct": 3.9841335134042324
         }
       },
       "score": 4.282796035855694,
@@ -11372,7 +12146,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 1841.58846327717,
-          "total_return_pct": 18.415884632771697
+          "total_return_pct": 18.415884632771697,
+          "routing_confidence": 0.8597,
+          "specialist_score": 0.4728,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "new_york",
+          "worst_session": "london",
+          "best_session_return_pct": 7.349353707741822,
+          "worst_session_return_pct": 4.029245642622323
         }
       },
       "score": 4.1915820064891784,
@@ -11501,7 +12293,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 2156.897942351314,
-          "total_return_pct": 21.56897942351314
+          "total_return_pct": 21.56897942351314,
+          "routing_confidence": 0.6053,
+          "specialist_score": 0.3329,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "london",
+          "worst_session": "new_york",
+          "best_session_return_pct": 10.606931734457758,
+          "worst_session_return_pct": 3.0787451553647336
         }
       },
       "score": 4.186520389052206,
@@ -11630,7 +12440,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 1732.7933940531238,
-          "total_return_pct": 17.32793394053124
+          "total_return_pct": 17.32793394053124,
+          "routing_confidence": 0.8426,
+          "specialist_score": 0.4634,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "london",
+          "worst_session": "new_york",
+          "best_session_return_pct": 8.213505378447302,
+          "worst_session_return_pct": 3.136860280688678
         }
       },
       "score": 4.179090208345177,
@@ -11759,7 +12587,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 1383.5873821647301,
-          "total_return_pct": 13.835873821647303
+          "total_return_pct": 13.835873821647303,
+          "routing_confidence": 0.8092,
+          "specialist_score": 0.4451,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "london",
+          "worst_session": "asia",
+          "best_session_return_pct": 5.795272471315857,
+          "worst_session_return_pct": 3.3713666185721363
         }
       },
       "score": 4.144000897125063,
@@ -11888,7 +12734,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 2350.5789742374827,
-          "total_return_pct": 23.505789742374827
+          "total_return_pct": 23.505789742374827,
+          "routing_confidence": 0.9139,
+          "specialist_score": 0.5026,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "new_york",
+          "worst_session": "london",
+          "best_session_return_pct": 9.603593724411878,
+          "worst_session_return_pct": 5.3542968074198765
         }
       },
       "score": 4.130671282732546,
@@ -12017,7 +12881,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 2078.560763735821,
-          "total_return_pct": 20.78560763735821
+          "total_return_pct": 20.78560763735821,
+          "routing_confidence": 0.5902,
+          "specialist_score": 0.3246,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "london",
+          "worst_session": "new_york",
+          "best_session_return_pct": 10.958755085692436,
+          "worst_session_return_pct": 3.087546388740865
         }
       },
       "score": 4.125273217992184,
@@ -12146,7 +13028,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 1352.4591365610875,
-          "total_return_pct": 13.524591365610876
+          "total_return_pct": 13.524591365610876,
+          "routing_confidence": 0.8136,
+          "specialist_score": 0.4475,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "london",
+          "worst_session": "asia",
+          "best_session_return_pct": 5.723586889309831,
+          "worst_session_return_pct": 3.11532168795252
         }
       },
       "score": 4.121581123706133,
@@ -12275,7 +13175,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 1363.3110382261232,
-          "total_return_pct": 13.633110382261233
+          "total_return_pct": 13.633110382261233,
+          "routing_confidence": 0.5365,
+          "specialist_score": 0.2951,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "new_york",
+          "worst_session": "asia",
+          "best_session_return_pct": 5.917159799863346,
+          "worst_session_return_pct": 3.4635899555243457
         }
       },
       "score": 4.113995942083232,
@@ -12404,7 +13322,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 1032.0069335655833,
-          "total_return_pct": 10.320069335655834
+          "total_return_pct": 10.320069335655834,
+          "routing_confidence": 0.5724,
+          "specialist_score": 0.3148,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "london",
+          "worst_session": "asia",
+          "best_session_return_pct": 5.487020420572837,
+          "worst_session_return_pct": 1.809007168499049
         }
       },
       "score": 4.094579877242049,
@@ -12533,7 +13469,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 1859.6684826060246,
-          "total_return_pct": 18.596684826060244
+          "total_return_pct": 18.596684826060244,
+          "routing_confidence": 0.6513,
+          "specialist_score": 0.3582,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "london",
+          "worst_session": "new_york",
+          "best_session_return_pct": 10.526817123594075,
+          "worst_session_return_pct": 1.3188353011428324
         }
       },
       "score": 3.7853902986778176,
@@ -12669,7 +13623,26 @@
           "is_trend_follower": true,
           "is_range_trader": false,
           "total_pnl": 2173.5306502277363,
-          "total_return_pct": 21.735306502277364
+          "total_return_pct": 21.735306502277364,
+          "routing_confidence": 0.9608,
+          "specialist_score": 0.5284,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "trending_up"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london"
+          ],
+          "blocked_sessions": [
+            "new_york"
+          ],
+          "best_session": "asia",
+          "worst_session": "new_york",
+          "best_session_return_pct": 13.534702207515968,
+          "worst_session_return_pct": -4.123358586626546
         }
       },
       "score": 3.784246270390499,
@@ -12705,13 +13678,13 @@
       "live_decay": {
         "signal_level": "warning",
         "reason": "recent_avg_negative",
-        "updated_at": "2026-04-23T04:44:07.781920+00:00",
-        "recent_count": 25,
-        "recent_sum_pnl": -282.36999999999995,
-        "recent_avg_pnl": -11.294799999999999,
+        "updated_at": "2026-04-24T04:37:13.486401+00:00",
+        "recent_count": 26,
+        "recent_sum_pnl": -251.21999999999997,
+        "recent_avg_pnl": -9.66230769230769,
         "loss_streak": 0,
-        "negative_ratio": 0.56,
-        "total_trades": 25
+        "negative_ratio": 0.5384615384615384,
+        "total_trades": 26
       }
     }
   },
@@ -12809,7 +13782,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 846.3700735675825,
-          "total_return_pct": 8.463700735675824
+          "total_return_pct": 8.463700735675824,
+          "routing_confidence": 0.5713,
+          "specialist_score": 0.3142,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "london",
+          "worst_session": "asia",
+          "best_session_return_pct": 3.8049416938384413,
+          "worst_session_return_pct": 1.7811239946105253
         }
       },
       "score": 3.7587993777639714,
@@ -12952,7 +13943,25 @@
           "is_trend_follower": true,
           "is_range_trader": false,
           "total_pnl": 7383.8648256336855,
-          "total_return_pct": 73.83864825633685
+          "total_return_pct": 73.83864825633685,
+          "routing_confidence": 1.0,
+          "specialist_score": 0.55,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "trending_down"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "london",
+          "worst_session": "asia",
+          "best_session_return_pct": 45.046792641747835,
+          "worst_session_return_pct": 12.328911824916007
         }
       },
       "score": 3.7074436675708426,
@@ -13074,7 +14083,24 @@
           "is_trend_follower": true,
           "is_range_trader": false,
           "total_pnl": 4683.358068853587,
-          "total_return_pct": 46.83358068853587
+          "total_return_pct": 46.83358068853587,
+          "routing_confidence": 1.0,
+          "specialist_score": 0.55,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "trending_down"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "london",
+          "worst_session": "asia",
+          "best_session_return_pct": 20.733778953897087,
+          "worst_session_return_pct": 8.969243507318396
         }
       },
       "score": 3.70533531339737,
@@ -13203,7 +14229,24 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 1419.1185964473714,
-          "total_return_pct": 14.191185964473712
+          "total_return_pct": 14.191185964473712,
+          "routing_confidence": 0.6416,
+          "specialist_score": 0.3529,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london"
+          ],
+          "blocked_sessions": [],
+          "best_session": "london",
+          "worst_session": "new_york",
+          "best_session_return_pct": 10.239970978259466,
+          "worst_session_return_pct": -0.496424061443857
         }
       },
       "score": 3.698041812587253,
@@ -13339,7 +14382,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 1166.2174731095288,
-          "total_return_pct": 11.662174731095288
+          "total_return_pct": 11.662174731095288,
+          "routing_confidence": 0.5493,
+          "specialist_score": 0.3021,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "london",
+          "worst_session": "asia",
+          "best_session_return_pct": 4.3709771865738976,
+          "worst_session_return_pct": 3.403514921923673
         }
       },
       "score": 3.655236136525547,
@@ -13468,7 +14529,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 1906.7914365628428,
-          "total_return_pct": 19.06791436562843
+          "total_return_pct": 19.06791436562843,
+          "routing_confidence": 0.882,
+          "specialist_score": 0.4851,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "london",
+          "worst_session": "new_york",
+          "best_session_return_pct": 8.612615871451313,
+          "worst_session_return_pct": 4.17358897104211
         }
       },
       "score": 3.6458235038535913,
@@ -13604,7 +14683,26 @@
           "is_trend_follower": true,
           "is_range_trader": true,
           "total_pnl": 2892.964278468737,
-          "total_return_pct": 28.92964278468737
+          "total_return_pct": 28.92964278468737,
+          "routing_confidence": 0.909,
+          "specialist_score": 0.5,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "low_vol",
+            "ranging",
+            "trending_down"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "asia",
+          "worst_session": "new_york",
+          "best_session_return_pct": 13.066537028524024,
+          "worst_session_return_pct": 4.903825424187581
         }
       },
       "score": 3.6450729594709497,
@@ -13751,7 +14849,27 @@
           "is_trend_follower": true,
           "is_range_trader": true,
           "total_pnl": 3213.065668053782,
-          "total_return_pct": 32.13065668053782
+          "total_return_pct": 32.13065668053782,
+          "routing_confidence": 0.7829,
+          "specialist_score": 0.4306,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "low_vol",
+            "ranging",
+            "trending_down"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "london",
+          "worst_session": "new_york",
+          "best_session_return_pct": 18.319488746246506,
+          "worst_session_return_pct": 3.5115476041645115
         }
       },
       "score": 3.644015501330262,
@@ -13898,7 +15016,26 @@
           "is_trend_follower": true,
           "is_range_trader": true,
           "total_pnl": 2865.083762557553,
-          "total_return_pct": 28.65083762557553
+          "total_return_pct": 28.65083762557553,
+          "routing_confidence": 0.897,
+          "specialist_score": 0.4934,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "low_vol",
+            "ranging",
+            "trending_down"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "asia",
+          "worst_session": "new_york",
+          "best_session_return_pct": 12.14534152058203,
+          "worst_session_return_pct": 6.0348346005943085
         }
       },
       "score": 3.6393664220074786,
@@ -13930,7 +15067,18 @@
       },
       "family": "ma_trend",
       "playbook_type": "ma_trend",
-      "motif": "trend_continuation"
+      "motif": "trend_continuation",
+      "live_decay": {
+        "signal_level": "warning",
+        "reason": "negative_ratio_high_and_recent_avg_negative",
+        "updated_at": "2026-04-24T04:37:13.486401+00:00",
+        "recent_count": 9,
+        "recent_sum_pnl": -412.28,
+        "recent_avg_pnl": -45.80888888888889,
+        "loss_streak": 0,
+        "negative_ratio": 0.7777777777777778,
+        "total_trades": 9
+      }
     }
   },
   "core15_BTCUSDm_M15_8400": {
@@ -14027,7 +15175,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 1546.326021786278,
-          "total_return_pct": 15.46326021786278
+          "total_return_pct": 15.46326021786278,
+          "routing_confidence": 0.8073,
+          "specialist_score": 0.444,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "new_york",
+          "worst_session": "asia",
+          "best_session_return_pct": 6.298589288032878,
+          "worst_session_return_pct": 3.9180926296820644
         }
       },
       "score": 3.6221282755684574,
@@ -14149,7 +15315,26 @@
           "is_trend_follower": true,
           "is_range_trader": false,
           "total_pnl": 9873.644367503612,
-          "total_return_pct": 98.73644367503611
+          "total_return_pct": 98.73644367503611,
+          "routing_confidence": 0.9,
+          "specialist_score": 0.495,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "trending_down"
+          ],
+          "blocked_regimes": [
+            "trending_up"
+          ],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "london",
+          "worst_session": "asia",
+          "best_session_return_pct": 44.09806391199384,
+          "worst_session_return_pct": 25.87535775052811
         }
       },
       "score": 3.618680743463691,
@@ -14285,7 +15470,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 1193.209720255533,
-          "total_return_pct": 11.93209720255533
+          "total_return_pct": 11.93209720255533,
+          "routing_confidence": 0.6159,
+          "specialist_score": 0.3387,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "london",
+          "worst_session": "asia",
+          "best_session_return_pct": 5.174272761929424,
+          "worst_session_return_pct": 2.1534104421026954
         }
       },
       "score": 3.5990314355910553,
@@ -14428,7 +15631,29 @@
           "is_trend_follower": true,
           "is_range_trader": true,
           "total_pnl": 5777.0440485057725,
-          "total_return_pct": 57.770440485057726
+          "total_return_pct": 57.770440485057726,
+          "routing_confidence": 0.9,
+          "specialist_score": 0.495,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging",
+            "trending_down",
+            "trending_up"
+          ],
+          "blocked_regimes": [
+            "low_vol"
+          ],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "london",
+          "worst_session": "asia",
+          "best_session_return_pct": 31.40875709770758,
+          "worst_session_return_pct": 10.094452203067428
         }
       },
       "score": 3.569890280407262,
@@ -14550,7 +15775,24 @@
           "is_trend_follower": true,
           "is_range_trader": false,
           "total_pnl": 3416.031481635605,
-          "total_return_pct": 34.16031481635605
+          "total_return_pct": 34.16031481635605,
+          "routing_confidence": 1.0,
+          "specialist_score": 0.55,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "trending_down"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "london",
+          "worst_session": "new_york",
+          "best_session_return_pct": 15.066141846408605,
+          "worst_session_return_pct": 9.008375597114346
         }
       },
       "score": 3.558595681449752,
@@ -14679,7 +15921,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 1474.5413998371364,
-          "total_return_pct": 14.745413998371363
+          "total_return_pct": 14.745413998371363,
+          "routing_confidence": 0.8166,
+          "specialist_score": 0.4491,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "new_york",
+          "worst_session": "asia",
+          "best_session_return_pct": 5.939342206324819,
+          "worst_session_return_pct": 3.871496182583525
         }
       },
       "score": 3.542664629425858,
@@ -14808,7 +16068,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 1411.7986556804046,
-          "total_return_pct": 14.117986556804047
+          "total_return_pct": 14.117986556804047,
+          "routing_confidence": 0.5456,
+          "specialist_score": 0.3001,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "london",
+          "worst_session": "new_york",
+          "best_session_return_pct": 6.748012000782287,
+          "worst_session_return_pct": 1.934635407593194
         }
       },
       "score": 3.519020723697336,
@@ -14930,7 +16208,24 @@
           "is_trend_follower": true,
           "is_range_trader": false,
           "total_pnl": 4151.749561229035,
-          "total_return_pct": 41.517495612290354
+          "total_return_pct": 41.517495612290354,
+          "routing_confidence": 1.0,
+          "specialist_score": 0.55,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "trending_down"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "london",
+          "worst_session": "new_york",
+          "best_session_return_pct": 15.955446250571313,
+          "worst_session_return_pct": 10.715784424648964
         }
       },
       "score": 3.4590041357815347,
@@ -15073,7 +16368,28 @@
           "is_trend_follower": true,
           "is_range_trader": true,
           "total_pnl": 6316.729041073947,
-          "total_return_pct": 63.167290410739476
+          "total_return_pct": 63.167290410739476,
+          "routing_confidence": 0.9,
+          "specialist_score": 0.495,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging",
+            "trending_down"
+          ],
+          "blocked_regimes": [
+            "trending_up"
+          ],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "london",
+          "worst_session": "new_york",
+          "best_session_return_pct": 33.656485938530494,
+          "worst_session_return_pct": 6.398326574119506
         }
       },
       "score": 3.4550802310244872,
@@ -15209,7 +16525,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 1269.5920705425635,
-          "total_return_pct": 12.695920705425635
+          "total_return_pct": 12.695920705425635,
+          "routing_confidence": 0.5998,
+          "specialist_score": 0.3299,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "london",
+          "worst_session": "new_york",
+          "best_session_return_pct": 6.407805431446775,
+          "worst_session_return_pct": 3.0379999890372003
         }
       },
       "score": 3.4518580742636313,
@@ -15338,7 +16672,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 710.577656994002,
-          "total_return_pct": 7.10577656994002
+          "total_return_pct": 7.10577656994002,
+          "routing_confidence": 0.5546,
+          "specialist_score": 0.305,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "london",
+          "worst_session": "asia",
+          "best_session_return_pct": 4.357791127358311,
+          "worst_session_return_pct": 0.7987746486980726
         }
       },
       "score": 3.4403133760786493,
@@ -15460,7 +16812,24 @@
           "is_trend_follower": true,
           "is_range_trader": false,
           "total_pnl": 3957.394526101929,
-          "total_return_pct": 39.57394526101929
+          "total_return_pct": 39.57394526101929,
+          "routing_confidence": 1.0,
+          "specialist_score": 0.55,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "trending_down"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "london",
+          "worst_session": "asia",
+          "best_session_return_pct": 19.478951557890245,
+          "worst_session_return_pct": 8.943899362658433
         }
       },
       "score": 3.4398428666269654,
@@ -15582,7 +16951,26 @@
           "is_trend_follower": true,
           "is_range_trader": false,
           "total_pnl": 7640.986756921833,
-          "total_return_pct": 76.40986756921833
+          "total_return_pct": 76.40986756921833,
+          "routing_confidence": 0.9,
+          "specialist_score": 0.495,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "trending_down"
+          ],
+          "blocked_regimes": [
+            "trending_up"
+          ],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "london",
+          "worst_session": "new_york",
+          "best_session_return_pct": 28.696745419496555,
+          "worst_session_return_pct": 22.437449418273562
         }
       },
       "score": 3.439467492329606,
@@ -15725,7 +17113,25 @@
           "is_trend_follower": true,
           "is_range_trader": false,
           "total_pnl": 6713.12523689091,
-          "total_return_pct": 67.1312523689091
+          "total_return_pct": 67.1312523689091,
+          "routing_confidence": 1.0,
+          "specialist_score": 0.55,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "trending_down"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "london",
+          "worst_session": "asia",
+          "best_session_return_pct": 43.70669866074837,
+          "worst_session_return_pct": 8.527063099411254
         }
       },
       "score": 3.4336903223970925,
@@ -15847,7 +17253,24 @@
           "is_trend_follower": true,
           "is_range_trader": false,
           "total_pnl": 3961.52552013185,
-          "total_return_pct": 39.6152552013185
+          "total_return_pct": 39.6152552013185,
+          "routing_confidence": 1.0,
+          "specialist_score": 0.55,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "trending_down"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "asia",
+          "worst_session": "new_york",
+          "best_session_return_pct": 19.22444284283283,
+          "worst_session_return_pct": 2.8993186123787535
         }
       },
       "score": 3.432627149806587,
@@ -15969,7 +17392,25 @@
           "is_trend_follower": true,
           "is_range_trader": false,
           "total_pnl": 4704.65360443648,
-          "total_return_pct": 47.0465360443648
+          "total_return_pct": 47.0465360443648,
+          "routing_confidence": 1.0,
+          "specialist_score": 0.55,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "trending_down",
+            "trending_up"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "london",
+          "worst_session": "new_york",
+          "best_session_return_pct": 25.045827588055445,
+          "worst_session_return_pct": 6.633434378807935
         }
       },
       "score": 3.4237511547699064,
@@ -16098,7 +17539,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 658.2400706123159,
-          "total_return_pct": 6.582400706123159
+          "total_return_pct": 6.582400706123159,
+          "routing_confidence": 0.5706,
+          "specialist_score": 0.3138,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "new_york",
+          "worst_session": "asia",
+          "best_session_return_pct": 2.8275246695100686,
+          "worst_session_return_pct": 1.4594399505176137
         }
       },
       "score": 3.404778846127054,
@@ -16227,7 +17686,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 658.236581750857,
-          "total_return_pct": 6.58236581750857
+          "total_return_pct": 6.58236581750857,
+          "routing_confidence": 0.5706,
+          "specialist_score": 0.3138,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "new_york",
+          "worst_session": "asia",
+          "best_session_return_pct": 2.8275237439499588,
+          "worst_session_return_pct": 1.4594394727854765
         }
       },
       "score": 3.4047695171813364,
@@ -16356,7 +17833,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 658.2360225496006,
-          "total_return_pct": 6.582360225496006
+          "total_return_pct": 6.582360225496006,
+          "routing_confidence": 0.5706,
+          "specialist_score": 0.3138,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "new_york",
+          "worst_session": "asia",
+          "best_session_return_pct": 2.8275235955994513,
+          "worst_session_return_pct": 1.4594393962136747
         }
       },
       "score": 3.40476802177565,
@@ -16485,7 +17980,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 658.2328793948245,
-          "total_return_pct": 6.582328793948245
+          "total_return_pct": 6.582328793948245,
+          "routing_confidence": 0.5706,
+          "specialist_score": 0.3138,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "new_york",
+          "worst_session": "asia",
+          "best_session_return_pct": 2.8275227617518706,
+          "worst_session_return_pct": 1.4594389658193856
         }
       },
       "score": 3.404759615664757,
@@ -16614,7 +18127,25 @@
           "is_trend_follower": false,
           "is_range_trader": true,
           "total_pnl": 1404.7815602367718,
-          "total_return_pct": 14.047815602367718
+          "total_return_pct": 14.047815602367718,
+          "routing_confidence": 0.771,
+          "specialist_score": 0.4241,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "low_vol",
+            "ranging"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "asia",
+          "worst_session": "new_york",
+          "best_session_return_pct": 8.405540874799337,
+          "worst_session_return_pct": 1.2650963079723465
         }
       },
       "score": 3.3992569439121945,
@@ -16736,7 +18267,24 @@
           "is_trend_follower": true,
           "is_range_trader": false,
           "total_pnl": 4531.000845135551,
-          "total_return_pct": 45.31000845135551
+          "total_return_pct": 45.31000845135551,
+          "routing_confidence": 1.0,
+          "specialist_score": 0.55,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "trending_down"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "london",
+          "worst_session": "new_york",
+          "best_session_return_pct": 18.34316690645251,
+          "worst_session_return_pct": 12.281725305962407
         }
       },
       "score": 3.3955944995566414,
@@ -16858,7 +18406,24 @@
           "is_trend_follower": true,
           "is_range_trader": false,
           "total_pnl": 4970.324859967955,
-          "total_return_pct": 49.70324859967955
+          "total_return_pct": 49.70324859967955,
+          "routing_confidence": 1.0,
+          "specialist_score": 0.55,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "trending_down"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "london",
+          "worst_session": "asia",
+          "best_session_return_pct": 22.963458252077142,
+          "worst_session_return_pct": 13.242915473859734
         }
       },
       "score": 3.3917390535691103,
@@ -16980,7 +18545,24 @@
           "is_trend_follower": true,
           "is_range_trader": false,
           "total_pnl": 5097.503530861747,
-          "total_return_pct": 50.97503530861747
+          "total_return_pct": 50.97503530861747,
+          "routing_confidence": 1.0,
+          "specialist_score": 0.55,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "trending_down"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "new_york",
+          "worst_session": "asia",
+          "best_session_return_pct": 18.6083950202507,
+          "worst_session_return_pct": 15.402302621089115
         }
       },
       "score": 3.3826118893271815,
@@ -17127,7 +18709,26 @@
           "is_trend_follower": true,
           "is_range_trader": true,
           "total_pnl": 2867.8486087960837,
-          "total_return_pct": 28.678486087960838
+          "total_return_pct": 28.678486087960838,
+          "routing_confidence": 0.9015,
+          "specialist_score": 0.4958,
+          "avg_regime_confidence": 0.0,
+          "allowed_regimes": [
+            "high_vol",
+            "low_vol",
+            "trending_down"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london",
+            "new_york"
+          ],
+          "blocked_sessions": [],
+          "best_session": "london",
+          "worst_session": "new_york",
+          "best_session_return_pct": 12.530512975693155,
+          "worst_session_return_pct": 5.867086933914284
         }
       },
       "score": 3.377802872057716,
@@ -17163,13 +18764,1175 @@
       "live_decay": {
         "signal_level": "warning",
         "reason": "recent_avg_negative",
-        "updated_at": "2026-04-23T04:44:07.781920+00:00",
-        "recent_count": 17,
-        "recent_sum_pnl": -278.9,
-        "recent_avg_pnl": -16.405882352941177,
-        "loss_streak": 3,
-        "negative_ratio": 0.5882352941176471,
-        "total_trades": 17
+        "updated_at": "2026-04-24T04:37:13.486401+00:00",
+        "recent_count": 20,
+        "recent_sum_pnl": -44.87999999999998,
+        "recent_avg_pnl": -2.243999999999999,
+        "loss_streak": 0,
+        "negative_ratio": 0.55,
+        "total_trades": 20
+      }
+    }
+  },
+  "core15_BTCUSDm_M15_89bb": {
+    "name": "core15_BTCUSDm_M15_89bb",
+    "symbol": "BTCUSDm",
+    "timeframe": "M15",
+    "status": "candidate",
+    "score": 1.3651823738066664,
+    "stats": {
+      "initial_equity": 10000.0,
+      "final_equity": 10578.23777983607,
+      "net_profit": 578.2377798360703,
+      "return_pct": 5.782377798360703,
+      "sharpe_ratio": 3.179184160508797,
+      "max_drawdown_pct": -3.4830385655812646,
+      "profit_factor": 1.3486662060532306,
+      "win_rate": 0.45535714285714285,
+      "num_trades": 112.0,
+      "avg_win": 43.85619069649629,
+      "avg_loss": 27.187343371889135,
+      "expectancy": 5.162837319964941,
+      "same_bar_ambiguity_count": 0.0,
+      "same_bar_ambiguity_stop_loss_count": 0.0,
+      "same_bar_ambiguity_take_profit_count": 0.0,
+      "same_bar_ambiguity_rate": 0.0,
+      "strategy_explain": {
+        "regime_pnl": {
+          "high_vol": {
+            "return_pct": 0.30218296022242574,
+            "net_profit": 30.218296022242576,
+            "num_trades": 1,
+            "avg_rr": 1.250000000000009,
+            "win_rate": 1.0
+          },
+          "trending_down": {
+            "return_pct": 1.1846109782947052,
+            "net_profit": 118.4610978294705,
+            "num_trades": 77,
+            "avg_rr": 1.2499999999999998,
+            "win_rate": 0.4805194805194805
+          },
+          "trending_up": {
+            "return_pct": 4.295583859843605,
+            "net_profit": 429.5583859843605,
+            "num_trades": 34,
+            "avg_rr": 1.2499999999999982,
+            "win_rate": 0.38235294117647056
+          }
+        },
+        "regime_class_pnl": {
+          "event_driven": {
+            "return_pct": 0.30218296022242574,
+            "num_trades": 1
+          },
+          "trend": {
+            "return_pct": 5.48019483813831,
+            "num_trades": 111
+          }
+        },
+        "regime_type_pnl": {
+          "downtrend_strong": {
+            "return_pct": 0.28065312306598694,
+            "num_trades": 1
+          },
+          "downtrend_weak": {
+            "return_pct": 0.9039578552287181,
+            "num_trades": 76
+          },
+          "macro_news_high_impact": {
+            "return_pct": 0.30218296022242574,
+            "num_trades": 1
+          },
+          "uptrend_strong": {
+            "return_pct": -0.0902967126858783,
+            "num_trades": 1
+          },
+          "uptrend_weak": {
+            "return_pct": 4.3858805725294845,
+            "num_trades": 33
+          }
+        },
+        "vol_regime_pnl": {
+          "high": {
+            "return_pct": -0.5825113762297464,
+            "num_trades": 23
+          },
+          "low": {
+            "return_pct": 3.9299507820720994,
+            "num_trades": 21
+          },
+          "normal": {
+            "return_pct": 2.4349383925183834,
+            "num_trades": 68
+          }
+        },
+        "session_pnl": {
+          "asia": {
+            "return_pct": -4.285627568970624,
+            "num_trades": 25
+          },
+          "london": {
+            "return_pct": 9.922542401044748,
+            "num_trades": 37
+          },
+          "new_york": {
+            "return_pct": 0.14546296628661154,
+            "num_trades": 50
+          }
+        },
+        "risk_behavior": {
+          "avg_rr": 1.2499999999999996,
+          "sl_hit_ratio": 0.017857142857142856,
+          "tp_hit_ratio": 0.10714285714285714,
+          "exit_rule_ratio": 0.875,
+          "avg_holding_bars": 2.625,
+          "median_holding_bars": 1.0,
+          "max_holding_bars": 12,
+          "max_consecutive_losses": 7
+        },
+        "stability": {
+          "subperiod_sharpe": [
+            -0.40487858099851715,
+            1.426259644054862,
+            0.6676254955555289
+          ],
+          "subperiod_return_pct": [
+            -0.8473554715755145,
+            3.6939432589890484,
+            2.9357900109472017
+          ],
+          "sharpe_std": 0.7512107238574566
+        },
+        "news_behavior": {
+          "trades_around_high_impact": {
+            "num_trades": 2,
+            "return_pct": 0.47622240375545016
+          },
+          "avoidance_rate": 0.6688464118041583
+        },
+        "meta": {
+          "best_regime": "trending_up",
+          "worst_regime": "high_vol",
+          "best_session": "london",
+          "worst_session": "asia",
+          "best_regime_return_pct": 4.295583859843605,
+          "worst_regime_return_pct": 0.30218296022242574,
+          "best_session_return_pct": 9.922542401044748,
+          "worst_session_return_pct": -4.285627568970624,
+          "allowed_regimes": [
+            "trending_up"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "london"
+          ],
+          "blocked_sessions": [
+            "asia"
+          ],
+          "routing_confidence": 0.6559,
+          "avg_regime_confidence": 0.6260348214285714,
+          "specialist_score": 0.6425,
+          "is_trend_follower": true,
+          "is_range_trader": false,
+          "total_pnl": 578.2377798360737,
+          "total_return_pct": 5.782377798360738
+        }
+      },
+      "research_novelty_score": 0.10000000000000009,
+      "research_nearest_similarity": 0.8999999999999999,
+      "research_motif": "trend_pullback",
+      "score": 1.3651823738066664,
+      "accepted": true,
+      "research_low_trade_relief": true,
+      "research_bootstrap_candidate": false,
+      "research_bootstrap_applied": false,
+      "wf_overall_sharpe": 3.7663411505290054,
+      "wf_overall_max_drawdown_pct": 3.48303856558132,
+      "symbol": "BTCUSDm",
+      "timeframe": "M15",
+      "family": "pullback_trend",
+      "playbook_type": "pullback_trend",
+      "mc_final_pnl_mean": 536.2434378437748,
+      "mc_final_pnl_p5": -430.5265076928251,
+      "mc_final_pnl_p95": 1652.8465503136372,
+      "mc_max_dd_mean": 483.9870411677973,
+      "mc_max_dd_p5": 231.09281659695543,
+      "mc_max_dd_p95": 877.5831235062095,
+      "mc_loss_prob": 0.21333333333333335,
+      "mc_cvar_p5": -714.4903943406996,
+      "mc_dd_over_10pct_prob": 0.02,
+      "mc_dd_over_20pct_prob": 0.0,
+      "mc_method": "block",
+      "mc_block_size": 4.0,
+      "research_mc_tail_relief": true,
+      "family_aware_governance": true,
+      "family_governance_bucket": "challenger",
+      "strategy": {
+        "long_entry_rule": "ma_short > ma_long and close > open and close > ma_short and trend_strength > 0.15",
+        "short_entry_rule": "ma_short < ma_long and close < ma_long and rsi < 55 and rsi > 38 and trend_strength < -0.15",
+        "exit_rule": "bars_since_entry >= 12 or close < ma_short or trend_strength < 0.03",
+        "sl_atr_mult": 2.0,
+        "tp_atr_mult": 2.5,
+        "stop_loss_pips": 150.0,
+        "take_profit_pips": 100.0,
+        "family": "pullback_trend",
+        "playbook_type": "pullback_trend",
+        "params": {
+          "trend_min": 0.15,
+          "rsi_exit": 58,
+          "trend_exit": 0.03,
+          "preferred_symbols": [
+            "BTCUSDm"
+          ],
+          "preferred_timeframes": [
+            "M15"
+          ],
+          "stop_loss_pips": 150,
+          "take_profit_pips": 100,
+          "vol_min": 0.861,
+          "vol_max": 0.437,
+          "time_stop_bars": 12,
+          "preferred_sessions": [
+            "london"
+          ],
+          "family": "pullback_trend",
+          "playbook_type": "pullback_trend",
+          "primary_market_condition": "trend",
+          "sl_atr_mult": 2.0,
+          "tp_atr_mult": 2.5,
+          "microstructure_profile": "btc_m15",
+          "long_family": "pullback_trend",
+          "short_family": "ma_trend",
+          "exit_family": "generic",
+          "regime_type_long": "trend",
+          "regime_type_short": "trend",
+          "regime_type": "trend",
+          "has_time_stop": true,
+          "has_session_exit_guard": false,
+          "exit_archetype": "time_stop"
+        }
+      }
+    }
+  },
+  "core15_BTCUSDm_M15_b2f3": {
+    "name": "core15_BTCUSDm_M15_b2f3",
+    "symbol": "BTCUSDm",
+    "timeframe": "M15",
+    "status": "candidate",
+    "score": 1.2226611176113242,
+    "stats": {
+      "initial_equity": 10000.0,
+      "final_equity": 10353.6444164887,
+      "net_profit": 353.6444164886998,
+      "return_pct": 3.536444164886998,
+      "sharpe_ratio": 2.489531284883401,
+      "max_drawdown_pct": -2.566079937452337,
+      "profit_factor": 1.2573551535315086,
+      "win_rate": 0.5192307692307693,
+      "num_trades": 104.0,
+      "avg_win": 31.996180828015888,
+      "avg_loss": 27.48298696448303,
+      "expectancy": 3.4004270816221798,
+      "same_bar_ambiguity_count": 0.0,
+      "same_bar_ambiguity_stop_loss_count": 0.0,
+      "same_bar_ambiguity_take_profit_count": 0.0,
+      "same_bar_ambiguity_rate": 0.0,
+      "strategy_explain": {
+        "regime_pnl": {
+          "trending_down": {
+            "return_pct": 1.4675978893724066,
+            "net_profit": 146.75978893724067,
+            "num_trades": 26,
+            "avg_rr": 0.9999999999999989,
+            "win_rate": 0.46153846153846156
+          },
+          "trending_up": {
+            "return_pct": 2.0688462755146584,
+            "net_profit": 206.88462755146583,
+            "num_trades": 78,
+            "avg_rr": 1.0,
+            "win_rate": 0.5384615384615384
+          }
+        },
+        "regime_class_pnl": {
+          "trend": {
+            "return_pct": 3.536444164887064,
+            "num_trades": 104
+          }
+        },
+        "regime_type_pnl": {
+          "downtrend_strong": {
+            "return_pct": 0.9883828914535187,
+            "num_trades": 1
+          },
+          "downtrend_weak": {
+            "return_pct": 0.4792149979188883,
+            "num_trades": 25
+          },
+          "uptrend_strong": {
+            "return_pct": 0.0730121848446719,
+            "num_trades": 1
+          },
+          "uptrend_weak": {
+            "return_pct": 1.995834090669986,
+            "num_trades": 77
+          }
+        },
+        "vol_regime_pnl": {
+          "high": {
+            "return_pct": 0.4417571426794912,
+            "num_trades": 19
+          },
+          "low": {
+            "return_pct": 2.871054874286111,
+            "num_trades": 18
+          },
+          "normal": {
+            "return_pct": 0.22363214792146324,
+            "num_trades": 67
+          }
+        },
+        "session_pnl": {
+          "asia": {
+            "return_pct": -0.8653566435869183,
+            "num_trades": 32
+          },
+          "london": {
+            "return_pct": 7.040211412372331,
+            "num_trades": 49
+          },
+          "new_york": {
+            "return_pct": -2.6384106038983473,
+            "num_trades": 23
+          }
+        },
+        "risk_behavior": {
+          "avg_rr": 0.9999999999999998,
+          "sl_hit_ratio": 0.028846153846153848,
+          "tp_hit_ratio": 0.09615384615384616,
+          "exit_rule_ratio": 0.875,
+          "avg_holding_bars": 2.326923076923077,
+          "median_holding_bars": 1.0,
+          "max_holding_bars": 10,
+          "max_consecutive_losses": 6
+        },
+        "stability": {
+          "subperiod_sharpe": [
+            0.27852302406610874,
+            0.4655359641337238,
+            0.7486401752183708
+          ],
+          "subperiod_return_pct": [
+            0.8592263734433547,
+            0.9377801841742345,
+            1.739437607269476
+          ],
+          "sharpe_std": 0.19325629784020337
+        },
+        "news_behavior": {
+          "trades_around_high_impact": {
+            "num_trades": 0,
+            "return_pct": 0.0
+          },
+          "avoidance_rate": 1.0
+        },
+        "meta": {
+          "best_regime": "trending_up",
+          "worst_regime": "trending_down",
+          "best_session": "london",
+          "worst_session": "new_york",
+          "best_regime_return_pct": 2.0688462755146584,
+          "worst_regime_return_pct": 1.4675978893724066,
+          "best_session_return_pct": 7.040211412372331,
+          "worst_session_return_pct": -2.6384106038983473,
+          "allowed_regimes": [
+            "trending_up"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "london"
+          ],
+          "blocked_sessions": [
+            "new_york"
+          ],
+          "routing_confidence": 0.6084,
+          "avg_regime_confidence": 0.6711009615384615,
+          "specialist_score": 0.6366,
+          "is_trend_follower": true,
+          "is_range_trader": false,
+          "total_pnl": 353.64441648870644,
+          "total_return_pct": 3.536444164887064
+        }
+      },
+      "research_novelty_score": 0.08000000000000007,
+      "research_nearest_similarity": 0.9199999999999999,
+      "research_motif": "trend_pullback",
+      "score": 1.2226611176113242,
+      "accepted": true,
+      "research_low_trade_relief": true,
+      "research_bootstrap_candidate": false,
+      "research_bootstrap_applied": false,
+      "wf_overall_sharpe": 3.26553797137795,
+      "wf_overall_max_drawdown_pct": 2.5660799374522925,
+      "symbol": "BTCUSDm",
+      "timeframe": "M15",
+      "family": "pullback_trend",
+      "playbook_type": "pullback_trend",
+      "mc_final_pnl_mean": 303.48675777522806,
+      "mc_final_pnl_p5": -365.2182290638404,
+      "mc_final_pnl_p95": 1004.1072587306852,
+      "mc_max_dd_mean": 353.8700701015943,
+      "mc_max_dd_p5": 151.02440575750393,
+      "mc_max_dd_p95": 674.6855724430463,
+      "mc_loss_prob": 0.25333333333333335,
+      "mc_cvar_p5": -556.2304277465917,
+      "mc_dd_over_10pct_prob": 0.006666666666666667,
+      "mc_dd_over_20pct_prob": 0.0,
+      "mc_method": "block",
+      "mc_block_size": 4.0,
+      "research_mc_tail_relief": true,
+      "family_aware_governance": true,
+      "family_governance_bucket": "challenger",
+      "strategy": {
+        "long_entry_rule": "ma_short > ma_long and close > ma_long and rsi > 45 and rsi < 62 and trend_strength > 0.16",
+        "short_entry_rule": "ma_short < ma_long and close < open and close < ma_short and trend_strength < -0.16",
+        "exit_rule": "bars_since_entry >= 10 or close > ma_short or trend_strength > -0.03",
+        "sl_atr_mult": 2.0,
+        "tp_atr_mult": 2.0,
+        "stop_loss_pips": 50.0,
+        "take_profit_pips": 50.0,
+        "family": "pullback_trend",
+        "playbook_type": "pullback_trend",
+        "params": {
+          "trend_min": 0.16,
+          "rsi_exit": 54,
+          "trend_exit": -0.03,
+          "preferred_symbols": [
+            "BTCUSDm"
+          ],
+          "preferred_timeframes": [
+            "M15"
+          ],
+          "stop_loss_pips": 50,
+          "take_profit_pips": 50,
+          "vol_min": 0.929,
+          "vol_max": 0.664,
+          "time_stop_bars": 10,
+          "preferred_sessions": [
+            "london"
+          ],
+          "family": "pullback_trend",
+          "playbook_type": "pullback_trend",
+          "primary_market_condition": "trend",
+          "sl_atr_mult": 2.0,
+          "tp_atr_mult": 2.0,
+          "microstructure_profile": "btc_m15",
+          "long_family": "ma_trend",
+          "short_family": "pullback_trend",
+          "exit_family": "generic",
+          "regime_type_long": "trend",
+          "regime_type_short": "trend",
+          "regime_type": "trend",
+          "has_time_stop": true,
+          "has_session_exit_guard": false,
+          "exit_archetype": "time_stop"
+        }
+      }
+    }
+  },
+  "core15_BTCUSDm_M15_e5c0": {
+    "name": "core15_BTCUSDm_M15_e5c0",
+    "symbol": "BTCUSDm",
+    "timeframe": "M15",
+    "status": "candidate",
+    "score": 1.9076614949601125,
+    "stats": {
+      "initial_equity": 10000.0,
+      "final_equity": 10414.17627117237,
+      "net_profit": 414.1762711723695,
+      "return_pct": 4.141762711723695,
+      "sharpe_ratio": 3.941949951889769,
+      "max_drawdown_pct": -1.0188021852837625,
+      "profit_factor": 2.1466133306757937,
+      "win_rate": 0.64,
+      "num_trades": 25.0,
+      "avg_win": 48.4620818304793,
+      "avg_loss": 40.135226457255186,
+      "expectancy": 16.567050846894887,
+      "same_bar_ambiguity_count": 0.0,
+      "same_bar_ambiguity_stop_loss_count": 0.0,
+      "same_bar_ambiguity_take_profit_count": 0.0,
+      "same_bar_ambiguity_rate": 0.0,
+      "strategy_explain": {
+        "regime_pnl": {
+          "trending_down": {
+            "return_pct": 2.6490398983645163,
+            "net_profit": 264.9039898364516,
+            "num_trades": 13,
+            "avg_rr": 1.3888888888888953,
+            "win_rate": 0.7692307692307693
+          },
+          "trending_up": {
+            "return_pct": 1.4927228133592043,
+            "net_profit": 149.27228133592044,
+            "num_trades": 12,
+            "avg_rr": 1.388888888888893,
+            "win_rate": 0.5
+          }
+        },
+        "regime_class_pnl": {
+          "trend": {
+            "return_pct": 4.14176271172372,
+            "num_trades": 25
+          }
+        },
+        "regime_type_pnl": {
+          "downtrend_strong": {
+            "return_pct": 0.3099422521906326,
+            "num_trades": 1
+          },
+          "downtrend_weak": {
+            "return_pct": 2.3390976461738835,
+            "num_trades": 12
+          },
+          "uptrend_weak": {
+            "return_pct": 1.4927228133592043,
+            "num_trades": 12
+          }
+        },
+        "vol_regime_pnl": {
+          "high": {
+            "return_pct": -0.36313669104948154,
+            "num_trades": 1
+          },
+          "low": {
+            "return_pct": 3.5162584096782643,
+            "num_trades": 11
+          },
+          "normal": {
+            "return_pct": 0.9886409930949376,
+            "num_trades": 13
+          }
+        },
+        "session_pnl": {
+          "asia": {
+            "return_pct": 0.08148439171613603,
+            "num_trades": 8
+          },
+          "london": {
+            "return_pct": 4.411069066774481,
+            "num_trades": 15
+          },
+          "new_york": {
+            "return_pct": -0.35079074676689703,
+            "num_trades": 2
+          }
+        },
+        "risk_behavior": {
+          "avg_rr": 1.388888888888894,
+          "sl_hit_ratio": 0.04,
+          "tp_hit_ratio": 0.12,
+          "exit_rule_ratio": 0.84,
+          "avg_holding_bars": 2.96,
+          "median_holding_bars": 1.0,
+          "max_holding_bars": 8,
+          "max_consecutive_losses": 2
+        },
+        "stability": {
+          "subperiod_sharpe": [
+            -0.16553675793409542,
+            2.2791726509267103,
+            1.0833622428933039
+          ],
+          "subperiod_return_pct": [
+            -0.18698091760925536,
+            1.196611009112079,
+            3.132132620220897
+          ],
+          "sharpe_std": 0.9981268757027528
+        },
+        "news_behavior": {
+          "trades_around_high_impact": {
+            "num_trades": 0,
+            "return_pct": 0.0
+          },
+          "avoidance_rate": 1.0
+        },
+        "meta": {
+          "best_regime": "trending_down",
+          "worst_regime": "trending_up",
+          "best_session": "london",
+          "worst_session": "new_york",
+          "best_regime_return_pct": 2.6490398983645163,
+          "worst_regime_return_pct": 1.4927228133592043,
+          "best_session_return_pct": 4.411069066774481,
+          "worst_session_return_pct": -0.35079074676689703,
+          "allowed_regimes": [
+            "trending_down"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "london"
+          ],
+          "blocked_sessions": [],
+          "routing_confidence": 0.2568,
+          "avg_regime_confidence": 0.886368,
+          "specialist_score": 0.5401,
+          "is_trend_follower": true,
+          "is_range_trader": false,
+          "total_pnl": 414.176271172372,
+          "total_return_pct": 4.14176271172372
+        }
+      },
+      "research_novelty_score": 0.10666666666666669,
+      "research_nearest_similarity": 0.8933333333333333,
+      "research_motif": "trend_pullback",
+      "score": 1.9076614949601125,
+      "accepted": true,
+      "research_low_trade_relief": true,
+      "research_bootstrap_candidate": false,
+      "research_bootstrap_applied": false,
+      "wf_overall_sharpe": 5.0146478112346395,
+      "wf_overall_max_drawdown_pct": 1.0188021852837514,
+      "symbol": "BTCUSDm",
+      "timeframe": "M15",
+      "family": "pullback_trend",
+      "playbook_type": "pullback_trend",
+      "mc_final_pnl_mean": 430.9559292038091,
+      "mc_final_pnl_p5": 56.685448036006356,
+      "mc_final_pnl_p95": 792.4275037194504,
+      "mc_max_dd_mean": 142.33594782906647,
+      "mc_max_dd_p5": 67.94927326225378,
+      "mc_max_dd_p95": 278.2652953444641,
+      "mc_loss_prob": 0.03666666666666667,
+      "mc_cvar_p5": -79.37455337508018,
+      "mc_dd_over_10pct_prob": 0.0,
+      "mc_dd_over_20pct_prob": 0.0,
+      "mc_method": "block",
+      "mc_block_size": 4.0,
+      "research_mc_tail_relief": false,
+      "family_aware_governance": true,
+      "family_governance_bucket": "challenger",
+      "strategy": {
+        "long_entry_rule": "ma_short > ma_long and close > open and close > ma_short and trend_strength > 0.23",
+        "short_entry_rule": "ma_short < ma_long and close < ma_long and rsi < 55 and rsi > 38 and trend_strength < -0.23",
+        "exit_rule": "bars_since_entry >= 8 or close < ma_short or trend_strength < -0.06",
+        "sl_atr_mult": 1.8,
+        "tp_atr_mult": 2.5,
+        "stop_loss_pips": 75.0,
+        "take_profit_pips": 50.0,
+        "family": "pullback_trend",
+        "playbook_type": "pullback_trend",
+        "params": {
+          "trend_min": 0.23,
+          "rsi_exit": 56,
+          "trend_exit": -0.06,
+          "preferred_symbols": [
+            "BTCUSDm"
+          ],
+          "preferred_timeframes": [
+            "M15"
+          ],
+          "stop_loss_pips": 75,
+          "take_profit_pips": 50,
+          "vol_min": 0.653,
+          "vol_max": 0.293,
+          "time_stop_bars": 8,
+          "preferred_sessions": [
+            "london"
+          ],
+          "family": "pullback_trend",
+          "playbook_type": "pullback_trend",
+          "primary_market_condition": "trend",
+          "sl_atr_mult": 1.8,
+          "tp_atr_mult": 2.5,
+          "microstructure_profile": "btc_m15",
+          "long_family": "pullback_trend",
+          "short_family": "ma_trend",
+          "exit_family": "generic",
+          "regime_type_long": "trend",
+          "regime_type_short": "trend",
+          "regime_type": "trend",
+          "has_time_stop": true,
+          "has_session_exit_guard": false,
+          "exit_archetype": "time_stop"
+        }
+      },
+      "family_governance_protected": true
+    }
+  },
+  "core15_BTCUSDm_M15_3aa9": {
+    "name": "core15_BTCUSDm_M15_3aa9",
+    "symbol": "BTCUSDm",
+    "timeframe": "M15",
+    "status": "active",
+    "score": 2.2999824784666907,
+    "stats": {
+      "initial_equity": 10000.0,
+      "final_equity": 10678.323610928835,
+      "net_profit": 678.3236109288355,
+      "return_pct": 6.783236109288354,
+      "sharpe_ratio": 5.733878575027869,
+      "max_drawdown_pct": -1.8686947229230255,
+      "profit_factor": 1.7499594006590662,
+      "win_rate": 0.5096153846153846,
+      "num_trades": 104.0,
+      "avg_win": 29.864227432291678,
+      "avg_loss": 17.734910646718,
+      "expectancy": 6.522342412777315,
+      "same_bar_ambiguity_count": 0.0,
+      "same_bar_ambiguity_stop_loss_count": 0.0,
+      "same_bar_ambiguity_take_profit_count": 0.0,
+      "same_bar_ambiguity_rate": 0.0,
+      "strategy_explain": {
+        "regime_pnl": {
+          "high_vol": {
+            "return_pct": 0.27501774382571814,
+            "net_profit": 27.50177438257181,
+            "num_trades": 1,
+            "avg_rr": 0.9090909090909061,
+            "win_rate": 1.0
+          },
+          "trending_down": {
+            "return_pct": 2.3720097605274186,
+            "net_profit": 237.20097605274188,
+            "num_trades": 57,
+            "avg_rr": 0.9090909090909083,
+            "win_rate": 0.543859649122807
+          },
+          "trending_up": {
+            "return_pct": 4.136208604935271,
+            "net_profit": 413.62086049352706,
+            "num_trades": 46,
+            "avg_rr": 0.909090909090909,
+            "win_rate": 0.45652173913043476
+          }
+        },
+        "regime_class_pnl": {
+          "event_driven": {
+            "return_pct": 0.27501774382571814,
+            "num_trades": 1
+          },
+          "trend": {
+            "return_pct": 6.508218365462688,
+            "num_trades": 103
+          }
+        },
+        "regime_type_pnl": {
+          "downtrend_strong": {
+            "return_pct": 0.2593702423113948,
+            "num_trades": 1
+          },
+          "downtrend_weak": {
+            "return_pct": 2.112639518216024,
+            "num_trades": 56
+          },
+          "macro_news_high_impact": {
+            "return_pct": 0.27501774382571814,
+            "num_trades": 1
+          },
+          "uptrend_weak": {
+            "return_pct": 4.136208604935271,
+            "num_trades": 46
+          }
+        },
+        "vol_regime_pnl": {
+          "high": {
+            "return_pct": -0.7736143417062513,
+            "num_trades": 20
+          },
+          "low": {
+            "return_pct": 2.638615989124565,
+            "num_trades": 17
+          },
+          "normal": {
+            "return_pct": 4.918234461870094,
+            "num_trades": 67
+          }
+        },
+        "session_pnl": {
+          "asia": {
+            "return_pct": 0.11763925919761391,
+            "num_trades": 29
+          },
+          "london": {
+            "return_pct": 8.662162002122034,
+            "num_trades": 38
+          },
+          "new_york": {
+            "return_pct": -1.9965651520312375,
+            "num_trades": 37
+          }
+        },
+        "risk_behavior": {
+          "avg_rr": 0.9090909090909087,
+          "sl_hit_ratio": 0.0,
+          "tp_hit_ratio": 0.09615384615384616,
+          "exit_rule_ratio": 0.9038461538461539,
+          "avg_holding_bars": 1.75,
+          "median_holding_bars": 1.0,
+          "max_holding_bars": 10,
+          "max_consecutive_losses": 5
+        },
+        "stability": {
+          "subperiod_sharpe": [
+            -0.6643303021512169,
+            1.4521436145567714,
+            2.0607960653183985
+          ],
+          "subperiod_return_pct": [
+            -0.9626324081665649,
+            3.0229505364403586,
+            4.722917981014614
+          ],
+          "sharpe_std": 1.1679152064256078
+        },
+        "news_behavior": {
+          "trades_around_high_impact": {
+            "num_trades": 2,
+            "return_pct": 0.43240430579215516
+          },
+          "avoidance_rate": 0.6562826313957535
+        },
+        "meta": {
+          "best_regime": "trending_up",
+          "worst_regime": "high_vol",
+          "best_session": "london",
+          "worst_session": "new_york",
+          "best_regime_return_pct": 4.136208604935271,
+          "worst_regime_return_pct": 0.27501774382571814,
+          "best_session_return_pct": 8.662162002122034,
+          "worst_session_return_pct": -1.9965651520312375,
+          "allowed_regimes": [
+            "trending_down",
+            "trending_up"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "london"
+          ],
+          "blocked_sessions": [],
+          "routing_confidence": 0.6541,
+          "avg_regime_confidence": 0.6568019230769231,
+          "specialist_score": 0.6553,
+          "is_trend_follower": true,
+          "is_range_trader": false,
+          "total_pnl": 678.3236109288407,
+          "total_return_pct": 6.783236109288406
+        }
+      },
+      "research_novelty_score": 0.1200000000000001,
+      "research_nearest_similarity": 0.8799999999999999,
+      "research_motif": "trend_pullback",
+      "score": 2.2999824784666907,
+      "accepted": true,
+      "research_low_trade_relief": true,
+      "research_bootstrap_candidate": false,
+      "research_bootstrap_applied": false,
+      "wf_overall_sharpe": 7.636042451126687,
+      "wf_overall_max_drawdown_pct": 1.5501920440987194,
+      "symbol": "BTCUSDm",
+      "timeframe": "M15",
+      "family": "pullback_trend",
+      "playbook_type": "pullback_trend",
+      "mc_final_pnl_mean": 667.572466922298,
+      "mc_final_pnl_p5": 130.6626206342018,
+      "mc_final_pnl_p95": 1299.3155559922318,
+      "mc_max_dd_mean": 190.99826075127282,
+      "mc_max_dd_p5": 105.20767890630654,
+      "mc_max_dd_p95": 334.64501466797844,
+      "mc_loss_prob": 0.02666666666666667,
+      "mc_cvar_p5": -8.752582293235182,
+      "mc_dd_over_10pct_prob": 0.0,
+      "mc_dd_over_20pct_prob": 0.0,
+      "mc_method": "block",
+      "mc_block_size": 4.0,
+      "research_mc_tail_relief": true,
+      "research_exit_dependency_relief": true,
+      "family_aware_governance": true,
+      "family_governance_bucket": "challenger",
+      "strategy": {
+        "long_entry_rule": "ma_short > ma_long and close > ma_long and rsi > 45 and rsi < 62 and trend_strength > 0.16",
+        "short_entry_rule": "ma_short < ma_long and close < ma_long and rsi < 55 and rsi > 38 and trend_strength < -0.16",
+        "exit_rule": "bars_since_entry >= 10 or close < ma_short or trend_strength < 0.03",
+        "sl_atr_mult": 2.2,
+        "tp_atr_mult": 2.0,
+        "stop_loss_pips": 50.0,
+        "take_profit_pips": 50.0,
+        "family": "pullback_trend",
+        "playbook_type": "pullback_trend",
+        "params": {
+          "trend_min": 0.16,
+          "rsi_exit": 50,
+          "trend_exit": 0.03,
+          "preferred_symbols": [
+            "BTCUSDm"
+          ],
+          "preferred_timeframes": [
+            "M15"
+          ],
+          "stop_loss_pips": 50,
+          "take_profit_pips": 50,
+          "vol_min": 0.562,
+          "vol_max": 0.649,
+          "time_stop_bars": 10,
+          "preferred_sessions": [
+            "london"
+          ],
+          "family": "pullback_trend",
+          "playbook_type": "pullback_trend",
+          "primary_market_condition": "trend",
+          "sl_atr_mult": 2.2,
+          "tp_atr_mult": 2.0,
+          "microstructure_profile": "btc_m15",
+          "long_family": "ma_trend",
+          "short_family": "ma_trend",
+          "exit_family": "generic",
+          "regime_type_long": "trend",
+          "regime_type_short": "trend",
+          "regime_type": "trend",
+          "has_time_stop": true,
+          "has_session_exit_guard": false,
+          "exit_archetype": "time_stop"
+        }
+      }
+    }
+  },
+  "core15_BTCUSDm_M15_f968": {
+    "name": "core15_BTCUSDm_M15_f968",
+    "symbol": "BTCUSDm",
+    "timeframe": "M15",
+    "status": "exploratory",
+    "score": 3.1886887912078854,
+    "stats": {
+      "initial_equity": 10000.0,
+      "final_equity": 10937.27501558875,
+      "net_profit": 937.2750155887497,
+      "return_pct": 9.372750155887498,
+      "sharpe_ratio": 6.868520936434418,
+      "max_drawdown_pct": -2.0737898022188284,
+      "profit_factor": 2.9583709546281893,
+      "win_rate": 0.5957446808510638,
+      "num_trades": 47.0,
+      "avg_win": 50.56694070980193,
+      "avg_loss": 25.189438120300057,
+      "expectancy": 19.94202160827134,
+      "same_bar_ambiguity_count": 0.0,
+      "same_bar_ambiguity_stop_loss_count": 0.0,
+      "same_bar_ambiguity_take_profit_count": 0.0,
+      "same_bar_ambiguity_rate": 0.0,
+      "strategy_explain": {
+        "regime_pnl": {
+          "high_vol": {
+            "return_pct": 0.39815376493141635,
+            "net_profit": 39.815376493141635,
+            "num_trades": 1,
+            "avg_rr": 1.3333333333333497,
+            "win_rate": 1.0
+          },
+          "trending_down": {
+            "return_pct": 2.4936733242120646,
+            "net_profit": 249.36733242120644,
+            "num_trades": 25,
+            "avg_rr": 1.3333333333333306,
+            "win_rate": 0.6
+          },
+          "trending_up": {
+            "return_pct": 6.48092306674405,
+            "net_profit": 648.092306674405,
+            "num_trades": 21,
+            "avg_rr": 1.3333333333333437,
+            "win_rate": 0.5714285714285714
+          }
+        },
+        "regime_class_pnl": {
+          "event_driven": {
+            "return_pct": 0.39815376493141635,
+            "num_trades": 1
+          },
+          "trend": {
+            "return_pct": 8.974596390956115,
+            "num_trades": 46
+          }
+        },
+        "regime_type_pnl": {
+          "downtrend_strong": {
+            "return_pct": 0.37864751297341587,
+            "num_trades": 1
+          },
+          "downtrend_weak": {
+            "return_pct": 2.1150258112386484,
+            "num_trades": 24
+          },
+          "macro_news_high_impact": {
+            "return_pct": 0.39815376493141635,
+            "num_trades": 1
+          },
+          "uptrend_weak": {
+            "return_pct": 6.48092306674405,
+            "num_trades": 21
+          }
+        },
+        "vol_regime_pnl": {
+          "high": {
+            "return_pct": -0.44280812440910283,
+            "num_trades": 12
+          },
+          "low": {
+            "return_pct": 6.182576956000975,
+            "num_trades": 12
+          },
+          "normal": {
+            "return_pct": 3.6329813242956566,
+            "num_trades": 23
+          }
+        },
+        "session_pnl": {
+          "asia": {
+            "return_pct": 0.9332225748226778,
+            "num_trades": 17
+          },
+          "london": {
+            "return_pct": 8.32353909696537,
+            "num_trades": 20
+          },
+          "new_york": {
+            "return_pct": 0.11598848409948302,
+            "num_trades": 10
+          }
+        },
+        "risk_behavior": {
+          "avg_rr": 1.333333333333337,
+          "sl_hit_ratio": 0.0,
+          "tp_hit_ratio": 0.14893617021276595,
+          "exit_rule_ratio": 0.851063829787234,
+          "avg_holding_bars": 1.9148936170212767,
+          "median_holding_bars": 1.0,
+          "max_holding_bars": 10,
+          "max_consecutive_losses": 4
+        },
+        "stability": {
+          "subperiod_sharpe": [
+            0.04336345506047159,
+            0.805011242436439,
+            2.962029549398845
+          ],
+          "subperiod_return_pct": [
+            0.0767227737476491,
+            1.4416457031299943,
+            7.8543816790098875
+          ],
+          "sharpe_std": 1.2360981217266822
+        },
+        "news_behavior": {
+          "trades_around_high_impact": {
+            "num_trades": 1,
+            "return_pct": 0.39815376493141635
+          },
+          "avoidance_rate": 0.6197169538846635
+        },
+        "meta": {
+          "best_regime": "trending_up",
+          "worst_regime": "high_vol",
+          "best_session": "london",
+          "worst_session": "new_york",
+          "best_regime_return_pct": 6.48092306674405,
+          "worst_regime_return_pct": 0.39815376493141635,
+          "best_session_return_pct": 8.32353909696537,
+          "worst_session_return_pct": 0.11598848409948302,
+          "allowed_regimes": [
+            "trending_down",
+            "trending_up"
+          ],
+          "blocked_regimes": [],
+          "allowed_sessions": [
+            "asia",
+            "london"
+          ],
+          "blocked_sessions": [],
+          "routing_confidence": 0.5495,
+          "avg_regime_confidence": 0.747731914893617,
+          "specialist_score": 0.6387,
+          "is_trend_follower": true,
+          "is_range_trader": false,
+          "total_pnl": 937.2750155887531,
+          "total_return_pct": 9.372750155887532
+        }
+      },
+      "research_novelty_score": 0.10000000000000009,
+      "research_nearest_similarity": 0.8999999999999999,
+      "research_motif": "trend_pullback",
+      "score": 3.1886887912078854,
+      "accepted": true,
+      "research_low_trade_relief": true,
+      "research_bootstrap_candidate": false,
+      "research_bootstrap_applied": false,
+      "wf_overall_sharpe": 8.677099665435279,
+      "wf_overall_max_drawdown_pct": 0.7653444261474296,
+      "symbol": "BTCUSDm",
+      "timeframe": "M15",
+      "family": "pullback_trend",
+      "playbook_type": "pullback_trend",
+      "mc_final_pnl_mean": 907.0071676480562,
+      "mc_final_pnl_p5": 209.63579347007183,
+      "mc_final_pnl_p95": 1713.2725427807702,
+      "mc_max_dd_mean": 161.96448509221946,
+      "mc_max_dd_p5": 71.59214981063396,
+      "mc_max_dd_p95": 283.40976822139703,
+      "mc_loss_prob": 0.016666666666666666,
+      "mc_cvar_p5": 35.97885660237411,
+      "mc_dd_over_10pct_prob": 0.0,
+      "mc_dd_over_20pct_prob": 0.0,
+      "mc_method": "block",
+      "mc_block_size": 4.0,
+      "research_mc_tail_relief": false,
+      "family_aware_governance": true,
+      "family_governance_bucket": "challenger",
+      "strategy": {
+        "long_entry_rule": "ma_short > ma_long and close > ma_long and rsi > 45 and rsi < 62 and trend_strength > 0.2",
+        "short_entry_rule": "ma_short < ma_long and close < ma_long and rsi < 55 and rsi > 38 and trend_strength < -0.2",
+        "exit_rule": "bars_since_entry >= 10 or close < ma_short or trend_strength < -0.07",
+        "sl_atr_mult": 1.5,
+        "tp_atr_mult": 2.0,
+        "stop_loss_pips": 75.0,
+        "take_profit_pips": 200.0,
+        "family": "pullback_trend",
+        "playbook_type": "pullback_trend",
+        "params": {
+          "trend_min": 0.2,
+          "rsi_exit": 56,
+          "trend_exit": -0.07,
+          "preferred_symbols": [
+            "BTCUSDm"
+          ],
+          "preferred_timeframes": [
+            "M15"
+          ],
+          "stop_loss_pips": 75,
+          "take_profit_pips": 200,
+          "vol_min": 0.534,
+          "vol_max": 0.526,
+          "time_stop_bars": 10,
+          "preferred_sessions": [
+            "london"
+          ],
+          "family": "pullback_trend",
+          "playbook_type": "pullback_trend",
+          "primary_market_condition": "trend",
+          "sl_atr_mult": 1.5,
+          "tp_atr_mult": 2.0,
+          "microstructure_profile": "btc_m15",
+          "long_family": "ma_trend",
+          "short_family": "ma_trend",
+          "exit_family": "generic",
+          "regime_type_long": "trend",
+          "regime_type_short": "trend",
+          "regime_type": "trend",
+          "has_time_stop": true,
+          "has_session_exit_guard": false,
+          "exit_archetype": "time_stop"
+        }
       }
     }
   }
