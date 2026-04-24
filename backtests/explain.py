@@ -373,12 +373,26 @@ def build_strategy_explain(
     range_ret = float((regime_pnl.get("ranging", {}) or {}).get("return_pct", 0.0))
 
     avg_regime_confidence = float(np.mean(regime_confidences)) if regime_confidences else 0.0
+    preferred_allowed_regimes = [str(x) for x in ((trades.attrs.get("preferred_allowed_regimes") or []) if hasattr(trades, "attrs") else [])]
+    preferred_blocked_regimes = [str(x) for x in ((trades.attrs.get("preferred_blocked_regimes") or []) if hasattr(trades, "attrs") else [])]
+
     allowed_regimes, blocked_regimes = _derive_allowed_blocked_labels(
         regime_pnl, min_allowed_ret=1.5, blocked_ret=-4.0, min_trades=8
     )
     allowed_sessions, blocked_sessions = _derive_allowed_blocked_labels(
         session_pnl, min_allowed_ret=0.75, blocked_ret=-2.0, min_trades=8
     )
+
+    if preferred_allowed_regimes:
+        for label in preferred_allowed_regimes:
+            if label not in allowed_regimes:
+                allowed_regimes.append(label)
+        allowed_regimes = sorted(set(allowed_regimes))
+    if preferred_blocked_regimes:
+        for label in preferred_blocked_regimes:
+            if label not in blocked_regimes:
+                blocked_regimes.append(label)
+        blocked_regimes = sorted(set(blocked_regimes))
     routing_confidence = _derive_routing_confidence(
         best_ret=best_regime_ret,
         worst_ret=worst_regime_ret,

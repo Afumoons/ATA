@@ -176,6 +176,15 @@ XAU_IMPULSE_PULLBACK_LONG_TEMPLATES = [
     "ma_short > ma_long and close > ma_short and close > open and trend_strength > {trend_min}",
     "ma_short > ma_long and close > ma_short and rsi > 50 and rsi < 70 and trend_strength > {trend_min}",
 ]
+XAU_TRENDING_UP_ONLY_LONG_TEMPLATES = [
+    "ma_short > ma_long and close > ma_short and trend_strength > {trend_min} and rsi > 54 and rsi < 66 and volatility > vol_min",
+    "ma_short > ma_long and close > ma_long and close > open and trend_strength > {trend_min} and rsi > 55 and volatility > vol_min",
+    "session_london == 1 and ma_short > ma_long and close > ma_short and rsi > 54 and trend_strength > {trend_min} and volatility > vol_min",
+    "session_new_york == 1 and ma_short > ma_long and close > ma_short and trend_strength > {trend_min} and rsi > 56 and volatility > vol_min",
+]
+XAU_TRENDING_UP_ONLY_SHORT_TEMPLATES = [
+    "trend_strength < -0.99",
+]
 XAU_IMPULSE_PULLBACK_SHORT_TEMPLATES = [
     "session_london == 1 and ma_short < ma_long and close < ma_short and trend_strength < -{trend_min} and volatility > vol_min and fib_zone_618 == 1",
     "session_new_york == 1 and ma_short < ma_long and close < ma_short and trend_strength < -{trend_min} and volatility > vol_min and fib_zone_618 == 1",
@@ -260,6 +269,15 @@ FAMILY_LIBRARY: Dict[str, Dict[str, Any]] = {
         "exit_templates": ATR_INVALIDATION_EXIT_TEMPLATES + SESSION_GUARD_EXIT_TEMPLATES + TIME_EXIT_TEMPLATES,
         "allowed_symbols": ["XAUUSDm"],
     },
+    "xau_trending_up_specialist": {
+        "long": XAU_TRENDING_UP_ONLY_LONG_TEMPLATES,
+        "short": XAU_TRENDING_UP_ONLY_SHORT_TEMPLATES,
+        "regime_type": "trend",
+        "playbook_type": "xau_trending_up_specialist",
+        "preferred_sessions": ["london", "new_york"],
+        "exit_templates": ATR_INVALIDATION_EXIT_TEMPLATES + PULLBACK_EXIT_TEMPLATES + TIME_EXIT_TEMPLATES,
+        "allowed_symbols": ["XAUUSDm"],
+    },
 }
 
 CORE_M15_FAMILY_WEIGHTS: Dict[str, float] = {
@@ -269,8 +287,9 @@ CORE_M15_FAMILY_WEIGHTS: Dict[str, float] = {
     "vol_breakout": 0.15,
     "compression_breakout": 0.12,
     "session_breakout": 0.10,
-    "xau_impulse_pullback": 0.13,
-    "xau_session_continuation": 0.08,
+    "xau_impulse_pullback": 0.11,
+    "xau_session_continuation": 0.07,
+    "xau_trending_up_specialist": 0.15,
 }
 
 XAG_M15_FAMILY_WEIGHTS: Dict[str, float] = {
@@ -295,7 +314,7 @@ def _normalize_family_for_market(family: str, symbol: str) -> str:
     family_meta = FAMILY_LIBRARY.get(family, {})
     allowed_symbols = set(family_meta.get("allowed_symbols", []) or [])
     if allowed_symbols and symbol not in allowed_symbols:
-        return "pullback_trend" if family == "xau_impulse_pullback" else "session_breakout"
+        return "pullback_trend" if family in {"xau_impulse_pullback", "xau_trending_up_specialist"} else "session_breakout"
     return family
 
 
@@ -402,6 +421,17 @@ def _sample_family_params(family: str, symbol: str, timeframe: str) -> Dict[str,
             params["sl_atr_mult"] = random.choice([1.5, 1.8, 2.0])
             params["tp_atr_mult"] = random.choice([3.5, 4.0, 4.5, 5.0])
             params["rsi_exit"] = random.randint(60, 72)
+        elif family == "xau_trending_up_specialist":
+            params["trend_min"] = round(random.uniform(0.08, 0.12), 2)
+            params["trend_exit"] = round(random.uniform(0.02, 0.06), 2)
+            params["vol_min"] = round(random.uniform(0.0011, 0.0018), 4)
+            params["time_stop_bars"] = random.choice([4, 6, 8])
+            params["sl_atr_mult"] = random.choice([1.2, 1.4, 1.5])
+            params["tp_atr_mult"] = random.choice([2.5, 3.0, 3.5, 4.0])
+            params["rsi_exit"] = random.randint(58, 64)
+            params["allowed_regimes"] = ["trending_up"]
+            params["blocked_regimes"] = ["trending_down", "ranging"]
+            params["preferred_sessions"] = ["london", "new_york"]
         elif family == "pullback_trend":
             params["trend_min"] = round(random.uniform(0.08, 0.16), 2)
             params["trend_exit"] = round(random.uniform(-0.03, 0.02), 2)

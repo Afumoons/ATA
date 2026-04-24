@@ -9827,7 +9827,7 @@
       "live_decay": {
         "signal_level": "warning",
         "reason": "recent_avg_negative",
-        "updated_at": "2026-04-24T05:55:17.009626+00:00",
+        "updated_at": "2026-04-24T07:19:07.765005+00:00",
         "recent_count": 13,
         "recent_sum_pnl": -114.95999999999995,
         "recent_avg_pnl": -8.84307692307692,
@@ -11659,7 +11659,7 @@
       "live_decay": {
         "signal_level": "warning",
         "reason": "negative_ratio_high_and_recent_avg_negative",
-        "updated_at": "2026-04-24T05:55:17.009626+00:00",
+        "updated_at": "2026-04-24T07:19:07.765005+00:00",
         "recent_count": 11,
         "recent_sum_pnl": -300.59,
         "recent_avg_pnl": -27.326363636363634,
@@ -13955,7 +13955,7 @@
       "live_decay": {
         "signal_level": "warning",
         "reason": "recent_avg_negative",
-        "updated_at": "2026-04-24T05:55:17.009626+00:00",
+        "updated_at": "2026-04-24T07:19:07.765005+00:00",
         "recent_count": 26,
         "recent_sum_pnl": -251.21999999999997,
         "recent_avg_pnl": -9.66230769230769,
@@ -15498,13 +15498,13 @@
       "live_decay": {
         "signal_level": "warning",
         "reason": "negative_ratio_high_and_recent_avg_negative",
-        "updated_at": "2026-04-24T05:55:17.009626+00:00",
-        "recent_count": 9,
-        "recent_sum_pnl": -412.28,
-        "recent_avg_pnl": -45.80888888888889,
-        "loss_streak": 0,
-        "negative_ratio": 0.7777777777777778,
-        "total_trades": 9
+        "updated_at": "2026-04-24T07:19:07.765005+00:00",
+        "recent_count": 10,
+        "recent_sum_pnl": -443.68,
+        "recent_avg_pnl": -44.368,
+        "loss_streak": 1,
+        "negative_ratio": 0.8,
+        "total_trades": 10
       }
     }
   },

@@ -391,6 +391,9 @@ def run_backtest(
     try:
         from .explain import build_strategy_explain
         trades_df = pd.DataFrame([t.__dict__ for t in trades]) if trades else pd.DataFrame()
+        if hasattr(strategy, "params") and isinstance(strategy.params, dict):
+            trades_df.attrs["preferred_allowed_regimes"] = list(strategy.params.get("allowed_regimes", []) or [])
+            trades_df.attrs["preferred_blocked_regimes"] = list(strategy.params.get("blocked_regimes", []) or [])
         explain = build_strategy_explain(
             trades=trades_df,
             features=df,

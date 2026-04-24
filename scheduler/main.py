@@ -1148,11 +1148,35 @@ def job_research_strategies() -> None:
                     (explain.get("regime_pnl", {}).get("trending_up", {}) or {}).get("return_pct", 0.0)
                     + (explain.get("regime_pnl", {}).get("trending_down", {}) or {}).get("return_pct", 0.0)
                 )
+                trend_up_ret = float((explain.get("regime_pnl", {}).get("trending_up", {}) or {}).get("return_pct", 0.0))
+                trend_up_trades = int((explain.get("regime_pnl", {}).get("trending_up", {}) or {}).get("num_trades", 0) or 0)
+                trend_down_ret = float((explain.get("regime_pnl", {}).get("trending_down", {}) or {}).get("return_pct", 0.0))
                 range_ret = float((explain.get("regime_pnl", {}).get("ranging", {}) or {}).get("return_pct", 0.0))
                 routing_conf = float(meta.get("routing_confidence", 0.0) or 0.0)
                 specialist_score = float(meta.get("specialist_score", 0.0) or 0.0)
                 bounded_role = bool(meta.get("allowed_regimes") or meta.get("allowed_sessions") or meta.get("blocked_regimes") or meta.get("blocked_sessions"))
                 ret_val = float(eval_result.get("return_pct", 0.0) or 0.0)
+                family_is_trending_up_specialist = family == "xau_trending_up_specialist"
+
+                if family_is_trending_up_specialist and not (
+                    trend_up_trades >= 30
+                    and trend_up_ret >= 2.0
+                    and trend_up_ret > max(0.0, trend_down_ret)
+                    and trend_up_ret > max(0.0, range_ret)
+                ):
+                    research_skip_counts["weak_trending_up_specialist"] += 1
+                    if len(research_skip_samples["weak_trending_up_specialist"]) < 3:
+                        research_skip_samples["weak_trending_up_specialist"].append(
+                            f"{strat.name}:up_ret={trend_up_ret:.2f},up_trades={trend_up_trades},down_ret={trend_down_ret:.2f},range_ret={range_ret:.2f}"
+                        )
+                    _record_family_skip(
+                        family_skip_counts,
+                        family_skip_samples,
+                        family,
+                        "weak_trending_up_specialist",
+                        f"{strat.name}:up_ret={trend_up_ret:.2f},up_trades={trend_up_trades},down_ret={trend_down_ret:.2f},range_ret={range_ret:.2f}",
+                    )
+                    continue
 
                 if (
                     num_trades >= 100
