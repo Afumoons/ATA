@@ -9827,7 +9827,7 @@
       "live_decay": {
         "signal_level": "warning",
         "reason": "recent_avg_negative",
-        "updated_at": "2026-04-24T05:22:13.425144+00:00",
+        "updated_at": "2026-04-24T05:40:16.561309+00:00",
         "recent_count": 13,
         "recent_sum_pnl": -114.95999999999995,
         "recent_avg_pnl": -8.84307692307692,
@@ -11659,7 +11659,7 @@
       "live_decay": {
         "signal_level": "warning",
         "reason": "negative_ratio_high_and_recent_avg_negative",
-        "updated_at": "2026-04-24T05:22:13.425144+00:00",
+        "updated_at": "2026-04-24T05:40:16.561309+00:00",
         "recent_count": 11,
         "recent_sum_pnl": -300.59,
         "recent_avg_pnl": -27.326363636363634,
@@ -13955,7 +13955,7 @@
       "live_decay": {
         "signal_level": "warning",
         "reason": "recent_avg_negative",
-        "updated_at": "2026-04-24T05:22:13.425144+00:00",
+        "updated_at": "2026-04-24T05:40:16.561309+00:00",
         "recent_count": 26,
         "recent_sum_pnl": -251.21999999999997,
         "recent_avg_pnl": -9.66230769230769,
@@ -15498,7 +15498,7 @@
       "live_decay": {
         "signal_level": "warning",
         "reason": "negative_ratio_high_and_recent_avg_negative",
-        "updated_at": "2026-04-24T05:22:13.425144+00:00",
+        "updated_at": "2026-04-24T05:40:16.561309+00:00",
         "recent_count": 9,
         "recent_sum_pnl": -412.28,
         "recent_avg_pnl": -45.80888888888889,

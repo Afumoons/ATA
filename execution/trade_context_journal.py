@@ -62,8 +62,9 @@ def _feature_context(symbol: str, ts_iso: str) -> dict[str, Any]:
     df = add_regime_column(df)
     df["time"] = pd.to_datetime(df["time"], utc=True)
     df = df.sort_values("time").reset_index(drop=True)
-    ts = pd.Timestamp(datetime.fromisoformat(ts_iso.replace("Z", "+00:00")).astimezone(timezone.utc))
-    idx = df["time"].searchsorted(ts, side="right") - 1
+    ts = pd.to_datetime(datetime.fromisoformat(ts_iso.replace("Z", "+00:00")).astimezone(timezone.utc), utc=True).to_datetime64()
+    haystack = df["time"].to_numpy(dtype="datetime64[ns]")
+    idx = haystack.searchsorted(ts, side="right") - 1
     if idx < 0 or idx >= len(df):
         return {"bar_time": None, "regime": None, "regime_class": None, "regime_type": None, "vol_regime": None, "session": None}
     row = df.iloc[int(idx)]
