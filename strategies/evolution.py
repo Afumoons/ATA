@@ -176,6 +176,9 @@ def evolve_population(
     scored_strategies: List[Tuple[StrategyDefinition, float]],
     cfg: EvolutionConfig = DEFAULT_EVOL_CONFIG,
 ) -> List[StrategyDefinition]:
+    forced_specialists: List[str] = []
+    if symbol == "XAUUSDm" and timeframe == "M15":
+        forced_specialists = ["xau_trending_up_specialist", "xau_ranging_specialist"]
     if not scored_strategies:
         families = list(CORE_M15_FAMILY_WEIGHTS.keys())
         seeded: List[StrategyDefinition] = []
@@ -196,6 +199,15 @@ def evolve_population(
         fp = _strategy_fingerprint(strat)
         if fp not in seen_fingerprints:
             new_pop.append(strat)
+            seen_fingerprints.add(fp)
+
+    for family in forced_specialists:
+        while sum(1 for s in new_pop if _family_of(s) == family) < 2 and len(new_pop) < cfg.population_size:
+            candidate = random_strategy(symbol, timeframe, family=family)
+            fp = _strategy_fingerprint(candidate)
+            if fp in seen_fingerprints:
+                break
+            new_pop.append(candidate)
             seen_fingerprints.add(fp)
 
     family_counts = Counter(_family_of(s) for s in new_pop)

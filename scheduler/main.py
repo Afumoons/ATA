@@ -262,6 +262,14 @@ def _passes_cheap_prescreen(feat, strat, symbol: str) -> tuple[bool, dict]:
         and sharpe >= -0.05
         and dd <= 12.0
     )
+    xau_specialist_relief = (
+        "XAU" in sym_u
+        and family in {"xau_trending_up_specialist", "xau_ranging_specialist"}
+        and num_trades >= 20
+        and pf >= 0.90
+        and sharpe >= -0.25
+        and dd <= 15.0
+    )
 
     passed = (
         (
@@ -272,6 +280,7 @@ def _passes_cheap_prescreen(feat, strat, symbol: str) -> tuple[bool, dict]:
         )
         or xau_bootstrap_relief
         or xag_trend_relief
+        or xau_specialist_relief
     )
     return passed, {
         "num_trades": num_trades,
@@ -280,6 +289,7 @@ def _passes_cheap_prescreen(feat, strat, symbol: str) -> tuple[bool, dict]:
         "max_drawdown_pct": dd,
         "xau_bootstrap_relief": xau_bootstrap_relief,
         "xag_trend_relief": xag_trend_relief,
+        "xau_specialist_relief": xau_specialist_relief,
     }
 
 
@@ -959,8 +969,8 @@ def job_research_strategies() -> None:
                 playbook_type = str(params.get("playbook_type", "") or "")
                 is_xag = "XAG" in canon.upper()
                 bootstrap_candidate = (
-                    playbook_type in {"xau_impulse_pullback", "xau_session_continuation"}
-                    or family in {"xau_impulse_pullback", "xau_session_continuation"}
+                    playbook_type in {"xau_impulse_pullback", "xau_session_continuation", "xau_trending_up_specialist", "xau_ranging_specialist"}
+                    or family in {"xau_impulse_pullback", "xau_session_continuation", "xau_trending_up_specialist", "xau_ranging_specialist"}
                     or (is_xag and family in {"compression_breakout", "vol_breakout", "session_breakout", "pullback_trend"})
                 )
 
@@ -1157,10 +1167,11 @@ def job_research_strategies() -> None:
                 bounded_role = bool(meta.get("allowed_regimes") or meta.get("allowed_sessions") or meta.get("blocked_regimes") or meta.get("blocked_sessions"))
                 ret_val = float(eval_result.get("return_pct", 0.0) or 0.0)
                 family_is_trending_up_specialist = family == "xau_trending_up_specialist"
+                family_is_ranging_specialist = family == "xau_ranging_specialist"
 
                 if family_is_trending_up_specialist and not (
-                    trend_up_trades >= 30
-                    and trend_up_ret >= 2.0
+                    trend_up_trades >= 25
+                    and trend_up_ret >= 1.0
                     and trend_up_ret > max(0.0, trend_down_ret)
                     and trend_up_ret > max(0.0, range_ret)
                 ):
@@ -1175,6 +1186,26 @@ def job_research_strategies() -> None:
                         family,
                         "weak_trending_up_specialist",
                         f"{strat.name}:up_ret={trend_up_ret:.2f},up_trades={trend_up_trades},down_ret={trend_down_ret:.2f},range_ret={range_ret:.2f}",
+                    )
+                    continue
+
+                if family_is_ranging_specialist and not (
+                    num_trades >= 20
+                    and range_ret >= 0.25
+                    and range_ret > max(0.0, trend_up_ret)
+                    and range_ret > max(0.0, trend_down_ret)
+                ):
+                    research_skip_counts["weak_ranging_specialist"] += 1
+                    if len(research_skip_samples["weak_ranging_specialist"]) < 3:
+                        research_skip_samples["weak_ranging_specialist"].append(
+                            f"{strat.name}:range_ret={range_ret:.2f},tr={num_trades:.0f},up_ret={trend_up_ret:.2f},down_ret={trend_down_ret:.2f}"
+                        )
+                    _record_family_skip(
+                        family_skip_counts,
+                        family_skip_samples,
+                        family,
+                        "weak_ranging_specialist",
+                        f"{strat.name}:range_ret={range_ret:.2f},tr={num_trades:.0f},up_ret={trend_up_ret:.2f},down_ret={trend_down_ret:.2f}",
                     )
                     continue
 

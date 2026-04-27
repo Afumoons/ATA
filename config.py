@@ -76,6 +76,8 @@ class SchedulerConfig:
         "vol_breakout",
         "rsi_range",
         "ichifib",
+        "xau_trending_up_specialist",
+        "xau_ranging_specialist",
         "mixed:ma_trend+rsi_range",
         "mixed:rsi_range+ma_trend",
     })

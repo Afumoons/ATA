@@ -107,3 +107,4 @@ node_modules/
 npm-debug.log*
 yarn.lock
 pnpm-lock.yaml
+execution/trade_context_journal.json
