@@ -212,6 +212,21 @@ XAU_SESSION_CONTINUATION_SHORT_TEMPLATES = [
     "session_new_york == 1 and ma_short < ma_long and close < ma_short and trend_strength < -{trend_min} and volatility > vol_min",
 ]
 
+EMA_RSI_REVERSAL_LONG_TEMPLATES = [
+    "ma_short > ma_long and close > ma_short and close > ma_long and rsi > {rsi_reentry_floor} and rsi < {rsi_reentry_ceiling} and trend_strength > -{trend_buffer} and volatility > vol_min",
+    "ma_short > ma_long and close > ma_short and rsi > {rsi_reentry_floor} and rsi < {rsi_reentry_ceiling} and close > open and volatility > vol_min",
+]
+EMA_RSI_REVERSAL_SHORT_TEMPLATES = [
+    "ma_short < ma_long and close < ma_short and close < ma_long and rsi < {rsi_short_reentry_ceiling} and rsi > {rsi_short_reentry_floor} and trend_strength < {trend_buffer} and volatility > vol_min",
+    "ma_short < ma_long and close < ma_short and rsi < {rsi_short_reentry_ceiling} and rsi > {rsi_short_reentry_floor} and close < open and volatility > vol_min",
+]
+EMA_RSI_REVERSAL_EXIT_TEMPLATES = [
+    "bars_since_entry >= {time_stop_bars} or rsi > {rsi_exit}",
+    "bars_since_entry >= {time_stop_bars} or rsi < {rsi_exit}",
+    "bars_since_entry >= {time_stop_bars} or close < ma_short",
+    "bars_since_entry >= {time_stop_bars} or close > ma_short",
+]
+
 FAMILY_LIBRARY: Dict[str, Dict[str, Any]] = {
     "ma_trend": {
         "long": _LIGHT_LONG_TEMPLATES[1:],
@@ -306,6 +321,14 @@ FAMILY_LIBRARY: Dict[str, Dict[str, Any]] = {
         ],
         "allowed_symbols": ["XAUUSDm"],
     },
+    "ema_rsi_reversal": {
+        "long": EMA_RSI_REVERSAL_LONG_TEMPLATES,
+        "short": EMA_RSI_REVERSAL_SHORT_TEMPLATES,
+        "regime_type": "reversal",
+        "playbook_type": "ema_rsi_reversal",
+        "preferred_sessions": ["london", "new_york"],
+        "exit_templates": EMA_RSI_REVERSAL_EXIT_TEMPLATES,
+    },
 }
 
 CORE_M15_FAMILY_WEIGHTS: Dict[str, float] = {
@@ -319,6 +342,7 @@ CORE_M15_FAMILY_WEIGHTS: Dict[str, float] = {
     "xau_session_continuation": 0.05,
     "xau_trending_up_specialist": 0.24,
     "xau_ranging_specialist": 0.18,
+    "ema_rsi_reversal": 0.10,
 }
 
 XAG_M15_FAMILY_WEIGHTS: Dict[str, float] = {
@@ -425,6 +449,19 @@ def _sample_family_params(family: str, symbol: str, timeframe: str) -> Dict[str,
         params["trend_min"] = round(random.uniform(0.10, 0.26), 2)
         params["trend_exit"] = round(random.uniform(-0.08, 0.05), 2)
         params["time_stop_bars"] = random.choice([4, 6, 8, 12])
+    elif family == "ema_rsi_reversal":
+        params["trend_min"] = round(random.uniform(0.02, 0.10), 2)
+        params["trend_exit"] = round(random.uniform(-0.03, 0.03), 2)
+        params["trend_buffer"] = round(random.uniform(0.03, 0.10), 2)
+        params["rsi_reentry_floor"] = random.randint(28, 35)
+        params["rsi_reentry_ceiling"] = random.randint(44, 52)
+        params["rsi_short_reentry_floor"] = random.randint(48, 56)
+        params["rsi_short_reentry_ceiling"] = random.randint(65, 72)
+        params["rsi_exit"] = random.randint(52, 60)
+        params["vol_min"] = round(random.uniform(0.35, 0.90), 3)
+        params["time_stop_bars"] = random.choice([2, 3, 4])
+        params["stop_loss_pips"] = random.choice([50, 75, 100])
+        params["take_profit_pips"] = params["stop_loss_pips"] * 2
 
     is_core_15m = symbol in {"XAUUSDm", "BTCUSDm"} and timeframe == "M15"
     if is_core_15m:
@@ -501,6 +538,24 @@ def _sample_family_params(family: str, symbol: str, timeframe: str) -> Dict[str,
             params["tp_atr_mult"] = random.choice([3.0, 3.5, 4.0])
         elif family == "rsi_range":
             params["vol_max"] = round(random.uniform(0.18, 0.35), 3)
+        elif family == "ema_rsi_reversal":
+            params["trend_buffer"] = round(random.uniform(0.02, 0.06), 3)
+            params["rsi_reentry_floor"] = random.randint(28, 33)
+            params["rsi_reentry_ceiling"] = random.randint(40, 48)
+            params["rsi_short_reentry_floor"] = random.randint(52, 60)
+            params["rsi_short_reentry_ceiling"] = random.randint(67, 74)
+            params["rsi_exit"] = random.randint(54, 62)
+            params["vol_min"] = round(random.uniform(0.25, 0.65), 3)
+            params["time_stop_bars"] = random.choice([2, 3, 4])
+            params["sl_atr_mult"] = random.choice([1.2, 1.5, 1.8])
+            params["tp_atr_mult"] = round(params["sl_atr_mult"] * 2.0, 1)
+            params["stop_loss_pips"] = random.choice([125, 150, 175])
+            params["take_profit_pips"] = params["stop_loss_pips"] * 2
+            params["preferred_sessions"] = ["london", "new_york"]
+            params["signal_alignment_required"] = True
+            params["max_signal_age_bars"] = 3
+            params["volatility_filter"] = "avoid_extremely_low"
+            params["entry_intent"] = "ema9_21_reversal_proxy"
 
     if symbol == "XAGUSDm" and timeframe == "M15":
         params["microstructure_profile"] = "xag_m15"
