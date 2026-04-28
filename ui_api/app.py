@@ -8,6 +8,7 @@ from .adapters import (
     load_execution_summary,
     load_manifest_payload,
     load_pool_summary_payload,
+    load_research_summary,
     load_strategies_summary,
     load_strategy_detail,
 )
@@ -19,6 +20,7 @@ from .models import (
     ManifestResponse,
     OverviewResponse,
     PoolSummaryResponse,
+    ResearchSummaryResponse,
     StrategyDetailResponse,
 )
 
@@ -67,6 +69,14 @@ def api_strategy_detail(name: str) -> StrategyDetailResponse:
     if payload is None:
         raise HTTPException(status_code=404, detail="strategy not found")
     return StrategyDetailResponse.model_validate(payload)
+
+
+@app.get("/api/research/summary", response_model=ResearchSummaryResponse)
+def api_research_summary(symbol: str = "XAUUSDm", timeframe: str = "M15") -> ResearchSummaryResponse:
+    payload = load_research_summary(symbol=symbol, timeframe=timeframe)
+    if payload is None:
+        raise HTTPException(status_code=404, detail="research summary not found")
+    return ResearchSummaryResponse.model_validate(payload)
 
 
 @app.get("/api/audit/timeline", response_model=AuditTimelineResponse)

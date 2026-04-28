@@ -4,6 +4,7 @@ import type {
   ManifestResponse,
   OverviewResponse,
   PoolSummaryResponse,
+  ResearchSummaryResponse,
   StrategyDetailResponse,
   StrategySummaryResponse,
 } from "./types";
@@ -93,6 +94,7 @@ export const uiApi = {
   overview: () => request<OverviewResponse>("/overview"),
   executionSummary: () => request<ExecutionSummaryResponse>("/execution/summary"),
   poolSummary: () => request<PoolSummaryResponse>("/pool/summary"),
+  researchSummary: (symbol = "XAUUSDm", timeframe = "M15") => request<ResearchSummaryResponse>(`/research/summary?symbol=${encodeURIComponent(symbol)}&timeframe=${encodeURIComponent(timeframe)}`),
   manifest: () => request<ManifestResponse>("/manifest"),
   strategies: () => request<StrategySummaryResponse[]>("/strategies"),
   strategyDetail: (name: string) => request<StrategyDetailResponse>(`/strategies/${encodeURIComponent(name)}`),

@@ -24,6 +24,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 EXECUTION_DIR = BASE_DIR / "execution"
 OPEN_TRADES_PATH = EXECUTION_DIR / "open_trades.json"
 TRADES_LOG_PATH = EXECUTION_DIR / "trades.log"
+RESEARCH_SUMMARY_DIR = BASE_DIR / "research" / "family_stage"
 
 TRADE_LOG_PATTERN = re.compile(r"(\w+)=([^\s]+)")
 
@@ -341,6 +342,48 @@ def load_strategy_detail(name: str) -> Dict[str, Any] | None:
         "pool_record": pool_dict,
         "live_stats": stats,
         "derived": derived,
+    }
+
+
+def load_research_summary(symbol: str = "XAUUSDm", timeframe: str = "M15") -> Dict[str, Any] | None:
+    path = RESEARCH_SUMMARY_DIR / f"{symbol}_{timeframe}.json"
+    payload = read_json_file(path, default=None)
+    if not isinstance(payload, dict):
+        return None
+
+    families = payload.get("families") or {}
+    funnel_totals: Counter[str] = Counter()
+    rejection_totals: Counter[str] = Counter()
+    top_rejection_samples: Dict[str, List[str]] = {}
+
+    for family_name, family_payload in families.items():
+        if not isinstance(family_payload, dict):
+            continue
+        stages = family_payload.get("stages") or {}
+        skips = family_payload.get("skip_reasons") or {}
+        samples = family_payload.get("skip_samples") or {}
+        for key, value in stages.items():
+            try:
+                funnel_totals[key] += int(value or 0)
+            except Exception:
+                pass
+        for key, value in skips.items():
+            try:
+                rejection_totals[key] += int(value or 0)
+            except Exception:
+                pass
+        for key, value in samples.items():
+            if key not in top_rejection_samples and isinstance(value, list):
+                top_rejection_samples[key] = value[:3]
+
+    return {
+        "generated_at": payload.get("generated_at") or utc_now_iso(),
+        "symbol": payload.get("symbol") or symbol,
+        "timeframe": payload.get("timeframe") or timeframe,
+        "families": families,
+        "funnel_totals": dict(sorted(funnel_totals.items())),
+        "rejection_totals": dict(sorted(rejection_totals.items(), key=lambda item: item[1], reverse=True)),
+        "top_rejection_samples": top_rejection_samples,
     }
 
 

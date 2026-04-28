@@ -68,6 +68,16 @@ class StrategyDetailResponse(BaseModel):
     derived: Dict[str, Any] = Field(default_factory=dict)
 
 
+class ResearchSummaryResponse(BaseModel):
+    generated_at: str
+    symbol: str
+    timeframe: str
+    families: Dict[str, Any] = Field(default_factory=dict)
+    funnel_totals: Dict[str, int] = Field(default_factory=dict)
+    rejection_totals: Dict[str, int] = Field(default_factory=dict)
+    top_rejection_samples: Dict[str, List[str]] = Field(default_factory=dict)
+
+
 class AuditTimelineResponse(BaseModel):
     generated_at: str
     events: List[Dict[str, Any]] = Field(default_factory=list)

@@ -85,6 +85,16 @@ export interface StrategyDetailResponse {
   derived?: Record<string, unknown> | null;
 }
 
+export interface ResearchSummaryResponse {
+  generated_at: string;
+  symbol: string;
+  timeframe: string;
+  families: Record<string, unknown>;
+  funnel_totals: Record<string, number>;
+  rejection_totals: Record<string, number>;
+  top_rejection_samples: Record<string, string[]>;
+}
+
 export interface AuditTimelineResponse {
   generated_at: string;
   events: Array<Record<string, unknown>>;
