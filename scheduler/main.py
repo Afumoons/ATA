@@ -222,19 +222,25 @@ def _research_backtest_kwargs(symbol: str) -> dict:
     return params
 
 
-def _cheap_prescreen_backtest_kwargs(symbol: str) -> dict:
+def _cheap_prescreen_backtest_kwargs(symbol: str, strat=None) -> dict:
     """Return lighter-cost backtest settings for fast prescreen rejection."""
     params = dict(CHEAP_PRESCREEN_BACKTEST_KWARGS)
     sym_u = symbol.upper()
+    family = ""
+    if strat is not None:
+        family = str(((getattr(strat, "params", {}) or {}).get("family", "") or ""))
     if "XAU" in sym_u:
-        params["spread"] = 0.35
+        if family in {"xau_trending_up_specialist", "xau_ranging_specialist"}:
+            params.update(dict(XAU_BACKTEST_KWARGS))
+        else:
+            params["spread"] = 0.35
     if "BTC" in sym_u:
         params["spread"] = 4.0
     return params
 
 
 def _passes_cheap_prescreen(feat, strat, symbol: str) -> tuple[bool, dict]:
-    prescreen_kwargs = _cheap_prescreen_backtest_kwargs(symbol)
+    prescreen_kwargs = _cheap_prescreen_backtest_kwargs(symbol, strat)
     result = run_backtest(feat, strat, regime_column="regime", **prescreen_kwargs)
     stats = result.stats or {}
     num_trades = float(stats.get("num_trades", 0.0) or 0.0)

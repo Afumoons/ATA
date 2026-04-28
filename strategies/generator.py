@@ -177,23 +177,23 @@ XAU_IMPULSE_PULLBACK_LONG_TEMPLATES = [
     "ma_short > ma_long and close > ma_short and rsi > 50 and rsi < 70 and trend_strength > {trend_min}",
 ]
 XAU_TRENDING_UP_ONLY_LONG_TEMPLATES = [
-    "ma_short > ma_long and close > ma_short and rsi > 52 and rsi < 58 and trend_strength > {trend_min} and fib_zone_382 == 1",
-    "ma_short > ma_long and close > open and close > ma_short and rsi > 53 and rsi < 59 and trend_strength > {trend_min} and session_london == 1",
-    "ma_short > ma_long and close > ma_long and rsi > 54 and rsi < 60 and trend_strength > {trend_min} and volatility > vol_min and fib_zone_618 == 1",
-    "ma_short > ma_long and close > ma_short and close > open and trend_strength > {trend_min} and rsi > 52 and rsi < 57 and session_new_york == 1",
+    "ma_short > ma_long and trend_strength > {trend_min}",
+    "ma_short > ma_long and close > ma_short and trend_strength > {trend_min}",
+    "ma_short > ma_long and close > ma_short and rsi > 50 and rsi < 62 and trend_strength > {trend_min}",
+    "ma_short > ma_long and close > ma_long and trend_strength > {trend_min} and session_london == 1",
 ]
 XAU_TRENDING_UP_ONLY_SHORT_TEMPLATES = [
     "close < -1",
 ]
 XAU_RANGING_ONLY_LONG_TEMPLATES = [
-    "rsi < 35 and trend_strength > -{trend_min} and trend_strength < {trend_min}",
-    "close < ma_short and rsi < 38 and trend_strength > -{trend_min} and trend_strength < {trend_min}",
-    "session_asia == 1 and rsi < 40 and trend_strength > -{trend_min} and trend_strength < {trend_min} and volatility < vol_max",
+    "rsi < 35 and trend_strength > -0.08 and trend_strength < 0.08",
+    "close < ma_short and rsi < 38 and trend_strength > -0.08 and trend_strength < 0.08",
+    "session_asia == 1 and rsi < 40 and trend_strength > -0.08 and trend_strength < 0.08",
 ]
 XAU_RANGING_ONLY_SHORT_TEMPLATES = [
-    "rsi > 65 and trend_strength > -{trend_min} and trend_strength < {trend_min}",
-    "close > ma_short and rsi > 62 and trend_strength > -{trend_min} and trend_strength < {trend_min}",
-    "session_asia == 1 and rsi > 60 and trend_strength > -{trend_min} and trend_strength < {trend_min} and volatility < vol_max",
+    "ma_short < ma_long and trend_strength < -0.055",
+    "rsi > 65 and trend_strength > -0.08 and trend_strength < 0.08",
+    "close > ma_short and rsi > 62 and trend_strength > -0.08 and trend_strength < 0.08",
 ]
 XAU_IMPULSE_PULLBACK_SHORT_TEMPLATES = [
     "session_london == 1 and ma_short < ma_long and close < ma_short and trend_strength < -{trend_min} and volatility > vol_min and fib_zone_618 == 1",
@@ -284,10 +284,10 @@ FAMILY_LIBRARY: Dict[str, Dict[str, Any]] = {
         "short": XAU_TRENDING_UP_ONLY_SHORT_TEMPLATES,
         "regime_type": "trend",
         "playbook_type": "xau_trending_up_specialist",
-        "preferred_sessions": ["london", "new_york"],
+        "preferred_sessions": ["asia", "london", "new_york"],
         "exit_templates": [
-            "bars_since_entry >= {time_stop_bars} or close < ma_short",
-            "bars_since_entry >= {time_stop_bars} or trend_strength < {trend_exit}",
+            "rsi > {rsi_exit}",
+            "close < ma_short",
             "bars_since_entry >= {time_stop_bars} or rsi > {rsi_exit}",
         ],
         "allowed_symbols": ["XAUUSDm"],
@@ -442,9 +442,12 @@ def _sample_family_params(family: str, symbol: str, timeframe: str) -> Dict[str,
         params["microstructure_profile"] = "xau_m15"
         params["stop_loss_pips"] = random.choice([150, 200, 250])
         params["take_profit_pips"] = random.choice([250, 300, 400])
-        if family in {"xau_trending_up_specialist", "xau_ranging_specialist"}:
-            params["stop_loss_pips"] = random.choice([50, 75, 100])
-            params["take_profit_pips"] = random.choice([75, 100, 125, 150])
+        if family == "xau_trending_up_specialist":
+            params["stop_loss_pips"] = random.choice([150, 200, 250])
+            params["take_profit_pips"] = random.choice([250, 300, 400])
+        elif family == "xau_ranging_specialist":
+            params["stop_loss_pips"] = random.choice([100, 125, 150])
+            params["take_profit_pips"] = random.choice([200, 250, 300])
         if family in {"xau_impulse_pullback", "xau_session_continuation"}:
             params["trend_min"] = round(random.uniform(0.03, 0.09), 2)
             params["trend_exit"] = round(random.uniform(-0.02, 0.03), 2)
@@ -454,27 +457,26 @@ def _sample_family_params(family: str, symbol: str, timeframe: str) -> Dict[str,
             params["tp_atr_mult"] = random.choice([3.5, 4.0, 4.5, 5.0])
             params["rsi_exit"] = random.randint(60, 72)
         elif family == "xau_trending_up_specialist":
-            params["trend_min"] = round(random.uniform(0.04, 0.09), 2)
-            params["trend_exit"] = round(random.uniform(-0.01, 0.02), 2)
-            params["vol_min"] = round(random.uniform(0.12, 0.35), 3)
-            params["time_stop_bars"] = random.choice([3, 4, 6, 8])
-            params["sl_atr_mult"] = random.choice([0.8, 1.0, 1.2])
-            params["tp_atr_mult"] = random.choice([1.2, 1.5, 1.8, 2.0])
-            params["rsi_exit"] = random.randint(54, 59)
-            params["allowed_regimes"] = ["trending_up"]
-            params["blocked_regimes"] = ["trending_down", "ranging"]
-            params["preferred_sessions"] = ["london", "new_york"]
+            params["trend_min"] = round(random.uniform(0.055, 0.085), 3)
+            params["trend_exit"] = round(random.uniform(-0.01, 0.01), 3)
+            params["time_stop_bars"] = random.choice([8, 10, 12])
+            params["sl_atr_mult"] = random.choice([1.5, 1.8, 2.0])
+            params["tp_atr_mult"] = random.choice([3.0, 3.5, 4.0])
+            params["rsi_exit"] = random.randint(42, 50)
+            params["allowed_regimes"] = ["trending_up", "high_vol"]
+            params["blocked_regimes"] = []
+            params["preferred_sessions"] = ["asia", "london", "new_york"]
         elif family == "xau_ranging_specialist":
-            params["trend_min"] = round(random.uniform(0.03, 0.08), 2)
-            params["trend_exit"] = round(random.uniform(-0.02, 0.02), 2)
-            params["vol_max"] = round(random.uniform(0.45, 0.95), 3)
-            params["time_stop_bars"] = random.choice([3, 4, 6, 8])
-            params["sl_atr_mult"] = random.choice([0.8, 1.0, 1.2, 1.4])
-            params["tp_atr_mult"] = random.choice([1.0, 1.2, 1.5, 1.8])
-            params["rsi_exit"] = random.randint(50, 58)
-            params["allowed_regimes"] = ["ranging"]
-            params["blocked_regimes"] = ["trending_down", "trending_up"]
-            params["preferred_sessions"] = ["asia", "london"]
+            params["trend_min"] = 0.08
+            params["trend_exit"] = round(random.uniform(-0.01, 0.02), 3)
+            params["vol_max"] = round(random.uniform(0.20, 0.35), 3)
+            params["time_stop_bars"] = random.choice([4, 6, 8])
+            params["sl_atr_mult"] = random.choice([1.2, 1.5, 1.8])
+            params["tp_atr_mult"] = random.choice([2.0, 2.5, 3.0, 4.0])
+            params["rsi_exit"] = random.randint(42, 48)
+            params["allowed_regimes"] = ["ranging", "low_vol"]
+            params["blocked_regimes"] = ["trending_up"]
+            params["preferred_sessions"] = ["asia", "london", "new_york"]
         elif family == "pullback_trend":
             params["trend_min"] = round(random.uniform(0.08, 0.16), 2)
             params["trend_exit"] = round(random.uniform(-0.03, 0.02), 2)
