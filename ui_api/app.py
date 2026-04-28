@@ -5,6 +5,7 @@ from fastapi import FastAPI, HTTPException
 from .adapters import (
     build_overview_payload,
     load_audit_timeline,
+    load_drift_summary,
     load_execution_summary,
     load_manifest_payload,
     load_pool_summary_payload,
@@ -15,6 +16,7 @@ from .adapters import (
 from .logging_utils import ui_logger
 from .models import (
     AuditTimelineResponse,
+    DriftSummaryResponse,
     ExecutionSummaryResponse,
     HealthResponse,
     ManifestResponse,
@@ -77,6 +79,11 @@ def api_research_summary(symbol: str = "XAUUSDm", timeframe: str = "M15") -> Res
     if payload is None:
         raise HTTPException(status_code=404, detail="research summary not found")
     return ResearchSummaryResponse.model_validate(payload)
+
+
+@app.get("/api/drift/summary", response_model=DriftSummaryResponse)
+def api_drift_summary() -> DriftSummaryResponse:
+    return DriftSummaryResponse.model_validate(load_drift_summary())
 
 
 @app.get("/api/audit/timeline", response_model=AuditTimelineResponse)

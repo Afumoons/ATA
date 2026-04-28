@@ -95,6 +95,12 @@ export interface ResearchSummaryResponse {
   top_rejection_samples: Record<string, string[]>;
 }
 
+export interface DriftSummaryResponse {
+  generated_at: string;
+  rows: Array<Record<string, unknown>>;
+  summary: Record<string, unknown>;
+}
+
 export interface AuditTimelineResponse {
   generated_at: string;
   events: Array<Record<string, unknown>>;

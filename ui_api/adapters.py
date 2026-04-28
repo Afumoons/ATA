@@ -387,6 +387,59 @@ def load_research_summary(symbol: str = "XAUUSDm", timeframe: str = "M15") -> Di
     }
 
 
+def load_drift_summary() -> Dict[str, Any]:
+    pool = load_pool()
+    live_stats = load_strategy_live_stats_snapshot().get("strategies", {})
+    rows: List[Dict[str, Any]] = []
+
+    for name, rec in pool.strategies.items():
+        stats = rec.stats or {}
+        explain = (stats.get("strategy_explain") or {}) if isinstance(stats, dict) else {}
+        meta = (explain.get("meta") or {}) if isinstance(explain, dict) else {}
+        live = live_stats.get(name) or {}
+
+        research_return_pct = float(stats.get("return_pct", 0.0) or 0.0)
+        research_sharpe = float(stats.get("sharpe_ratio", 0.0) or 0.0)
+        live_total_pnl = float((live.get("total_pnl", 0.0) or 0.0)) if isinstance(live, dict) else 0.0
+        live_trades = int((live.get("num_trades", 0) or 0)) if isinstance(live, dict) else 0
+        recent_pnls = list((live.get("recent_pnls") or [])) if isinstance(live, dict) else []
+        recent_avg = (sum(float(x or 0.0) for x in recent_pnls) / len(recent_pnls)) if recent_pnls else 0.0
+        drift_score = abs(live_total_pnl - research_return_pct)
+        decay_warning = live_trades >= 3 and recent_avg < 0
+
+        rows.append({
+            "name": name,
+            "symbol": rec.symbol,
+            "timeframe": rec.timeframe,
+            "status": rec.status,
+            "family": ((stats.get("strategy") or {}).get("family") if isinstance(stats, dict) else None) or stats.get("family") or "unknown",
+            "research_return_pct": research_return_pct,
+            "research_sharpe": research_sharpe,
+            "live_total_pnl": live_total_pnl,
+            "live_trades": live_trades,
+            "recent_avg_pnl": recent_avg,
+            "best_regime": meta.get("best_regime"),
+            "worst_regime": meta.get("worst_regime"),
+            "drift_score": drift_score,
+            "decay_warning": decay_warning,
+            "last_update": live.get("last_update") if isinstance(live, dict) else None,
+        })
+
+    rows.sort(key=lambda row: (bool(row.get("decay_warning")), float(row.get("drift_score", 0.0))), reverse=True)
+    attention = [row for row in rows if row.get("decay_warning") or abs(float(row.get("recent_avg_pnl", 0.0))) > 0]
+
+    return {
+        "generated_at": utc_now_iso(),
+        "rows": rows[:50],
+        "summary": {
+            "strategy_count": len(rows),
+            "attention_count": len(attention),
+            "decay_warning_count": sum(1 for row in rows if row.get("decay_warning")),
+            "negative_recent_avg_count": sum(1 for row in rows if float(row.get("recent_avg_pnl", 0.0)) < 0),
+        },
+    }
+
+
 def load_audit_timeline(limit: int = 100) -> Dict[str, Any]:
     pool_rows = read_json_file(POOL_AUDIT_TRAIL_PATH, default=[])
     unmatched_rows = read_json_file(UNMATCHED_CLOSED_DEALS_PATH, default=[])

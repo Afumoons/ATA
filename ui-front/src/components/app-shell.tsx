@@ -7,6 +7,8 @@ const navItems = [
   ["/", "Overview", "Capital, health strip, freshness, runtime posture"],
   ["/execution", "Execution", "Live posture, no-trade diagnosis, attention events"],
   ["/pool", "Pool", "Inventory, relationship mapping, strategy drill-down"],
+  ["/research", "Research", "Funnel stages, rejection reasons, family throughput"],
+  ["/drift", "Drift", "Live vs research mismatch and decay warnings"],
   ["/manifest", "Manifest", "Artifact presence and deployment composition"],
   ["/audit", "Audit", "Merged timeline with operator filters"],
 ] as const;

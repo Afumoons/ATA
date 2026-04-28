@@ -78,6 +78,12 @@ class ResearchSummaryResponse(BaseModel):
     top_rejection_samples: Dict[str, List[str]] = Field(default_factory=dict)
 
 
+class DriftSummaryResponse(BaseModel):
+    generated_at: str
+    rows: List[Dict[str, Any]] = Field(default_factory=list)
+    summary: Dict[str, Any] = Field(default_factory=dict)
+
+
 class AuditTimelineResponse(BaseModel):
     generated_at: str
     events: List[Dict[str, Any]] = Field(default_factory=list)
