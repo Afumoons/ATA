@@ -16,12 +16,13 @@ import {
 } from "@/components/dashboard";
 import { useQuery } from "@/hooks/use-query";
 import { uiApi } from "@/lib/api";
-import { compactValue, formatCurrency, formatDateTime, formatNumber } from "@/lib/format";
+import { compactValue, formatCurrency, formatDateTime, formatNumber, formatPercent } from "@/lib/format";
 import {
   coerceRecord,
   getStrategyRelationshipState,
   pickFirstNumber,
   pickFirstString,
+  toneFromMagnitude,
   toneFromSignedNumber,
 } from "@/lib/ui-state";
 
@@ -84,6 +85,7 @@ export default function PoolPage() {
   const selectedIndex = coerceRecord(selectedDetail?.index_entry);
   const selectedPool = coerceRecord(selectedDetail?.pool_record);
   const selectedLiveStats = coerceRecord(selectedDetail?.live_stats);
+  const selectedDerived = coerceRecord(selectedDetail?.derived);
   const relationship = getStrategyRelationshipState({
     manifest_entry: selectedDetail?.manifest_entry,
     index_entry: selectedDetail?.index_entry,
@@ -94,6 +96,7 @@ export default function PoolPage() {
   const livePnl = pickFirstNumber(selectedLiveStats.total_pnl, selectedLiveStats.realized_pnl);
   const liveTrades = pickFirstNumber(selectedLiveStats.num_trades, selectedLiveStats.total_trades);
   const liveLastUpdate = pickFirstString(selectedLiveStats.last_update);
+  const liveVsResearchDelta = pickFirstNumber(selectedDerived.live_vs_research_delta);
   const ruleSource = Object.keys(selectedManifest).length ? selectedManifest : selectedPool;
 
   const tierOptions = Array.from(new Set(strategyRows.map((row) => String(row.tier ?? "unknown")))).sort();
@@ -134,6 +137,15 @@ export default function PoolPage() {
         )}
       </Section>
 
+      <div className="detail-grid-2">
+        <Section title="Family concentration" description="Which strategy families dominate the current pool.">
+          <KeyValueGrid data={data.family_counts ?? {}} emptyTitle="No family mix" emptyDescription="Family concentration was not returned by the backend." />
+        </Section>
+        <Section title="Symbol concentration" description="How inventory is split across tradable symbols.">
+          <KeyValueGrid data={data.symbol_counts ?? {}} emptyTitle="No symbol mix" emptyDescription="Symbol concentration was not returned by the backend." />
+        </Section>
+      </div>
+
       <Section title="Slot distribution" description="Volume concentration by symbol and timeframe.">
         <DataTable
           columns={["Symbol", "Timeframe", "Count"]}
@@ -172,7 +184,7 @@ export default function PoolPage() {
         </div>
 
         <DataTable
-          columns={["Strategy", "Symbol", "Timeframe", "Tier", "Status", "Manifest", "Score"]}
+          columns={["Strategy", "Symbol", "Timeframe", "Tier", "Family", "Motif", "Status", "Manifest", "Score"]}
           rows={filteredStrategies.slice(0, 32).map((strategy) => [
             <button
               key={strategy.name}
@@ -185,6 +197,8 @@ export default function PoolPage() {
             compactValue(strategy.symbol),
             compactValue(strategy.timeframe),
             compactValue(strategy.tier),
+            compactValue(strategy.family),
+            compactValue(strategy.motif),
             compactValue(strategy.status),
             <StatusBadge
               key={`${strategy.name}-manifest`}
@@ -235,7 +249,7 @@ export default function PoolPage() {
               <StatCard
                 label="Family / motif"
                 value={compactValue(
-                  `${pickFirstString(selectedManifest.family, selectedIndex.family, selectedPool.family) ?? "—"} / ${pickFirstString(selectedManifest.motif, selectedIndex.motif, selectedPool.motif) ?? "—"}`,
+                  `${pickFirstString(selectedManifest.family, selectedIndex.family, selectedPool.family) ?? "unknown"} / ${pickFirstString(selectedManifest.motif, selectedIndex.motif, selectedPool.motif) ?? "unknown"}`,
                 )}
                 hint={compactValue(pickFirstString(selectedManifest.timeframe, selectedIndex.timeframe, selectedPool.timeframe))}
                 tone="neutral"
@@ -245,6 +259,33 @@ export default function PoolPage() {
                 value={formatNumber(liveTrades)}
                 hint={liveLastUpdate ? `Last update ${formatDateTime(liveLastUpdate)}` : "No live-stat timestamp"}
                 tone={toneFromSignedNumber(livePnl)}
+              />
+            </section>
+
+            <section className="stats-grid">
+              <StatCard
+                label="Best / worst regime"
+                value={compactValue(`${pickFirstString(selectedDerived.best_regime) ?? "unknown"} / ${pickFirstString(selectedDerived.worst_regime) ?? "unknown"}`)}
+                hint="Research explain meta"
+                tone="info"
+              />
+              <StatCard
+                label="Best / worst session"
+                value={compactValue(`${pickFirstString(selectedDerived.best_session) ?? "unknown"} / ${pickFirstString(selectedDerived.worst_session) ?? "unknown"}`)}
+                hint="Session edge profile"
+                tone="neutral"
+              />
+              <StatCard
+                label="Routing / specialist"
+                value={compactValue(`${formatNumber(pickFirstNumber(selectedDerived.routing_confidence))} / ${formatNumber(pickFirstNumber(selectedDerived.specialist_score))}`)}
+                hint="Routing confidence / specialist score"
+                tone="success"
+              />
+              <StatCard
+                label="Live vs research delta"
+                value={formatNumber(liveVsResearchDelta)}
+                hint="live_total_pnl - research_return_pct"
+                tone={toneFromMagnitude(liveVsResearchDelta, 50, 200)}
               />
             </section>
 
@@ -265,17 +306,27 @@ export default function PoolPage() {
                 <div className="rule-card">
                   <span className="kv-key">Risk framing</span>
                   <strong>
-                    SL {compactValue(ruleSource.sl_atr_mult ?? ruleSource.stop_loss_pips)} · TP {compactValue(ruleSource.tp_atr_mult ?? ruleSource.take_profit_pips)}
+                    SL {compactValue(ruleSource.sl_atr_mult ?? ruleSource.stop_loss_pips)} / TP {compactValue(ruleSource.tp_atr_mult ?? ruleSource.take_profit_pips)}
                   </strong>
                 </div>
               </div>
             </Section>
+
+            <div className="detail-grid-2">
+              <Section title="Regime map" description="Where the strategy actually makes or loses money across detected market regimes.">
+                <KeyValueGrid data={coerceRecord(selectedDerived.regime_pnl)} emptyTitle="No regime map" emptyDescription="Research explain did not return regime-level PnL details for this strategy." />
+              </Section>
+              <Section title="Session map" description="Which sessions contribute most to edge or drag.">
+                <KeyValueGrid data={coerceRecord(selectedDerived.session_pnl)} emptyTitle="No session map" emptyDescription="Research explain did not return session-level PnL details for this strategy." />
+              </Section>
+            </div>
 
             <Section title="Live stats summary" description="Compact live trading statistics for the selected strategy, when available.">
               <section className="stats-grid">
                 <StatCard label="Live trades" value={formatNumber(liveTrades)} hint="num_trades from live stats" tone="info" />
                 <StatCard label="Live PnL" value={formatCurrency(livePnl)} hint="total_pnl from live stats" tone={toneFromSignedNumber(livePnl)} />
                 <StatCard label="Manifest rank" value={formatNumber(pickFirstNumber(selectedManifest.manifest_rank, selectedIndex.last_manifest_rank))} hint="Last known manifest placement" tone="neutral" />
+                <StatCard label="Research return" value={formatPercent(pickFirstNumber(selectedDerived.research_return_pct))} hint="Backtest return pct" tone="success" />
                 <StatCard label="Payload health" value={relationship.inManifest || relationship.inPool ? "Shaped" : "Thin"} hint="Whether a strategy payload is available in surfaced layers" tone={relationship.inManifest || relationship.inPool ? "success" : "warning"} />
               </section>
             </Section>

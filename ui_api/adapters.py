@@ -90,6 +90,36 @@ def build_overview_payload() -> Dict[str, Any]:
     pool_summary = load_pool_summary()
     manifest_summary = load_manifest_summary()
     index_summary = load_strategy_index_summary()
+    execution_summary = load_execution_summary()
+
+    attention_queue: List[Dict[str, Any]] = []
+    unmatched = int(((execution_summary.get("unmatched_closed_deals") or {}).get("count", 0)) or 0)
+    if unmatched > 0:
+        attention_queue.append({
+            "label": "Unmatched closed deals",
+            "tone": "critical" if unmatched >= 5 else "warning",
+            "value": unmatched,
+            "detail": "Closed-deal reconciliation needs operator review.",
+        })
+
+    open_trades = int(((execution_summary.get("open_trades") or {}).get("count", 0)) or 0)
+    if not bool(live_state.get("locked_for_day")) and open_trades == 0:
+        attention_queue.append({
+            "label": "No open trades",
+            "tone": "warning",
+            "value": 0,
+            "detail": "Trading day is active but the execution snapshot shows no open positions.",
+        })
+
+    manifest_generated_at = manifest_summary.get("generated_at")
+    index_generated_at = index_summary.get("generated_at")
+    if manifest_generated_at != index_generated_at:
+        attention_queue.append({
+            "label": "Artifact freshness mismatch",
+            "tone": "warning",
+            "value": 2,
+            "detail": "Manifest and strategy index were not generated at the same timestamp.",
+        })
 
     return {
         "generated_at": utc_now_iso(),
@@ -105,10 +135,11 @@ def build_overview_payload() -> Dict[str, Any]:
         "live_slots": manifest_summary["slots"],
         "diagnostics": {
             "pool_path": pool_summary["path"],
-            "manifest_generated_at": manifest_summary["generated_at"],
-            "index_generated_at": index_summary["generated_at"],
+            "manifest_generated_at": manifest_generated_at,
+            "index_generated_at": index_generated_at,
             "index_tier_counts": index_summary["tier_counts"],
         },
+        "attention_queue": attention_queue,
     }
 
 
@@ -223,9 +254,14 @@ def load_execution_summary() -> Dict[str, Any]:
 def load_pool_summary_payload() -> Dict[str, Any]:
     pool = load_pool()
     by_slot: Dict[Tuple[str, str], int] = defaultdict(int)
+    family_counts: Counter[str] = Counter()
+    symbol_counts: Counter[str] = Counter()
     top_strategies = sorted(pool.strategies.values(), key=lambda rec: float(rec.score or 0.0), reverse=True)[:15]
     for rec in pool.strategies.values():
         by_slot[(rec.symbol, rec.timeframe)] += 1
+        symbol_counts[str(rec.symbol or "unknown")] += 1
+        family = str((((rec.stats or {}).get("strategy") or {}).get("family") or ((rec.stats or {}).get("family")) or "unknown"))
+        family_counts[family] += 1
     return {
         "generated_at": utc_now_iso(),
         "total": len(pool.strategies),
@@ -244,6 +280,8 @@ def load_pool_summary_payload() -> Dict[str, Any]:
             }
             for rec in top_strategies
         ],
+        "family_counts": dict(sorted(family_counts.items())),
+        "symbol_counts": dict(sorted(symbol_counts.items())),
     }
 
 
@@ -270,12 +308,39 @@ def load_strategy_detail(name: str) -> Dict[str, Any] | None:
     stats = load_strategy_live_stats_snapshot().get("strategies", {}).get(name)
     if not any([manifest_entry, index_entry, pool_rec, stats]):
         return None
+
+    pool_dict = pool_rec.to_dict() if pool_rec else None
+    stats_block = ((pool_dict or {}).get("stats") or {}) if isinstance(pool_dict, dict) else {}
+    explain = ((stats_block.get("strategy_explain") or {}) if isinstance(stats_block, dict) else {})
+    regime_pnl = explain.get("regime_pnl") or {}
+    session_pnl = explain.get("session_pnl") or {}
+    meta = explain.get("meta") or {}
+    stability = explain.get("stability") or {}
+    live_total_pnl = float(((stats or {}).get("total_pnl", 0.0)) or 0.0) if isinstance(stats, dict) else 0.0
+    research_return_pct = float((stats_block.get("return_pct", 0.0)) or 0.0) if isinstance(stats_block, dict) else 0.0
+
+    derived = {
+        "best_regime": meta.get("best_regime"),
+        "worst_regime": meta.get("worst_regime"),
+        "best_session": meta.get("best_session"),
+        "worst_session": meta.get("worst_session"),
+        "routing_confidence": meta.get("routing_confidence"),
+        "specialist_score": meta.get("specialist_score"),
+        "regime_pnl": regime_pnl,
+        "session_pnl": session_pnl,
+        "stability": stability,
+        "live_vs_research_delta": live_total_pnl - research_return_pct,
+        "live_total_pnl": live_total_pnl,
+        "research_return_pct": research_return_pct,
+    }
+
     return {
         "name": name,
         "manifest_entry": manifest_entry,
         "index_entry": index_entry,
-        "pool_record": pool_rec.to_dict() if pool_rec else None,
+        "pool_record": pool_dict,
         "live_stats": stats,
+        "derived": derived,
     }
 
 

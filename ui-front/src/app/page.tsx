@@ -160,6 +160,25 @@ export default function OverviewPage() {
         </div>
       </Section>
 
+      <Section title="Attention queue" description="High-signal operator nudges surfaced from reconciliation, artifact freshness, and runtime posture.">
+        {data.attention_queue?.length ? (
+          <StatusStrip
+            items={data.attention_queue.map((item) => ({
+              label: item.label,
+              value: item.value != null ? String(item.value) : "Attention",
+              tone: item.tone ?? "warning",
+              detail: item.detail,
+            }))}
+          />
+        ) : (
+          <InlineNotice
+            title="No urgent operator nudges"
+            description="This snapshot did not surface unmatched deals, artifact timestamp mismatches, or obvious no-position warnings."
+            tone="success"
+          />
+        )}
+      </Section>
+
       <Section title="Pool status mix" description="Distribution of inventory state across the current strategy pool.">
         {Object.keys(data.pool_status_counts ?? {}).length ? (
           <KeyValueGrid data={data.pool_status_counts} />

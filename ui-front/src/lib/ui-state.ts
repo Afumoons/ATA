@@ -231,6 +231,14 @@ export function getHighSignalExecutionReasons(data: ExecutionSummaryResponse) {
   return reasons;
 }
 
+export function toneFromMagnitude(value: number | null | undefined, warning = 1, critical = 5): StatusTone {
+  if (value == null || Number.isNaN(value)) return "neutral";
+  const absValue = Math.abs(value);
+  if (absValue >= critical) return "critical";
+  if (absValue >= warning) return "warning";
+  return "success";
+}
+
 export function getStrategyRelationshipState(detail: {
   manifest_entry?: Record<string, unknown> | null;
   index_entry?: Record<string, unknown> | null;

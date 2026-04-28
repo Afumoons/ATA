@@ -29,6 +29,7 @@ class OverviewResponse(BaseModel):
     strategy_index_entry_count: int = 0
     live_slots: List[SlotCount] = Field(default_factory=list)
     diagnostics: Dict[str, Any] = Field(default_factory=dict)
+    attention_queue: List[Dict[str, Any]] = Field(default_factory=list)
 
 
 class ExecutionSummaryResponse(BaseModel):
@@ -46,6 +47,8 @@ class PoolSummaryResponse(BaseModel):
     status_counts: Dict[str, int] = Field(default_factory=dict)
     by_slot: List[Dict[str, Any]] = Field(default_factory=list)
     top_strategies: List[Dict[str, Any]] = Field(default_factory=list)
+    family_counts: Dict[str, int] = Field(default_factory=dict)
+    symbol_counts: Dict[str, int] = Field(default_factory=dict)
 
 
 class ManifestResponse(BaseModel):
@@ -62,6 +65,7 @@ class StrategyDetailResponse(BaseModel):
     index_entry: Optional[Dict[str, Any]] = None
     pool_record: Optional[Dict[str, Any]] = None
     live_stats: Optional[Dict[str, Any]] = None
+    derived: Dict[str, Any] = Field(default_factory=dict)
 
 
 class AuditTimelineResponse(BaseModel):

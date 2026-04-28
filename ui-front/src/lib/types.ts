@@ -13,6 +13,7 @@ export interface OverviewResponse {
   strategy_index_entry_count: number;
   live_slots: Array<{ symbol: string; timeframe: string; count: number }>;
   diagnostics: Record<string, unknown>;
+  attention_queue: Array<{ label: string; tone?: StatusTone; value?: number | string; detail?: string }>;
 }
 
 export interface ExecutionSummaryResponse {
@@ -47,6 +48,8 @@ export interface PoolSummaryResponse {
     status: string;
     score?: number | null;
   }>;
+  family_counts: Record<string, number>;
+  symbol_counts: Record<string, number>;
 }
 
 export interface ManifestResponse {
@@ -79,6 +82,7 @@ export interface StrategyDetailResponse {
   index_entry?: Record<string, unknown> | null;
   pool_record?: Record<string, unknown> | null;
   live_stats?: Record<string, unknown> | null;
+  derived?: Record<string, unknown> | null;
 }
 
 export interface AuditTimelineResponse {
