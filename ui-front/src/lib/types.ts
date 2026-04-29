@@ -95,10 +95,42 @@ export interface ResearchSummaryResponse {
   top_rejection_samples: Record<string, string[]>;
 }
 
+export interface DriftSummaryRow {
+  name: string;
+  symbol?: string | null;
+  timeframe?: string | null;
+  status?: string | null;
+  family?: string | null;
+  research_return_pct?: number | null;
+  research_sharpe?: number | null;
+  live_total_pnl?: number | null;
+  live_trades?: number | null;
+  recent_avg_pnl?: number | null;
+  best_regime?: string | null;
+  worst_regime?: string | null;
+  drift_score?: number | null;
+  decay_warning?: boolean | null;
+  severity?: "healthy" | "watch" | "drifting" | "broken" | null;
+  last_update?: string | null;
+}
+
 export interface DriftSummaryResponse {
   generated_at: string;
-  rows: Array<Record<string, unknown>>;
-  summary: Record<string, unknown>;
+  rows: DriftSummaryRow[];
+  summary: {
+    strategy_count?: number;
+    attention_count?: number;
+    decay_warning_count?: number;
+    negative_recent_avg_count?: number;
+    severity_counts?: Record<string, number>;
+    available_filters?: {
+      symbols?: string[];
+      families?: string[];
+      statuses?: string[];
+      severities?: string[];
+    };
+    [key: string]: unknown;
+  };
 }
 
 export interface AuditTimelineResponse {

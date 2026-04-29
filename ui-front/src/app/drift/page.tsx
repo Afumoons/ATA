@@ -1,9 +1,9 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import { PageHeader } from "@/components/app-shell";
 import {
   DataTable,
-  EmptyState,
   ErrorState,
   FreshnessBadge,
   KeyValueGrid,
@@ -16,11 +16,31 @@ import {
 import { useQuery } from "@/hooks/use-query";
 import { uiApi } from "@/lib/api";
 import { compactValue, formatCurrency, formatDateTime, formatNumber, formatPercent } from "@/lib/format";
-import { toneFromSignedNumber } from "@/lib/ui-state";
+import type { DriftSummaryRow, StatusTone } from "@/lib/types";
+
+const severityTone: Record<string, StatusTone> = {
+  healthy: "success",
+  watch: "warning",
+  drifting: "warning",
+  broken: "critical",
+};
+
+function normalizeFilterValue(value: string) {
+  return value === "__all__" ? "" : value;
+}
+
+function severityBadge(value: string | null | undefined) {
+  const label = value ? value[0].toUpperCase() + value.slice(1) : "Unknown";
+  return <StatusBadge label={label} tone={severityTone[value ?? ""] ?? "neutral"} />;
+}
 
 export default function DriftPage() {
   const driftQuery = useQuery("drift-summary", uiApi.driftSummary, { refetchIntervalMs: 60_000 });
   const { data, error, loading, hasData, refreshing, refresh } = driftQuery;
+  const [symbolFilter, setSymbolFilter] = useState("");
+  const [familyFilter, setFamilyFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [severityFilter, setSeverityFilter] = useState("");
 
   if (loading && !hasData) {
     return <LoadingState title="Loading drift diagnostics" description="Collecting live-vs-research mismatch and decay-warning candidates." />;
@@ -31,7 +51,21 @@ export default function DriftPage() {
   }
 
   const rows = data.rows ?? [];
-  const topAttention = rows.filter((row) => Boolean(row.decay_warning) || Number(row.recent_avg_pnl ?? 0) < 0).slice(0, 12);
+  const filterOptions = data.summary?.available_filters ?? {};
+
+  const filteredRows = useMemo(
+    () => rows.filter((row) => {
+      if (symbolFilter && row.symbol !== symbolFilter) return false;
+      if (familyFilter && row.family !== familyFilter) return false;
+      if (statusFilter && row.status !== statusFilter) return false;
+      if (severityFilter && row.severity !== severityFilter) return false;
+      return true;
+    }),
+    [rows, symbolFilter, familyFilter, statusFilter, severityFilter],
+  );
+
+  const topAttention = filteredRows.filter((row) => row.severity === "drifting" || row.severity === "broken" || Boolean(row.decay_warning)).slice(0, 12);
+  const severityCounts = data.summary?.severity_counts ?? {};
 
   return (
     <div className="dashboard-stack">
@@ -49,10 +83,41 @@ export default function DriftPage() {
 
       <section className="stats-grid">
         <StatCard label="Tracked strategies" value={formatNumber(Number(data.summary?.strategy_count ?? 0))} hint="Rows surfaced by drift adapter" tone="info" />
-        <StatCard label="Attention rows" value={formatNumber(Number(data.summary?.attention_count ?? 0))} hint="Rows with warning-like signals" tone="warning" />
-        <StatCard label="Decay warnings" value={formatNumber(Number(data.summary?.decay_warning_count ?? 0))} hint="Live trades >= 3 and recent average below zero" tone="critical" />
-        <StatCard label="Negative recent avg" value={formatNumber(Number(data.summary?.negative_recent_avg_count ?? 0))} hint="Recent PnL average below zero" tone="warning" />
+        <StatCard label="Visible rows" value={formatNumber(filteredRows.length)} hint="Rows after current filters" tone="info" />
+        <StatCard label="Broken" value={formatNumber(Number(severityCounts.broken ?? 0))} hint="Highest-risk drift severity" tone="critical" />
+        <StatCard label="Drifting" value={formatNumber(Number(severityCounts.drifting ?? 0))} hint="Negative or widening mismatch" tone="warning" />
       </section>
+
+      <Section title="Drift filters" description="Slice the drift snapshot by symbol, family, lifecycle status, and severity.">
+        <div className="flex flex-wrap gap-3">
+          <select className="rounded-md border bg-background px-3 py-2 text-sm" value={symbolFilter || "__all__"} onChange={(event) => setSymbolFilter(normalizeFilterValue(event.target.value))}>
+            <option value="__all__">All symbols</option>
+            {(filterOptions.symbols ?? []).map((value) => <option key={value} value={value}>{value}</option>)}
+          </select>
+          <select className="rounded-md border bg-background px-3 py-2 text-sm" value={familyFilter || "__all__"} onChange={(event) => setFamilyFilter(normalizeFilterValue(event.target.value))}>
+            <option value="__all__">All families</option>
+            {(filterOptions.families ?? []).map((value) => <option key={value} value={value}>{value}</option>)}
+          </select>
+          <select className="rounded-md border bg-background px-3 py-2 text-sm" value={statusFilter || "__all__"} onChange={(event) => setStatusFilter(normalizeFilterValue(event.target.value))}>
+            <option value="__all__">All statuses</option>
+            {(filterOptions.statuses ?? []).map((value) => <option key={value} value={value}>{value}</option>)}
+          </select>
+          <select className="rounded-md border bg-background px-3 py-2 text-sm" value={severityFilter || "__all__"} onChange={(event) => setSeverityFilter(normalizeFilterValue(event.target.value))}>
+            <option value="__all__">All severities</option>
+            {(filterOptions.severities ?? []).map((value) => <option key={value} value={value}>{value}</option>)}
+          </select>
+          <ToolbarButton
+            label="Reset filters"
+            onClick={() => {
+              setSymbolFilter("");
+              setFamilyFilter("");
+              setStatusFilter("");
+              setSeverityFilter("");
+            }}
+            tone="neutral"
+          />
+        </div>
+      </Section>
 
       <Section title="Drift summary" description="Compact aggregate statistics for the current drift snapshot.">
         <KeyValueGrid data={data.summary ?? {}} emptyTitle="No drift summary" emptyDescription="The drift endpoint did not return aggregate drift metadata." />
@@ -60,30 +125,33 @@ export default function DriftPage() {
 
       <Section title="Attention queue" description="Highest-priority rows where live behavior is diverging or degrading.">
         <DataTable
-          columns={["Strategy", "Symbol", "Family", "Status", "Research return", "Live PnL", "Recent avg", "Decay", "Best / worst regime"]}
-          rows={topAttention.map((row) => [
+          columns={["Strategy", "Symbol", "Family", "Status", "Severity", "Research return", "Live PnL", "Recent avg", "Decay", "Best / worst regime"]}
+          rows={topAttention.map((row: DriftSummaryRow) => [
             compactValue(row.name),
             compactValue(row.symbol),
             compactValue(row.family),
             compactValue(row.status),
+            severityBadge(row.severity),
             formatPercent(Number(row.research_return_pct ?? 0)),
             formatCurrency(Number(row.live_total_pnl ?? 0)),
             formatCurrency(Number(row.recent_avg_pnl ?? 0)),
-            <StatusBadge key={`${String(row.name)}-decay`} label={row.decay_warning ? "Warning" : "Watch"} tone={row.decay_warning ? "critical" : "warning"} />,
+            <StatusBadge key={`${String(row.name)}-decay`} label={row.decay_warning ? "Warning" : "Stable"} tone={row.decay_warning ? "critical" : "success"} />,
             compactValue(`${row.best_regime ?? "?"} / ${row.worst_regime ?? "?"}`),
           ])}
           emptyTitle="No attention rows"
-          emptyDescription="The current drift snapshot did not surface rows that crossed the simple warning heuristics."
+          emptyDescription="No filtered rows currently cross the drift attention heuristics."
         />
       </Section>
 
       <Section title="Drift leaderboard" description="Sorted rows with live-vs-research mismatch context for review and triage.">
         <DataTable
-          columns={["Strategy", "Symbol", "Status", "Trades", "Research return", "Research sharpe", "Live PnL", "Recent avg", "Drift score", "Last update"]}
-          rows={rows.map((row) => [
+          columns={["Strategy", "Symbol", "Family", "Status", "Severity", "Trades", "Research return", "Research sharpe", "Live PnL", "Recent avg", "Drift score", "Last update"]}
+          rows={filteredRows.map((row: DriftSummaryRow) => [
             compactValue(row.name),
             compactValue(row.symbol),
+            compactValue(row.family),
             compactValue(row.status),
+            severityBadge(row.severity),
             formatNumber(Number(row.live_trades ?? 0)),
             formatPercent(Number(row.research_return_pct ?? 0)),
             formatNumber(Number(row.research_sharpe ?? 0)),
@@ -93,7 +161,7 @@ export default function DriftPage() {
             compactValue(formatDateTime(row.last_update)),
           ])}
           emptyTitle="No drift rows"
-          emptyDescription="The drift adapter did not produce any rows for this snapshot."
+          emptyDescription="No rows match the current filter selection."
         />
       </Section>
     </div>

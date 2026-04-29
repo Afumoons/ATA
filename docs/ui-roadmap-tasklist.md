@@ -72,8 +72,8 @@ Transform the current Operator UI from a read-only monitoring surface into a dec
 
 ### U2B — Drift depth improvements
 - [x] Commit U2A cleanly as isolated UI commit
-- [ ] Add symbol / family / status filters to Drift page
-- [ ] Add severity badges (healthy / watch / drifting / broken)
+- [x] Add symbol / family / status filters to Drift page
+- [x] Add severity badges (healthy / watch / drifting / broken)
 - [ ] Add sparkline for recent PnL sequence
 - [ ] Add regime mismatch indicator (research best regime vs live observed regime)
 - [ ] Add repeated decay-warning counter per strategy

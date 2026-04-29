@@ -391,6 +391,10 @@ def load_drift_summary() -> Dict[str, Any]:
     pool = load_pool()
     live_stats = load_strategy_live_stats_snapshot().get("strategies", {})
     rows: List[Dict[str, Any]] = []
+    symbols: Counter[str] = Counter()
+    families: Counter[str] = Counter()
+    statuses: Counter[str] = Counter()
+    severities: Counter[str] = Counter()
 
     for name, rec in pool.strategies.items():
         stats = rec.stats or {}
@@ -407,12 +411,29 @@ def load_drift_summary() -> Dict[str, Any]:
         drift_score = abs(live_total_pnl - research_return_pct)
         decay_warning = live_trades >= 3 and recent_avg < 0
 
+        severity = "healthy"
+        if decay_warning or drift_score >= 20 or recent_avg <= -5:
+            severity = "broken"
+        elif drift_score >= 10 or recent_avg < 0:
+            severity = "drifting"
+        elif drift_score >= 3 or live_trades == 0:
+            severity = "watch"
+
+        family = ((stats.get("strategy") or {}).get("family") if isinstance(stats, dict) else None) or stats.get("family") or "unknown"
+        symbol = str(rec.symbol or "unknown")
+        status = str(rec.status or "unknown")
+
+        symbols[symbol] += 1
+        families[str(family)] += 1
+        statuses[status] += 1
+        severities[severity] += 1
+
         rows.append({
             "name": name,
             "symbol": rec.symbol,
             "timeframe": rec.timeframe,
             "status": rec.status,
-            "family": ((stats.get("strategy") or {}).get("family") if isinstance(stats, dict) else None) or stats.get("family") or "unknown",
+            "family": family,
             "research_return_pct": research_return_pct,
             "research_sharpe": research_sharpe,
             "live_total_pnl": live_total_pnl,
@@ -422,11 +443,12 @@ def load_drift_summary() -> Dict[str, Any]:
             "worst_regime": meta.get("worst_regime"),
             "drift_score": drift_score,
             "decay_warning": decay_warning,
+            "severity": severity,
             "last_update": live.get("last_update") if isinstance(live, dict) else None,
         })
 
-    rows.sort(key=lambda row: (bool(row.get("decay_warning")), float(row.get("drift_score", 0.0))), reverse=True)
-    attention = [row for row in rows if row.get("decay_warning") or abs(float(row.get("recent_avg_pnl", 0.0))) > 0]
+    rows.sort(key=lambda row: (float({"healthy": 0, "watch": 1, "drifting": 2, "broken": 3}.get(str(row.get("severity")), 0)), bool(row.get("decay_warning")), float(row.get("drift_score", 0.0))), reverse=True)
+    attention = [row for row in rows if row.get("severity") in {"drifting", "broken"} or row.get("decay_warning") or abs(float(row.get("recent_avg_pnl", 0.0))) > 0]
 
     return {
         "generated_at": utc_now_iso(),
@@ -436,6 +458,13 @@ def load_drift_summary() -> Dict[str, Any]:
             "attention_count": len(attention),
             "decay_warning_count": sum(1 for row in rows if row.get("decay_warning")),
             "negative_recent_avg_count": sum(1 for row in rows if float(row.get("recent_avg_pnl", 0.0)) < 0),
+            "severity_counts": dict(sorted(severities.items())),
+            "available_filters": {
+                "symbols": sorted(symbols.keys()),
+                "families": sorted(families.keys()),
+                "statuses": sorted(statuses.keys()),
+                "severities": ["healthy", "watch", "drifting", "broken"],
+            },
         },
     }
 
