@@ -25,6 +25,7 @@
 - [x] Add U5B nearest-neighbor / clone similarity panel on Strategy detail
 - [x] Add U5B duplicate-risk visibility from semantic similarity / memory veto context
 - [x] Add U6A governance visibility page
+- [x] Add U7A operator attention grouping pass on key triage-heavy pages
 
 ## Completion Rule
 When every item in `docs/ui-roadmap-tasklist.md` is checked or intentionally closed, mark this plan completed and stop/remove the background cron loop.

@@ -2,6 +2,7 @@
 
 import { PageHeader } from "@/components/app-shell";
 import {
+  AttentionCard,
   DataTable,
   EmptyState,
   ErrorState,
@@ -412,6 +413,35 @@ export default function ExecutionPage() {
             ])}
             emptyTitle="No execution artifact warnings shaped"
             emptyDescription="The execution payload did not return artifact freshness diagnostics for this snapshot."
+          />
+        </div>
+      </Section>
+
+      <Section title="Operator attention lanes" description="Quick visual grouping of the execution issues most likely to need immediate intervention or deeper diagnosis.">
+        <div className="attention-grid">
+          <AttentionCard
+            label="No-trade pressure"
+            value={formatNumber(Number(noTradeDiagnosis.active_cause_count ?? activeNoTradeCauses.length))}
+            detail={String(noTradeDiagnosis.headline ?? "No active no-trade cause is dominating this execution snapshot.")}
+            tone={activeNoTradeCauses.length > 0 ? "warning" : "success"}
+          />
+          <AttentionCard
+            label="Stale artifacts"
+            value={formatNumber(Number(executionArtifactWarnings.critical_count ?? 0))}
+            detail="Critical freshness misses can distort downstream posture, reconciliation, and operator trust in the snapshot."
+            tone={Number(executionArtifactWarnings.critical_count ?? 0) > 0 ? "critical" : "success"}
+          />
+          <AttentionCard
+            label="Context registration failures"
+            value={formatNumber(Number(tradeContextRegistrationFailures.count ?? 0))}
+            detail="Journal registration errors strip away execution evidence and weaken exit explainability."
+            tone={Number(tradeContextRegistrationFailures.count ?? 0) > 0 ? "warning" : "success"}
+          />
+          <AttentionCard
+            label="Unmatched closed deals"
+            value={formatNumber(Number(unmatchedSummary.count ?? data.unmatched_closed_deals.count ?? 0))}
+            detail="Closed-deal backlog is the clearest signal that reconciliation confidence is slipping and may need manual help."
+            tone={Number(unmatchedSummary.count ?? data.unmatched_closed_deals.count ?? 0) > 0 ? "critical" : "success"}
           />
         </div>
       </Section>

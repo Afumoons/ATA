@@ -77,3 +77,6 @@
 - Added a dedicated `/governance` page that turns the existing pool summary payload into a read-only governance surface for concentration heuristics, policy-band violations, family saturation/diversity, and active-vs-disabled inventory balance.
 - Verified the U6A governance slice with a production `npm run build` in `ui-front`.
 - Marked U6A complete in roadmap/task notes; next slice is U7A information design pass.
+- Added a shared attention-card treatment plus operator attention lanes on Drift, Review, and Execution so the highest-risk buckets read as grouped visual priorities instead of only stat rows and tables.
+- Verified the U7A attention-grouping slice with a production `npm run build` in `ui-front`.
+- Marked the U7A operator-attention-grouping item complete in roadmap/task notes; next slice is dense-view hierarchy and generic-table reduction on the most crowded pages.

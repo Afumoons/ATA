@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { PageHeader } from "@/components/app-shell";
 import {
+  AttentionCard,
   DataTable,
   ErrorState,
   FreshnessBadge,
@@ -162,6 +163,35 @@ export default function ReviewPage() {
               setStatusFilter("");
               setSymbolFilter("");
             }}
+            tone="neutral"
+          />
+        </div>
+      </Section>
+
+      <Section title="Triage lane spotlight" description="Visual grouping for the four operator lanes that matter most before reading the full queue.">
+        <div className="attention-grid">
+          <AttentionCard
+            label="Promote watch"
+            value={formatNumber(Number(triageCounts.promote_watch ?? 0))}
+            detail="Near-acceptance candidates that deserve quick promotion review before they cool off."
+            tone="success"
+          />
+          <AttentionCard
+            label="Demote watch"
+            value={formatNumber(Number(triageCounts.demote_watch ?? 0))}
+            detail="Live rows drifting, degrading, or staying active while evidence is turning against them."
+            tone="critical"
+          />
+          <AttentionCard
+            label="Inspect"
+            value={formatNumber(Number(triageCounts.inspect ?? 0))}
+            detail="Rows with mismatched metadata or runtime anomalies that need diagnosis, not instant action."
+            tone="warning"
+          />
+          <AttentionCard
+            label="Archive"
+            value={formatNumber(Number(triageCounts.archive ?? 0))}
+            detail="Disabled or cleanup-tier rows that still carry governance or housekeeping questions."
             tone="neutral"
           />
         </div>

@@ -127,6 +127,31 @@ export function StatusStrip({
   );
 }
 
+export function AttentionCard({
+  label,
+  value,
+  detail,
+  tone = "neutral",
+}: {
+  label: string;
+  value: ReactNode;
+  detail: string;
+  tone?: StatusTone;
+}) {
+  const toneLabel = tone === "neutral" ? "Monitor" : tone.charAt(0).toUpperCase() + tone.slice(1);
+
+  return (
+    <Card className={cn("attention-card", `tone-${tone}`)}>
+      <div className="attention-card-topline">
+        <span className="attention-card-label">{label}</span>
+        <StatusBadge label={toneLabel} tone={tone} />
+      </div>
+      <strong className="attention-card-value">{value}</strong>
+      <p>{detail}</p>
+    </Card>
+  );
+}
+
 export function DataTable({
   columns,
   rows,

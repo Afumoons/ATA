@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { PageHeader } from "@/components/app-shell";
 import {
+  AttentionCard,
   DataTable,
   ErrorState,
   FreshnessBadge,
@@ -254,6 +255,35 @@ export default function DriftPage() {
               setSortPreset("highest-drift");
             }}
             tone="neutral"
+          />
+        </div>
+      </Section>
+
+      <Section title="Operator attention lanes" description="A faster read on which drift patterns deserve immediate review before you scan the full leaderboard.">
+        <div className="attention-grid">
+          <AttentionCard
+            label="Broken drift"
+            value={formatNumber(Number(severityCounts.broken ?? 0))}
+            detail="Highest-risk rows where live behavior is sharply separated from research expectations."
+            tone="critical"
+          />
+          <AttentionCard
+            label="Negative momentum"
+            value={formatNumber(Number(severityCounts.drifting ?? 0))}
+            detail="Strategies still alive, but recent averages and drift score are now leaning the wrong way."
+            tone="warning"
+          />
+          <AttentionCard
+            label="Regime disagreement"
+            value={formatNumber(Number(regimeAlignmentCounts.mismatch ?? 0))}
+            detail="Research thinks the edge lives somewhere else than what live traffic is currently showing."
+            tone="critical"
+          />
+          <AttentionCard
+            label="Manual review queue"
+            value={formatNumber(manualReviewQueue.length)}
+            detail="Rows where repeated decay, anomalies, or mismatch stack up enough to justify human triage."
+            tone={manualReviewQueue.length > 0 ? "critical" : "neutral"}
           />
         </div>
       </Section>

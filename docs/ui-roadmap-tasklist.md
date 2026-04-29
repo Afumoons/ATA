@@ -155,7 +155,7 @@ Transform the current Operator UI from a read-only monitoring surface into a dec
 
 ### U7A — Information design
 - [ ] Improve hierarchy for dense data views
-- [ ] Add better visual grouping of operator attention items
+- [x] Add better visual grouping of operator attention items
 - [ ] Reduce generic table feel on key pages
 - [ ] Add more expressive badges / severity color language
 
