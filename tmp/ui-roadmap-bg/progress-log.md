@@ -30,3 +30,7 @@
 - Extended the Research page with a skip-reason drilldown table so operators can inspect why each family is being blocked without leaving the funnel view.
 - Verified the U1C skip-drilldown slice with `python -m compileall ui_api`, a package-context smoke test for `load_research_summary('XAUUSDm', 'M15')`, and production `npm run build` in `ui-front`.
 - Marked U1C fully complete in roadmap/task notes; next slice is U4A richer open-trade drilldown on the Execution page.
+- Added enriched open-trade drilldown data in the execution adapter, including per-symbol posture rollups, protection coverage, hold-age metrics, live strategy context, and operator review flags.
+- Extended `/execution` with open-trade posture summary cards, per-symbol posture aggregation, and a richer drilldown table for position-level triage.
+- Verified the open-trade drilldown slice with `python -m compileall ui_api`, a direct `load_execution_summary()` smoke test, and production `npm run build` in `ui-front`.
+- Marked the U4A richer open-trade drilldown item complete in roadmap/task notes; next slice is U4A per-symbol execution posture cards.

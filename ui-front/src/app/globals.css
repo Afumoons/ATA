@@ -607,6 +607,19 @@ table td {
   color: var(--text-muted);
 }
 
+.table-stack {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.table-stack strong,
+.table-stack span {
+  line-height: 1.45;
+  word-break: break-word;
+}
+
 table td:first-child,
 .kv-value,
 .timeline-cell strong,

@@ -19,6 +19,46 @@ import { uiApi } from "@/lib/api";
 import { compactValue, formatCurrency, formatDateTime, formatNumber } from "@/lib/format";
 import { getHighSignalExecutionReasons, summarizeEvent, toneFromSignedNumber } from "@/lib/ui-state";
 
+function formatDurationMinutes(value: unknown) {
+  if (typeof value !== "number" || Number.isNaN(value)) return "—";
+  if (value < 60) return `${value}m`;
+  const hours = Math.floor(value / 60);
+  const minutes = value % 60;
+  if (hours < 24) return `${hours}h ${minutes}m`;
+  const days = Math.floor(hours / 24);
+  const remainderHours = hours % 24;
+  return `${days}d ${remainderHours}h`;
+}
+
+function toneFromProtectionStatus(value: unknown) {
+  switch (value) {
+    case "sl_tp":
+      return "success" as const;
+    case "sl_only":
+    case "tp_only":
+      return "warning" as const;
+    case "unprotected":
+      return "critical" as const;
+    default:
+      return "neutral" as const;
+  }
+}
+
+function labelForProtectionStatus(value: unknown) {
+  switch (value) {
+    case "sl_tp":
+      return "SL + TP";
+    case "sl_only":
+      return "SL only";
+    case "tp_only":
+      return "TP only";
+    case "unprotected":
+      return "No SL / TP";
+    default:
+      return compactValue(value);
+  }
+}
+
 export default function ExecutionPage() {
   const executionQuery = useQuery("execution-summary", uiApi.executionSummary, { refetchIntervalMs: 45_000 });
   const auditQuery = useQuery("execution-audit-context", () => uiApi.auditTimeline(30), { refetchIntervalMs: 60_000 });
@@ -39,6 +79,9 @@ export default function ExecutionPage() {
   }
 
   const diagnosisItems = getHighSignalExecutionReasons(data);
+  const openTradeSummary = data.open_trades.summary ?? {};
+  const openTradeDrilldown = data.open_trades.drilldown ?? [];
+  const openTradeBySymbol = openTradeSummary.by_symbol ?? [];
   const attentionEvents = (auditQuery.data?.events ?? []).filter((event) => {
     const source = String(event.source ?? "").toLowerCase();
     return source.includes("unmatched") || source.includes("trade");
@@ -157,6 +200,100 @@ export default function ExecutionPage() {
           ])}
           emptyTitle="No open trades"
           emptyDescription="The latest execution snapshot reports zero open positions. If that is unexpected, inspect the diagnosis summary and recent attention events above."
+        />
+      </Section>
+
+      <Section title="Open trade posture" description="Execution-facing breakdown of live positions by symbol, protection state, age, and floating pressure.">
+        <div className="dashboard-stack">
+          <section className="stats-grid">
+            <StatCard label="Symbols engaged" value={formatNumber(Number(openTradeSummary.symbol_count ?? 0))} hint="Symbols with at least one open trade" tone="info" />
+            <StatCard
+              label="Net floating PnL"
+              value={formatCurrency(Number(openTradeSummary.net_floating_pnl ?? 0))}
+              hint={`${formatNumber(Number(openTradeSummary.floating_loss_count ?? 0))} trade(s) underwater`}
+              tone={toneFromSignedNumber(Number(openTradeSummary.net_floating_pnl ?? 0))}
+            />
+            <StatCard
+              label="Protection coverage"
+              value={`${formatNumber(Number(openTradeSummary.protected_count ?? 0))} / ${formatNumber(Number(data.open_trades.count ?? 0))}`}
+              hint={`${formatNumber(Number(openTradeSummary.incomplete_protection_count ?? 0))} need SL/TP review`}
+              tone={Number(openTradeSummary.incomplete_protection_count ?? 0) > 0 ? "warning" : "success"}
+            />
+            <StatCard
+              label="Aged / stale"
+              value={`${formatNumber(Number(openTradeSummary.aged_trade_count ?? 0))} / ${formatNumber(Number(openTradeSummary.stale_update_count ?? 0))}`}
+              hint="Held over 4h / update lag over 60m"
+              tone={Number(openTradeSummary.aged_trade_count ?? 0) > 0 || Number(openTradeSummary.stale_update_count ?? 0) > 0 ? "warning" : "neutral"}
+            />
+          </section>
+
+          <DataTable
+            columns={["Symbol", "Open trades", "Net floating", "Volume", "Strategies", "Oldest position"]}
+            rows={openTradeBySymbol.map((row) => [
+              compactValue(row.symbol),
+              compactValue(row.open_trade_count),
+              <div key={`${compactValue(row.symbol)}-pnl`} className="table-stack">
+                <strong className={`tone-${toneFromSignedNumber(Number(row.net_floating_pnl ?? 0))}`}>{formatCurrency(Number(row.net_floating_pnl ?? 0))}</strong>
+                <span>{formatNumber(Number(row.floating_loss_count ?? 0))} loss-making trade(s)</span>
+              </div>,
+              compactValue(row.total_volume),
+              <div key={`${compactValue(row.symbol)}-strategies`} className="table-stack">
+                <strong>{formatNumber(Number(row.strategy_count ?? 0))}</strong>
+                <span>{Array.isArray(row.strategies) && row.strategies.length ? row.strategies.join(", ") : "—"}</span>
+              </div>,
+              <div key={`${compactValue(row.symbol)}-age`} className="table-stack">
+                <strong>{formatDurationMinutes(typeof row.oldest_age_minutes === "number" ? row.oldest_age_minutes : Number.NaN)}</strong>
+                <span>{formatDateTime(typeof row.oldest_open_time === "string" ? row.oldest_open_time : undefined)}</span>
+              </div>,
+            ])}
+            emptyTitle="No symbol posture yet"
+            emptyDescription="There are no open positions to aggregate by symbol in this snapshot."
+          />
+        </div>
+      </Section>
+
+      <Section title="Open trade drilldown" description="Per-position operator context including hold age, protection completeness, live strategy context, and flags that deserve review.">
+        <DataTable
+          columns={["Strategy", "Position", "Live context", "Protection", "Flags"]}
+          rows={openTradeDrilldown.map((trade) => [
+            <div key={`${compactValue(trade.ticket)}-strategy`} className="table-stack">
+              <strong>{compactValue(trade.strategy_name ?? trade.comment)}</strong>
+              <span>{compactValue(trade.symbol)}</span>
+            </div>,
+            <div key={`${compactValue(trade.ticket)}-position`} className="table-stack">
+              <strong className={`tone-${toneFromSignedNumber(Number(trade.floating_pnl ?? 0))}`}>{formatCurrency(Number(trade.floating_pnl ?? 0))}</strong>
+              <span>{compactValue(trade.side)} · vol {compactValue(trade.volume)} · held {formatDurationMinutes(typeof trade.holding_minutes === "number" ? trade.holding_minutes : Number.NaN)}</span>
+              <span>Opened {formatDateTime(typeof trade.open_time === "string" ? trade.open_time : undefined)} at {compactValue(trade.open_price)}</span>
+            </div>,
+            <div key={`${compactValue(trade.ticket)}-live`} className="table-stack">
+              <strong>{formatNumber(typeof trade.live_num_trades === "number" ? trade.live_num_trades : undefined)} live trades</strong>
+              <span>Realized {formatCurrency(typeof trade.live_total_pnl === "number" ? trade.live_total_pnl : undefined)}</span>
+              <span>Recent PnLs {compactValue(trade.recent_realized_pnls)}</span>
+            </div>,
+            <div key={`${compactValue(trade.ticket)}-protection`} className="table-stack">
+              <strong className={`tone-${toneFromProtectionStatus(trade.protection_status)}`}>{labelForProtectionStatus(trade.protection_status)}</strong>
+              <span>SL {compactValue(trade.sl)} · TP {compactValue(trade.tp)}</span>
+              <span>R:R {compactValue(trade.risk_reward)} · update lag {formatDurationMinutes(typeof trade.minutes_since_update === "number" ? trade.minutes_since_update : Number.NaN)}</span>
+            </div>,
+            <div key={`${compactValue(trade.ticket)}-flags`} className="table-stack">
+              <div className="badge-row">
+                {Array.isArray(trade.operator_flags) && trade.operator_flags.length ? (
+                  trade.operator_flags.map((flag) => (
+                    <StatusBadge
+                      key={`${compactValue(trade.ticket)}-${String(flag)}`}
+                      label={String(flag).replace(/_/g, " ")}
+                      tone={String(flag).includes("loss") || String(flag).includes("unprotected") ? "critical" : String(flag).includes("incomplete") || String(flag).includes("aged") || String(flag).includes("stale") ? "warning" : "info"}
+                    />
+                  ))
+                ) : (
+                  <StatusBadge label="No review flags" tone="success" />
+                )}
+              </div>
+              <span>Ticket {compactValue(trade.ticket ?? trade.position_id)}</span>
+            </div>,
+          ])}
+          emptyTitle="No enriched open-trade rows"
+          emptyDescription="There are no current positions to enrich with operator drilldown context."
         />
       </Section>
 

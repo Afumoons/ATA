@@ -34,6 +34,7 @@ Implement and advance `docs/ui-roadmap-tasklist.md` until the tasklist is fully 
 - U3A explainability surfaces added on Strategy detail in current workstream
 - U3B review queue page added in current workstream
 - U1C research filters added on Research page in current workstream
+- U4A richer open trade drilldown added on Execution page in current workstream
 
 ## Milestone Order
 1. Commit roadmap tasklist doc cleanly
@@ -65,5 +66,6 @@ For each autonomous run:
 - U1C research filters are now complete for symbol, timeframe, and family/sort controls
 - U1C research diagnostics is now complete, including skip-reason drilldown with counts and examples per family
 - U1C funnel visualization, previous-run comparison, and fragile-family highlighting are now complete
-- Next highest-value slice is U4A execution depth, starting with richer open trade drilldown
+- U4A richer open trade drilldown is now complete, including per-symbol posture rollups, protection coverage, hold-age context, and per-position review flags
+- Next highest-value slice is U4A per-symbol execution posture cards on the Execution page
 - User explicitly wants progress reports, not approval questions

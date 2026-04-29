@@ -458,10 +458,198 @@ def load_recent_trade_log(limit: int = 30) -> List[Dict[str, Any]]:
     return rows
 
 
+def _normalize_symbol_key(value: Any) -> str:
+    symbol = str(value or "").strip().upper()
+    if symbol.endswith("M") and len(symbol) > 3:
+        return symbol[:-1]
+    return symbol
+
+
+def _canonical_trade_side(value: Any) -> str:
+    side = str(value or "").strip().lower()
+    if side in {"buy", "long"}:
+        return "long"
+    if side in {"sell", "short"}:
+        return "short"
+    return side or "unknown"
+
+
+def _build_open_trade_drilldown(
+    trades: List[Dict[str, Any]],
+    live_stats: Dict[str, Any],
+    recent_trade_log: List[Dict[str, Any]],
+) -> Dict[str, Any]:
+    strategy_rows = (live_stats.get("strategies") or {}) if isinstance(live_stats, dict) else {}
+    if not isinstance(strategy_rows, dict):
+        strategy_rows = {}
+
+    recent_trade_keys = {
+        (str(row.get("strategy") or row.get("strategy_name") or ""), _normalize_symbol_key(row.get("symbol")), _canonical_trade_side(row.get("dir") or row.get("direction") or row.get("side")))
+        for row in recent_trade_log
+        if isinstance(row, dict)
+    }
+
+    by_symbol: Dict[str, Dict[str, Any]] = {}
+    drilldown_rows: List[Dict[str, Any]] = []
+    protected_count = 0
+    incomplete_protection_count = 0
+    aged_trade_count = 0
+    stale_update_count = 0
+    floating_loss_count = 0
+    total_floating_pnl = 0.0
+
+    now = datetime.now(timezone.utc)
+
+    for trade in trades:
+        strategy_name = str(trade.get("strategy_name") or trade.get("comment") or "")
+        symbol = str(trade.get("symbol") or "")
+        normalized_symbol = _normalize_symbol_key(symbol)
+        side = _canonical_trade_side(trade.get("side") or trade.get("direction") or trade.get("dir"))
+        volume = _safe_float(trade.get("volume") or trade.get("lots")) or 0.0
+        floating_pnl = _safe_float(trade.get("floating_pnl") or trade.get("pnl") or trade.get("profit")) or 0.0
+        open_price = _safe_float(trade.get("open_price"))
+        stop_loss = _safe_float(trade.get("sl"))
+        take_profit = _safe_float(trade.get("tp"))
+        open_time = parse_iso_datetime(trade.get("open_time") or trade.get("opened_at"))
+        last_update = parse_iso_datetime(trade.get("last_update") or trade.get("updated_at"))
+        live_row = strategy_rows.get(strategy_name) if isinstance(strategy_rows.get(strategy_name), dict) else {}
+        live_total_pnl = _safe_float((live_row or {}).get("total_pnl"))
+        live_num_trades = _safe_int((live_row or {}).get("num_trades"))
+        recent_pnls = list((live_row or {}).get("recent_pnls") or [])[:5]
+
+        age_minutes = int((now - open_time).total_seconds() // 60) if open_time else None
+        minutes_since_update = int((now - last_update).total_seconds() // 60) if last_update else None
+
+        stop_distance = abs(open_price - stop_loss) if open_price is not None and stop_loss is not None else None
+        target_distance = abs(take_profit - open_price) if open_price is not None and take_profit is not None else None
+        risk_reward = round(target_distance / stop_distance, 2) if stop_distance and target_distance and stop_distance > 0 else None
+
+        has_stop = stop_loss is not None
+        has_target = take_profit is not None
+        protection_status = "sl_tp" if has_stop and has_target else "sl_only" if has_stop else "tp_only" if has_target else "unprotected"
+
+        flags: List[str] = []
+        if floating_pnl < 0:
+            flags.append("floating_loss")
+            floating_loss_count += 1
+        if protection_status != "sl_tp":
+            flags.append("incomplete_protection")
+            incomplete_protection_count += 1
+        else:
+            protected_count += 1
+        if age_minutes is not None and age_minutes >= 240:
+            flags.append("aged_position")
+            aged_trade_count += 1
+        if minutes_since_update is not None and minutes_since_update >= 60:
+            flags.append("stale_update")
+            stale_update_count += 1
+        if not live_row:
+            flags.append("missing_live_stats")
+        if (strategy_name, normalized_symbol, side) not in recent_trade_keys:
+            flags.append("no_recent_log_match")
+
+        total_floating_pnl += floating_pnl
+
+        symbol_bucket = by_symbol.setdefault(
+            symbol or normalized_symbol or "unknown",
+            {
+                "symbol": symbol or normalized_symbol or "unknown",
+                "open_trade_count": 0,
+                "net_floating_pnl": 0.0,
+                "total_volume": 0.0,
+                "strategies": set(),
+                "oldest_open_time": None,
+                "aged_trade_count": 0,
+                "floating_loss_count": 0,
+            },
+        )
+        symbol_bucket["open_trade_count"] += 1
+        symbol_bucket["net_floating_pnl"] += floating_pnl
+        symbol_bucket["total_volume"] += volume
+        if strategy_name:
+            symbol_bucket["strategies"].add(strategy_name)
+        if age_minutes is not None and age_minutes >= 240:
+            symbol_bucket["aged_trade_count"] += 1
+        if floating_pnl < 0:
+            symbol_bucket["floating_loss_count"] += 1
+        current_oldest = parse_iso_datetime(symbol_bucket.get("oldest_open_time"))
+        if open_time and (current_oldest is None or open_time < current_oldest):
+            symbol_bucket["oldest_open_time"] = open_time.replace(microsecond=0).isoformat()
+
+        drilldown_rows.append({
+            **trade,
+            "strategy_name": strategy_name or None,
+            "symbol_normalized": normalized_symbol or None,
+            "side": side,
+            "floating_pnl": floating_pnl,
+            "volume": volume,
+            "open_price": open_price,
+            "sl": stop_loss,
+            "tp": take_profit,
+            "holding_minutes": age_minutes,
+            "minutes_since_update": minutes_since_update,
+            "stop_distance": round(stop_distance, 5) if stop_distance is not None else None,
+            "target_distance": round(target_distance, 5) if target_distance is not None else None,
+            "risk_reward": risk_reward,
+            "protection_status": protection_status,
+            "live_total_pnl": live_total_pnl,
+            "live_num_trades": live_num_trades,
+            "recent_realized_pnls": recent_pnls,
+            "operator_flags": flags,
+        })
+
+    by_symbol_rows = []
+    for bucket in by_symbol.values():
+        strategies = sorted(bucket["strategies"])
+        oldest_open_time = bucket.get("oldest_open_time")
+        oldest_age_minutes = None
+        oldest_open_dt = parse_iso_datetime(oldest_open_time)
+        if oldest_open_dt:
+            oldest_age_minutes = int((now - oldest_open_dt).total_seconds() // 60)
+        by_symbol_rows.append({
+            "symbol": bucket["symbol"],
+            "open_trade_count": bucket["open_trade_count"],
+            "net_floating_pnl": round(float(bucket["net_floating_pnl"]), 2),
+            "total_volume": round(float(bucket["total_volume"]), 4),
+            "strategy_count": len(strategies),
+            "strategies": strategies,
+            "oldest_open_time": oldest_open_time,
+            "oldest_age_minutes": oldest_age_minutes,
+            "aged_trade_count": bucket["aged_trade_count"],
+            "floating_loss_count": bucket["floating_loss_count"],
+        })
+
+    by_symbol_rows.sort(key=lambda row: (abs(float(row["net_floating_pnl"])), int(row["open_trade_count"])), reverse=True)
+    drilldown_rows.sort(
+        key=lambda row: (
+            abs(float(row.get("floating_pnl") or 0.0)),
+            int(row.get("holding_minutes") or 0),
+            str(row.get("strategy_name") or ""),
+        ),
+        reverse=True,
+    )
+
+    return {
+        "summary": {
+            "symbol_count": len(by_symbol_rows),
+            "net_floating_pnl": round(total_floating_pnl, 2),
+            "protected_count": protected_count,
+            "incomplete_protection_count": incomplete_protection_count,
+            "aged_trade_count": aged_trade_count,
+            "stale_update_count": stale_update_count,
+            "floating_loss_count": floating_loss_count,
+            "by_symbol": by_symbol_rows,
+        },
+        "drilldown": drilldown_rows,
+    }
+
+
 def load_execution_summary() -> Dict[str, Any]:
     live_state = load_live_state_snapshot()
     live_stats = load_strategy_live_stats_snapshot()
     open_trades = load_open_trades_snapshot()
+    recent_trade_log = load_recent_trade_log()
+    open_trade_context = _build_open_trade_drilldown(open_trades.get("trades") or [], live_stats, recent_trade_log)
     unmatched_rows = read_json_file(UNMATCHED_CLOSED_DEALS_PATH, default=[])
     if not isinstance(unmatched_rows, list):
         unmatched_rows = []
@@ -474,12 +662,15 @@ def load_execution_summary() -> Dict[str, Any]:
             "total_trades": live_stats["total_trades"],
             "top_active": live_stats["top_active"],
         },
-        "open_trades": open_trades,
+        "open_trades": {
+            **open_trades,
+            **open_trade_context,
+        },
         "unmatched_closed_deals": {
             "count": len(unmatched_rows),
             "recent": unmatched_rows[-20:],
         },
-        "recent_trade_log": load_recent_trade_log(),
+        "recent_trade_log": recent_trade_log,
     }
 
 

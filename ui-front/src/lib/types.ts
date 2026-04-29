@@ -28,6 +28,17 @@ export interface ExecutionSummaryResponse {
   open_trades: {
     count?: number;
     trades?: Array<Record<string, unknown>>;
+    summary?: {
+      symbol_count?: number;
+      net_floating_pnl?: number;
+      protected_count?: number;
+      incomplete_protection_count?: number;
+      aged_trade_count?: number;
+      stale_update_count?: number;
+      floating_loss_count?: number;
+      by_symbol?: Array<Record<string, unknown>>;
+    };
+    drilldown?: Array<Record<string, unknown>>;
   };
   unmatched_closed_deals: {
     count?: number;

@@ -106,7 +106,7 @@ Transform the current Operator UI from a read-only monitoring surface into a dec
 ## Phase U4 — Execution and Reconciliation Cockpit
 
 ### U4A — Execution depth
-- [ ] Add richer open trade drilldown
+- [x] Add richer open trade drilldown
 - [ ] Add per-symbol execution posture card
 - [ ] Add recent fills / exits summary cards
 - [ ] Add no-trade diagnosis breakdown by cause
