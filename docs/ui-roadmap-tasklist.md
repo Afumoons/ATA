@@ -49,9 +49,9 @@ Transform the current Operator UI from a read-only monitoring surface into a dec
 - [x] Surface rejection samples
 
 ### U1C — Research diagnostics improvements
-- [ ] Add symbol switcher (XAU/BTC/XAG/etc.) to Research page
-- [ ] Add timeframe switcher to Research page
-- [ ] Add family filter and sorting controls
+- [x] Add symbol switcher (XAU/BTC/XAG/etc.) to Research page
+- [x] Add timeframe switcher to Research page
+- [x] Add family filter and sorting controls
 - [ ] Add funnel visualization cards or stacked bars
 - [ ] Add batch-to-batch comparison view
 - [ ] Add “what changed since previous run” summary
@@ -173,10 +173,11 @@ Transform the current Operator UI from a read-only monitoring surface into a dec
 1. [x] Finish U2B Drift depth improvements
 2. [x] Build U3A Promotion / Demotion Explainability
 3. [x] Build U3B Review Queue
-4. [ ] Expand U1C Research diagnostics controls
-5. [ ] Expand U4 Execution / Reconciliation cockpit
-6. [ ] Add U5 Strategy DNA comparison tools
-7. [ ] Finish U7 design polish pass
+4. [x] Expand U1C Research diagnostics controls
+5. [ ] Add U1C funnel visualization and change summary
+6. [ ] Expand U4 Execution / Reconciliation cockpit
+7. [ ] Add U5 Strategy DNA comparison tools
+8. [ ] Finish U7 design polish pass
 
 ---
 

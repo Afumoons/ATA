@@ -24,7 +24,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 EXECUTION_DIR = BASE_DIR / "execution"
 OPEN_TRADES_PATH = EXECUTION_DIR / "open_trades.json"
 TRADES_LOG_PATH = EXECUTION_DIR / "trades.log"
-RESEARCH_SUMMARY_DIR = BASE_DIR / "research" / "family_stage"
+RESEARCH_SUMMARY_DIR = BASE_DIR / "tmp" / "research_family_stage_summaries"
 
 TRADE_LOG_PATTERN = re.compile(r"(\w+)=([^\s]+)")
 
@@ -53,6 +53,28 @@ def read_json_file(path: Path, *, default: Any) -> Any:
             return json.load(f)
     except Exception:
         return default
+
+
+def list_research_summary_artifacts() -> Dict[str, List[str]]:
+    symbol_to_timeframes: Dict[str, set[str]] = defaultdict(set)
+    if not RESEARCH_SUMMARY_DIR.exists():
+        return {"symbols": [], "timeframes": []}
+
+    for path in RESEARCH_SUMMARY_DIR.glob("*.json"):
+        stem = path.stem
+        if "_" not in stem:
+            continue
+        symbol, timeframe = stem.rsplit("_", 1)
+        if not symbol or not timeframe:
+            continue
+        symbol_to_timeframes[symbol].add(timeframe)
+
+    all_timeframes = sorted({timeframe for values in symbol_to_timeframes.values() for timeframe in values})
+    return {
+        "symbols": sorted(symbol_to_timeframes.keys()),
+        "timeframes": all_timeframes,
+        "timeframes_by_symbol": {symbol: sorted(values) for symbol, values in sorted(symbol_to_timeframes.items())},
+    }
 
 
 def _humanize_token(value: Any, fallback: str = "unknown") -> str:
@@ -601,6 +623,7 @@ def load_strategy_detail(name: str) -> Dict[str, Any] | None:
 
 
 def load_research_summary(symbol: str = "XAUUSDm", timeframe: str = "M15") -> Dict[str, Any] | None:
+    artifacts = list_research_summary_artifacts()
     path = RESEARCH_SUMMARY_DIR / f"{symbol}_{timeframe}.json"
     payload = read_json_file(path, default=None)
     if not isinstance(payload, dict):
@@ -639,6 +662,7 @@ def load_research_summary(symbol: str = "XAUUSDm", timeframe: str = "M15") -> Di
         "funnel_totals": dict(sorted(funnel_totals.items())),
         "rejection_totals": dict(sorted(rejection_totals.items(), key=lambda item: item[1], reverse=True)),
         "top_rejection_samples": top_rejection_samples,
+        "available_filters": artifacts,
     }
 
 

@@ -33,6 +33,7 @@ Implement and advance `docs/ui-roadmap-tasklist.md` until the tasklist is fully 
 - U2B repeated decay counter, unresolved anomaly grouping, and manual review queue added on Drift page in current workstream
 - U3A explainability surfaces added on Strategy detail in current workstream
 - U3B review queue page added in current workstream
+- U1C research filters added on Research page in current workstream
 
 ## Milestone Order
 1. Commit roadmap tasklist doc cleanly
@@ -60,5 +61,7 @@ For each autonomous run:
 - Drift page shipped in commit `fb9fd25`
 - U2B drift depth is now complete
 - U3A explainability on Strategy detail is now complete
-- U3B review queue is now complete, next highest-value slice is U1C research diagnostics improvements
+- U3B review queue is now complete
+- U1C research filters are now complete for symbol, timeframe, and family/sort controls
+- Next highest-value slice is the remainder of U1C, starting with funnel visualization and a change-summary layer
 - User explicitly wants progress reports, not approval questions

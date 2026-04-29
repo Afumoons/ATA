@@ -16,3 +16,8 @@
 - Review queue now surfaces almost-accepted candidates, live-drifting rows, family/regime mismatches, stale active strategies, and repeated reconciliation anomaly heuristics when present.
 - Verified U3B slice with Python compile checks for `ui_api`, production `npm run build` in `ui-front`, and a direct adapter smoke test for `load_review_queue()`.
 - Marked U3B complete in roadmap/task notes; next slice is U1C research diagnostics controls.
+- Fixed the research summary adapter to read from `tmp/research_family_stage_summaries/`, matching where family-stage artifacts are actually emitted.
+- Added U1C research controls on `/research`: symbol switcher, timeframe switcher, family filter, and sort presets for accepted, conversion, generation volume, rejection pressure, and family name.
+- The Research page now shows filtered family counts, conversion rate, rejection totals, and top visible family so operator filtering changes are immediately legible.
+- Verified the U1C filter-controls slice with Python compile checks for `ui_api`, a direct adapter smoke test for BTC/XAG/XAU summaries, and production `npm run build` in `ui-front`.
+- Marked the first U1C control items complete in roadmap/task notes; next slice is funnel visualization plus a change-summary layer.
