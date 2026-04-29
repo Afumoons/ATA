@@ -43,6 +43,14 @@ export interface ExecutionSummaryResponse {
   unmatched_closed_deals: {
     count?: number;
     recent?: Array<Record<string, unknown>>;
+    dashboard?: {
+      summary?: Record<string, unknown>;
+      lanes?: Array<Record<string, unknown>>;
+      reasons?: Array<Record<string, unknown>>;
+      symbols?: Array<Record<string, unknown>>;
+      manual_buckets?: Array<Record<string, unknown>>;
+      recent?: Array<Record<string, unknown>>;
+    };
   };
   recent_activity?: {
     window_hours?: number;

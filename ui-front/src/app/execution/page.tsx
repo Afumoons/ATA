@@ -135,6 +135,13 @@ export default function ExecutionPage() {
   const noTradeDiagnosis = data.no_trade_diagnosis ?? {};
   const noTradeCauses = noTradeDiagnosis.causes ?? [];
   const activeNoTradeCauses = noTradeCauses.filter((cause) => cause.status === "active");
+  const unmatchedDashboard = data.unmatched_closed_deals.dashboard ?? {};
+  const unmatchedSummary = unmatchedDashboard.summary ?? {};
+  const unmatchedLanes = unmatchedDashboard.lanes ?? [];
+  const unmatchedReasons = unmatchedDashboard.reasons ?? [];
+  const unmatchedSymbols = unmatchedDashboard.symbols ?? [];
+  const unmatchedManualBuckets = unmatchedDashboard.manual_buckets ?? [];
+  const unmatchedRecent = unmatchedDashboard.recent ?? data.unmatched_closed_deals.recent ?? [];
   const attentionEvents = (auditQuery.data?.events ?? []).filter((event) => {
     const source = String(event.source ?? "").toLowerCase();
     return source.includes("unmatched") || source.includes("trade");
@@ -551,19 +558,121 @@ export default function ExecutionPage() {
         />
       </Section>
 
-      <Section title="Unmatched closed deals" description="Closed deals that have not been cleanly paired or reconciled.">
-        <DataTable
-          columns={["Symbol", "Ticket", "Closed at", "Reason", "PnL"]}
-          rows={(data.unmatched_closed_deals.recent ?? []).map((deal) => [
-            compactValue(deal.symbol),
-            compactValue(deal.ticket ?? deal.position_id ?? deal.deal_ticket),
-            compactValue(formatDateTime(deal.closed_at ?? deal.recorded_at ?? deal.close_time)),
-            compactValue(deal.reason ?? deal.comment),
-            compactValue(deal.pnl ?? deal.profit),
-          ])}
-          emptyTitle="No unmatched closed deals"
-          emptyDescription="Closed-deal reconciliation currently looks clean from this route."
-        />
+      <Section title="Unmatched closed-deal resolution dashboard" description="Operator-facing breakdown of unresolved close attribution, recovery lanes, and the strongest hints available for pairing work.">
+        <div className="dashboard-stack">
+          <section className="stats-grid">
+            <StatCard
+              label="Unmatched deals"
+              value={formatNumber(Number(unmatchedSummary.count ?? data.unmatched_closed_deals.count ?? 0))}
+              hint={unmatchedSummary.newest_recorded_at ? `Latest ${formatDateTime(String(unmatchedSummary.newest_recorded_at))}` : "Closed-deal reconciliation is currently quiet"}
+              tone={Number(unmatchedSummary.count ?? data.unmatched_closed_deals.count ?? 0) > 0 ? "warning" : "success"}
+            />
+            <StatCard
+              label="Recoverable"
+              value={formatNumber(Number(unmatchedSummary.recoverable_count ?? 0))}
+              hint={`${formatNumber(Number(unmatchedSummary.ambiguous_count ?? 0))} ambiguous candidate set(s)`}
+              tone={Number(unmatchedSummary.recoverable_count ?? 0) > 0 ? "info" : "neutral"}
+            />
+            <StatCard
+              label="Manual fallback"
+              value={formatNumber(Number(unmatchedSummary.manual_bucket_only_count ?? unmatchedSummary.manual_bucket_count ?? 0))}
+              hint={`${formatNumber(Number(unmatchedSummary.symbols_affected ?? 0))} symbol(s) affected`}
+              tone={Number(unmatchedSummary.manual_bucket_only_count ?? unmatchedSummary.manual_bucket_count ?? 0) > 0 ? "critical" : "neutral"}
+            />
+            <StatCard
+              label="Journal context"
+              value={formatNumber(Number(unmatchedSummary.journal_context_count ?? 0))}
+              hint={unmatchedSummary.oldest_recorded_at ? `Oldest ${formatDateTime(String(unmatchedSummary.oldest_recorded_at))}` : "No unresolved aging backlog"}
+              tone={Number(unmatchedSummary.journal_context_count ?? 0) > 0 ? "info" : "neutral"}
+            />
+          </section>
+
+          {Number(unmatchedSummary.count ?? data.unmatched_closed_deals.count ?? 0) > 0 ? (
+            <InlineNotice
+              tone="warning"
+              title="Reconciliation backlog needs operator review"
+              description="Use the lane table to separate single-candidate recoveries from ambiguous/manual-bucket cases before digging into raw audit rows."
+            />
+          ) : null}
+
+          <div className="detail-grid-2">
+            <DataTable
+              columns={["Resolution lane", "Count", "Tone", "Operator meaning"]}
+              rows={unmatchedLanes.map((lane) => [
+                <div key={`${compactValue(lane.key)}-lane`} className="table-stack">
+                  <strong>{compactValue(lane.label)}</strong>
+                  <span>{compactValue(lane.key)}</span>
+                </div>,
+                formatNumber(Number(lane.count ?? 0)),
+                <StatusBadge key={`${compactValue(lane.key)}-tone`} label={compactValue(lane.tone)} tone={lane.tone as "neutral" | "info" | "success" | "warning" | "critical"} />,
+                compactValue(lane.detail),
+              ])}
+              emptyTitle="No resolution lanes"
+              emptyDescription="There are no unresolved close rows to classify right now."
+            />
+
+            <DataTable
+              columns={["Symbol", "Deals", "Recoverable", "Net PnL", "Latest"]}
+              rows={unmatchedSymbols.map((row) => [
+                compactValue(row.symbol),
+                formatNumber(Number(row.count ?? 0)),
+                formatNumber(Number(row.recoverable_count ?? 0)),
+                <strong key={`${compactValue(row.symbol)}-profit`} className={`tone-${toneFromSignedNumber(Number(row.profit ?? 0))}`}>{formatCurrency(Number(row.profit ?? 0))}</strong>,
+                compactValue(formatDateTime(row.latest_recorded_at)),
+              ])}
+              emptyTitle="No symbol hotspots"
+              emptyDescription="No unresolved backlog means there is nothing to cluster by symbol yet."
+            />
+          </div>
+
+          <div className="detail-grid-2">
+            <DataTable
+              columns={["Reason", "Count"]}
+              rows={unmatchedReasons.map((row) => [compactValue(row.reason), formatNumber(Number(row.count ?? 0))])}
+              emptyTitle="No reason breakdown"
+              emptyDescription="The current unmatched-close backlog does not have reason labels to summarize."
+            />
+
+            <DataTable
+              columns={["Manual bucket", "Count"]}
+              rows={unmatchedManualBuckets.map((row) => [compactValue(row.bucket), formatNumber(Number(row.count ?? 0))])}
+              emptyTitle="No manual bucket usage"
+              emptyDescription="No unresolved rows were forced into manual attribution buckets in this snapshot."
+            />
+          </div>
+
+          <DataTable
+            columns={["Deal", "Resolution", "Evidence", "Strategy hints", "PnL"]}
+            rows={unmatchedRecent.map((deal) => [
+              <div key={`${compactValue(deal.deal_ticket ?? deal.position_id)}-deal`} className="table-stack">
+                <strong>{compactValue(deal.symbol)}</strong>
+                <span>Deal {compactValue(deal.deal_ticket ?? deal.ticket)}</span>
+                <span>Position {compactValue(deal.position_id)}</span>
+              </div>,
+              <div key={`${compactValue(deal.deal_ticket ?? deal.position_id)}-resolution`} className="table-stack">
+                <StatusBadge
+                  label={compactValue(deal.resolution_label ?? deal.resolution_lane)}
+                  tone={deal.pairing_confidence === "high" ? "success" : deal.pairing_confidence === "medium" ? "warning" : "critical"}
+                />
+                <span>{compactValue(deal.resolution_detail)}</span>
+              </div>,
+              <div key={`${compactValue(deal.deal_ticket ?? deal.position_id)}-evidence`} className="table-stack">
+                <span>{formatNumber(Number(deal.ticket_alias_count ?? 0))} alias hint(s)</span>
+                <span>{deal.has_comment_uid4 ? "Comment UID available" : "No comment UID"}</span>
+                <span>{deal.journal_context_present ? `Journal hit ${compactValue(deal.journal_strategy_name)}` : "No journal hit"}</span>
+                <span>{deal.age_minutes != null ? `Age ${formatDurationMinutes(Number(deal.age_minutes))}` : "Unknown age"}</span>
+              </div>,
+              <div key={`${compactValue(deal.deal_ticket ?? deal.position_id)}-hints`} className="table-stack">
+                <strong>{Array.isArray(deal.candidate_matches) && deal.candidate_matches.length ? deal.candidate_matches.join(", ") : "No candidate strategies"}</strong>
+                <span>{compactValue(deal.manual_bucket ?? "No manual bucket")}</span>
+                <span>{compactValue(deal.reason)}</span>
+              </div>,
+              <strong key={`${compactValue(deal.deal_ticket ?? deal.position_id)}-pnl`} className={`tone-${toneFromSignedNumber(Number(deal.profit ?? deal.pnl ?? 0))}`}>{formatCurrency(Number(deal.profit ?? deal.pnl ?? 0))}</strong>,
+            ])}
+            emptyTitle="No unmatched closed deals"
+            emptyDescription="Closed-deal reconciliation currently looks clean from this route."
+          />
+        </div>
       </Section>
 
       <Section title="Recent trade log" description="Latest execution log entries surfaced directly from the UI API.">

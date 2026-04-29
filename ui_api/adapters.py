@@ -949,6 +949,192 @@ def _build_open_trade_drilldown(
     }
 
 
+def _build_unmatched_closed_deal_dashboard(unmatched_rows: List[Dict[str, Any]], trade_context_journal: Dict[str, Any]) -> Dict[str, Any]:
+    journal_trades = trade_context_journal.get("trades") or {}
+    if not isinstance(journal_trades, dict):
+        journal_trades = {}
+
+    now = datetime.now(timezone.utc)
+    lane_counts: Counter[str] = Counter()
+    reason_counts: Counter[str] = Counter()
+    symbol_totals: Dict[str, Dict[str, Any]] = defaultdict(lambda: {
+        "symbol": "unknown",
+        "count": 0,
+        "recoverable_count": 0,
+        "profit": 0.0,
+        "latest_recorded_at": None,
+    })
+    manual_bucket_counts: Counter[str] = Counter()
+    total_profit = 0.0
+    recoverable_count = 0
+    ambiguous_count = 0
+    manual_bucket_only_count = 0
+    journal_context_count = 0
+    newest_recorded_at: str | None = None
+    oldest_recorded_at: str | None = None
+    newest_dt: datetime | None = None
+    oldest_dt: datetime | None = None
+    enriched_rows: List[Dict[str, Any]] = []
+
+    for raw_row in unmatched_rows:
+        if not isinstance(raw_row, dict):
+            continue
+
+        row = dict(raw_row)
+        symbol = str(row.get("symbol_canonical") or row.get("symbol") or "unknown")
+        reason = str(row.get("reason") or "unknown")
+        manual_bucket = str(row.get("manual_bucket") or "")
+        candidate_matches = row.get("candidate_matches") or []
+        if not isinstance(candidate_matches, list):
+            candidate_matches = []
+        candidate_matches = [str(candidate) for candidate in candidate_matches if candidate]
+        candidate_matches = list(dict.fromkeys(candidate_matches))[:5]
+        alias_count = sum(1 for key in ("deal_ticket", "order_ticket", "position_id") if row.get(key) not in (None, ""))
+
+        journal_context = None
+        for key in (row.get("deal_ticket"), row.get("position_id"), row.get("order_ticket"), row.get("ticket")):
+            if key in (None, ""):
+                continue
+            candidate = journal_trades.get(str(key))
+            if isinstance(candidate, dict):
+                journal_context = candidate
+                break
+
+        if len(candidate_matches) == 1:
+            lane = "recoverable"
+            lane_label = "Single candidate match"
+            lane_detail = f"Heuristics narrowed this deal to {candidate_matches[0]}."
+            pairing_confidence = "high"
+            recoverable_count += 1
+        elif len(candidate_matches) > 1:
+            lane = "ambiguous"
+            lane_label = "Multiple candidates"
+            lane_detail = "Ticket/comment hints found more than one possible strategy."
+            pairing_confidence = "medium"
+            ambiguous_count += 1
+        elif manual_bucket:
+            lane = "manual_bucket_only"
+            lane_label = "Manual bucket fallback"
+            lane_detail = f"PnL landed in {manual_bucket} because no unique strategy lineage was recovered."
+            pairing_confidence = "low"
+            manual_bucket_only_count += 1
+        else:
+            lane = "unclassified"
+            lane_label = "No recovery hints"
+            lane_detail = "The audit row has no unique candidate match or manual fallback label."
+            pairing_confidence = "low"
+
+        if journal_context:
+            journal_context_count += 1
+            if journal_context.get("strategy_name") and lane != "recoverable":
+                lane_detail = f"{lane_detail} A trade-context journal row exists for {journal_context.get('strategy_name')}."
+
+        recorded_at = row.get("recorded_at")
+        recorded_dt = parse_iso_datetime(recorded_at)
+        if recorded_dt:
+            if newest_dt is None or recorded_dt > newest_dt:
+                newest_dt = recorded_dt
+                newest_recorded_at = recorded_dt.isoformat()
+            if oldest_dt is None or recorded_dt < oldest_dt:
+                oldest_dt = recorded_dt
+                oldest_recorded_at = recorded_dt.isoformat()
+            age_minutes = max(int((now - recorded_dt).total_seconds() // 60), 0)
+        else:
+            age_minutes = None
+
+        try:
+            profit = float(row.get("profit") if row.get("profit") is not None else row.get("pnl") or 0.0)
+        except Exception:
+            profit = 0.0
+        total_profit += profit
+
+        lane_counts[lane] += 1
+        reason_counts[reason] += 1
+        if manual_bucket:
+            manual_bucket_counts[manual_bucket] += 1
+
+        symbol_row = symbol_totals[symbol]
+        symbol_row["symbol"] = symbol
+        symbol_row["count"] += 1
+        symbol_row["profit"] = round(float(symbol_row.get("profit") or 0.0) + profit, 2)
+        if lane == "recoverable":
+            symbol_row["recoverable_count"] += 1
+        if not symbol_row.get("latest_recorded_at") or (recorded_at and str(recorded_at) > str(symbol_row.get("latest_recorded_at"))):
+            symbol_row["latest_recorded_at"] = recorded_at
+
+        enriched_rows.append({
+            **row,
+            "symbol": symbol,
+            "reason": reason,
+            "manual_bucket": manual_bucket or None,
+            "candidate_matches": candidate_matches,
+            "candidate_count": len(candidate_matches),
+            "ticket_alias_count": alias_count,
+            "has_comment_uid4": bool(row.get("comment_uid4")),
+            "journal_context_present": bool(journal_context),
+            "journal_strategy_name": journal_context.get("strategy_name") if journal_context else None,
+            "resolution_lane": lane,
+            "resolution_label": lane_label,
+            "resolution_detail": lane_detail,
+            "pairing_confidence": pairing_confidence,
+            "age_minutes": age_minutes,
+            "profit": round(profit, 2),
+        })
+
+    lane_meta = {
+        "recoverable": ("success", "Single-candidate heuristic recovery"),
+        "ambiguous": ("warning", "More than one strategy candidate needs operator choice"),
+        "manual_bucket_only": ("critical", "PnL was bucketed manually without a unique strategy link"),
+        "unclassified": ("critical", "The row lacks enough hints for automatic recovery"),
+    }
+
+    enriched_rows.sort(
+        key=lambda row: (
+            parse_iso_datetime(row.get("recorded_at")) or datetime.fromtimestamp(0, tz=timezone.utc),
+            str(row.get("deal_ticket") or row.get("position_id") or ""),
+        ),
+        reverse=True,
+    )
+
+    return {
+        "summary": {
+            "count": len(enriched_rows),
+            "symbols_affected": len(symbol_totals),
+            "recoverable_count": recoverable_count,
+            "ambiguous_count": ambiguous_count,
+            "manual_bucket_only_count": manual_bucket_only_count,
+            "journal_context_count": journal_context_count,
+            "manual_bucket_count": sum(manual_bucket_counts.values()),
+            "total_profit": round(total_profit, 2),
+            "newest_recorded_at": newest_recorded_at,
+            "oldest_recorded_at": oldest_recorded_at,
+        },
+        "lanes": [
+            {
+                "key": lane,
+                "label": lane.replace("_", " "),
+                "count": count,
+                "tone": lane_meta.get(lane, ("warning", ""))[0],
+                "detail": lane_meta.get(lane, ("warning", "Needs inspection"))[1],
+            }
+            for lane, count in sorted(lane_counts.items(), key=lambda item: (-item[1], item[0]))
+        ],
+        "reasons": [
+            {"reason": reason, "count": count}
+            for reason, count in sorted(reason_counts.items(), key=lambda item: (-item[1], item[0]))
+        ],
+        "symbols": sorted(
+            symbol_totals.values(),
+            key=lambda row: (-int(row.get("count") or 0), -abs(float(row.get("profit") or 0.0)), str(row.get("symbol") or "")),
+        )[:10],
+        "manual_buckets": [
+            {"bucket": bucket, "count": count}
+            for bucket, count in manual_bucket_counts.most_common(10)
+        ],
+        "recent": enriched_rows[:25],
+    }
+
+
 def load_execution_summary() -> Dict[str, Any]:
     live_state = load_live_state_snapshot()
     live_stats = load_strategy_live_stats_snapshot()
@@ -960,6 +1146,7 @@ def load_execution_summary() -> Dict[str, Any]:
     unmatched_rows = read_json_file(UNMATCHED_CLOSED_DEALS_PATH, default=[])
     if not isinstance(unmatched_rows, list):
         unmatched_rows = []
+    unmatched_dashboard = _build_unmatched_closed_deal_dashboard(unmatched_rows, trade_context_journal)
     no_trade_diagnosis = _build_no_trade_diagnosis(
         live_state,
         live_stats,
@@ -983,7 +1170,8 @@ def load_execution_summary() -> Dict[str, Any]:
         },
         "unmatched_closed_deals": {
             "count": len(unmatched_rows),
-            "recent": unmatched_rows[-20:],
+            "recent": unmatched_dashboard.get("recent") or unmatched_rows[-20:],
+            "dashboard": unmatched_dashboard,
         },
         "recent_activity": recent_activity,
         "no_trade_diagnosis": no_trade_diagnosis,

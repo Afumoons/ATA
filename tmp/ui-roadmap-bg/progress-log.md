@@ -45,3 +45,6 @@
 - Extended `/execution` with a dedicated no-trade diagnosis breakdown section, including posture headline, active-cause stat cards, and a cause-by-cause operator table.
 - Verified the no-trade diagnosis slice with `python -m compileall ui_api`, a direct `load_execution_summary()` smoke test for `no_trade_diagnosis`, and production `npm run build` in `ui-front`.
 - Marked U4A fully complete in roadmap/task notes; next slice is U4B unmatched-closed-deal resolution dashboard.
+- Added a U4B unmatched-closed-deal resolution dashboard to the execution summary API and `/execution`, clustering unresolved closes into recovery lanes, symbol/reason hotspots, manual-bucket usage, and enriched per-row evidence.
+- Verified the U4B reconciliation-dashboard slice with `python -m compileall ui_api`, a direct synthetic smoke test for `_build_unmatched_closed_deal_dashboard()`, and production `npm run build` in `ui-front`.
+- Marked the U4B unmatched-closed-deal resolution dashboard item complete in roadmap/task notes; next slice is U4B pairing confidence explanation.

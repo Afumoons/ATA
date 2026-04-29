@@ -70,5 +70,6 @@ For each autonomous run:
 - U4A per-symbol execution posture cards are now complete, adding operator-readable symbol cards for protection gaps, stale updates, trade balance, and log/live-stat alignment
 - U4A recent fills / exits summary cards are now complete, combining trades.log fill traces with trade-context journal exits on the Execution page
 - U4A no-trade diagnosis breakdown by cause is now complete, adding a backend-shaped cause matrix plus operator-facing breakdown cards/table on the Execution page
-- Next highest-value slice is U4B unmatched-closed-deal resolution dashboard
+- U4B unmatched-closed-deal resolution dashboard is now complete, adding recovery-lane summaries, symbol/reason clustering, and enriched unresolved-deal evidence on the Execution page
+- Next highest-value slice is U4B pairing confidence explanation
 - User explicitly wants progress reports, not approval questions
