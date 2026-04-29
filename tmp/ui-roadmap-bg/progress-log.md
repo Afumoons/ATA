@@ -80,3 +80,6 @@
 - Added a shared attention-card treatment plus operator attention lanes on Drift, Review, and Execution so the highest-risk buckets read as grouped visual priorities instead of only stat rows and tables.
 - Verified the U7A attention-grouping slice with a production `npm run build` in `ui-front`.
 - Marked the U7A operator-attention-grouping item complete in roadmap/task notes; next slice is dense-view hierarchy and generic-table reduction on the most crowded pages.
+- Added a U7A review queue hierarchy pass, turning the dense full review queue into operator dossiers with clearer priority eyebrows, category chips, metric tiles, and why/freshness copy while preserving the raw table below.
+- Verified the review-dossier slice with `python -m compileall ui_api` and a production `npm run build` in `ui-front`.
+- Updated notes to point the next U7A slice at Execution-page dense-view hierarchy and table de-genericization.

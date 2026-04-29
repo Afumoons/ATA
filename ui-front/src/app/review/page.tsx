@@ -75,6 +75,40 @@ function reasonSummary(row: ReviewQueueRow) {
   return compactValue(reasons.join(" • "));
 }
 
+function metricToneFromNumber(value: number | null | undefined, inverse = false): StatusTone {
+  if (value == null || Number.isNaN(value)) return "neutral";
+  if (value === 0) return "neutral";
+  if (inverse) {
+    return value > 0 ? "warning" : "success";
+  }
+  return value > 0 ? "success" : "critical";
+}
+
+function staleTone(hours: number | null | undefined): StatusTone {
+  if (hours == null || Number.isNaN(hours)) return "neutral";
+  if (hours >= 48) return "critical";
+  if (hours >= 24) return "warning";
+  return "success";
+}
+
+function renderCategoryChips(row: ReviewQueueRow) {
+  const labels = (row.category_flags ?? []).map((value) => categoryLabels[value] ?? value);
+  if (!labels.length) {
+    return <span className="review-chip tone-neutral">No category flag</span>;
+  }
+
+  return labels.map((label) => (
+    <span key={`${row.name}-${label}`} className="review-chip tone-info">{label}</span>
+  ));
+}
+
+function reviewPriorityLabel(row: ReviewQueueRow) {
+  if (row.triage_bucket === "demote_watch") return "Needs demotion review";
+  if (row.triage_bucket === "promote_watch") return "Ready for promotion review";
+  if (row.triage_bucket === "archive") return "Archive / cleanup candidate";
+  return "Needs operator diagnosis";
+}
+
 export default function ReviewPage() {
   const reviewQuery = useQuery("review-queue", uiApi.reviewQueue, { refetchIntervalMs: 60_000 });
   const { data, error, loading, hasData, refreshing, refresh } = reviewQuery;
@@ -233,29 +267,102 @@ export default function ReviewPage() {
       </div>
 
       <Section title="Full review queue" description="Detailed operator queue spanning all roadmap review categories and triage buckets.">
-        <DataTable
-          columns={["Strategy", "Bucket", "Status", "Symbol", "Family", "Categories", "Score", "Manifest rank", "Research return", "Live PnL", "Recent avg", "Unmatched closes", "Decay count", "Stale hours", "Last update", "Reasons"]}
-          rows={filteredRows.map((row) => [
-            compactValue(row.name),
-            bucketBadge(row.triage_bucket),
-            compactValue(row.status),
-            compactValue(row.symbol),
-            compactValue(row.family),
-            categorySummary(row),
-            formatNumber(row.score),
-            formatNumber(row.manifest_rank),
-            formatPercent(Number(row.research_return_pct ?? 0)),
-            formatCurrency(Number(row.live_total_pnl ?? 0)),
-            formatCurrency(Number(row.recent_avg_pnl ?? 0)),
-            formatNumber(Number(row.unmatched_close_count ?? 0)),
-            formatNumber(Number(row.decay_warning_count ?? 0)),
-            row.stale_hours == null ? <span className="text-xs text-muted-foreground">n/a</span> : `${formatNumber(row.stale_hours)}h`,
-            compactValue(formatDateTime(row.last_update)),
-            reasonSummary(row),
-          ])}
-          emptyTitle="No review rows"
-          emptyDescription="No strategies match the current review queue filters."
-        />
+        <div className="dashboard-stack">
+          <div className="review-dossier-grid">
+            {filteredRows.map((row) => (
+              <article key={`${row.name}-${row.symbol}-${row.family}`} className={`panel review-dossier-card tone-${triageTones[row.triage_bucket ?? "inspect"] ?? "neutral"}`}>
+                <div className="review-dossier-header">
+                  <div className="review-dossier-heading">
+                    <span className="review-dossier-eyebrow">{reviewPriorityLabel(row)}</span>
+                    <h4>{compactValue(row.name)}</h4>
+                    <p>
+                      {compactValue(row.symbol)} · {compactValue(row.family)} · {compactValue(row.status)}
+                    </p>
+                  </div>
+                  <div className="review-dossier-badges">
+                    {bucketBadge(row.triage_bucket)}
+                    {severityBadge(row.drift_severity)}
+                  </div>
+                </div>
+
+                <div className="review-chip-row">{renderCategoryChips(row)}</div>
+
+                <div className="review-dossier-metrics">
+                  <div className={`review-dossier-metric tone-${metricToneFromNumber(row.score)}`}>
+                    <span>Score</span>
+                    <strong>{formatNumber(row.score)}</strong>
+                  </div>
+                  <div className={`review-dossier-metric tone-${metricToneFromNumber(row.promotion_gap, true)}`}>
+                    <span>Promotion gap</span>
+                    <strong>{row.promotion_gap == null ? "n/a" : formatNumber(row.promotion_gap)}</strong>
+                  </div>
+                  <div className={`review-dossier-metric tone-${metricToneFromNumber(Number(row.research_return_pct ?? 0))}`}>
+                    <span>Research return</span>
+                    <strong>{formatPercent(Number(row.research_return_pct ?? 0))}</strong>
+                  </div>
+                  <div className={`review-dossier-metric tone-${metricToneFromNumber(Number(row.live_total_pnl ?? 0))}`}>
+                    <span>Live PnL</span>
+                    <strong>{formatCurrency(Number(row.live_total_pnl ?? 0))}</strong>
+                  </div>
+                  <div className={`review-dossier-metric tone-${metricToneFromNumber(Number(row.recent_avg_pnl ?? 0))}`}>
+                    <span>Recent avg</span>
+                    <strong>{formatCurrency(Number(row.recent_avg_pnl ?? 0))}</strong>
+                  </div>
+                  <div className={`review-dossier-metric tone-${Number(row.unmatched_close_count ?? 0) > 0 ? "critical" : "success"}`}>
+                    <span>Recon pressure</span>
+                    <strong>{formatNumber(Number(row.unmatched_close_count ?? 0))} unmatched</strong>
+                  </div>
+                  <div className={`review-dossier-metric tone-${Number(row.decay_warning_count ?? 0) > 0 ? "warning" : "success"}`}>
+                    <span>Decay warnings</span>
+                    <strong>{formatNumber(Number(row.decay_warning_count ?? 0))}</strong>
+                  </div>
+                  <div className={`review-dossier-metric tone-${staleTone(row.stale_hours)}`}>
+                    <span>Stale window</span>
+                    <strong>{row.stale_hours == null ? "n/a" : `${formatNumber(row.stale_hours)}h`}</strong>
+                  </div>
+                </div>
+
+                <div className="review-dossier-footer">
+                  <div className="review-dossier-copy">
+                    <span className="review-dossier-label">Why it is here</span>
+                    <p>{reasonSummary(row)}</p>
+                  </div>
+                  <div className="review-dossier-copy">
+                    <span className="review-dossier-label">Manifest / freshness</span>
+                    <p>
+                      Rank {formatNumber(row.manifest_rank)}
+                      {row.last_update ? ` · last update ${formatDateTime(row.last_update)}` : " · last update unavailable"}
+                    </p>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+
+          <DataTable
+            columns={["Strategy", "Bucket", "Status", "Symbol", "Family", "Categories", "Score", "Manifest rank", "Research return", "Live PnL", "Recent avg", "Unmatched closes", "Decay count", "Stale hours", "Last update", "Reasons"]}
+            rows={filteredRows.map((row) => [
+              compactValue(row.name),
+              bucketBadge(row.triage_bucket),
+              compactValue(row.status),
+              compactValue(row.symbol),
+              compactValue(row.family),
+              categorySummary(row),
+              formatNumber(row.score),
+              formatNumber(row.manifest_rank),
+              formatPercent(Number(row.research_return_pct ?? 0)),
+              formatCurrency(Number(row.live_total_pnl ?? 0)),
+              formatCurrency(Number(row.recent_avg_pnl ?? 0)),
+              formatNumber(Number(row.unmatched_close_count ?? 0)),
+              formatNumber(Number(row.decay_warning_count ?? 0)),
+              row.stale_hours == null ? <span className="text-xs text-muted-foreground">n/a</span> : `${formatNumber(row.stale_hours)}h`,
+              compactValue(formatDateTime(row.last_update)),
+              reasonSummary(row),
+            ])}
+            emptyTitle="No review rows"
+            emptyDescription="No strategies match the current review queue filters."
+          />
+        </div>
       </Section>
     </div>
   );
