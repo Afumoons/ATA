@@ -66,15 +66,22 @@ class LiveStats:
 # Public helpers
 # ---------------------------------------------------------------------------
 
-def _get_account_info():
+def _get_account_info(*, strict: bool = True):
     info = mt5.account_info()
     if info is None:
-        raise RuntimeError("MT5 account_info() returned None")
+        if strict:
+            raise RuntimeError("MT5 account_info() returned None")
+        logger.warning("MT5 account_info() returned None")
+        return None
     return info
 
 
-def _get_account_equity() -> float:
-    info = _get_account_info()
+def _get_account_equity(*, strict: bool = True) -> float:
+    info = _get_account_info(strict=strict)
+    if info is None:
+        if strict:
+            raise RuntimeError("MT5 account_info() returned None")
+        return 0.0
     return float(info.equity)
 
 

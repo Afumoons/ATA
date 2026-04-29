@@ -650,7 +650,15 @@ def execute_signals_for_symbol(
     from ..config import risk_config
     from ..execution.live_monitor import _get_account_equity
 
-    current_equity = _get_account_equity()
+    current_equity = _get_account_equity(strict=False)
+    if current_equity <= 0.0:
+        logger.warning(
+            "Skipping signal execution for %s %s because MT5 account equity is unavailable",
+            symbol,
+            timeframe,
+        )
+        summary["blocked_account_info_unavailable"] = True
+        return [], summary
 
     if not can_open_new_trade(
         current_equity=current_equity,
