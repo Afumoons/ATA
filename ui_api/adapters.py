@@ -26,8 +26,14 @@ OPEN_TRADES_PATH = EXECUTION_DIR / "open_trades.json"
 TRADES_LOG_PATH = EXECUTION_DIR / "trades.log"
 TRADE_CONTEXT_JOURNAL_PATH = EXECUTION_DIR / "trade_context_journal.json"
 RESEARCH_SUMMARY_DIR = BASE_DIR / "tmp" / "research_family_stage_summaries"
+LOGS_DIR = BASE_DIR / "logs"
 
 TRADE_LOG_PATTERN = re.compile(r"(\w+)=([^\s]+)")
+SYSTEM_LOG_PATTERN = re.compile(r"^(?P<timestamp>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}) \[(?P<level>[A-Z]+)\] (?P<logger>[^:]+): (?P<message>.*)$")
+TRADE_CONTEXT_FAILURE_PATTERN = re.compile(
+    r"Failed to register trade (?P<phase>entry|exit) context for (?P<strategy>.+?) (?P<ticket_label>ticket|deal)=(?P<ticket>[^\s]+)",
+    re.IGNORECASE,
+)
 
 
 def utc_now_iso() -> str:
@@ -468,6 +474,104 @@ def load_trade_context_journal() -> Dict[str, Any]:
         trades = {}
     data["trades"] = trades
     return data
+
+
+def _iter_system_log_paths(limit: int = 6) -> List[Path]:
+    if not LOGS_DIR.exists():
+        return []
+    return sorted(
+        (path for path in LOGS_DIR.glob("system.log*") if path.is_file()),
+        key=lambda path: path.stat().st_mtime,
+        reverse=True,
+    )[:limit]
+
+
+def _classify_trade_context_failure_cause(cause: str, traceback_lines: List[str]) -> Tuple[str, str]:
+    haystack = " ".join([cause, *traceback_lines]).lower()
+    if "read_parquet" in haystack or ".parquet" in haystack:
+        return ("feature_snapshot", "Feature snapshot read failed while enriching the trade-context journal.")
+    if "permission" in haystack or "access is denied" in haystack:
+        return ("permission", "The runtime could not read or write a required file for journal registration.")
+    if "json" in haystack or "decode" in haystack or "expecting value" in haystack:
+        return ("journal_payload", "The existing trade-context journal payload could not be decoded cleanly.")
+    if "no such file" in haystack or "filenotfounderror" in haystack:
+        return ("missing_artifact", "A required artifact was missing when the runtime tried to register context.")
+    if "os.replace" in haystack or "mkstemp" in haystack or "safe_write_json" in haystack:
+        return ("journal_write", "The runtime failed while writing the trade-context journal atomically.")
+    return ("unknown", "The runtime raised an unexpected exception while registering trade context.")
+
+
+def load_recent_trade_context_registration_failures(limit: int = 12) -> Dict[str, Any]:
+    rows: List[Dict[str, Any]] = []
+    for path in _iter_system_log_paths():
+        try:
+            lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+        except Exception:
+            continue
+
+        index = 0
+        while index < len(lines):
+            line = lines[index]
+            match = SYSTEM_LOG_PATTERN.match(line)
+            if not match:
+                index += 1
+                continue
+
+            message = str(match.group("message") or "")
+            failure_match = TRADE_CONTEXT_FAILURE_PATTERN.search(message)
+            if not failure_match:
+                index += 1
+                continue
+
+            traceback_lines: List[str] = []
+            cursor = index + 1
+            while cursor < len(lines) and not SYSTEM_LOG_PATTERN.match(lines[cursor]):
+                extra_line = lines[cursor].rstrip()
+                if extra_line:
+                    traceback_lines.append(extra_line)
+                cursor += 1
+
+            cause_line = next((entry for entry in reversed(traceback_lines) if ":" in entry), traceback_lines[-1] if traceback_lines else "")
+            cause_key, cause_detail = _classify_trade_context_failure_cause(cause_line, traceback_lines)
+            timestamp = parse_iso_datetime(str(match.group("timestamp") or "").replace(",", "."))
+            rows.append({
+                "timestamp": timestamp.replace(microsecond=0).isoformat() if timestamp else None,
+                "phase": str(failure_match.group("phase") or "").lower(),
+                "strategy_name": str(failure_match.group("strategy") or "").strip(),
+                "ticket": str(failure_match.group("ticket") or "").strip(),
+                "ticket_label": str(failure_match.group("ticket_label") or "ticket").lower(),
+                "log_file": path.name,
+                "logger": str(match.group("logger") or ""),
+                "message": message,
+                "cause": cause_line or "No stack-trace cause captured",
+                "cause_key": cause_key,
+                "cause_detail": cause_detail,
+                "traceback": traceback_lines[-8:],
+            })
+            index = cursor
+
+    rows.sort(key=lambda row: str(row.get("timestamp") or ""), reverse=True)
+    limited_rows = rows[:limit]
+    phase_counts = Counter(str(row.get("phase") or "unknown") for row in limited_rows)
+    cause_counts = Counter(str(row.get("cause_key") or "unknown") for row in limited_rows)
+    strategy_counts = Counter(str(row.get("strategy_name") or "unknown") for row in limited_rows)
+
+    return {
+        "count": len(rows),
+        "latest_at": limited_rows[0].get("timestamp") if limited_rows else None,
+        "entry_count": int(phase_counts.get("entry", 0)),
+        "exit_count": int(phase_counts.get("exit", 0)),
+        "files_scanned": [path.name for path in _iter_system_log_paths()],
+        "causes": [
+            {"key": key, "count": count}
+            for key, count in sorted(cause_counts.items(), key=lambda item: (-item[1], item[0]))
+        ],
+        "strategies": [
+            {"strategy_name": key, "count": count}
+            for key, count in strategy_counts.most_common(8)
+        ],
+        "recent": limited_rows,
+    }
 
 
 def _build_recent_fill_exit_summary(recent_trade_log: List[Dict[str, Any]], trade_context_journal: Dict[str, Any], *, window_hours: int = 24) -> Dict[str, Any]:
@@ -1268,6 +1372,7 @@ def load_execution_summary() -> Dict[str, Any]:
     open_trades = load_open_trades_snapshot()
     recent_trade_log = load_recent_trade_log()
     trade_context_journal = load_trade_context_journal()
+    trade_context_registration_failures = load_recent_trade_context_registration_failures()
     open_trade_context = _build_open_trade_drilldown(open_trades.get("trades") or [], live_stats, recent_trade_log)
     recent_activity = _build_recent_fill_exit_summary(recent_trade_log, trade_context_journal)
     unmatched_rows = read_json_file(UNMATCHED_CLOSED_DEALS_PATH, default=[])
@@ -1300,6 +1405,7 @@ def load_execution_summary() -> Dict[str, Any]:
             "recent": unmatched_dashboard.get("recent") or unmatched_rows[-20:],
             "dashboard": unmatched_dashboard,
         },
+        "trade_context_registration_failures": trade_context_registration_failures,
         "recent_activity": recent_activity,
         "no_trade_diagnosis": no_trade_diagnosis,
         "recent_trade_log": recent_trade_log,

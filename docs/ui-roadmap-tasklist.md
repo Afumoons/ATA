@@ -114,7 +114,7 @@ Transform the current Operator UI from a read-only monitoring surface into a dec
 ### U4B — Reconciliation tools
 - [x] Add unmatched-closed-deal resolution dashboard
 - [x] Add pairing confidence explanation
-- [ ] Add recent trade-context registration failures panel
+- [x] Add recent trade-context registration failures panel
 - [ ] Add stale execution artifact warnings
 
 ---

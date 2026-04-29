@@ -38,6 +38,7 @@ class ExecutionSummaryResponse(BaseModel):
     strategy_live_stats: Dict[str, Any] = Field(default_factory=dict)
     open_trades: Dict[str, Any] = Field(default_factory=dict)
     unmatched_closed_deals: Dict[str, Any] = Field(default_factory=dict)
+    trade_context_registration_failures: Dict[str, Any] = Field(default_factory=dict)
     recent_activity: Dict[str, Any] = Field(default_factory=dict)
     no_trade_diagnosis: Dict[str, Any] = Field(default_factory=dict)
     recent_trade_log: List[Dict[str, Any]] = Field(default_factory=list)

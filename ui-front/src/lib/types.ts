@@ -57,6 +57,16 @@ export interface ExecutionSummaryResponse {
       recent?: Array<Record<string, unknown>>;
     };
   };
+  trade_context_registration_failures?: {
+    count?: number;
+    latest_at?: string | null;
+    entry_count?: number;
+    exit_count?: number;
+    files_scanned?: string[];
+    causes?: Array<Record<string, unknown>>;
+    strategies?: Array<Record<string, unknown>>;
+    recent?: Array<Record<string, unknown>>;
+  };
   recent_activity?: {
     window_hours?: number;
     fills?: {

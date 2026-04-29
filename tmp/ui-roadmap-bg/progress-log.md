@@ -51,3 +51,6 @@
 - Added U4B pairing confidence explanation to the execution reconciliation dashboard, including confidence buckets, evidence-signal breakdowns, and per-row confidence reasoning/score for unmatched closed deals.
 - Verified the pairing-confidence slice with `python -m compileall ui_api`, a direct synthetic smoke test for `_build_unmatched_closed_deal_dashboard()`, and production `npm run build` in `ui-front`.
 - Marked the U4B pairing confidence explanation item complete in roadmap/task notes; next slice is U4B recent trade-context registration failures panel.
+- Added a U4B trade-context registration failures panel to the execution summary API and `/execution`, parsing recent `logs/system.log*` exceptions for entry/exit context registration, cause buckets, impacted strategies, and traceback hints.
+- Verified the registration-failures slice with `python -m compileall ui_api`, a direct `load_execution_summary()` smoke test for `trade_context_registration_failures`, and production `npm run build` in `ui-front`.
+- Marked the U4B registration-failures item complete in roadmap/task notes; next slice is U4B stale execution artifact warnings.

@@ -72,5 +72,6 @@ For each autonomous run:
 - U4A no-trade diagnosis breakdown by cause is now complete, adding a backend-shaped cause matrix plus operator-facing breakdown cards/table on the Execution page
 - U4B unmatched-closed-deal resolution dashboard is now complete, adding recovery-lane summaries, symbol/reason clustering, and enriched unresolved-deal evidence on the Execution page
 - U4B pairing confidence explanation is now complete, including confidence buckets, evidence-signal explanations, and per-row confidence detail on the Execution page
-- Next highest-value slice is U4B recent trade-context registration failures panel
+- U4B recent trade-context registration failures panel is now complete, adding system-log exception parsing plus operator-facing cause/strategy tables and traceback hints on the Execution page
+- Next highest-value slice is U4B stale execution artifact warnings
 - User explicitly wants progress reports, not approval questions

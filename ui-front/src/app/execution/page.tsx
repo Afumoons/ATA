@@ -132,6 +132,10 @@ export default function ExecutionPage() {
   const recentFills = recentActivity.fills ?? {};
   const recentExits = recentActivity.exits ?? {};
   const recentWindowHours = Number(recentActivity.window_hours ?? 24);
+  const tradeContextRegistrationFailures = data.trade_context_registration_failures ?? {};
+  const registrationFailureCauses = tradeContextRegistrationFailures.causes ?? [];
+  const registrationFailureStrategies = tradeContextRegistrationFailures.strategies ?? [];
+  const registrationFailureRecent = tradeContextRegistrationFailures.recent ?? [];
   const noTradeDiagnosis = data.no_trade_diagnosis ?? {};
   const noTradeCauses = noTradeDiagnosis.causes ?? [];
   const activeNoTradeCauses = noTradeCauses.filter((cause) => cause.status === "active");
@@ -559,6 +563,97 @@ export default function ExecutionPage() {
           emptyTitle="No enriched open-trade rows"
           emptyDescription="There are no current positions to enrich with operator drilldown context."
         />
+      </Section>
+
+      <Section title="Recent trade-context registration failures" description="Latest exceptions raised while the runtime tried to attach entry or exit context into the trade-context journal.">
+        <div className="dashboard-stack">
+          <section className="stats-grid">
+            <StatCard
+              label="Failures captured"
+              value={formatNumber(Number(tradeContextRegistrationFailures.count ?? 0))}
+              hint={tradeContextRegistrationFailures.latest_at ? `Latest ${formatDateTime(String(tradeContextRegistrationFailures.latest_at))}` : "No recent registration exceptions found in scanned system logs"}
+              tone={Number(tradeContextRegistrationFailures.count ?? 0) > 0 ? "warning" : "success"}
+            />
+            <StatCard
+              label="Entry / exit"
+              value={`${formatNumber(Number(tradeContextRegistrationFailures.entry_count ?? 0))} / ${formatNumber(Number(tradeContextRegistrationFailures.exit_count ?? 0))}`}
+              hint="Entry context failures first, exit context failures second"
+              tone="neutral"
+            />
+            <StatCard
+              label="Unique strategies"
+              value={formatNumber(registrationFailureStrategies.length)}
+              hint={Array.isArray(tradeContextRegistrationFailures.files_scanned) && tradeContextRegistrationFailures.files_scanned.length ? `Logs ${tradeContextRegistrationFailures.files_scanned.join(", ")}` : "System log scan metadata unavailable"}
+              tone="info"
+            />
+            <StatCard
+              label="Top cause bucket"
+              value={compactValue(registrationFailureCauses[0]?.key ?? "none")}
+              hint={registrationFailureCauses.length ? `${formatNumber(Number(registrationFailureCauses[0]?.count ?? 0))} hit(s) in the recent panel` : "No cause buckets to summarize"}
+              tone={registrationFailureCauses.length ? "warning" : "neutral"}
+            />
+          </section>
+
+          {Number(tradeContextRegistrationFailures.count ?? 0) > 0 ? (
+            <InlineNotice
+              tone="warning"
+              title="Trade-context journal registration is dropping runtime evidence"
+              description="These failures usually weaken exit attribution and recent fill-to-journal explainability. Clear the dominant cause before trusting downstream reconciliation surfaces." 
+            />
+          ) : (
+            <InlineNotice
+              tone="success"
+              title="No recent registration failures found"
+              description="The scanned system logs did not show entry/exit context registration exceptions, so trade-context enrichment looks quiet from this slice."
+            />
+          )}
+
+          <div className="detail-grid-2">
+            <DataTable
+              columns={["Cause bucket", "Count"]}
+              rows={registrationFailureCauses.map((row) => [compactValue(row.key), formatNumber(Number(row.count ?? 0))])}
+              emptyTitle="No failure causes"
+              emptyDescription="No recent registration exceptions were parsed from the available system logs."
+            />
+
+            <DataTable
+              columns={["Strategy", "Count"]}
+              rows={registrationFailureStrategies.map((row) => [compactValue(row.strategy_name), formatNumber(Number(row.count ?? 0))])}
+              emptyTitle="No impacted strategies"
+              emptyDescription="The current log scan did not surface any strategy-specific registration failures."
+            />
+          </div>
+
+          <DataTable
+            columns={["When", "Strategy / phase", "Ticket", "Cause", "Traceback hint"]}
+            rows={registrationFailureRecent.map((row) => [
+              compactValue(formatDateTime(typeof row.timestamp === "string" ? row.timestamp : undefined)),
+              <div key={`${compactValue(row.ticket)}-${compactValue(row.phase)}-phase`} className="table-stack">
+                <strong>{compactValue(row.strategy_name)}</strong>
+                <span>{compactValue(row.phase)} context</span>
+              </div>,
+              <div key={`${compactValue(row.ticket)}-${compactValue(row.phase)}-ticket`} className="table-stack">
+                <strong>{compactValue(row.ticket)}</strong>
+                <span>{compactValue(row.ticket_label)}</span>
+                <span>{compactValue(row.log_file)}</span>
+              </div>,
+              <div key={`${compactValue(row.ticket)}-${compactValue(row.phase)}-cause`} className="table-stack">
+                <StatusBadge
+                  label={compactValue(row.cause_key)}
+                  tone={row.cause_key === "unknown" ? "warning" : row.cause_key === "permission" || row.cause_key === "journal_write" ? "critical" : "info"}
+                />
+                <span>{compactValue(row.cause_detail)}</span>
+                <span>{compactValue(row.cause)}</span>
+              </div>,
+              <div key={`${compactValue(row.ticket)}-${compactValue(row.phase)}-trace`} className="table-stack">
+                <span>{Array.isArray(row.traceback) && row.traceback.length ? compactValue(row.traceback[row.traceback.length - 1]) : "No traceback lines captured"}</span>
+                <span>{compactValue(row.message)}</span>
+              </div>,
+            ])}
+            emptyTitle="No recent registration failures"
+            emptyDescription="The execution logs did not show trade-context journal registration exceptions in the scanned files."
+          />
+        </div>
       </Section>
 
       <Section title="Unmatched closed-deal resolution dashboard" description="Operator-facing breakdown of unresolved close attribution, recovery lanes, and the strongest hints available for pairing work.">
