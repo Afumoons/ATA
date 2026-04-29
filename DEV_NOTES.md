@@ -63,6 +63,7 @@ For each autonomous run:
 - U3A explainability on Strategy detail is now complete
 - U3B review queue is now complete
 - U1C research filters are now complete for symbol, timeframe, and family/sort controls
+- U1C research diagnostics is now complete, including skip-reason drilldown with counts and examples per family
 - U1C funnel visualization, previous-run comparison, and fragile-family highlighting are now complete
-- Next highest-value slice is the remaining U1C skip-reason drilldown with counts and examples per family
+- Next highest-value slice is U4A execution depth, starting with richer open trade drilldown
 - User explicitly wants progress reports, not approval questions

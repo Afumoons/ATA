@@ -89,6 +89,7 @@ def _summarize_research_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
     funnel_totals: Counter[str] = Counter()
     rejection_totals: Counter[str] = Counter()
     family_rows: List[Dict[str, Any]] = []
+    family_skip_drilldown: List[Dict[str, Any]] = []
     top_rejection_samples: Dict[str, List[str]] = {}
 
     for family_name, family_payload in families.items():
@@ -114,6 +115,18 @@ def _summarize_research_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
         if isinstance(skips, dict) and skips:
             top_rejection = max(skips.items(), key=lambda item: _coerce_int(item[1]))[0]
 
+        reason_rows: List[Dict[str, Any]] = []
+        if isinstance(skips, dict):
+            for reason, count in sorted(skips.items(), key=lambda item: (_coerce_int(item[1]), str(item[0])), reverse=True):
+                samples_for_reason = samples.get(reason) if isinstance(samples, dict) else []
+                if not isinstance(samples_for_reason, list):
+                    samples_for_reason = []
+                reason_rows.append({
+                    "reason": str(reason),
+                    "count": _coerce_int(count),
+                    "samples": [str(sample) for sample in samples_for_reason[:3]],
+                })
+
         family_rows.append({
             "family": str(family_name),
             "generated": generated,
@@ -122,14 +135,25 @@ def _summarize_research_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
             "conversion_pct": round(conversion_pct, 2),
             "top_rejection": top_rejection,
         })
+        family_skip_drilldown.append({
+            "family": str(family_name),
+            "generated": generated,
+            "accepted": accepted,
+            "rejection_count": rejection_count,
+            "conversion_pct": round(conversion_pct, 2),
+            "top_rejection": top_rejection,
+            "reasons": reason_rows,
+        })
 
     family_rows.sort(key=lambda row: (row["accepted"], row["generated"], row["family"]), reverse=True)
+    family_skip_drilldown.sort(key=lambda row: (int(row["rejection_count"]), int(row["generated"]), str(row["family"])), reverse=True)
     return {
         "families": families,
         "funnel_totals": dict(sorted(funnel_totals.items())),
         "rejection_totals": dict(sorted(rejection_totals.items(), key=lambda item: item[1], reverse=True)),
         "top_rejection_samples": top_rejection_samples,
         "family_rows": family_rows,
+        "family_skip_drilldown": family_skip_drilldown,
     }
 
 
@@ -786,6 +810,7 @@ def load_research_summary(symbol: str = "XAUUSDm", timeframe: str = "M15") -> Di
         "funnel_totals": summary["funnel_totals"],
         "rejection_totals": summary["rejection_totals"],
         "top_rejection_samples": summary["top_rejection_samples"],
+        "family_skip_drilldown": summary["family_skip_drilldown"],
         "comparison": _build_research_comparison(symbol, timeframe, payload, summary),
         "available_filters": artifacts,
     }

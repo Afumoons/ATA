@@ -55,7 +55,7 @@ Transform the current Operator UI from a read-only monitoring surface into a dec
 - [x] Add funnel visualization cards or stacked bars
 - [x] Add batch-to-batch comparison view
 - [x] Add “what changed since previous run” summary
-- [ ] Add skip-reason drilldown with counts + examples per family
+- [x] Add skip-reason drilldown with counts + examples per family
 - [x] Highlight fragile families with low generated-to-accepted conversion
 
 ---
@@ -186,7 +186,7 @@ Transform the current Operator UI from a read-only monitoring surface into a dec
 ### Milestone M1 — Research cockpit
 - [x] U1A complete
 - [x] U1B complete
-- [ ] U1C filter/comparison improvements complete
+- [x] U1C filter/comparison improvements complete
 
 ### Milestone M2 — Drift cockpit
 - [x] U2A committed

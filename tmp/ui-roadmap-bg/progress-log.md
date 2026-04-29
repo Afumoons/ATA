@@ -26,3 +26,7 @@
 - The Research page now shows batch-to-batch deltas, a “since previous run” summary, and a fragile-family table for low-conversion/high-rejection families.
 - Verified the U1C comparison slice with `python -m compileall ui_api`, a package-context smoke test for `load_research_summary('XAUUSDm', 'M15')`, and production `npm run build` in `ui-front`.
 - Marked U1C funnel visualization, previous-run comparison, and fragile-family highlighting complete in roadmap/task notes; next slice is per-family skip-reason drilldown with counts and examples.
+- Added family-level skip-reason drilldown data to the research summary API, including per-reason counts and up to three example strategy names per family.
+- Extended the Research page with a skip-reason drilldown table so operators can inspect why each family is being blocked without leaving the funnel view.
+- Verified the U1C skip-drilldown slice with `python -m compileall ui_api`, a package-context smoke test for `load_research_summary('XAUUSDm', 'M15')`, and production `npm run build` in `ui-front`.
+- Marked U1C fully complete in roadmap/task notes; next slice is U4A richer open-trade drilldown on the Execution page.

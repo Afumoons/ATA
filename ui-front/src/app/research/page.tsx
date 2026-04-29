@@ -77,6 +77,22 @@ type ComparisonFamilyDelta = {
   previous_top_rejection: string;
 };
 
+type FamilySkipReason = {
+  reason: string;
+  count: number;
+  samples: string[];
+};
+
+type FamilySkipDrilldown = {
+  family: string;
+  generated: number;
+  accepted: number;
+  rejection_count: number;
+  conversion_pct: number;
+  top_rejection: string;
+  reasons: FamilySkipReason[];
+};
+
 export default function ResearchPage() {
   const [symbol, setSymbol] = useState("XAUUSDm");
   const [timeframe, setTimeframe] = useState("M15");
@@ -172,6 +188,10 @@ export default function ResearchPage() {
   const comparison = (data.comparison as Record<string, unknown> | undefined) ?? {};
   const comparisonSummary = (comparison.summary as Record<string, unknown> | undefined) ?? {};
   const comparisonFamilyDeltas = ((comparison.family_deltas as ComparisonFamilyDelta[] | undefined) ?? []).filter((row) => {
+    if (!familyFilter) return true;
+    return row.family === familyFilter;
+  });
+  const familySkipDrilldown = ((data.family_skip_drilldown as FamilySkipDrilldown[] | undefined) ?? []).filter((row) => {
     if (!familyFilter) return true;
     return row.family === familyFilter;
   });
@@ -316,6 +336,36 @@ export default function ResearchPage() {
 
       <Section title="Top rejection reasons" description="Most common reasons strategies are dropping out of the research pipeline.">
         <KeyValueGrid data={data.rejection_totals} emptyTitle="No rejection totals" emptyDescription="The research summary did not provide rejection-reason counts." />
+      </Section>
+
+      <Section title="Skip-reason drilldown" description="Per-family rejection mix with exact counts and example strategy names, so operators can see whether a family is blocked by saturation, prescreen quality, or duplicate pressure.">
+        <DataTable
+          columns={["Family", "Generated", "Accepted", "Conversion", "Skip count", "Top skip", "Reason breakdown"]}
+          rows={familySkipDrilldown.map((row) => [
+            compactValue(row.family),
+            formatNumber(row.generated),
+            formatNumber(row.accepted),
+            formatPercent(row.conversion_pct),
+            formatNumber(row.rejection_count),
+            compactValue(row.top_rejection),
+            row.reasons.length ? (
+              <div className="space-y-2" key={`${row.family}-reasons`}>
+                {row.reasons.map((reason) => (
+                  <div key={`${row.family}-${reason.reason}`}>
+                    <strong>{`${reason.reason} (${formatNumber(reason.count)})`}</strong>
+                    <div className="text-xs text-muted-foreground">
+                      {reason.samples.length ? `Examples: ${reason.samples.join(", ")}` : "No sample strategies stored for this skip reason."}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              compactValue("No skip reasons")
+            ),
+          ])}
+          emptyTitle="No skip drilldown rows"
+          emptyDescription="The current filter has no family-level skip reasons with stored counts and examples."
+        />
       </Section>
 
       <Section title="Family funnel table" description="Per-family progress from generated candidates through accepted entries, with client-side filtering and sorting for quick diagnosis.">
