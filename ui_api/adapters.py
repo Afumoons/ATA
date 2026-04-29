@@ -93,6 +93,13 @@ def _coerce_int(value: Any) -> int:
         return 0
 
 
+def _normalize_skip_sample(value: Any) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    return text.split(":", 1)[0].strip() or text
+
+
 def _summarize_research_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
     families = payload.get("families") or {}
     funnel_totals: Counter[str] = Counter()
@@ -565,6 +572,117 @@ def _build_strategy_similarity_panel(
             "near_clone": 0.85,
             "clone_risk": 0.92,
         },
+    }
+
+
+def _build_strategy_duplicate_risk_context(
+    *,
+    symbol: str,
+    timeframe: str,
+    family: str,
+    similarity_panel: Dict[str, Any],
+) -> Dict[str, Any]:
+    if not symbol or not timeframe or not family or family == "unknown":
+        return {}
+
+    payload = read_json_file(RESEARCH_SUMMARY_DIR / f"{symbol}_{timeframe}.json", default=None)
+    if not isinstance(payload, dict):
+        return {}
+
+    summary = _summarize_research_payload(payload)
+    family_row = next((row for row in summary["family_skip_drilldown"] if str(row.get("family") or "") == family), None)
+    if not isinstance(family_row, dict):
+        return {}
+
+    family_reasons = {
+        str(item.get("reason") or ""): item
+        for item in family_row.get("reasons", [])
+        if isinstance(item, dict) and item.get("reason")
+    }
+    semantic_reason = family_reasons.get("semantic_duplicate") or {}
+    memory_reason = family_reasons.get("memory_veto") or {}
+    semantic_count = _coerce_int(semantic_reason.get("count"))
+    memory_count = _coerce_int(memory_reason.get("count"))
+    family_generated = _coerce_int(family_row.get("generated"))
+    family_accepted = _coerce_int(family_row.get("accepted"))
+
+    slot_semantic_total = 0
+    slot_memory_total = 0
+    for other_row in summary["family_skip_drilldown"]:
+        if not isinstance(other_row, dict):
+            continue
+        for reason_row in other_row.get("reasons", []):
+            if not isinstance(reason_row, dict):
+                continue
+            reason_name = str(reason_row.get("reason") or "")
+            if reason_name == "semantic_duplicate":
+                slot_semantic_total += _coerce_int(reason_row.get("count"))
+            elif reason_name == "memory_veto":
+                slot_memory_total += _coerce_int(reason_row.get("count"))
+
+    reason_rows: List[Dict[str, Any]] = []
+    for reason_name, label, tone, payload_row in [
+        ("semantic_duplicate", "Semantic duplicate", "warning", semantic_reason),
+        ("memory_veto", "Memory veto", "critical", memory_reason),
+    ]:
+        count = _coerce_int(payload_row.get("count"))
+        raw_samples = payload_row.get("samples") if isinstance(payload_row, dict) else []
+        samples = [_normalize_skip_sample(item) for item in raw_samples] if isinstance(raw_samples, list) else []
+        samples = [item for item in samples if item]
+        if count <= 0 and not samples:
+            continue
+        if reason_name == "memory_veto":
+            reading = "Research memory found too many bad historical neighbors for similar candidates."
+        else:
+            reading = "Fresh candidates in this family were blocked for landing too close to an existing strategy shape."
+        reason_rows.append({
+            "reason": reason_name,
+            "label": label,
+            "count": count,
+            "samples": samples[:3],
+            "tone": tone,
+            "reading": reading,
+        })
+
+    risk_label = "clear"
+    risk_tone = "success"
+    if memory_count > 0 or str(similarity_panel.get("duplicate_risk") or "") == "high":
+        risk_label = "memory pressure"
+        risk_tone = "critical"
+    elif semantic_count > 0 or str(similarity_panel.get("duplicate_risk") or "") in {"watch", "moderate"}:
+        risk_label = "duplicate pressure"
+        risk_tone = "warning"
+
+    summary_parts: List[str] = []
+    if semantic_count > 0:
+        summary_parts.append(f"{semantic_count} recent semantic-duplicate skip(s) hit this family")
+    if memory_count > 0:
+        summary_parts.append(f"{memory_count} memory-veto skip(s) also landed here")
+    if not summary_parts:
+        summary_parts.append("Latest research run did not log semantic-duplicate or memory-veto skips for this family")
+    summary_parts.append(f"{slot_semantic_total} semantic duplicate skip(s) across the full {symbol} {timeframe} slot")
+    if slot_memory_total > 0:
+        summary_parts.append(f"{slot_memory_total} memory-veto skip(s) across the slot")
+
+    headline = f"Latest {symbol} {timeframe} research run shows {risk_label} around the {family} family."
+
+    return {
+        "headline": headline,
+        "summary": ", ".join(summary_parts) + ".",
+        "tone": risk_tone,
+        "risk_label": risk_label,
+        "generated_at": payload.get("generated_at"),
+        "symbol": symbol,
+        "timeframe": timeframe,
+        "family": family,
+        "family_generated": family_generated,
+        "family_accepted": family_accepted,
+        "family_rejection_count": _coerce_int(family_row.get("rejection_count")),
+        "semantic_duplicate_count": semantic_count,
+        "memory_veto_count": memory_count,
+        "slot_semantic_duplicate_total": slot_semantic_total,
+        "slot_memory_veto_total": slot_memory_total,
+        "reasons": reason_rows,
     }
 
 
@@ -2608,6 +2726,16 @@ def load_strategy_detail(name: str) -> Dict[str, Any] | None:
         else:
             latest_reason_text = f"Current pool snapshot reports status {_humanize_token(current_status)}"
 
+    detail_symbol = str((manifest_entry or {}).get("symbol") or (index_entry or {}).get("symbol") or (pool_dict or {}).get("symbol") or "")
+    detail_timeframe = str((manifest_entry or {}).get("timeframe") or (index_entry or {}).get("timeframe") or (pool_dict or {}).get("timeframe") or "")
+    similarity_panel = _build_strategy_similarity_panel(
+        target_name=name,
+        pool=pool,
+        manifest_by_name=manifest_by_name,
+        index_by_name=index_by_name,
+        live_strategy_rows=live_strategy_rows if isinstance(live_strategy_rows, dict) else {},
+    )
+
     derived = {
         "best_regime": meta.get("best_regime"),
         "worst_regime": meta.get("worst_regime"),
@@ -2648,12 +2776,12 @@ def load_strategy_detail(name: str) -> Dict[str, Any] | None:
             "decision_label": f"{_humanize_token(current_status).title()} posture",
             "decay_warning_count": decay_warning_count,
         },
-        "similarity_panel": _build_strategy_similarity_panel(
-            target_name=name,
-            pool=pool,
-            manifest_by_name=manifest_by_name,
-            index_by_name=index_by_name,
-            live_strategy_rows=live_strategy_rows if isinstance(live_strategy_rows, dict) else {},
+        "similarity_panel": similarity_panel,
+        "duplicate_risk_context": _build_strategy_duplicate_risk_context(
+            symbol=detail_symbol,
+            timeframe=detail_timeframe,
+            family=family,
+            similarity_panel=similarity_panel if isinstance(similarity_panel, dict) else {},
         ),
     }
 

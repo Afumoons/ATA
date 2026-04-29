@@ -217,9 +217,11 @@ export default function PoolPage() {
   const fragilityMarkers = normalizeDetailRows(strategyIdentity.fragility_markers);
   const decisionContext = coerceRecord(selectedDerived.decision_context);
   const similarityPanel = coerceRecord(selectedDerived.similarity_panel);
+  const duplicateRiskContext = coerceRecord(selectedDerived.duplicate_risk_context);
   const similarityTarget = coerceRecord(similarityPanel.target);
   const similarityNearest = coerceRecord(similarityPanel.nearest_neighbor);
   const similarityNeighbors = normalizeDetailRows(similarityPanel.neighbors);
+  const duplicateRiskReasons = normalizeDetailRows(duplicateRiskContext.reasons);
   const transitionHistory = Array.isArray(decisionContext.transition_history)
     ? decisionContext.transition_history.filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object" && !Array.isArray(item))
     : [];
@@ -551,12 +553,12 @@ export default function PoolPage() {
               description="Semantic-neighbor panel for spotting clone pressure, same-slot overlap, and low-novelty strategies before the pool quietly over-concentrates around one idea."
               action={similarityPanel.duplicate_risk ? <StatusBadge label={`Duplicate risk: ${compactValue(similarityPanel.duplicate_risk)}`} tone={toneFromBadgeTone(similarityPanel.tone)} /> : null}
             >
-              {!similarityNeighbors.length ? (
+              {!similarityNeighbors.length && !duplicateRiskReasons.length && !Object.keys(duplicateRiskContext).length ? (
                 <EmptyState title="No similarity panel yet" description="The backend could not recover enough strategy-rule payloads to compute nearest neighbors for this strategy." />
               ) : (
                 <div className="dashboard-stack">
                   <div className="panel">
-                    <p>{compactValue(similarityPanel.summary ?? similarityPanel.headline)}</p>
+                    <p>{compactValue(similarityPanel.summary ?? similarityPanel.headline ?? duplicateRiskContext.summary)}</p>
                   </div>
 
                   <section className="stats-grid">
@@ -592,6 +594,47 @@ export default function PoolPage() {
                     />
                   </section>
 
+                  <section className="stats-grid">
+                    <StatCard
+                      label="Semantic duplicate skips"
+                      value={formatNumber(pickFirstNumber(duplicateRiskContext.semantic_duplicate_count))}
+                      hint={compactValue(duplicateRiskContext.generated_at ? `Latest research run ${formatDateTime(duplicateRiskContext.generated_at)}` : "Latest research-family snapshot")}
+                      tone={pickFirstNumber(duplicateRiskContext.semantic_duplicate_count) ? "warning" : "success"}
+                    />
+                    <StatCard
+                      label="Memory veto skips"
+                      value={formatNumber(pickFirstNumber(duplicateRiskContext.memory_veto_count))}
+                      hint="Candidates rejected because similar historical neighbors looked structurally bad"
+                      tone={pickFirstNumber(duplicateRiskContext.memory_veto_count) ? "critical" : "success"}
+                    />
+                    <StatCard
+                      label="Family generated / accepted"
+                      value={compactValue(`${formatNumber(pickFirstNumber(duplicateRiskContext.family_generated))} / ${formatNumber(pickFirstNumber(duplicateRiskContext.family_accepted))}`)}
+                      hint={compactValue(duplicateRiskContext.family ? `${duplicateRiskContext.family} in latest slot research` : "Family throughput")}
+                      tone="info"
+                    />
+                    <StatCard
+                      label="Veto pressure"
+                      value={compactValue(duplicateRiskContext.risk_label)}
+                      hint={compactValue(duplicateRiskContext.symbol && duplicateRiskContext.timeframe ? `${duplicateRiskContext.symbol} ${duplicateRiskContext.timeframe} research context` : "Research veto context")}
+                      tone={toneFromBadgeTone(duplicateRiskContext.tone)}
+                    />
+                  </section>
+
+                  {duplicateRiskReasons.length ? (
+                    <DataTable
+                      columns={["Veto lane", "Count", "Example candidates", "Reading"]}
+                      rows={duplicateRiskReasons.map((item, index) => [
+                        <StatusBadge key={`duplicate-risk-reason-${index}`} label={compactValue(item.label ?? item.reason)} tone={toneFromBadgeTone(item.tone)} />,
+                        formatNumber(pickFirstNumber(item.count)),
+                        compactValue(Array.isArray(item.samples) ? item.samples.join(", ") : item.samples),
+                        compactValue(item.reading),
+                      ])}
+                      emptyTitle="No duplicate-risk veto rows"
+                      emptyDescription="The latest research-family snapshot did not log semantic-duplicate or memory-veto skips for this strategy family."
+                    />
+                  ) : null}
+
                   <DataTable
                     columns={["Neighbor", "Similarity", "Relationship", "Status", "Research / live", "Novelty", "Risk"]}
                     rows={similarityNeighbors.map((item, index) => [
@@ -618,6 +661,14 @@ export default function PoolPage() {
                         </p>
                       </div>
                     </Section>
+                    <Section title="Research veto context" description="How recent research runs are already pushing back on duplicate shapes in this slot.">
+                      <div className="panel">
+                        <p>{compactValue(duplicateRiskContext.summary ?? "No recent semantic-duplicate or memory-veto context was found for this strategy family.")}</p>
+                      </div>
+                    </Section>
+                  </div>
+
+                  <div className="detail-grid-2">
                     <Section title="Operator cue" description="What to do with high similarity.">
                       <div className="panel">
                         <p>

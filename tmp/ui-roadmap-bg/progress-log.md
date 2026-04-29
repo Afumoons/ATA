@@ -70,3 +70,7 @@
 - Added a U5B nearest-neighbor / clone similarity panel to Strategy detail, deriving semantic-neighbor rankings from pool strategy payloads plus same-slot overlap, structural clone detection, and research novelty cues.
 - Verified the nearest-neighbor slice with `python -m compileall ui_api`, a direct `load_strategy_detail('core15_BTCUSDm_M15_b13d')` smoke test for `derived.similarity_panel`, and production `npm run build` in `ui-front`.
 - Marked the nearest-neighbor / clone similarity item complete in roadmap/task notes; next slice is U5B duplicate-risk visibility from semantic similarity / memory veto context.
+- Added U5B duplicate-risk visibility to Strategy detail by joining the similarity panel with latest research-family semantic-duplicate and memory-veto skip context for the same symbol/timeframe/family slot.
+- The Pool strategy detail view now surfaces semantic-duplicate skips, memory-veto skips, family generated/accepted throughput, veto-pressure tone, and example vetoed candidates alongside the nearest-neighbor panel.
+- Verified the duplicate-risk context slice with `python -m compileall ui_api`, a direct `load_strategy_detail('core15_BTCUSDm_M15_b13d')` smoke test for `derived.duplicate_risk_context`, and production `npm run build` in `ui-front`.
+- Marked U5 fully complete in roadmap/task notes; next slice is U6A governance policy summary page.
