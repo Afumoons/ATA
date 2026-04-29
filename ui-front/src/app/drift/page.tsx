@@ -32,6 +32,20 @@ const severityRank: Record<string, number> = {
   broken: 3,
 };
 
+const regimeAlignmentTone: Record<string, StatusTone> = {
+  aligned: "success",
+  mismatch: "critical",
+  insufficient_live_data: "warning",
+  unknown: "neutral",
+};
+
+const regimeAlignmentLabel: Record<string, string> = {
+  aligned: "Aligned",
+  mismatch: "Mismatch",
+  insufficient_live_data: "Thin live data",
+  unknown: "Unknown",
+};
+
 const sortPresetOptions = [
   { value: "highest-drift", label: "Highest drift" },
   { value: "negative-recent-avg", label: "Negative recent avg" },
@@ -52,6 +66,15 @@ function lastUpdateTimestamp(value: string | null | undefined) {
   if (!value) return 0;
   const parsed = Date.parse(value);
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function regimeAlignmentBadge(value: DriftSummaryRow["regime_alignment"]) {
+  const key = value ?? "unknown";
+  return <StatusBadge label={regimeAlignmentLabel[key] ?? regimeAlignmentLabel.unknown} tone={regimeAlignmentTone[key] ?? "neutral"} />;
+}
+
+function regimePairValue(row: DriftSummaryRow) {
+  return compactValue(`${row.best_regime ?? "?"} → ${row.live_observed_regime ?? "?"}`);
 }
 
 function RecentPnlSparkline({ values }: { values?: number[] | null }) {
@@ -149,6 +172,7 @@ export default function DriftPage() {
   const filterOptions = data.summary?.available_filters ?? {};
   const topAttention = sortedRows.filter((row) => row.severity === "drifting" || row.severity === "broken" || Boolean(row.decay_warning)).slice(0, 12);
   const severityCounts = data.summary?.severity_counts ?? {};
+  const regimeAlignmentCounts = data.summary?.regime_alignment_counts ?? {};
 
   return (
     <div className="dashboard-stack">
@@ -169,6 +193,7 @@ export default function DriftPage() {
         <StatCard label="Visible rows" value={formatNumber(filteredRows.length)} hint="Rows after current filters" tone="info" />
         <StatCard label="Broken" value={formatNumber(Number(severityCounts.broken ?? 0))} hint="Highest-risk drift severity" tone="critical" />
         <StatCard label="Drifting" value={formatNumber(Number(severityCounts.drifting ?? 0))} hint="Negative or widening mismatch" tone="warning" />
+        <StatCard label="Regime mismatch" value={formatNumber(Number(regimeAlignmentCounts.mismatch ?? 0))} hint="Research best regime disagrees with live observed regime" tone="critical" />
       </section>
 
       <Section title="Drift filters" description="Slice the drift snapshot by symbol, family, lifecycle status, severity, and triage sort preset.">
@@ -212,7 +237,7 @@ export default function DriftPage() {
 
       <Section title="Attention queue" description="Highest-priority rows where live behavior is diverging or degrading.">
         <DataTable
-          columns={["Strategy", "Symbol", "Family", "Status", "Severity", "Research return", "Live PnL", "Recent avg", "Recent sequence", "Decay", "Best / worst regime"]}
+          columns={["Strategy", "Symbol", "Family", "Status", "Severity", "Research return", "Live PnL", "Recent avg", "Recent sequence", "Decay", "Regime alignment", "Research best → live observed"]}
           rows={topAttention.map((row: DriftSummaryRow) => [
             compactValue(row.name),
             compactValue(row.symbol),
@@ -224,7 +249,8 @@ export default function DriftPage() {
             formatCurrency(Number(row.recent_avg_pnl ?? 0)),
             <RecentPnlSparkline key={`${String(row.name)}-attention-sequence`} values={row.recent_pnls} />,
             <StatusBadge key={`${String(row.name)}-decay`} label={row.decay_warning ? "Warning" : "Stable"} tone={row.decay_warning ? "critical" : "success"} />,
-            compactValue(`${row.best_regime ?? "?"} / ${row.worst_regime ?? "?"}`),
+            regimeAlignmentBadge(row.regime_alignment),
+            regimePairValue(row),
           ])}
           emptyTitle="No attention rows"
           emptyDescription="No filtered rows currently cross the drift attention heuristics."
@@ -233,13 +259,15 @@ export default function DriftPage() {
 
       <Section title="Drift leaderboard" description="Sorted rows with live-vs-research mismatch context for review and triage.">
         <DataTable
-          columns={["Strategy", "Symbol", "Family", "Status", "Severity", "Trades", "Research return", "Research sharpe", "Live PnL", "Recent avg", "Recent sequence", "Drift score", "Last update"]}
+          columns={["Strategy", "Symbol", "Family", "Status", "Severity", "Regime alignment", "Research best → live observed", "Trades", "Research return", "Research sharpe", "Live PnL", "Recent avg", "Recent sequence", "Drift score", "Last update"]}
           rows={sortedRows.map((row: DriftSummaryRow) => [
             compactValue(row.name),
             compactValue(row.symbol),
             compactValue(row.family),
             compactValue(row.status),
             severityBadge(row.severity),
+            regimeAlignmentBadge(row.regime_alignment),
+            regimePairValue(row),
             formatNumber(Number(row.live_trades ?? 0)),
             formatPercent(Number(row.research_return_pct ?? 0)),
             formatNumber(Number(row.research_sharpe ?? 0)),

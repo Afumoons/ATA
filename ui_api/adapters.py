@@ -395,6 +395,32 @@ def load_drift_summary() -> Dict[str, Any]:
     families: Counter[str] = Counter()
     statuses: Counter[str] = Counter()
     severities: Counter[str] = Counter()
+    regime_alignment_counts: Counter[str] = Counter()
+
+    def pick_live_observed_regime(explain: Dict[str, Any]) -> Optional[str]:
+        live_meta = explain.get("live_meta") or {}
+        if isinstance(live_meta, dict):
+            best_regime = live_meta.get("best_regime")
+            if best_regime:
+                return str(best_regime)
+
+        live_regime_pnl = explain.get("live_regime_pnl") or {}
+        if not isinstance(live_regime_pnl, dict):
+            return None
+
+        ranked_live_regimes: List[Tuple[int, float, str]] = []
+        for label, stats in live_regime_pnl.items():
+            if not isinstance(stats, dict):
+                continue
+            ranked_live_regimes.append((
+                int(stats.get("num_trades", 0) or 0),
+                float(stats.get("total_pnl", 0.0) or 0.0),
+                str(label),
+            ))
+        if not ranked_live_regimes:
+            return None
+        ranked_live_regimes.sort(key=lambda item: (item[0], abs(item[1]), item[1]), reverse=True)
+        return ranked_live_regimes[0][2]
 
     for name, rec in pool.strategies.items():
         stats = rec.stats or {}
@@ -411,6 +437,14 @@ def load_drift_summary() -> Dict[str, Any]:
         recent_avg = (sum(recent_pnls) / len(recent_pnls)) if recent_pnls else 0.0
         drift_score = abs(live_total_pnl - research_return_pct)
         decay_warning = live_trades >= 3 and recent_avg < 0
+        research_best_regime = meta.get("best_regime")
+        live_observed_regime = pick_live_observed_regime(explain) if isinstance(explain, dict) else None
+
+        regime_alignment = "unknown"
+        if research_best_regime and live_observed_regime:
+            regime_alignment = "aligned" if str(research_best_regime) == str(live_observed_regime) else "mismatch"
+        elif research_best_regime:
+            regime_alignment = "insufficient_live_data"
 
         severity = "healthy"
         if decay_warning or drift_score >= 20 or recent_avg <= -5:
@@ -428,6 +462,7 @@ def load_drift_summary() -> Dict[str, Any]:
         families[str(family)] += 1
         statuses[status] += 1
         severities[severity] += 1
+        regime_alignment_counts[regime_alignment] += 1
 
         rows.append({
             "name": name,
@@ -441,8 +476,10 @@ def load_drift_summary() -> Dict[str, Any]:
             "live_trades": live_trades,
             "recent_avg_pnl": recent_avg,
             "recent_pnls": recent_pnls,
-            "best_regime": meta.get("best_regime"),
+            "best_regime": research_best_regime,
             "worst_regime": meta.get("worst_regime"),
+            "live_observed_regime": live_observed_regime,
+            "regime_alignment": regime_alignment,
             "drift_score": drift_score,
             "decay_warning": decay_warning,
             "severity": severity,
@@ -461,6 +498,7 @@ def load_drift_summary() -> Dict[str, Any]:
             "decay_warning_count": sum(1 for row in rows if row.get("decay_warning")),
             "negative_recent_avg_count": sum(1 for row in rows if float(row.get("recent_avg_pnl", 0.0)) < 0),
             "severity_counts": dict(sorted(severities.items())),
+            "regime_alignment_counts": dict(sorted(regime_alignment_counts.items())),
             "available_filters": {
                 "symbols": sorted(symbols.keys()),
                 "families": sorted(families.keys()),

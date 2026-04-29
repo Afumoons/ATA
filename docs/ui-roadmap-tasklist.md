@@ -75,7 +75,7 @@ Transform the current Operator UI from a read-only monitoring surface into a dec
 - [x] Add symbol / family / status filters to Drift page
 - [x] Add severity badges (healthy / watch / drifting / broken)
 - [x] Add sparkline for recent PnL sequence
-- [ ] Add regime mismatch indicator (research best regime vs live observed regime)
+- [x] Add regime mismatch indicator (research best regime vs live observed regime)
 - [ ] Add repeated decay-warning counter per strategy
 - [ ] Add unresolved anomaly grouping (unmatched close, missing stats, stale updates)
 - [ ] Add “needs manual review” queue section

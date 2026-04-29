@@ -109,6 +109,8 @@ export interface DriftSummaryRow {
   recent_pnls?: number[] | null;
   best_regime?: string | null;
   worst_regime?: string | null;
+  live_observed_regime?: string | null;
+  regime_alignment?: "aligned" | "mismatch" | "insufficient_live_data" | "unknown" | null;
   drift_score?: number | null;
   decay_warning?: boolean | null;
   severity?: "healthy" | "watch" | "drifting" | "broken" | null;
@@ -124,6 +126,7 @@ export interface DriftSummaryResponse {
     decay_warning_count?: number;
     negative_recent_avg_count?: number;
     severity_counts?: Record<string, number>;
+    regime_alignment_counts?: Record<string, number>;
     available_filters?: {
       symbols?: string[];
       families?: string[];
