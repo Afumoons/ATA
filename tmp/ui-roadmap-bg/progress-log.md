@@ -60,3 +60,6 @@
 - Added a U5A strategy identity layer to the strategy detail payload and Pool page, including a Strategy DNA summary, true-edge identity badges, family/regime mismatch warnings, session dependence detection, and fragility markers derived from research explain + live decay context.
 - Verified the U5A identity slice with `python -m compileall ui_api`, a direct `load_strategy_detail()` smoke test for `derived.strategy_identity`, and production `npm run build` in `ui-front`.
 - Marked U5A complete in roadmap/task notes; next slice is U5B compare-two-strategies view.
+- Added a U5B compare-two-strategies view on `/pool`, including dual strategy selectors, head-to-head posture cards, a comparison matrix, regime/session contrast tables, and DNA warning/fragility summaries.
+- Verified the U5B compare-two-strategies slice with production `npm run build` in `ui-front`.
+- Marked the compare-two-strategies item complete in roadmap/task notes; next slice is U5B compare-family view.

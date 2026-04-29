@@ -20,6 +20,7 @@
 - [x] Add U4B recent trade-context registration failures panel on `/execution`
 - [x] Add U4B stale execution artifact warnings on `/execution`
 - [x] Add U5A strategy identity / DNA layer on Strategy detail
+- [x] Add U5B compare-two-strategies view on `/pool`
 
 ## Completion Rule
 When every item in `docs/ui-roadmap-tasklist.md` is checked or intentionally closed, mark this plan completed and stop/remove the background cron loop.

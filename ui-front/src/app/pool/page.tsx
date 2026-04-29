@@ -44,6 +44,7 @@ function toneFromBadgeTone(value: unknown) {
 }
 
 const EMPTY_STRATEGY_ROWS: Awaited<ReturnType<typeof uiApi.strategies>> = [];
+type StrategyDetailData = Awaited<ReturnType<typeof uiApi.strategyDetail>>;
 
 function humanizeDecisionReason(value: unknown) {
   if (typeof value !== "string" || !value.trim()) return "No explicit reason recorded";
@@ -67,10 +68,63 @@ function toneFromStrategyStatus(status: string | null) {
   }
 }
 
+function detailSummary(detail: StrategyDetailData | null | undefined) {
+  const manifest = coerceRecord(detail?.manifest_entry);
+  const indexEntry = coerceRecord(detail?.index_entry);
+  const pool = coerceRecord(detail?.pool_record);
+  const live = coerceRecord(detail?.live_stats);
+  const derived = coerceRecord(detail?.derived);
+  const decision = coerceRecord(derived.decision_context);
+  const identity = coerceRecord(derived.strategy_identity);
+
+  return {
+    name: detail?.name ?? "Unknown",
+    symbol: pickFirstString(manifest.symbol, indexEntry.symbol, pool.symbol),
+    timeframe: pickFirstString(manifest.timeframe, indexEntry.timeframe, pool.timeframe),
+    family: pickFirstString(manifest.family, indexEntry.family, pool.family),
+    motif: pickFirstString(manifest.motif, indexEntry.motif, pool.motif),
+    status: pickFirstString(decision.current_status, manifest.status, indexEntry.status, pool.status),
+    tier: pickFirstString(decision.current_tier, indexEntry.tier, pool.tier, manifest.tier),
+    score: pickFirstNumber(manifest.score, indexEntry.score, pool.score, pool.pool_score),
+    manifestRank: pickFirstNumber(decision.manifest_rank, manifest.manifest_rank, indexEntry.last_manifest_rank),
+    livePnl: pickFirstNumber(live.total_pnl, live.realized_pnl),
+    liveTrades: pickFirstNumber(live.num_trades, live.total_trades),
+    researchReturnPct: pickFirstNumber(derived.research_return_pct),
+    researchSharpe: pickFirstNumber(derived.research_sharpe),
+    liveVsResearchDelta: pickFirstNumber(derived.live_vs_research_delta),
+    routingConfidence: pickFirstNumber(derived.routing_confidence),
+    specialistScore: pickFirstNumber(derived.specialist_score),
+    bestRegime: pickFirstString(derived.best_regime),
+    bestSession: pickFirstString(derived.best_session),
+    archetype: pickFirstString(identity.archetype),
+    identitySummary: pickFirstString(identity.summary),
+    decayWarningCount: pickFirstNumber(decision.decay_warning_count),
+    warningCount: normalizeDetailRows(identity.warnings).length,
+    fragilityCount: normalizeDetailRows(identity.fragility_markers).length,
+    badges: normalizeDetailRows(identity.edge_badges),
+    warnings: normalizeDetailRows(identity.warnings),
+    fragilityMarkers: normalizeDetailRows(identity.fragility_markers),
+  };
+}
+
+function compareEdgeLabel(primary: number | null | undefined, secondary: number | null | undefined, format: (value: number | null | undefined) => string) {
+  if (primary == null && secondary == null) return "No data";
+  if (primary == null) return `Edge ${format(secondary)} on compare`;
+  if (secondary == null) return `Edge ${format(primary)} on primary`;
+  if (primary === secondary) return "Even";
+  return primary > secondary ? `Primary +${format(primary - secondary)}` : `Compare +${format(secondary - primary)}`;
+}
+
+function renderMapComparisonRows(left: Record<string, unknown>, right: Record<string, unknown>) {
+  const keys = Array.from(new Set([...Object.keys(left), ...Object.keys(right)])).sort((a, b) => a.localeCompare(b));
+  return keys.map((key) => [key, compactValue(left[key]), compactValue(right[key])]);
+}
+
 export default function PoolPage() {
   const [search, setSearch] = useState("");
   const [tierFilter, setTierFilter] = useState("all");
   const [selectedStrategy, setSelectedStrategy] = useState<string>("");
+  const [compareStrategy, setCompareStrategy] = useState<string>("");
 
   const poolQuery = useQuery("pool-summary", uiApi.poolSummary, { refetchIntervalMs: 60_000 });
   const strategiesQuery = useQuery("strategies-summary", uiApi.strategies, { refetchIntervalMs: 90_000 });
@@ -105,10 +159,28 @@ export default function PoolPage() {
     return filteredStrategies[0].name;
   }, [filteredStrategies, selectedStrategy]);
 
+  const comparisonCandidates = useMemo(
+    () => filteredStrategies.filter((row) => row.name !== resolvedSelectedStrategy),
+    [filteredStrategies, resolvedSelectedStrategy],
+  );
+
+  const resolvedCompareStrategy = useMemo(() => {
+    if (!comparisonCandidates.length) return "";
+    if (compareStrategy && comparisonCandidates.some((row) => row.name === compareStrategy)) {
+      return compareStrategy;
+    }
+    return comparisonCandidates[0]?.name ?? "";
+  }, [compareStrategy, comparisonCandidates]);
+
   const detailQuery = useQuery(
     `strategy-detail:${resolvedSelectedStrategy}`,
     () => uiApi.strategyDetail(resolvedSelectedStrategy),
     { enabled: Boolean(resolvedSelectedStrategy) },
+  );
+  const compareDetailQuery = useQuery(
+    `strategy-compare:${resolvedCompareStrategy}`,
+    () => uiApi.strategyDetail(resolvedCompareStrategy),
+    { enabled: Boolean(resolvedCompareStrategy) },
   );
 
   if (loading && !hasData) {
@@ -147,6 +219,17 @@ export default function PoolPage() {
   const liveLastUpdate = pickFirstString(selectedLiveStats.last_update);
   const liveVsResearchDelta = pickFirstNumber(selectedDerived.live_vs_research_delta);
   const ruleSource = Object.keys(selectedManifest).length ? selectedManifest : selectedPool;
+  const compareDetail = compareDetailQuery.data;
+  const primaryComparisonSummary = detailSummary(selectedDetail);
+  const secondaryComparisonSummary = detailSummary(compareDetail);
+  const compareRegimeRows = renderMapComparisonRows(
+    coerceRecord(selectedDerived.regime_pnl),
+    coerceRecord(coerceRecord(compareDetail?.derived).regime_pnl),
+  );
+  const compareSessionRows = renderMapComparisonRows(
+    coerceRecord(selectedDerived.session_pnl),
+    coerceRecord(coerceRecord(compareDetail?.derived).session_pnl),
+  );
 
   const tierOptions = Array.from(new Set(strategyRows.map((row) => String(row.tier ?? "unknown")))).sort();
 
@@ -162,9 +245,9 @@ export default function PoolPage() {
             <ToolbarButton
               label="Refresh now"
               onClick={() => {
-                void Promise.all([refresh(), strategiesQuery.refresh(), detailQuery.refresh()]);
+                void Promise.all([refresh(), strategiesQuery.refresh(), detailQuery.refresh(), compareDetailQuery.refresh()]);
               }}
-              busy={refreshing || strategiesQuery.refreshing || detailQuery.refreshing}
+              busy={refreshing || strategiesQuery.refreshing || detailQuery.refreshing || compareDetailQuery.refreshing}
               tone="info"
             />
           </div>
@@ -569,6 +652,198 @@ export default function PoolPage() {
           emptyTitle="No top strategy rows"
           emptyDescription="The pool summary returned no top-ranked strategies for this snapshot."
         />
+      </Section>
+
+      <Section
+        title="Compare two strategies"
+        description="Head-to-head view for DNA, live posture, research edge, and mismatch risk before deciding which strategy deserves operator attention."
+        action={resolvedCompareStrategy ? <StatusBadge label={`${resolvedSelectedStrategy} vs ${resolvedCompareStrategy}`} tone="info" /> : null}
+      >
+        {!resolvedSelectedStrategy ? (
+          <EmptyState title="No primary strategy selected" description="Choose the first strategy from the explorer before opening a head-to-head comparison." />
+        ) : !comparisonCandidates.length ? (
+          <EmptyState title="No second strategy available" description="Widen the filters or choose a broader slice of the inventory to compare against another strategy." />
+        ) : (
+          <div className="dashboard-stack">
+            <div className="filter-toolbar panel compare-toolbar">
+              <label className="filter-field">
+                <span>Primary</span>
+                <select className="filter-input" value={resolvedSelectedStrategy} onChange={(event) => setSelectedStrategy(event.target.value)}>
+                  {filteredStrategies.map((strategy) => (
+                    <option key={`primary-${strategy.name}`} value={strategy.name}>
+                      {strategy.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="filter-field">
+                <span>Compare against</span>
+                <select className="filter-input" value={resolvedCompareStrategy} onChange={(event) => setCompareStrategy(event.target.value)}>
+                  {comparisonCandidates.map((strategy) => (
+                    <option key={`compare-${strategy.name}`} value={strategy.name}>
+                      {strategy.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="filter-summary">
+                <span className="eyebrow">Shared slot</span>
+                <strong>
+                  {primaryComparisonSummary.symbol === secondaryComparisonSummary.symbol && primaryComparisonSummary.timeframe === secondaryComparisonSummary.timeframe
+                    ? `${compactValue(primaryComparisonSummary.symbol)} / ${compactValue(primaryComparisonSummary.timeframe)}`
+                    : "Cross-slot compare"}
+                </strong>
+              </div>
+              <div className="filter-summary">
+                <span className="eyebrow">DNA contrast</span>
+                <strong>{compareEdgeLabel(primaryComparisonSummary.warningCount, secondaryComparisonSummary.warningCount, formatNumber)}</strong>
+              </div>
+            </div>
+
+            {compareDetailQuery.loading && !compareDetail ? (
+              <LoadingState title="Loading comparison detail" description="Pulling a second strategy payload for head-to-head operator review." />
+            ) : compareDetailQuery.error && !compareDetail ? (
+              <ErrorState error={compareDetailQuery.error} resourceLabel={`comparison detail for ${resolvedCompareStrategy}`} />
+            ) : !compareDetail ? (
+              <EmptyState title="No comparison detail returned" description="The second strategy could not be resolved into a detail payload." />
+            ) : (
+              <>
+                <section className="stats-grid">
+                  <StatCard
+                    label="Primary posture"
+                    value={compactValue(primaryComparisonSummary.status)}
+                    hint={compactValue(`${primaryComparisonSummary.name} · ${primaryComparisonSummary.tier ?? "unknown tier"}`)}
+                    tone={toneFromStrategyStatus(primaryComparisonSummary.status ?? null)}
+                  />
+                  <StatCard
+                    label="Compare posture"
+                    value={compactValue(secondaryComparisonSummary.status)}
+                    hint={compactValue(`${secondaryComparisonSummary.name} · ${secondaryComparisonSummary.tier ?? "unknown tier"}`)}
+                    tone={toneFromStrategyStatus(secondaryComparisonSummary.status ?? null)}
+                  />
+                  <StatCard
+                    label="Research return edge"
+                    value={compareEdgeLabel(primaryComparisonSummary.researchReturnPct, secondaryComparisonSummary.researchReturnPct, (value) => formatPercent(value))}
+                    hint="Backtest return pct gap"
+                    tone={toneFromSignedNumber((primaryComparisonSummary.researchReturnPct ?? 0) - (secondaryComparisonSummary.researchReturnPct ?? 0))}
+                  />
+                  <StatCard
+                    label="Live PnL edge"
+                    value={compareEdgeLabel(primaryComparisonSummary.livePnl, secondaryComparisonSummary.livePnl, (value) => formatCurrency(value))}
+                    hint="Current runtime PnL gap"
+                    tone={toneFromSignedNumber((primaryComparisonSummary.livePnl ?? 0) - (secondaryComparisonSummary.livePnl ?? 0))}
+                  />
+                </section>
+
+                <div className="detail-grid-2">
+                  <Section title={primaryComparisonSummary.name} description="Primary strategy snapshot for the current comparison.">
+                    <div className="dashboard-stack">
+                      <div className="panel">
+                        <p>{compactValue(primaryComparisonSummary.identitySummary)}</p>
+                      </div>
+                      <div className="badge-row">
+                        {primaryComparisonSummary.badges.map((item, index) => (
+                          <StatusBadge key={`primary-badge-${index}`} label={compactValue(item.label)} tone={toneFromBadgeTone(item.tone)} />
+                        ))}
+                      </div>
+                    </div>
+                  </Section>
+                  <Section title={secondaryComparisonSummary.name} description="Secondary strategy snapshot for the current comparison.">
+                    <div className="dashboard-stack">
+                      <div className="panel">
+                        <p>{compactValue(secondaryComparisonSummary.identitySummary)}</p>
+                      </div>
+                      <div className="badge-row">
+                        {secondaryComparisonSummary.badges.map((item, index) => (
+                          <StatusBadge key={`secondary-badge-${index}`} label={compactValue(item.label)} tone={toneFromBadgeTone(item.tone)} />
+                        ))}
+                      </div>
+                    </div>
+                  </Section>
+                </div>
+
+                <Section title="Head-to-head matrix" description="Fast operator comparison of posture, routing quality, DNA risk, and live-vs-research fit.">
+                  <DataTable
+                    columns={["Dimension", primaryComparisonSummary.name, secondaryComparisonSummary.name, "Edge"]}
+                    rows={[
+                      ["Symbol / timeframe", compactValue(`${primaryComparisonSummary.symbol ?? "unknown"} / ${primaryComparisonSummary.timeframe ?? "unknown"}`), compactValue(`${secondaryComparisonSummary.symbol ?? "unknown"} / ${secondaryComparisonSummary.timeframe ?? "unknown"}`), primaryComparisonSummary.symbol === secondaryComparisonSummary.symbol && primaryComparisonSummary.timeframe === secondaryComparisonSummary.timeframe ? "Same slot" : "Different slot"],
+                      ["Family / motif", compactValue(`${primaryComparisonSummary.family ?? "unknown"} / ${primaryComparisonSummary.motif ?? "unknown"}`), compactValue(`${secondaryComparisonSummary.family ?? "unknown"} / ${secondaryComparisonSummary.motif ?? "unknown"}`), primaryComparisonSummary.family === secondaryComparisonSummary.family ? "Same family" : "Different family"],
+                      ["Score", formatNumber(primaryComparisonSummary.score), formatNumber(secondaryComparisonSummary.score), compareEdgeLabel(primaryComparisonSummary.score, secondaryComparisonSummary.score, formatNumber)],
+                      ["Manifest rank", formatNumber(primaryComparisonSummary.manifestRank), formatNumber(secondaryComparisonSummary.manifestRank), compareEdgeLabel(secondaryComparisonSummary.manifestRank != null ? -secondaryComparisonSummary.manifestRank : null, primaryComparisonSummary.manifestRank != null ? -primaryComparisonSummary.manifestRank : null, (value) => formatNumber(Math.abs(value ?? 0)))],
+                      ["Research return", formatPercent(primaryComparisonSummary.researchReturnPct), formatPercent(secondaryComparisonSummary.researchReturnPct), compareEdgeLabel(primaryComparisonSummary.researchReturnPct, secondaryComparisonSummary.researchReturnPct, formatPercent)],
+                      ["Research sharpe", formatNumber(primaryComparisonSummary.researchSharpe), formatNumber(secondaryComparisonSummary.researchSharpe), compareEdgeLabel(primaryComparisonSummary.researchSharpe, secondaryComparisonSummary.researchSharpe, formatNumber)],
+                      ["Live PnL", formatCurrency(primaryComparisonSummary.livePnl), formatCurrency(secondaryComparisonSummary.livePnl), compareEdgeLabel(primaryComparisonSummary.livePnl, secondaryComparisonSummary.livePnl, formatCurrency)],
+                      ["Live trades", formatNumber(primaryComparisonSummary.liveTrades), formatNumber(secondaryComparisonSummary.liveTrades), compareEdgeLabel(primaryComparisonSummary.liveTrades, secondaryComparisonSummary.liveTrades, formatNumber)],
+                      ["Live vs research delta", formatNumber(primaryComparisonSummary.liveVsResearchDelta), formatNumber(secondaryComparisonSummary.liveVsResearchDelta), compareEdgeLabel(primaryComparisonSummary.liveVsResearchDelta != null ? -Math.abs(primaryComparisonSummary.liveVsResearchDelta) : null, secondaryComparisonSummary.liveVsResearchDelta != null ? -Math.abs(secondaryComparisonSummary.liveVsResearchDelta) : null, (value) => formatNumber(Math.abs(value ?? 0)))],
+                      ["Routing confidence", formatNumber(primaryComparisonSummary.routingConfidence), formatNumber(secondaryComparisonSummary.routingConfidence), compareEdgeLabel(primaryComparisonSummary.routingConfidence, secondaryComparisonSummary.routingConfidence, formatNumber)],
+                      ["Specialist score", formatNumber(primaryComparisonSummary.specialistScore), formatNumber(secondaryComparisonSummary.specialistScore), compareEdgeLabel(primaryComparisonSummary.specialistScore, secondaryComparisonSummary.specialistScore, formatNumber)],
+                      ["Best regime", compactValue(primaryComparisonSummary.bestRegime), compactValue(secondaryComparisonSummary.bestRegime), primaryComparisonSummary.bestRegime === secondaryComparisonSummary.bestRegime ? "Shared best regime" : "Different regime edge"],
+                      ["Best session", compactValue(primaryComparisonSummary.bestSession), compactValue(secondaryComparisonSummary.bestSession), primaryComparisonSummary.bestSession === secondaryComparisonSummary.bestSession ? "Shared best session" : "Different session edge"],
+                      ["Archetype", compactValue(primaryComparisonSummary.archetype), compactValue(secondaryComparisonSummary.archetype), primaryComparisonSummary.archetype === secondaryComparisonSummary.archetype ? "Shared DNA" : "Different DNA"],
+                      ["DNA warnings", formatNumber(primaryComparisonSummary.warningCount), formatNumber(secondaryComparisonSummary.warningCount), compareEdgeLabel(secondaryComparisonSummary.warningCount != null ? -secondaryComparisonSummary.warningCount : null, primaryComparisonSummary.warningCount != null ? -primaryComparisonSummary.warningCount : null, (value) => formatNumber(Math.abs(value ?? 0)))],
+                      ["Fragility markers", formatNumber(primaryComparisonSummary.fragilityCount), formatNumber(secondaryComparisonSummary.fragilityCount), compareEdgeLabel(secondaryComparisonSummary.fragilityCount != null ? -secondaryComparisonSummary.fragilityCount : null, primaryComparisonSummary.fragilityCount != null ? -primaryComparisonSummary.fragilityCount : null, (value) => formatNumber(Math.abs(value ?? 0)))],
+                      ["Decay warnings", formatNumber(primaryComparisonSummary.decayWarningCount), formatNumber(secondaryComparisonSummary.decayWarningCount), compareEdgeLabel(secondaryComparisonSummary.decayWarningCount != null ? -secondaryComparisonSummary.decayWarningCount : null, primaryComparisonSummary.decayWarningCount != null ? -primaryComparisonSummary.decayWarningCount : null, (value) => formatNumber(Math.abs(value ?? 0)))],
+                    ]}
+                  />
+                </Section>
+
+                <div className="detail-grid-2">
+                  <Section title="Regime map contrast" description="Research regime distribution for both strategies in one table.">
+                    <DataTable
+                      columns={["Regime", primaryComparisonSummary.name, secondaryComparisonSummary.name]}
+                      rows={compareRegimeRows}
+                      emptyTitle="No regime comparison"
+                      emptyDescription="One or both strategies did not expose regime-level research context."
+                    />
+                  </Section>
+                  <Section title="Session map contrast" description="Session edge concentration side by side.">
+                    <DataTable
+                      columns={["Session", primaryComparisonSummary.name, secondaryComparisonSummary.name]}
+                      rows={compareSessionRows}
+                      emptyTitle="No session comparison"
+                      emptyDescription="One or both strategies did not expose session-level research context."
+                    />
+                  </Section>
+                </div>
+
+                <div className="detail-grid-2">
+                  <Section title="Warning contrast" description="Mismatch, dependence, and operator-risk warnings surfaced by the DNA layer.">
+                    <DataTable
+                      columns={["Strategy", "Warnings", "Fragility markers"]}
+                      rows={[
+                        [
+                          primaryComparisonSummary.name,
+                          primaryComparisonSummary.warnings.length
+                            ? primaryComparisonSummary.warnings.map((item) => compactValue(item.label)).join(", ")
+                            : "None",
+                          primaryComparisonSummary.fragilityMarkers.length
+                            ? primaryComparisonSummary.fragilityMarkers.map((item) => compactValue(item.label)).join(", ")
+                            : "None",
+                        ],
+                        [
+                          secondaryComparisonSummary.name,
+                          secondaryComparisonSummary.warnings.length
+                            ? secondaryComparisonSummary.warnings.map((item) => compactValue(item.label)).join(", ")
+                            : "None",
+                          secondaryComparisonSummary.fragilityMarkers.length
+                            ? secondaryComparisonSummary.fragilityMarkers.map((item) => compactValue(item.label)).join(", ")
+                            : "None",
+                        ],
+                      ]}
+                    />
+                  </Section>
+                  <Section title="Operator reading" description="Quick synthesis of what the head-to-head actually means.">
+                    <div className="panel">
+                      <p>
+                        {primaryComparisonSummary.name} leads on research return {formatPercent(primaryComparisonSummary.researchReturnPct)} versus {formatPercent(secondaryComparisonSummary.researchReturnPct)}, while live PnL currently sits at {formatCurrency(primaryComparisonSummary.livePnl)} versus {formatCurrency(secondaryComparisonSummary.livePnl)}. Use the matrix above to decide whether the stronger research profile is also the safer live operator candidate.
+                      </p>
+                    </div>
+                  </Section>
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </Section>
     </div>
   );
