@@ -86,10 +86,10 @@ Transform the current Operator UI from a read-only monitoring surface into a dec
 ## Phase U3 — Promotion / Demotion Explainability
 
 ### U3A — Decision reason surfaces
-- [ ] Add “why this strategy is active/candidate/exploratory/disabled” panel
-- [ ] Surface latest promotion/demotion reason from pool/audit context
-- [ ] Add operator-readable decision explanation strings
-- [ ] Add recent status transition history on Strategy detail page
+- [x] Add “why this strategy is active/candidate/exploratory/disabled” panel
+- [x] Surface latest promotion/demotion reason from pool/audit context
+- [x] Add operator-readable decision explanation strings
+- [x] Add recent status transition history on Strategy detail page
 
 ### U3B — Review queue
 - [ ] Add dedicated review queue page
@@ -192,7 +192,7 @@ Transform the current Operator UI from a read-only monitoring surface into a dec
 - [x] U2B complete
 
 ### Milestone M3 — Governance cockpit
-- [ ] U3A complete
+- [x] U3A complete
 - [ ] U3B complete
 
 ### Milestone M4 — Full decision cockpit

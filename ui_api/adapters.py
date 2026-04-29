@@ -5,7 +5,7 @@ import re
 from collections import Counter, defaultdict, deque
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 try:
     from ..execution.audit_utils import POOL_AUDIT_TRAIL_PATH, UNMATCHED_CLOSED_DEALS_PATH
@@ -53,6 +53,32 @@ def read_json_file(path: Path, *, default: Any) -> Any:
             return json.load(f)
     except Exception:
         return default
+
+
+def _humanize_token(value: Any, fallback: str = "unknown") -> str:
+    text = str(value or "").strip()
+    if not text:
+        return fallback
+    return text.replace("_", " ")
+
+
+def _format_reason_sentence(reason: Any) -> str:
+    text = _humanize_token(reason, fallback="no explicit reason recorded")
+    return text[0].upper() + text[1:] if text else "No explicit reason recorded"
+
+
+def _safe_float(value: Any) -> Optional[float]:
+    try:
+        return float(value)
+    except Exception:
+        return None
+
+
+def _safe_int(value: Any) -> Optional[int]:
+    try:
+        return int(value)
+    except Exception:
+        return None
 
 
 def load_live_state_snapshot() -> Dict[str, Any]:
@@ -329,8 +355,208 @@ def load_strategy_detail(name: str) -> Dict[str, Any] | None:
     session_pnl = explain.get("session_pnl") or {}
     meta = explain.get("meta") or {}
     stability = explain.get("stability") or {}
+    live_decay = (stats_block.get("live_decay") or {}) if isinstance(stats_block, dict) else {}
     live_total_pnl = float(((stats or {}).get("total_pnl", 0.0)) or 0.0) if isinstance(stats, dict) else 0.0
     research_return_pct = float((stats_block.get("return_pct", 0.0)) or 0.0) if isinstance(stats_block, dict) else 0.0
+    research_sharpe = float((stats_block.get("sharpe_ratio", 0.0)) or 0.0) if isinstance(stats_block, dict) else 0.0
+
+    audit_rows = read_json_file(POOL_AUDIT_TRAIL_PATH, default=[])
+    if not isinstance(audit_rows, list):
+        audit_rows = []
+
+    transition_history: List[Dict[str, Any]] = []
+    strategy_events: List[Dict[str, Any]] = []
+    latest_reason_text: Optional[str] = None
+    latest_reason_source = "heuristic"
+    latest_reason_at: Optional[str] = None
+
+    for row in reversed(audit_rows):
+        if not isinstance(row, dict):
+            continue
+
+        event = str(row.get("event") or "")
+        recorded_at = row.get("recorded_at")
+        direct_match = str(row.get("strategy_name") or "") == name
+
+        if direct_match:
+            strategy_events.append({
+                "recorded_at": recorded_at,
+                "event": event,
+                "reason": row.get("reason"),
+                "status": row.get("status"),
+                "old_status": row.get("old_status") or row.get("from_status"),
+                "new_status": row.get("new_status") or row.get("to_status"),
+                "metrics": row.get("metrics"),
+            })
+
+        if direct_match and event == "live_decay_degrade":
+            transition_history.append({
+                "recorded_at": recorded_at,
+                "event": event,
+                "from_status": row.get("old_status") or row.get("from_status"),
+                "to_status": row.get("new_status") or row.get("to_status"),
+                "reason": row.get("reason"),
+                "summary": f"{_humanize_token(row.get('old_status'))} → {_humanize_token(row.get('new_status'))}",
+                "source": "live_decay",
+            })
+        elif direct_match and row.get("old_status") and row.get("new_status"):
+            transition_history.append({
+                "recorded_at": recorded_at,
+                "event": event,
+                "from_status": row.get("old_status") or row.get("from_status"),
+                "to_status": row.get("new_status") or row.get("to_status"),
+                "reason": row.get("reason"),
+                "summary": f"{_humanize_token(row.get('old_status'))} → {_humanize_token(row.get('new_status'))}",
+                "source": "pool_audit",
+            })
+
+        if event == "circuit_breaker_disable":
+            disabled_entries = row.get("disabled_entries") or []
+            if isinstance(disabled_entries, list):
+                for entry in disabled_entries:
+                    if not isinstance(entry, str) or not entry.startswith(f"{name}:"):
+                        continue
+                    previous_status = entry.split(":", 1)[1] or "live"
+                    dd_pct = _safe_float(row.get("dd_pct"))
+                    threshold = _safe_float(row.get("threshold"))
+                    reason = (
+                        f"portfolio drawdown {dd_pct:.2f}% exceeded threshold {threshold:.2f}%"
+                        if dd_pct is not None and threshold is not None
+                        else "portfolio drawdown exceeded circuit-breaker threshold"
+                    )
+                    transition_history.append({
+                        "recorded_at": recorded_at,
+                        "event": event,
+                        "from_status": previous_status,
+                        "to_status": "disabled",
+                        "reason": reason,
+                        "summary": f"{_humanize_token(previous_status)} → disabled",
+                        "source": "circuit_breaker",
+                    })
+                    strategy_events.append({
+                        "recorded_at": recorded_at,
+                        "event": event,
+                        "reason": reason,
+                        "status": "disabled",
+                        "old_status": previous_status,
+                        "new_status": "disabled",
+                        "metrics": {
+                            "dd_pct": row.get("dd_pct"),
+                            "threshold": row.get("threshold"),
+                        },
+                    })
+
+    transition_history.sort(key=lambda item: str(item.get("recorded_at") or ""), reverse=True)
+    strategy_events.sort(key=lambda item: str(item.get("recorded_at") or ""), reverse=True)
+
+    current_status = str((manifest_entry or {}).get("status") or (index_entry or {}).get("status") or (pool_dict or {}).get("status") or "unknown")
+    current_tier = str((index_entry or {}).get("tier") or (manifest_entry or {}).get("tier") or "unknown")
+    manifest_rank = (manifest_entry or {}).get("manifest_rank")
+    decay_warning_count = sum(1 for event in strategy_events if event.get("event") == "live_decay_warning")
+    latest_warning = next((event for event in strategy_events if event.get("event") == "live_decay_warning"), None)
+    latest_transition = transition_history[0] if transition_history else None
+
+    if latest_transition:
+        latest_reason_text = _format_reason_sentence(latest_transition.get("reason"))
+        latest_reason_source = str(latest_transition.get("source") or "pool_audit")
+        latest_reason_at = latest_transition.get("recorded_at")
+    elif latest_warning:
+        latest_reason_text = _format_reason_sentence(latest_warning.get("reason"))
+        latest_reason_source = "live_decay_warning"
+        latest_reason_at = latest_warning.get("recorded_at")
+
+    if not latest_reason_text and isinstance(pool_dict, dict):
+        circuit_disabled_at = stats_block.get("circuit_breaker_disabled_at")
+        circuit_prev_status = stats_block.get("circuit_breaker_previous_status")
+        circuit_dd_pct = _safe_float(stats_block.get("circuit_breaker_dd_pct"))
+        circuit_threshold = _safe_float(stats_block.get("circuit_breaker_threshold"))
+        if circuit_disabled_at and current_status == "disabled":
+            latest_reason_text = (
+                f"Disabled by circuit breaker after portfolio drawdown {circuit_dd_pct:.2f}% crossed {circuit_threshold:.2f}%"
+                if circuit_dd_pct is not None and circuit_threshold is not None
+                else "Disabled by circuit breaker"
+            )
+            latest_reason_source = "circuit_breaker_snapshot"
+            latest_reason_at = circuit_disabled_at
+            transition_history.insert(0, {
+                "recorded_at": circuit_disabled_at,
+                "event": "circuit_breaker_snapshot",
+                "from_status": circuit_prev_status,
+                "to_status": "disabled",
+                "reason": latest_reason_text,
+                "summary": f"{_humanize_token(circuit_prev_status, fallback='live')} → disabled",
+                "source": "pool_snapshot",
+            })
+            transition_history.sort(key=lambda item: str(item.get("recorded_at") or ""), reverse=True)
+
+    latest_transition = transition_history[0] if transition_history else None
+
+    family = str((manifest_entry or {}).get("family") or (index_entry or {}).get("family") or (stats_block.get("strategy") or {}).get("family") or stats_block.get("family") or "unknown")
+    best_regime = meta.get("best_regime")
+    routing_confidence = _safe_float(meta.get("routing_confidence"))
+    specialist_score = _safe_float(meta.get("specialist_score"))
+    live_trade_count = _safe_int(((stats or {}).get("num_trades")) if isinstance(stats, dict) else None) or 0
+    live_vs_research_delta = live_total_pnl - research_return_pct
+
+    explanation_parts: List[str] = []
+    if current_status == "active":
+        explanation_parts.append("Active because it is currently deployed in the live manifest")
+        if manifest_rank is not None:
+            explanation_parts.append(f"ranked #{int(manifest_rank)} within its live slot")
+        explanation_parts.append(f"with {family} research edge at {research_return_pct:.2f}% return and {research_sharpe:.2f} sharpe")
+    elif current_status == "exploratory":
+        explanation_parts.append("Exploratory because it is still live-eligible but running in a lower-conviction posture")
+        if manifest_rank is not None:
+            explanation_parts.append(f"currently occupying live manifest rank #{int(manifest_rank)}")
+        explanation_parts.append(f"while the backend keeps it visible for {family} regime coverage")
+    elif current_status == "candidate":
+        explanation_parts.append("Candidate because it remains in the research inventory but is not currently promoted into the live manifest")
+        explanation_parts.append(f"Its research profile is {research_return_pct:.2f}% return and {research_sharpe:.2f} sharpe")
+        explanation_parts.append(f"so it stays available for future promotion in the {family} family")
+    elif current_status == "disabled":
+        explanation_parts.append("Disabled because it is not currently eligible for live routing")
+        if latest_reason_text:
+            explanation_parts.append(latest_reason_text.lower())
+        elif current_tier == "archive" or bool((index_entry or {}).get("archived")):
+            explanation_parts.append("and it has already fallen into the archive tier")
+    else:
+        explanation_parts.append(f"Current status is {_humanize_token(current_status)} based on the latest pool snapshot")
+
+    if routing_confidence is not None or specialist_score is not None:
+        explanation_parts.append(
+            f"Routing confidence {routing_confidence:.2f} and specialist score {specialist_score:.2f} frame its operator posture"
+            if routing_confidence is not None and specialist_score is not None
+            else f"Routing confidence {routing_confidence:.2f} helps frame its operator posture"
+            if routing_confidence is not None
+            else f"Specialist score {specialist_score:.2f} helps frame its operator posture"
+        )
+
+    if best_regime:
+        explanation_parts.append(f"Best research regime is {_humanize_token(best_regime)}")
+
+    if latest_warning:
+        explanation_parts.append(f"Latest live warning: {_humanize_token(latest_warning.get('reason'), fallback='warning recorded')}")
+    elif isinstance(live_decay, dict) and live_decay.get("reason"):
+        explanation_parts.append(f"Latest live warning: {_humanize_token(live_decay.get('reason'), fallback='warning recorded')}")
+
+    if live_trade_count > 0:
+        explanation_parts.append(f"Live counters show {live_trade_count} recorded trades and a {live_vs_research_delta:.2f} live-vs-research delta")
+
+    decision_explanation = ". ".join(part.rstrip(".") for part in explanation_parts if part).strip()
+    if decision_explanation and not decision_explanation.endswith("."):
+        decision_explanation += "."
+
+    if not latest_reason_text:
+        if current_status == "active":
+            latest_reason_text = "Live manifest retained this strategy in the active set"
+        elif current_status == "exploratory":
+            latest_reason_text = "Live manifest retained this strategy as exploratory coverage"
+        elif current_status == "candidate":
+            latest_reason_text = "Research inventory retained this strategy as a promotion candidate"
+        elif current_status == "disabled":
+            latest_reason_text = "Current pool snapshot keeps this strategy disabled"
+        else:
+            latest_reason_text = f"Current pool snapshot reports status {_humanize_token(current_status)}"
 
     derived = {
         "best_regime": meta.get("best_regime"),
@@ -345,6 +571,23 @@ def load_strategy_detail(name: str) -> Dict[str, Any] | None:
         "live_vs_research_delta": live_total_pnl - research_return_pct,
         "live_total_pnl": live_total_pnl,
         "research_return_pct": research_return_pct,
+        "research_sharpe": research_sharpe,
+        "decision_context": {
+            "current_status": current_status,
+            "current_tier": current_tier,
+            "manifest_rank": manifest_rank,
+            "in_manifest": bool(manifest_entry),
+            "archived": bool((index_entry or {}).get("archived")),
+            "latest_reason": latest_reason_text,
+            "latest_reason_source": latest_reason_source,
+            "latest_reason_at": latest_reason_at,
+            "latest_transition": latest_transition,
+            "transition_history": transition_history[:8],
+            "strategy_events": strategy_events[:8],
+            "decision_explanation": decision_explanation,
+            "decision_label": f"{_humanize_token(current_status).title()} posture",
+            "decay_warning_count": decay_warning_count,
+        },
     }
 
     return {

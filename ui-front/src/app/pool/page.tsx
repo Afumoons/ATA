@@ -28,6 +28,28 @@ import {
 
 const EMPTY_STRATEGY_ROWS: Awaited<ReturnType<typeof uiApi.strategies>> = [];
 
+function humanizeDecisionReason(value: unknown) {
+  if (typeof value !== "string" || !value.trim()) return "No explicit reason recorded";
+  const text = value.replace(/_/g, " ");
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+function toneFromStrategyStatus(status: string | null) {
+  switch (status) {
+    case "active":
+      return "success" as const;
+    case "candidate":
+      return "info" as const;
+    case "exploratory":
+      return "warning" as const;
+    case "disabled":
+    case "retired":
+      return "critical" as const;
+    default:
+      return "neutral" as const;
+  }
+}
+
 export default function PoolPage() {
   const [search, setSearch] = useState("");
   const [tierFilter, setTierFilter] = useState("all");
@@ -86,6 +108,11 @@ export default function PoolPage() {
   const selectedPool = coerceRecord(selectedDetail?.pool_record);
   const selectedLiveStats = coerceRecord(selectedDetail?.live_stats);
   const selectedDerived = coerceRecord(selectedDetail?.derived);
+  const decisionContext = coerceRecord(selectedDerived.decision_context);
+  const transitionHistory = Array.isArray(decisionContext.transition_history)
+    ? decisionContext.transition_history.filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object" && !Array.isArray(item))
+    : [];
+  const latestTransition = coerceRecord(decisionContext.latest_transition);
   const relationship = getStrategyRelationshipState({
     manifest_entry: selectedDetail?.manifest_entry,
     index_entry: selectedDetail?.index_entry,
@@ -232,6 +259,79 @@ export default function PoolPage() {
                 <StatusBadge key={badge.label} label={badge.label} tone={badge.tone} />
               ))}
             </div>
+
+            <section className="stats-grid">
+              <StatCard
+                label="Decision posture"
+                value={compactValue(decisionContext.current_status ?? pickFirstString(selectedManifest.status, selectedIndex.status, selectedPool.status))}
+                hint={compactValue(decisionContext.current_tier ?? selectedIndex.tier)}
+                tone={toneFromStrategyStatus(pickFirstString(decisionContext.current_status, selectedManifest.status, selectedIndex.status, selectedPool.status))}
+              />
+              <StatCard
+                label="Latest status reason"
+                value={compactValue(decisionContext.latest_reason)}
+                hint={decisionContext.latest_reason_at ? `Logged ${formatDateTime(decisionContext.latest_reason_at)}` : "Heuristic snapshot context"}
+                tone={toneFromStrategyStatus(pickFirstString(decisionContext.current_status, selectedManifest.status, selectedIndex.status, selectedPool.status))}
+              />
+              <StatCard
+                label="Manifest posture"
+                value={decisionContext.in_manifest ? "Live manifest" : "Not in manifest"}
+                hint={decisionContext.manifest_rank ? `Rank #${compactValue(decisionContext.manifest_rank)}` : "No live rank"}
+                tone={decisionContext.in_manifest ? "success" : "warning"}
+              />
+              <StatCard
+                label="Transition events"
+                value={formatNumber(transitionHistory.length)}
+                hint={compactValue(decisionContext.latest_reason_source)}
+                tone={transitionHistory.length ? "info" : "neutral"}
+              />
+            </section>
+
+            <Section
+              title="Why this strategy has this posture"
+              description="Operator-readable explanation of why the strategy is currently active, candidate, exploratory, or disabled."
+              action={
+                <StatusBadge
+                  label={compactValue(decisionContext.decision_label ?? decisionContext.current_status ?? selectedPool.status)}
+                  tone={toneFromStrategyStatus(pickFirstString(decisionContext.current_status, selectedManifest.status, selectedIndex.status, selectedPool.status))}
+                />
+              }
+            >
+              <div className="dashboard-stack">
+                <div className="panel">
+                  <p>{compactValue(decisionContext.decision_explanation)}</p>
+                </div>
+                <div className="detail-grid-2">
+                  <Section title="Latest promotion / demotion context" description="Most recent audit or snapshot signal that explains the current status posture.">
+                    <KeyValueGrid
+                      data={{
+                        source: decisionContext.latest_reason_source,
+                        reason: humanizeDecisionReason(decisionContext.latest_reason),
+                        at: decisionContext.latest_reason_at,
+                        from_status: latestTransition.from_status,
+                        to_status: latestTransition.to_status,
+                      }}
+                      emptyTitle="No decision context"
+                      emptyDescription="The backend did not return any transition or heuristic context for this strategy yet."
+                    />
+                  </Section>
+                  <Section title="Recent status transition history" description="Explicit transition events recovered from audit data, newest first.">
+                    <DataTable
+                      columns={["Time", "Transition", "Event", "Reason", "Source"]}
+                      rows={transitionHistory.map((item) => [
+                        formatDateTime(item.recorded_at),
+                        compactValue(item.summary ?? `${compactValue(item.from_status)} → ${compactValue(item.to_status)}`),
+                        compactValue(item.event),
+                        humanizeDecisionReason(item.reason),
+                        compactValue(item.source),
+                      ])}
+                      emptyTitle="No transition history yet"
+                      emptyDescription="The current audit trail does not include explicit promotion or demotion rows for this strategy yet, but the posture panel above still explains the current state from snapshot context."
+                    />
+                  </Section>
+                </div>
+              </div>
+            </Section>
 
             <section className="stats-grid">
               <StatCard
