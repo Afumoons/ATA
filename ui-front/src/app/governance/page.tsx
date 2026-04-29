@@ -229,7 +229,14 @@ export default function GovernancePage() {
             ])}
           />
         ) : (
-          <EmptyState title="No current governance violations" description="This snapshot stays inside the configured governance bands, so nothing needs to be escalated from the policy layer right now." />
+          <EmptyState
+            title="No current governance violations"
+            description="This snapshot stays inside the configured governance bands, so nothing needs to be escalated from the policy layer right now."
+            tone="success"
+            eyebrow="Policy layer calm"
+            meaning="Current family mix, concentration, and inventory shape are staying inside the UI governance heuristics."
+            nextStep="Keep watching the saturation and imbalance sections for early drift before it becomes a formal policy break."
+          />
         )}
       </Section>
 
@@ -281,7 +288,14 @@ export default function GovernancePage() {
             emptyDescription="No family currently has any disabled inventory to compare against active coverage."
           />
         ) : (
-          <EmptyState title="No imbalance rows" description="This snapshot did not surface any family with parked inventory, so there is no active-vs-disabled imbalance to explain." />
+          <EmptyState
+            title="No imbalance rows"
+            description="This snapshot did not surface any family with parked inventory, so there is no active-vs-disabled imbalance to explain."
+            tone="success"
+            eyebrow="Inventory balance healthy"
+            meaning="Disabled or parked strategies are not accumulating in a way that suggests stale family buildup."
+            nextStep="Revisit this section when disabled inventory starts growing faster than active family coverage."
+          />
         )}
       </Section>
     </div>

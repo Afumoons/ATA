@@ -1,6 +1,6 @@
 # Autonomous Trading AI UI Roadmap Tasklist
 
-_Last updated: 2026-04-29_
+_Last updated: 2026-04-30_
 
 ## Goal
 Transform the current Operator UI from a read-only monitoring surface into a decision cockpit for research, execution, governance, and operator review.
@@ -162,7 +162,7 @@ Transform the current Operator UI from a read-only monitoring surface into a dec
 
 ### U7B — Frontend design pass
 - [ ] Apply cohesive design system direction across pages
-- [ ] Improve empty states so they explain operator meaning, not just absence
+- [x] Improve empty states so they explain operator meaning, not just absence
 - [ ] Improve data-rich layout spacing and scannability
 - [ ] Add subtle transitions and emphasis where it helps understanding
 

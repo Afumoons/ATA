@@ -312,17 +312,42 @@ export function EmptyState({
   title,
   description,
   compact = false,
+  tone = "neutral",
+  eyebrow,
+  meaning,
+  nextStep,
 }: {
   title: string;
   description: string;
   compact?: boolean;
+  tone?: StatusTone;
+  eyebrow?: string;
+  meaning?: string;
+  nextStep?: string;
 }) {
   return (
-    <Card className={cn("state-panel", compact && "is-compact")}>
+    <Card className={cn("state-panel", "state-empty", `tone-${tone}`, compact && "is-compact")}>
       <CardHeader className="pb-2">
+        {eyebrow ? <span className="eyebrow state-eyebrow">{eyebrow}</span> : null}
         <CardTitle>{title}</CardTitle>
         <CardDescription>{description}</CardDescription>
       </CardHeader>
+      {meaning || nextStep ? (
+        <CardContent className="state-panel-meta">
+          {meaning ? (
+            <div className="state-meta-block">
+              <span>Operator meaning</span>
+              <strong>{meaning}</strong>
+            </div>
+          ) : null}
+          {nextStep ? (
+            <div className="state-meta-block">
+              <span>Best next read</span>
+              <strong>{nextStep}</strong>
+            </div>
+          ) : null}
+        </CardContent>
+      ) : null}
     </Card>
   );
 }

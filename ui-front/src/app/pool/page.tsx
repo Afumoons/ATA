@@ -375,13 +375,27 @@ export default function PoolPage() {
         action={resolvedSelectedStrategy ? <StatusBadge label={resolvedSelectedStrategy} tone="info" /> : null}
       >
         {!resolvedSelectedStrategy ? (
-          <EmptyState title="No strategy selected" description="Choose a strategy from the explorer table above to inspect its layer relationships." />
+          <EmptyState
+            title="No strategy selected"
+            description="Choose a strategy from the explorer table above to inspect its layer relationships."
+            tone="info"
+            eyebrow="Detail view awaiting focus"
+            meaning="The explorer is populated, but the operator has not anchored the lower dossier on any single strategy yet."
+            nextStep="Pick one row from the explorer to open its cross-layer status, DNA, and clone-risk context."
+          />
         ) : detailQuery.loading && !selectedDetail ? (
           <LoadingState title="Loading strategy detail" description="Pulling manifest, index, pool, and live-stat context for the selected strategy." />
         ) : detailQuery.error && !selectedDetail ? (
           <ErrorState error={detailQuery.error} resourceLabel={`strategy detail for ${resolvedSelectedStrategy}`} />
         ) : !selectedDetail ? (
-          <EmptyState title="No strategy detail returned" description="The selected strategy could not be resolved into any layer detail payload." />
+          <EmptyState
+            title="No strategy detail returned"
+            description="The selected strategy could not be resolved into any layer detail payload."
+            tone="warning"
+            eyebrow="Cross-layer lookup incomplete"
+            meaning="This row exists in the explorer view, but the backend could not assemble its deeper manifest, pool, or live-stat dossier."
+            nextStep="Try a different strategy to confirm whether this is strategy-specific drift or a broader detail endpoint gap."
+          />
         ) : (
           <div className="dashboard-stack">
             <div className="badge-row">
@@ -517,7 +531,14 @@ export default function PoolPage() {
                       />
                     </div>
                   ) : (
-                    <EmptyState title="No identity badges yet" description="The backend did not produce any distilled DNA labels for this strategy." />
+                    <EmptyState
+                      title="No identity badges yet"
+                      description="The backend did not produce any distilled DNA labels for this strategy."
+                      tone="info"
+                      eyebrow="Identity layer still raw"
+                      meaning="The strategy can still be inspected, but its edge has not been distilled into concise operator labels."
+                      nextStep="Use the mismatch warnings, fragility markers, and raw detail cards below until a richer research explain payload is available."
+                    />
                   )}
                 </Section>
 
@@ -554,7 +575,14 @@ export default function PoolPage() {
               action={similarityPanel.duplicate_risk ? <StatusBadge label={`Duplicate risk: ${compactValue(similarityPanel.duplicate_risk)}`} tone={toneFromBadgeTone(similarityPanel.tone)} /> : null}
             >
               {!similarityNeighbors.length && !duplicateRiskReasons.length && !Object.keys(duplicateRiskContext).length ? (
-                <EmptyState title="No similarity panel yet" description="The backend could not recover enough strategy-rule payloads to compute nearest neighbors for this strategy." />
+                <EmptyState
+                  title="No similarity panel yet"
+                  description="The backend could not recover enough strategy-rule payloads to compute nearest neighbors for this strategy."
+                  tone="warning"
+                  eyebrow="Clone-pressure signal unavailable"
+                  meaning="You cannot yet tell whether this strategy is unique or quietly overlapping with near-duplicates in the same family slot."
+                  nextStep="Rely on duplicate-risk context and family comparison until rule payload coverage is restored for similarity scoring."
+                />
               ) : (
                 <div className="dashboard-stack">
                   <div className="panel">

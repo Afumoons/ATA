@@ -314,7 +314,14 @@ export default function ResearchPage() {
             />
           </div>
         ) : (
-          <EmptyState title="No previous snapshot" description="Only one research snapshot is available for this symbol/timeframe, so change tracking cannot be derived yet." />
+          <EmptyState
+            title="No previous snapshot"
+            description="Only one research snapshot is available for this symbol/timeframe, so change tracking cannot be derived yet."
+            tone="info"
+            eyebrow="Research continuity"
+            meaning="You can read the current funnel, but not whether throughput is improving or deteriorating versus the prior batch yet."
+            nextStep="Wait for the next research artifact for this same symbol/timeframe to land, then re-open the delta table."
+          />
         )}
       </Section>
 
@@ -403,7 +410,14 @@ export default function ResearchPage() {
             ))}
           </div>
         ) : (
-          <EmptyState title="No rejection samples" description="The research artifact did not include sample strategy names for rejection buckets." />
+          <EmptyState
+            title="No rejection samples"
+            description="The research artifact did not include sample strategy names for rejection buckets."
+            tone="warning"
+            eyebrow="Research evidence missing"
+            meaning="Operators can still see rejection counts, but not concrete example strategies behind each failure bucket."
+            nextStep="Use the skip-reason drilldown above for aggregate diagnosis until a richer sample-bearing artifact is generated."
+          />
         )}
       </Section>
     </div>

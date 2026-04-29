@@ -89,3 +89,6 @@
 - Added a U7A Drift-page hierarchy pass, replacing the top attention and manual-review tables with operator dossiers, a severity-language legend, and clearer priority framing while keeping the sortable leaderboard as the raw ledger.
 - Verified the Drift-page dossier slice with a production `npm run build` in `ui-front`.
 - Updated notes to point the next polish slice at broader U7B consistency work, especially empty-state/operator-meaning improvements and cross-page spacing/scannability.
+- Added a U7B empty-state/operator-meaning pass by upgrading the shared EmptyState treatment with tone, operator-meaning, and next-read guidance blocks, then applying it on Research, Governance, Manifest, and Pool where passive empty reads were still too quiet.
+- Verified the U7B empty-state/operator-meaning slice with a production `npm run build` in `ui-front`.
+- Marked the roadmap empty-state/operator-meaning item complete; next slice is continuing U7B with cross-page spacing/scannability consistency and restrained emphasis/transitions.

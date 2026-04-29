@@ -90,6 +90,10 @@ export default function ManifestPage() {
           <EmptyState
             title="Manifest is empty"
             description="No manifest entries are currently available from the backend. This usually means the manifest artifact is missing, not rebuilt, or currently has zero deployable strategies."
+            tone="warning"
+            eyebrow="Deployment surface missing"
+            meaning="Operators cannot trust this page as a representation of deployable strategies until the manifest repopulates."
+            nextStep="Check whether the manifest artifact was rebuilt recently and whether the backend is pointing at the expected source file."
           />
         )}
       </Section>

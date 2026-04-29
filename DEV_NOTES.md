@@ -96,5 +96,7 @@ For each autonomous run:
 - Verified the U7A Execution-page hierarchy slice with a production `npm run build` in `ui-front`
 - U7A Drift-page dossier / severity-language pass is now complete for the highest-priority readouts, replacing the top attention and manual-review tables with operator dossiers and a stronger severity legend while keeping the full leaderboard ledger below
 - Verified the U7A Drift-page dossier / severity-language slice with a production `npm run build` in `ui-front`
-- Next highest-value slice is continuing U7B polish across the remaining pages, especially cohesive empty-state/operator-meaning improvements and spacing/scannability consistency
+- U7B empty-state/operator-meaning pass is now complete across Research, Governance, Manifest, and Pool, adding clearer operator meaning plus next-read guidance when data is absent or incomplete
+- Verified the U7B empty-state/operator-meaning slice with a production `npm run build` in `ui-front`
+- Next highest-value slice is continuing U7B polish across the remaining pages, especially cross-page spacing/scannability consistency and restrained emphasis/transitions
 - User explicitly wants progress reports, not approval questions
