@@ -137,6 +137,9 @@ export default function ExecutionPage() {
   const activeNoTradeCauses = noTradeCauses.filter((cause) => cause.status === "active");
   const unmatchedDashboard = data.unmatched_closed_deals.dashboard ?? {};
   const unmatchedSummary = unmatchedDashboard.summary ?? {};
+  const unmatchedConfidence = unmatchedDashboard.confidence ?? {};
+  const unmatchedConfidenceBuckets = unmatchedConfidence.buckets ?? [];
+  const unmatchedConfidenceSignals = unmatchedConfidence.signals ?? [];
   const unmatchedLanes = unmatchedDashboard.lanes ?? [];
   const unmatchedReasons = unmatchedDashboard.reasons ?? [];
   const unmatchedSymbols = unmatchedDashboard.symbols ?? [];
@@ -627,6 +630,44 @@ export default function ExecutionPage() {
 
           <div className="detail-grid-2">
             <DataTable
+              columns={["Pairing confidence", "Count", "Tone", "Operator meaning"]}
+              rows={unmatchedConfidenceBuckets.map((bucket) => [
+                compactValue(bucket.label ?? bucket.key),
+                formatNumber(Number(bucket.count ?? 0)),
+                <StatusBadge key={`${compactValue(bucket.key)}-confidence`} label={compactValue(bucket.tone)} tone={bucket.tone as "neutral" | "info" | "success" | "warning" | "critical"} />,
+                compactValue(bucket.detail),
+              ])}
+              emptyTitle="No confidence buckets"
+              emptyDescription="No unresolved rows are currently available to explain pairing confidence."
+            />
+
+            <DataTable
+              columns={["Signal", "Count", "Impact", "Why it matters"]}
+              rows={unmatchedConfidenceSignals.map((signal) => [
+                compactValue(signal.label ?? signal.key),
+                formatNumber(Number(signal.count ?? 0)),
+                <StatusBadge
+                  key={`${compactValue(signal.key)}-impact`}
+                  label={compactValue(signal.impact)}
+                  tone={signal.impact === "positive" ? "success" : signal.impact === "negative" ? "critical" : "warning"}
+                />,
+                compactValue(signal.detail),
+              ])}
+              emptyTitle="No confidence signals"
+              emptyDescription="The current unmatched-close backlog does not yet show explicit pairing evidence signals."
+            />
+          </div>
+
+          {unmatchedConfidence.heuristic ? (
+            <InlineNotice
+              tone="info"
+              title="How pairing confidence is explained"
+              description={compactValue(unmatchedConfidence.heuristic)}
+            />
+          ) : null}
+
+          <div className="detail-grid-2">
+            <DataTable
               columns={["Reason", "Count"]}
               rows={unmatchedReasons.map((row) => [compactValue(row.reason), formatNumber(Number(row.count ?? 0))])}
               emptyTitle="No reason breakdown"
@@ -655,6 +696,10 @@ export default function ExecutionPage() {
                   tone={deal.pairing_confidence === "high" ? "success" : deal.pairing_confidence === "medium" ? "warning" : "critical"}
                 />
                 <span>{compactValue(deal.resolution_detail)}</span>
+                <span>
+                  Confidence {compactValue(deal.pairing_confidence)} · score {formatNumber(Number(deal.pairing_score ?? 0))}
+                </span>
+                <span>{compactValue(deal.pairing_confidence_detail)}</span>
               </div>,
               <div key={`${compactValue(deal.deal_ticket ?? deal.position_id)}-evidence`} className="table-stack">
                 <span>{formatNumber(Number(deal.ticket_alias_count ?? 0))} alias hint(s)</span>

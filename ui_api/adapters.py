@@ -965,6 +965,8 @@ def _build_unmatched_closed_deal_dashboard(unmatched_rows: List[Dict[str, Any]],
         "latest_recorded_at": None,
     })
     manual_bucket_counts: Counter[str] = Counter()
+    confidence_counts: Counter[str] = Counter()
+    signal_counts: Counter[str] = Counter()
     total_profit = 0.0
     recoverable_count = 0
     ambiguous_count = 0
@@ -1000,34 +1002,75 @@ def _build_unmatched_closed_deal_dashboard(unmatched_rows: List[Dict[str, Any]],
                 journal_context = candidate
                 break
 
+        pairing_reasons: List[str] = []
+        pairing_signal_flags: List[str] = []
+        pairing_score = 0
+
         if len(candidate_matches) == 1:
             lane = "recoverable"
             lane_label = "Single candidate match"
             lane_detail = f"Heuristics narrowed this deal to {candidate_matches[0]}."
-            pairing_confidence = "high"
             recoverable_count += 1
+            pairing_score += 3
+            pairing_reasons.append(f"single candidate match ({candidate_matches[0]})")
+            pairing_signal_flags.append("single_candidate_match")
         elif len(candidate_matches) > 1:
             lane = "ambiguous"
             lane_label = "Multiple candidates"
             lane_detail = "Ticket/comment hints found more than one possible strategy."
-            pairing_confidence = "medium"
             ambiguous_count += 1
+            pairing_score += 1
+            pairing_reasons.append(f"{len(candidate_matches)} candidate matches still compete")
+            pairing_signal_flags.append("multiple_candidate_matches")
         elif manual_bucket:
             lane = "manual_bucket_only"
             lane_label = "Manual bucket fallback"
             lane_detail = f"PnL landed in {manual_bucket} because no unique strategy lineage was recovered."
-            pairing_confidence = "low"
             manual_bucket_only_count += 1
+            pairing_reasons.append(f"manual fallback bucket {manual_bucket}")
+            pairing_signal_flags.append("manual_bucket_fallback")
         else:
             lane = "unclassified"
             lane_label = "No recovery hints"
             lane_detail = "The audit row has no unique candidate match or manual fallback label."
-            pairing_confidence = "low"
+            pairing_reasons.append("no candidate strategy lineage was recovered")
+            pairing_signal_flags.append("no_candidate_lineage")
 
         if journal_context:
             journal_context_count += 1
-            if journal_context.get("strategy_name") and lane != "recoverable":
-                lane_detail = f"{lane_detail} A trade-context journal row exists for {journal_context.get('strategy_name')}."
+            pairing_score += 1
+            pairing_signal_flags.append("journal_context")
+            strategy_name = journal_context.get("strategy_name")
+            if strategy_name:
+                pairing_reasons.append(f"trade-context journal hit for {strategy_name}")
+                if lane != "recoverable":
+                    lane_detail = f"{lane_detail} A trade-context journal row exists for {strategy_name}."
+            else:
+                pairing_reasons.append("trade-context journal hit")
+
+        if alias_count >= 2:
+            pairing_score += 1
+            pairing_reasons.append(f"{alias_count} ticket aliases align")
+            pairing_signal_flags.append("multiple_ticket_aliases")
+        elif alias_count == 1:
+            pairing_reasons.append("one ticket alias is available")
+            pairing_signal_flags.append("single_ticket_alias")
+
+        if row.get("comment_uid4"):
+            pairing_score += 1
+            pairing_reasons.append("comment UID is present")
+            pairing_signal_flags.append("comment_uid")
+
+        if lane == "recoverable" and pairing_score >= 5:
+            pairing_confidence = "high"
+        elif lane in {"recoverable", "ambiguous"} and pairing_score >= 2:
+            pairing_confidence = "medium"
+        else:
+            pairing_confidence = "low"
+
+        confidence_counts[pairing_confidence] += 1
+        for flag in pairing_signal_flags:
+            signal_counts[flag] += 1
 
         recorded_at = row.get("recorded_at")
         recorded_dt = parse_iso_datetime(recorded_at)
@@ -1077,6 +1120,9 @@ def _build_unmatched_closed_deal_dashboard(unmatched_rows: List[Dict[str, Any]],
             "resolution_label": lane_label,
             "resolution_detail": lane_detail,
             "pairing_confidence": pairing_confidence,
+            "pairing_score": pairing_score,
+            "pairing_confidence_detail": "; ".join(pairing_reasons) if pairing_reasons else "No confidence signals were captured.",
+            "pairing_signal_flags": pairing_signal_flags,
             "age_minutes": age_minutes,
             "profit": round(profit, 2),
         })
@@ -1096,6 +1142,63 @@ def _build_unmatched_closed_deal_dashboard(unmatched_rows: List[Dict[str, Any]],
         reverse=True,
     )
 
+    confidence_meta = {
+        "high": {
+            "tone": "success",
+            "detail": "Exactly one strategy candidate survived and at least two corroborating hints were present.",
+        },
+        "medium": {
+            "tone": "warning",
+            "detail": "There is some usable lineage evidence, but the operator should still verify before trusting the pairing.",
+        },
+        "low": {
+            "tone": "critical",
+            "detail": "The row lacks enough corroboration and should be treated as weak attribution evidence.",
+        },
+    }
+    signal_meta = {
+        "single_candidate_match": {
+            "label": "Single candidate match",
+            "impact": "positive",
+            "detail": "Heuristics collapsed to one strategy name.",
+        },
+        "multiple_candidate_matches": {
+            "label": "Multiple candidate matches",
+            "impact": "mixed",
+            "detail": "The candidate set is useful, but an operator still has to choose between several strategies.",
+        },
+        "manual_bucket_fallback": {
+            "label": "Manual bucket fallback",
+            "impact": "negative",
+            "detail": "The row fell back to a manual bucket because no unique lineage was recovered.",
+        },
+        "no_candidate_lineage": {
+            "label": "No candidate lineage",
+            "impact": "negative",
+            "detail": "The audit row currently offers no candidate strategy names.",
+        },
+        "journal_context": {
+            "label": "Trade-context journal hit",
+            "impact": "positive",
+            "detail": "The ticket or position appears in the trade-context journal.",
+        },
+        "multiple_ticket_aliases": {
+            "label": "Multiple ticket aliases",
+            "impact": "positive",
+            "detail": "Several ticket identifiers line up on the same row.",
+        },
+        "single_ticket_alias": {
+            "label": "Single ticket alias",
+            "impact": "mixed",
+            "detail": "Only one ticket identifier is available, so the linkage is thinner.",
+        },
+        "comment_uid": {
+            "label": "Comment UID present",
+            "impact": "positive",
+            "detail": "The close row preserved a comment UID that can support attribution.",
+        },
+    }
+
     return {
         "summary": {
             "count": len(enriched_rows),
@@ -1108,6 +1211,30 @@ def _build_unmatched_closed_deal_dashboard(unmatched_rows: List[Dict[str, Any]],
             "total_profit": round(total_profit, 2),
             "newest_recorded_at": newest_recorded_at,
             "oldest_recorded_at": oldest_recorded_at,
+        },
+        "confidence": {
+            "heuristic": "High confidence requires one surviving strategy candidate plus corroborating evidence such as journal context, multiple ticket aliases, or a preserved comment UID. Medium means some lineage exists but operator confirmation is still warranted. Low means the row is mostly manual or uncorroborated.",
+            "buckets": [
+                {
+                    "key": key,
+                    "label": key,
+                    "count": int(confidence_counts.get(key, 0)),
+                    "tone": confidence_meta[key]["tone"],
+                    "detail": confidence_meta[key]["detail"],
+                }
+                for key in ("high", "medium", "low")
+            ],
+            "signals": [
+                {
+                    "key": key,
+                    "label": meta["label"],
+                    "count": int(signal_counts.get(key, 0)),
+                    "impact": meta["impact"],
+                    "detail": meta["detail"],
+                }
+                for key, meta in signal_meta.items()
+                if int(signal_counts.get(key, 0)) > 0
+            ],
         },
         "lanes": [
             {

@@ -45,6 +45,11 @@ export interface ExecutionSummaryResponse {
     recent?: Array<Record<string, unknown>>;
     dashboard?: {
       summary?: Record<string, unknown>;
+      confidence?: {
+        heuristic?: string;
+        buckets?: Array<Record<string, unknown>>;
+        signals?: Array<Record<string, unknown>>;
+      };
       lanes?: Array<Record<string, unknown>>;
       reasons?: Array<Record<string, unknown>>;
       symbols?: Array<Record<string, unknown>>;
