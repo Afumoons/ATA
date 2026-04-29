@@ -27,6 +27,7 @@
 - [x] Add U6A governance visibility page
 - [x] Add U7A operator attention grouping pass on key triage-heavy pages
 - [x] Add U7A review queue dossier hierarchy pass
+- [x] Add U7A execution hierarchy / table de-genericization pass on `/execution`
 
 ## Completion Rule
 When every item in `docs/ui-roadmap-tasklist.md` is checked or intentionally closed, mark this plan completed and stop/remove the background cron loop.

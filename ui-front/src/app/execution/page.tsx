@@ -60,6 +60,21 @@ function labelForProtectionStatus(value: unknown) {
   }
 }
 
+function toneFromRegistrationFailureCause(value: unknown) {
+  const cause = String(value ?? "");
+  if (cause === "permission" || cause === "journal_write") return "critical" as const;
+  if (cause === "unknown") return "warning" as const;
+  return "info" as const;
+}
+
+function toneFromUnmatchedDeal(deal: Record<string, unknown>) {
+  const confidence = String(deal.pairing_confidence ?? "").toLowerCase();
+  if (confidence === "low") return "critical" as const;
+  if (confidence === "medium") return "warning" as const;
+  if (confidence === "high") return "success" as const;
+  return "neutral" as const;
+}
+
 function buildSymbolPosture(trades: Array<Record<string, unknown>>): {
   incompleteProtectionCount: number;
   staleUpdateCount: number;
@@ -329,6 +344,33 @@ export default function ExecutionPage() {
               title={String(noTradeDiagnosis.headline)}
               description={String(noTradeDiagnosis.detail ?? "")}
             />
+          ) : null}
+
+          {noTradeCauses.length ? (
+            <div className="execution-incident-grid">
+              {noTradeCauses.map((cause) => (
+                <article key={cause.key} className={`panel execution-incident-card tone-${cause.tone}`}>
+                  <div className="execution-incident-header">
+                    <div>
+                      <span className="execution-incident-eyebrow">Inactivity cause</span>
+                      <h4>{compactValue(cause.label)}</h4>
+                    </div>
+                    <StatusBadge label={compactValue(cause.status)} tone={cause.tone} />
+                  </div>
+                  <p className="execution-incident-copy">{compactValue(cause.detail ?? cause.evidence ?? "No operator meaning supplied")}</p>
+                  <div className="execution-incident-meta">
+                    <div>
+                      <span>Evidence</span>
+                      <strong>{compactValue(cause.evidence ?? "No evidence")}</strong>
+                    </div>
+                    <div>
+                      <span>Lane</span>
+                      <strong>{compactValue(cause.key)}</strong>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
           ) : null}
 
           <DataTable
@@ -706,6 +748,44 @@ export default function ExecutionPage() {
             />
           )}
 
+          {registrationFailureRecent.length ? (
+            <div className="execution-incident-grid">
+              {registrationFailureRecent.slice(0, 6).map((row) => {
+                const causeTone = toneFromRegistrationFailureCause(row.cause_key);
+                return (
+                  <article key={`${compactValue(row.ticket)}-${compactValue(row.phase)}-incident`} className={`panel execution-incident-card tone-${causeTone}`}>
+                    <div className="execution-incident-header">
+                      <div>
+                        <span className="execution-incident-eyebrow">Registration incident</span>
+                        <h4>{compactValue(row.strategy_name)}</h4>
+                      </div>
+                      <StatusBadge label={compactValue(row.phase ?? "unknown phase")} tone={causeTone} />
+                    </div>
+                    <p className="execution-incident-copy">{compactValue(row.cause_detail ?? row.message ?? "No cause detail")}</p>
+                    <div className="execution-incident-meta">
+                      <div>
+                        <span>Ticket</span>
+                        <strong>{compactValue(row.ticket ?? row.ticket_label)}</strong>
+                      </div>
+                      <div>
+                        <span>Cause</span>
+                        <strong>{compactValue(row.cause_key ?? row.cause)}</strong>
+                      </div>
+                      <div>
+                        <span>When</span>
+                        <strong>{compactValue(formatDateTime(typeof row.timestamp === "string" ? row.timestamp : undefined))}</strong>
+                      </div>
+                      <div>
+                        <span>Trace hint</span>
+                        <strong>{Array.isArray(row.traceback) && row.traceback.length ? compactValue(row.traceback[row.traceback.length - 1]) : "No traceback lines"}</strong>
+                      </div>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          ) : null}
+
           <div className="detail-grid-2">
             <DataTable
               columns={["Cause bucket", "Count"]}
@@ -738,7 +818,7 @@ export default function ExecutionPage() {
               <div key={`${compactValue(row.ticket)}-${compactValue(row.phase)}-cause`} className="table-stack">
                 <StatusBadge
                   label={compactValue(row.cause_key)}
-                  tone={row.cause_key === "unknown" ? "warning" : row.cause_key === "permission" || row.cause_key === "journal_write" ? "critical" : "info"}
+                  tone={toneFromRegistrationFailureCause(row.cause_key)}
                 />
                 <span>{compactValue(row.cause_detail)}</span>
                 <span>{compactValue(row.cause)}</span>
@@ -789,6 +869,66 @@ export default function ExecutionPage() {
               title="Reconciliation backlog needs operator review"
               description="Use the lane table to separate single-candidate recoveries from ambiguous/manual-bucket cases before digging into raw audit rows."
             />
+          ) : null}
+
+          {unmatchedRecent.length ? (
+            <div className="execution-dossier-grid">
+              {unmatchedRecent.slice(0, 6).map((deal) => {
+                const dealTone = toneFromUnmatchedDeal(deal);
+                return (
+                  <article key={`${compactValue(deal.deal_ticket ?? deal.position_id)}-dossier`} className={`panel execution-dossier-card tone-${dealTone}`}>
+                    <div className="execution-dossier-header">
+                      <div className="execution-dossier-heading">
+                        <span className="execution-dossier-eyebrow">Closed-deal dossier</span>
+                        <h4>{compactValue(deal.symbol)}</h4>
+                        <p>
+                          Deal {compactValue(deal.deal_ticket ?? deal.ticket)} · position {compactValue(deal.position_id)}
+                        </p>
+                      </div>
+                      <div className="execution-dossier-badges">
+                        <StatusBadge label={compactValue(deal.resolution_label ?? deal.resolution_lane)} tone={dealTone} />
+                        <StatusBadge label={`Confidence ${compactValue(deal.pairing_confidence ?? "unknown")}`} tone={dealTone} />
+                      </div>
+                    </div>
+
+                    <div className="execution-dossier-metrics">
+                      <div>
+                        <span>PnL</span>
+                        <strong className={`tone-${toneFromSignedNumber(Number(deal.profit ?? deal.pnl ?? 0))}`}>{formatCurrency(Number(deal.profit ?? deal.pnl ?? 0))}</strong>
+                      </div>
+                      <div>
+                        <span>Pairing score</span>
+                        <strong>{formatNumber(Number(deal.pairing_score ?? 0))}</strong>
+                      </div>
+                      <div>
+                        <span>Evidence</span>
+                        <strong>{formatNumber(Number(deal.ticket_alias_count ?? 0))} alias hint(s)</strong>
+                      </div>
+                      <div>
+                        <span>Age</span>
+                        <strong>{deal.age_minutes != null ? formatDurationMinutes(Number(deal.age_minutes)) : "Unknown age"}</strong>
+                      </div>
+                    </div>
+
+                    <div className="badge-row">
+                      <StatusBadge label={deal.has_comment_uid4 ? "Comment UID present" : "No comment UID"} tone={deal.has_comment_uid4 ? "success" : "warning"} />
+                      <StatusBadge label={deal.journal_context_present ? `Journal ${compactValue(deal.journal_strategy_name)}` : "No journal hit"} tone={deal.journal_context_present ? "info" : "critical"} />
+                    </div>
+
+                    <div className="execution-dossier-footer">
+                      <div className="execution-dossier-copy">
+                        <span className="execution-dossier-label">Resolution read</span>
+                        <p>{compactValue(deal.resolution_detail ?? deal.pairing_confidence_detail ?? "No resolution detail")}</p>
+                      </div>
+                      <div className="execution-dossier-copy">
+                        <span className="execution-dossier-label">Strategy hints</span>
+                        <p>{Array.isArray(deal.candidate_matches) && deal.candidate_matches.length ? deal.candidate_matches.join(", ") : compactValue(deal.manual_bucket ?? deal.reason ?? "No candidate strategies")}</p>
+                      </div>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
           ) : null}
 
           <div className="detail-grid-2">
@@ -886,7 +1026,7 @@ export default function ExecutionPage() {
               <div key={`${compactValue(deal.deal_ticket ?? deal.position_id)}-resolution`} className="table-stack">
                 <StatusBadge
                   label={compactValue(deal.resolution_label ?? deal.resolution_lane)}
-                  tone={deal.pairing_confidence === "high" ? "success" : deal.pairing_confidence === "medium" ? "warning" : "critical"}
+                  tone={toneFromUnmatchedDeal(deal)}
                 />
                 <span>{compactValue(deal.resolution_detail)}</span>
                 <span>

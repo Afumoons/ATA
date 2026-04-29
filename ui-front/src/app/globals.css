@@ -278,6 +278,13 @@ pre {
   gap: 14px;
 }
 
+.execution-incident-grid,
+.execution-dossier-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+}
+
 .review-dossier-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
@@ -481,6 +488,137 @@ pre {
 .execution-posture-copy {
   color: var(--text-muted);
   line-height: 1.6;
+}
+
+.execution-incident-card,
+.execution-dossier-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow: hidden;
+  padding: 18px;
+  border-radius: 22px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.015)),
+    linear-gradient(135deg, rgba(76, 139, 245, 0.14), rgba(17, 22, 29, 0.18));
+}
+
+.execution-incident-card::after,
+.execution-dossier-card::after {
+  content: "";
+  position: absolute;
+  inset: auto -50px -76px auto;
+  width: 160px;
+  height: 160px;
+  border-radius: 999px;
+  background: radial-gradient(circle, currentColor 0%, transparent 72%);
+  opacity: 0.1;
+  pointer-events: none;
+}
+
+.execution-incident-header,
+.execution-dossier-header,
+.execution-dossier-badges,
+.execution-dossier-footer {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  gap: 12px;
+}
+
+.execution-incident-header,
+.execution-dossier-header,
+.execution-dossier-footer {
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.execution-incident-header h4,
+.execution-dossier-heading h4,
+.execution-incident-copy,
+.execution-dossier-heading p,
+.execution-dossier-copy p {
+  margin: 0;
+}
+
+.execution-incident-eyebrow,
+.execution-dossier-eyebrow,
+.execution-dossier-label,
+.execution-incident-meta span,
+.execution-dossier-metrics span {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.execution-incident-header h4,
+.execution-dossier-heading h4 {
+  margin-top: 6px;
+  font-size: 1.24rem;
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+}
+
+.execution-incident-copy,
+.execution-dossier-heading p,
+.execution-dossier-copy p {
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.execution-incident-meta,
+.execution-dossier-metrics {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.execution-incident-meta div,
+.execution-dossier-metrics div {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.execution-incident-meta strong,
+.execution-dossier-metrics strong {
+  line-height: 1.45;
+}
+
+.execution-dossier-heading {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.execution-dossier-badges {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.execution-dossier-footer {
+  flex-wrap: wrap;
+}
+
+.execution-dossier-copy {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  min-width: min(100%, 220px);
+  max-width: 100%;
+  flex: 1 1 220px;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .research-funnel-card {

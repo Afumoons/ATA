@@ -83,3 +83,6 @@
 - Added a U7A review queue hierarchy pass, turning the dense full review queue into operator dossiers with clearer priority eyebrows, category chips, metric tiles, and why/freshness copy while preserving the raw table below.
 - Verified the review-dossier slice with `python -m compileall ui_api` and a production `npm run build` in `ui-front`.
 - Updated notes to point the next U7A slice at Execution-page dense-view hierarchy and table de-genericization.
+- Added a U7A execution hierarchy pass on `/execution`, promoting no-trade causes and registration failures into incident cards and unresolved closed deals into reconciliation dossiers before the raw tables.
+- Verified the Execution-page hierarchy slice with a production `npm run build` in `ui-front`.
+- Updated notes to move the next polish slice toward Drift-page hierarchy reduction and stronger severity language.
