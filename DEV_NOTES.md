@@ -28,6 +28,7 @@ Implement and advance `docs/ui-roadmap-tasklist.md` until the tasklist is fully 
 - U2 Drift Page committed as `fb9fd25`
 - UI roadmap tasklist documented in `docs/ui-roadmap-tasklist.md`
 - U2B sort presets added on Drift page and committed as `937e9ef`
+- U2B recent PnL sparkline added on Drift page in current workstream
 
 ## Milestone Order
 1. Commit roadmap tasklist doc cleanly
@@ -54,5 +55,5 @@ For each autonomous run:
 
 ## Working Notes
 - Drift page shipped in commit `fb9fd25`
-- Drift filters and severity are already present, next U2B depth slices are sparkline, regime mismatch, anomaly grouping, and manual review queue
+- Drift filters and severity are already present, next U2B depth slices are regime mismatch, anomaly grouping, repeated decay counting, and manual review queue
 - User explicitly wants progress reports, not approval questions

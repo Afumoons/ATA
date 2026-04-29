@@ -406,8 +406,9 @@ def load_drift_summary() -> Dict[str, Any]:
         research_sharpe = float(stats.get("sharpe_ratio", 0.0) or 0.0)
         live_total_pnl = float((live.get("total_pnl", 0.0) or 0.0)) if isinstance(live, dict) else 0.0
         live_trades = int((live.get("num_trades", 0) or 0)) if isinstance(live, dict) else 0
-        recent_pnls = list((live.get("recent_pnls") or [])) if isinstance(live, dict) else []
-        recent_avg = (sum(float(x or 0.0) for x in recent_pnls) / len(recent_pnls)) if recent_pnls else 0.0
+        recent_pnls_raw = list((live.get("recent_pnls") or [])) if isinstance(live, dict) else []
+        recent_pnls = [float(x or 0.0) for x in recent_pnls_raw]
+        recent_avg = (sum(recent_pnls) / len(recent_pnls)) if recent_pnls else 0.0
         drift_score = abs(live_total_pnl - research_return_pct)
         decay_warning = live_trades >= 3 and recent_avg < 0
 
@@ -439,6 +440,7 @@ def load_drift_summary() -> Dict[str, Any]:
             "live_total_pnl": live_total_pnl,
             "live_trades": live_trades,
             "recent_avg_pnl": recent_avg,
+            "recent_pnls": recent_pnls,
             "best_regime": meta.get("best_regime"),
             "worst_regime": meta.get("worst_regime"),
             "drift_score": drift_score,

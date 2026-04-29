@@ -54,6 +54,45 @@ function lastUpdateTimestamp(value: string | null | undefined) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+function RecentPnlSparkline({ values }: { values?: number[] | null }) {
+  const sequence = (values ?? []).filter((value) => Number.isFinite(value));
+
+  if (!sequence.length) {
+    return <span className="text-xs text-muted-foreground">No recent sequence</span>;
+  }
+
+  if (sequence.length === 1) {
+    const tone: StatusTone = sequence[0] >= 0 ? "success" : "critical";
+    return <StatusBadge label={formatCurrency(sequence[0])} tone={tone} />;
+  }
+
+  const width = 120;
+  const height = 36;
+  const padding = 4;
+  const minValue = Math.min(...sequence, 0);
+  const maxValue = Math.max(...sequence, 0);
+  const range = maxValue - minValue || 1;
+  const zeroY = padding + ((maxValue - 0) / range) * (height - padding * 2);
+  const points = sequence.map((value, index) => {
+    const x = padding + (index / (sequence.length - 1)) * (width - padding * 2);
+    const y = padding + ((maxValue - value) / range) * (height - padding * 2);
+    return `${x},${y}`;
+  }).join(" ");
+  const stroke = sequence.at(-1)! >= 0 ? "var(--success)" : "var(--critical)";
+
+  return (
+    <div className="flex flex-col gap-1 min-w-[120px]">
+      <svg viewBox={`0 0 ${width} ${height}`} className="h-9 w-[120px] overflow-visible">
+        <line x1={padding} y1={zeroY} x2={width - padding} y2={zeroY} stroke="rgba(148, 163, 184, 0.35)" strokeDasharray="3 3" strokeWidth="1" />
+        <polyline fill="none" points={points} stroke={stroke} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+      <span className="text-[0.68rem] uppercase tracking-[0.14em] text-muted-foreground">
+        {formatCurrency(sequence[0])} to {formatCurrency(sequence.at(-1))}
+      </span>
+    </div>
+  );
+}
+
 export default function DriftPage() {
   const driftQuery = useQuery("drift-summary", uiApi.driftSummary, { refetchIntervalMs: 60_000 });
   const { data, error, loading, hasData, refreshing, refresh } = driftQuery;
@@ -173,7 +212,7 @@ export default function DriftPage() {
 
       <Section title="Attention queue" description="Highest-priority rows where live behavior is diverging or degrading.">
         <DataTable
-          columns={["Strategy", "Symbol", "Family", "Status", "Severity", "Research return", "Live PnL", "Recent avg", "Decay", "Best / worst regime"]}
+          columns={["Strategy", "Symbol", "Family", "Status", "Severity", "Research return", "Live PnL", "Recent avg", "Recent sequence", "Decay", "Best / worst regime"]}
           rows={topAttention.map((row: DriftSummaryRow) => [
             compactValue(row.name),
             compactValue(row.symbol),
@@ -183,6 +222,7 @@ export default function DriftPage() {
             formatPercent(Number(row.research_return_pct ?? 0)),
             formatCurrency(Number(row.live_total_pnl ?? 0)),
             formatCurrency(Number(row.recent_avg_pnl ?? 0)),
+            <RecentPnlSparkline key={`${String(row.name)}-attention-sequence`} values={row.recent_pnls} />,
             <StatusBadge key={`${String(row.name)}-decay`} label={row.decay_warning ? "Warning" : "Stable"} tone={row.decay_warning ? "critical" : "success"} />,
             compactValue(`${row.best_regime ?? "?"} / ${row.worst_regime ?? "?"}`),
           ])}
@@ -193,7 +233,7 @@ export default function DriftPage() {
 
       <Section title="Drift leaderboard" description="Sorted rows with live-vs-research mismatch context for review and triage.">
         <DataTable
-          columns={["Strategy", "Symbol", "Family", "Status", "Severity", "Trades", "Research return", "Research sharpe", "Live PnL", "Recent avg", "Drift score", "Last update"]}
+          columns={["Strategy", "Symbol", "Family", "Status", "Severity", "Trades", "Research return", "Research sharpe", "Live PnL", "Recent avg", "Recent sequence", "Drift score", "Last update"]}
           rows={sortedRows.map((row: DriftSummaryRow) => [
             compactValue(row.name),
             compactValue(row.symbol),
@@ -205,6 +245,7 @@ export default function DriftPage() {
             formatNumber(Number(row.research_sharpe ?? 0)),
             formatCurrency(Number(row.live_total_pnl ?? 0)),
             formatCurrency(Number(row.recent_avg_pnl ?? 0)),
+            <RecentPnlSparkline key={`${String(row.name)}-leaderboard-sequence`} values={row.recent_pnls} />,
             formatNumber(Number(row.drift_score ?? 0)),
             compactValue(formatDateTime(row.last_update)),
           ])}

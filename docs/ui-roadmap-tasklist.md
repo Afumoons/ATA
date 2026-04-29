@@ -74,7 +74,7 @@ Transform the current Operator UI from a read-only monitoring surface into a dec
 - [x] Commit U2A cleanly as isolated UI commit
 - [x] Add symbol / family / status filters to Drift page
 - [x] Add severity badges (healthy / watch / drifting / broken)
-- [ ] Add sparkline for recent PnL sequence
+- [x] Add sparkline for recent PnL sequence
 - [ ] Add regime mismatch indicator (research best regime vs live observed regime)
 - [ ] Add repeated decay-warning counter per strategy
 - [ ] Add unresolved anomaly grouping (unmatched close, missing stats, stale updates)

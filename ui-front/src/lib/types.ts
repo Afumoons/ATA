@@ -106,6 +106,7 @@ export interface DriftSummaryRow {
   live_total_pnl?: number | null;
   live_trades?: number | null;
   recent_avg_pnl?: number | null;
+  recent_pnls?: number[] | null;
   best_regime?: string | null;
   worst_regime?: string | null;
   drift_score?: number | null;
