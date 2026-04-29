@@ -574,6 +574,202 @@ def load_recent_trade_context_registration_failures(limit: int = 12) -> Dict[str
     }
 
 
+def _path_mtime_iso(path: Path) -> str | None:
+    if not path.exists():
+        return None
+    try:
+        return datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc).replace(microsecond=0).isoformat()
+    except Exception:
+        return None
+
+
+def _build_execution_artifact_warnings(
+    live_state: Dict[str, Any],
+    live_stats: Dict[str, Any],
+    open_trades: Dict[str, Any],
+    recent_trade_log: List[Dict[str, Any]],
+    trade_context_journal: Dict[str, Any],
+    unmatched_rows: List[Dict[str, Any]],
+    trade_context_registration_failures: Dict[str, Any],
+) -> Dict[str, Any]:
+    now = datetime.now(timezone.utc)
+    latest_log_time = max(
+        (
+            parse_iso_datetime(row.get("ts") or row.get("timestamp") or row.get("recorded_at") or row.get("time"))
+            for row in recent_trade_log
+            if isinstance(row, dict)
+        ),
+        default=None,
+    )
+    latest_system_log_path = next(iter(_iter_system_log_paths(limit=1)), None)
+
+    journal_trades = trade_context_journal.get("trades") if isinstance(trade_context_journal, dict) else {}
+    if not isinstance(journal_trades, dict):
+        journal_trades = {}
+
+    artifact_specs = [
+        {
+            "key": "live_state",
+            "label": "Live state snapshot",
+            "path": LIVE_STATE_PATH,
+            "observed_at": _path_mtime_iso(LIVE_STATE_PATH),
+            "warning_minutes": 90,
+            "critical_minutes": 180,
+            "missing_tone": "critical",
+            "count": None,
+            "operator_meaning": "Day lock, equity, and top-level runtime posture may no longer reflect the current executor state.",
+        },
+        {
+            "key": "strategy_live_stats",
+            "label": "Strategy live stats",
+            "path": STATS_PATH,
+            "observed_at": _path_mtime_iso(STATS_PATH),
+            "warning_minutes": 90,
+            "critical_minutes": 180,
+            "missing_tone": "critical",
+            "count": int(live_stats.get("strategy_count", 0) or 0),
+            "operator_meaning": "Per-strategy live trade counts and realized PnL may be stale, which weakens execution diagnosis and drift review.",
+        },
+        {
+            "key": "open_trades",
+            "label": "Open trades snapshot",
+            "path": OPEN_TRADES_PATH,
+            "observed_at": _path_mtime_iso(OPEN_TRADES_PATH),
+            "warning_minutes": 120,
+            "critical_minutes": 240,
+            "missing_tone": "critical",
+            "count": int(open_trades.get("count", 0) or 0),
+            "operator_meaning": "Position posture, SL/TP coverage, and exposure counts may no longer match the actual open book.",
+        },
+        {
+            "key": "trade_log",
+            "label": "Trade execution log",
+            "path": TRADES_LOG_PATH,
+            "observed_at": latest_log_time.replace(microsecond=0).isoformat() if latest_log_time else _path_mtime_iso(TRADES_LOG_PATH),
+            "warning_minutes": 90,
+            "critical_minutes": 180,
+            "missing_tone": "critical",
+            "count": len(recent_trade_log),
+            "operator_meaning": "Recent fills, opens, and no-trade timing evidence may be incomplete or lagging.",
+        },
+        {
+            "key": "trade_context_journal",
+            "label": "Trade-context journal",
+            "path": TRADE_CONTEXT_JOURNAL_PATH,
+            "observed_at": _path_mtime_iso(TRADE_CONTEXT_JOURNAL_PATH),
+            "warning_minutes": 120,
+            "critical_minutes": 240,
+            "missing_tone": "warning",
+            "count": len(journal_trades),
+            "operator_meaning": "Exit attribution, regime/session context, and recent explainability surfaces may be incomplete.",
+        },
+        {
+            "key": "unmatched_closed_deals",
+            "label": "Unmatched closed-deal artifact",
+            "path": UNMATCHED_CLOSED_DEALS_PATH,
+            "observed_at": _path_mtime_iso(UNMATCHED_CLOSED_DEALS_PATH),
+            "warning_minutes": 360,
+            "critical_minutes": 720,
+            "missing_tone": "warning",
+            "count": len(unmatched_rows),
+            "operator_meaning": "Reconciliation warnings may be lagging, especially if new closed deals are failing to pair.",
+        },
+        {
+            "key": "system_log",
+            "label": "System log feed",
+            "path": latest_system_log_path,
+            "observed_at": _path_mtime_iso(latest_system_log_path) if latest_system_log_path else None,
+            "warning_minutes": 120,
+            "critical_minutes": 240,
+            "missing_tone": "warning",
+            "count": int(trade_context_registration_failures.get("count", 0) or 0),
+            "operator_meaning": "Registration-failure monitoring may miss fresh exceptions until the runtime emits new system-log lines.",
+        },
+    ]
+
+    rows: List[Dict[str, Any]] = []
+    tone_counts: Counter[str] = Counter()
+
+    for spec in artifact_specs:
+        path = spec.get("path")
+        exists = bool(path and isinstance(path, Path) and path.exists())
+        observed_at = parse_iso_datetime(spec.get("observed_at"))
+        minutes_old = None
+        if observed_at:
+            minutes_old = max(int((now - observed_at).total_seconds() // 60), 0)
+
+        tone = "success"
+        status = "healthy"
+        detail = "Artifact freshness is within the expected execution window."
+        count = spec.get("count")
+        missing_tone = str(spec.get("missing_tone") or "warning")
+        warning_minutes = int(spec.get("warning_minutes") or 120)
+        critical_minutes = int(spec.get("critical_minutes") or 240)
+
+        if not exists:
+            tone = missing_tone
+            status = "missing"
+            detail = "Artifact file is missing, so this execution surface cannot be trusted fully."
+        elif minutes_old is None:
+            tone = "warning"
+            status = "unknown"
+            detail = "Artifact exists, but its freshness timestamp could not be parsed."
+        elif spec.get("key") == "unmatched_closed_deals" and int(count or 0) == 0 and minutes_old >= warning_minutes:
+            tone = "neutral"
+            status = "quiet"
+            detail = f"Artifact is {minutes_old} minute(s) old, but it currently contains no unresolved rows."
+        elif minutes_old >= critical_minutes:
+            tone = "critical"
+            status = "critical_stale"
+            detail = f"Artifact is {minutes_old} minute(s) old, beyond the critical freshness threshold."
+        elif minutes_old >= warning_minutes:
+            tone = "warning"
+            status = "watch"
+            detail = f"Artifact is {minutes_old} minute(s) old, beyond the watch threshold."
+
+        note_parts: List[str] = []
+        if count is not None:
+            note_parts.append(f"visible count {int(count)}")
+        if path and isinstance(path, Path):
+            note_parts.append(path.name)
+
+        tone_counts[tone] += 1
+        rows.append({
+            "key": spec.get("key"),
+            "label": spec.get("label"),
+            "tone": tone,
+            "status": status,
+            "path": str(path) if path else None,
+            "observed_at": observed_at.replace(microsecond=0).isoformat() if observed_at else None,
+            "minutes_old": minutes_old,
+            "detail": detail,
+            "operator_meaning": spec.get("operator_meaning"),
+            "note": " · ".join(note_parts) if note_parts else None,
+        })
+
+    headline = "Execution artifacts look fresh"
+    summary_tone = "success"
+    if tone_counts.get("critical"):
+        headline = f"{tone_counts['critical']} execution artifact(s) are critically stale"
+        summary_tone = "critical"
+    elif tone_counts.get("warning"):
+        headline = f"{tone_counts['warning']} execution artifact(s) need freshness review"
+        summary_tone = "warning"
+    elif tone_counts.get("neutral"):
+        headline = "Some low-traffic execution artifacts are quiet but not actively unhealthy"
+        summary_tone = "info"
+
+    return {
+        "headline": headline,
+        "tone": summary_tone,
+        "critical_count": int(tone_counts.get("critical", 0)),
+        "warning_count": int(tone_counts.get("warning", 0)),
+        "missing_count": sum(1 for row in rows if row.get("status") == "missing"),
+        "healthy_count": int(tone_counts.get("success", 0)),
+        "artifacts": rows,
+    }
+
+
 def _build_recent_fill_exit_summary(recent_trade_log: List[Dict[str, Any]], trade_context_journal: Dict[str, Any], *, window_hours: int = 24) -> Dict[str, Any]:
     fill_rows: List[Dict[str, Any]] = []
     now = datetime.now(timezone.utc)
@@ -1379,6 +1575,15 @@ def load_execution_summary() -> Dict[str, Any]:
     if not isinstance(unmatched_rows, list):
         unmatched_rows = []
     unmatched_dashboard = _build_unmatched_closed_deal_dashboard(unmatched_rows, trade_context_journal)
+    execution_artifact_warnings = _build_execution_artifact_warnings(
+        live_state,
+        live_stats,
+        open_trades,
+        recent_trade_log,
+        trade_context_journal,
+        unmatched_rows,
+        trade_context_registration_failures,
+    )
     no_trade_diagnosis = _build_no_trade_diagnosis(
         live_state,
         live_stats,
@@ -1405,6 +1610,7 @@ def load_execution_summary() -> Dict[str, Any]:
             "recent": unmatched_dashboard.get("recent") or unmatched_rows[-20:],
             "dashboard": unmatched_dashboard,
         },
+        "execution_artifact_warnings": execution_artifact_warnings,
         "trade_context_registration_failures": trade_context_registration_failures,
         "recent_activity": recent_activity,
         "no_trade_diagnosis": no_trade_diagnosis,

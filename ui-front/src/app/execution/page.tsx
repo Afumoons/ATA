@@ -16,7 +16,7 @@ import {
 } from "@/components/dashboard";
 import { useQuery } from "@/hooks/use-query";
 import { uiApi } from "@/lib/api";
-import { compactValue, formatCurrency, formatDateTime, formatNumber } from "@/lib/format";
+import { compactValue, formatCurrency, formatDateTime, formatNumber, formatRelativeAge } from "@/lib/format";
 import { getHighSignalExecutionReasons, summarizeEvent, toneFromSignedNumber } from "@/lib/ui-state";
 
 function formatDurationMinutes(value: unknown) {
@@ -132,6 +132,8 @@ export default function ExecutionPage() {
   const recentFills = recentActivity.fills ?? {};
   const recentExits = recentActivity.exits ?? {};
   const recentWindowHours = Number(recentActivity.window_hours ?? 24);
+  const executionArtifactWarnings = data.execution_artifact_warnings ?? {};
+  const executionArtifactRows = executionArtifactWarnings.artifacts ?? [];
   const tradeContextRegistrationFailures = data.trade_context_registration_failures ?? {};
   const registrationFailureCauses = tradeContextRegistrationFailures.causes ?? [];
   const registrationFailureStrategies = tradeContextRegistrationFailures.strategies ?? [];
@@ -344,6 +346,72 @@ export default function ExecutionPage() {
             ])}
             emptyTitle="No no-trade causes shaped"
             emptyDescription="The execution payload did not return a cause breakdown for inactivity diagnosis."
+          />
+        </div>
+      </Section>
+
+      <Section title="Stale execution artifact warnings" description="Freshness check across the core runtime artifacts that feed execution posture, trade explainability, and reconciliation surfaces.">
+        <div className="dashboard-stack">
+          <section className="stats-grid">
+            <StatCard
+              label="Critical stale"
+              value={formatNumber(Number(executionArtifactWarnings.critical_count ?? 0))}
+              hint="Artifacts beyond the critical freshness threshold"
+              tone={Number(executionArtifactWarnings.critical_count ?? 0) > 0 ? "critical" : "success"}
+            />
+            <StatCard
+              label="Needs review"
+              value={formatNumber(Number(executionArtifactWarnings.warning_count ?? 0))}
+              hint="Artifacts beyond the watch threshold"
+              tone={Number(executionArtifactWarnings.warning_count ?? 0) > 0 ? "warning" : "neutral"}
+            />
+            <StatCard
+              label="Missing"
+              value={formatNumber(Number(executionArtifactWarnings.missing_count ?? 0))}
+              hint="Execution artifacts not found on disk"
+              tone={Number(executionArtifactWarnings.missing_count ?? 0) > 0 ? "critical" : "success"}
+            />
+            <StatCard
+              label="Healthy"
+              value={formatNumber(Number(executionArtifactWarnings.healthy_count ?? 0))}
+              hint="Artifacts currently inside their freshness window"
+              tone="success"
+            />
+          </section>
+
+          {executionArtifactWarnings.headline ? (
+            <InlineNotice
+              tone={(executionArtifactWarnings.tone as "neutral" | "info" | "success" | "warning" | "critical") ?? "info"}
+              title={String(executionArtifactWarnings.headline)}
+              description="Use this table to separate truly stale runtime evidence from quiet low-traffic artifacts before trusting the downstream execution and reconciliation readouts."
+            />
+          ) : null}
+
+          <DataTable
+            columns={["Artifact", "Freshness", "Status", "What it affects"]}
+            rows={executionArtifactRows.map((artifact) => [
+              <div key={`${compactValue(artifact.key)}-artifact`} className="table-stack">
+                <strong>{compactValue(artifact.label)}</strong>
+                <span>{compactValue(artifact.note)}</span>
+              </div>,
+              <div key={`${compactValue(artifact.key)}-freshness`} className="table-stack">
+                <strong>{artifact.observed_at ? formatDateTime(artifact.observed_at) : "No timestamp"}</strong>
+                <span>{artifact.observed_at ? formatRelativeAge(artifact.observed_at) : compactValue(artifact.path)}</span>
+              </div>,
+              <div key={`${compactValue(artifact.key)}-status`} className="table-stack">
+                <StatusBadge
+                  label={String(artifact.status ?? "unknown").replace(/_/g, " ")}
+                  tone={(artifact.tone as "neutral" | "info" | "success" | "warning" | "critical") ?? "neutral"}
+                />
+                <span>{compactValue(artifact.detail)}</span>
+              </div>,
+              <div key={`${compactValue(artifact.key)}-meaning`} className="table-stack">
+                <span>{compactValue(artifact.operator_meaning)}</span>
+                <span>{compactValue(artifact.path)}</span>
+              </div>,
+            ])}
+            emptyTitle="No execution artifact warnings shaped"
+            emptyDescription="The execution payload did not return artifact freshness diagnostics for this snapshot."
           />
         </div>
       </Section>

@@ -57,6 +57,15 @@ export interface ExecutionSummaryResponse {
       recent?: Array<Record<string, unknown>>;
     };
   };
+  execution_artifact_warnings?: {
+    headline?: string;
+    tone?: StatusTone;
+    critical_count?: number;
+    warning_count?: number;
+    missing_count?: number;
+    healthy_count?: number;
+    artifacts?: Array<Record<string, unknown>>;
+  };
   trade_context_registration_failures?: {
     count?: number;
     latest_at?: string | null;

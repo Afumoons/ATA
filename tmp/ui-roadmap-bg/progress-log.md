@@ -54,3 +54,6 @@
 - Added a U4B trade-context registration failures panel to the execution summary API and `/execution`, parsing recent `logs/system.log*` exceptions for entry/exit context registration, cause buckets, impacted strategies, and traceback hints.
 - Verified the registration-failures slice with `python -m compileall ui_api`, a direct `load_execution_summary()` smoke test for `trade_context_registration_failures`, and production `npm run build` in `ui-front`.
 - Marked the U4B registration-failures item complete in roadmap/task notes; next slice is U4B stale execution artifact warnings.
+- Added U4B stale execution artifact warnings to the execution summary API and `/execution`, checking freshness across live state, strategy stats, open trades, trades.log, trade-context journal, unmatched-close backlog, and the latest system log feed.
+- Verified the stale-artifact-warning slice with `python -m compileall ui_api`, a direct `load_execution_summary()` smoke test for `execution_artifact_warnings`, and production `npm run build` in `ui-front`.
+- Marked U4 fully complete in roadmap/task notes; next slice is U5A strategy identity / DNA card.

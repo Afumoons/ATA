@@ -18,6 +18,7 @@
 - [x] Add U4B unmatched-closed-deal resolution dashboard on `/execution`
 - [x] Add U4B pairing confidence explanation on `/execution`
 - [x] Add U4B recent trade-context registration failures panel on `/execution`
+- [x] Add U4B stale execution artifact warnings on `/execution`
 
 ## Completion Rule
 When every item in `docs/ui-roadmap-tasklist.md` is checked or intentionally closed, mark this plan completed and stop/remove the background cron loop.

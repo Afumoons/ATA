@@ -73,5 +73,6 @@ For each autonomous run:
 - U4B unmatched-closed-deal resolution dashboard is now complete, adding recovery-lane summaries, symbol/reason clustering, and enriched unresolved-deal evidence on the Execution page
 - U4B pairing confidence explanation is now complete, including confidence buckets, evidence-signal explanations, and per-row confidence detail on the Execution page
 - U4B recent trade-context registration failures panel is now complete, adding system-log exception parsing plus operator-facing cause/strategy tables and traceback hints on the Execution page
-- Next highest-value slice is U4B stale execution artifact warnings
+- U4B stale execution artifact warnings are now complete, adding core artifact freshness diagnostics and operator-readable impact warnings on the Execution page
+- Next highest-value slice is U5A strategy identity / DNA card
 - User explicitly wants progress reports, not approval questions

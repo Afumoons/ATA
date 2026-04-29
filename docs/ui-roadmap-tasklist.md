@@ -115,7 +115,7 @@ Transform the current Operator UI from a read-only monitoring surface into a dec
 - [x] Add unmatched-closed-deal resolution dashboard
 - [x] Add pairing confidence explanation
 - [x] Add recent trade-context registration failures panel
-- [ ] Add stale execution artifact warnings
+- [x] Add stale execution artifact warnings
 
 ---
 
@@ -197,7 +197,7 @@ Transform the current Operator UI from a read-only monitoring surface into a dec
 - [x] U3B complete
 
 ### Milestone M4 — Full decision cockpit
-- [ ] U4 complete
+- [x] U4 complete
 - [ ] U5 complete
 - [ ] U7 polish complete
 
