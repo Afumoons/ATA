@@ -139,10 +139,10 @@ Transform the current Operator UI from a read-only monitoring surface into a dec
 ## Phase U6 — Governance and Operator Control Layer
 
 ### U6A — Governance visibility
-- [ ] Add governance policy summary page
-- [ ] Add current pool composition rules and violations
-- [ ] Add family saturation and diversity indicators
-- [ ] Add active-vs-disabled inventory imbalance warnings
+- [x] Add governance policy summary page
+- [x] Add current pool composition rules and violations
+- [x] Add family saturation and diversity indicators
+- [x] Add active-vs-disabled inventory imbalance warnings
 
 ### U6B — Safe operator actions (only if wanted later)
 - [ ] Add read-only simulation of promote/demote effects
@@ -177,7 +177,7 @@ Transform the current Operator UI from a read-only monitoring surface into a dec
 5. [x] Add U1C funnel visualization and change summary
 6. [x] Expand U4 Execution / Reconciliation cockpit
 7. [x] Add remaining U5B duplicate-risk visibility from semantic similarity / memory veto context
-8. [ ] Build U6A governance visibility surfaces
+8. [x] Build U6A governance visibility surfaces
 9. [ ] Finish U7 design polish pass
 
 ---

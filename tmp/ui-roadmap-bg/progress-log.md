@@ -74,3 +74,6 @@
 - The Pool strategy detail view now surfaces semantic-duplicate skips, memory-veto skips, family generated/accepted throughput, veto-pressure tone, and example vetoed candidates alongside the nearest-neighbor panel.
 - Verified the duplicate-risk context slice with `python -m compileall ui_api`, a direct `load_strategy_detail('core15_BTCUSDm_M15_b13d')` smoke test for `derived.duplicate_risk_context`, and production `npm run build` in `ui-front`.
 - Marked U5 fully complete in roadmap/task notes; next slice is U6A governance policy summary page.
+- Added a dedicated `/governance` page that turns the existing pool summary payload into a read-only governance surface for concentration heuristics, policy-band violations, family saturation/diversity, and active-vs-disabled inventory balance.
+- Verified the U6A governance slice with a production `npm run build` in `ui-front`.
+- Marked U6A complete in roadmap/task notes; next slice is U7A information design pass.

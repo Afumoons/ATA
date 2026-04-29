@@ -10,6 +10,7 @@ const navItems = [
   ["/research", "Research", "Funnel stages, rejection reasons, family throughput"],
   ["/drift", "Drift", "Live vs research mismatch and decay warnings"],
   ["/review", "Review Queue", "Promotion watchlist and demotion triage buckets"],
+  ["/governance", "Governance", "Pool concentration, diversity, and inventory-balance guardrails"],
   ["/manifest", "Manifest", "Artifact presence and deployment composition"],
   ["/audit", "Audit", "Merged timeline with operator filters"],
 ] as const;

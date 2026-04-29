@@ -40,6 +40,7 @@ Implement and advance `docs/ui-roadmap-tasklist.md` until the tasklist is fully 
 - U5B compare-family view added on Pool page in current workstream
 - U5B nearest-neighbor / clone similarity panel added on Strategy detail in current workstream
 - U5B duplicate-risk visibility from semantic similarity / memory veto context added on Strategy detail in current workstream
+- U6A governance policy summary page added in current workstream
 
 ## Milestone Order
 1. Commit roadmap tasklist doc cleanly
@@ -83,5 +84,6 @@ For each autonomous run:
 - U5B compare-two-strategies view is now complete, including head-to-head posture, DNA, regime/session contrast, and warning comparison on Pool
 - U5B nearest-neighbor / clone similarity panel is now complete, adding semantic-neighbor ranking, same-slot clone pressure, structural clone detection, and novelty cues on Strategy detail
 - U5B duplicate-risk visibility from semantic similarity / memory veto context is now complete, adding latest research-family semantic-duplicate and memory-veto pressure alongside the Strategy detail similarity panel
-- Next highest-value slice is U6A governance policy summary page
+- U6A governance visibility is now complete, including governance policy heuristics, pool-composition violations, family saturation/diversity indicators, and active-vs-disabled imbalance warnings on a dedicated Governance page
+- Next highest-value slice is U7A information design pass
 - User explicitly wants progress reports, not approval questions
