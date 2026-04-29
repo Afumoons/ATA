@@ -216,6 +216,10 @@ export default function PoolPage() {
   const identityWarnings = normalizeDetailRows(strategyIdentity.warnings);
   const fragilityMarkers = normalizeDetailRows(strategyIdentity.fragility_markers);
   const decisionContext = coerceRecord(selectedDerived.decision_context);
+  const similarityPanel = coerceRecord(selectedDerived.similarity_panel);
+  const similarityTarget = coerceRecord(similarityPanel.target);
+  const similarityNearest = coerceRecord(similarityPanel.nearest_neighbor);
+  const similarityNeighbors = normalizeDetailRows(similarityPanel.neighbors);
   const transitionHistory = Array.isArray(decisionContext.transition_history)
     ? decisionContext.transition_history.filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object" && !Array.isArray(item))
     : [];
@@ -540,6 +544,90 @@ export default function PoolPage() {
                   </Section>
                 </div>
               </div>
+            </Section>
+
+            <Section
+              title="Nearest-neighbor / clone similarity"
+              description="Semantic-neighbor panel for spotting clone pressure, same-slot overlap, and low-novelty strategies before the pool quietly over-concentrates around one idea."
+              action={similarityPanel.duplicate_risk ? <StatusBadge label={`Duplicate risk: ${compactValue(similarityPanel.duplicate_risk)}`} tone={toneFromBadgeTone(similarityPanel.tone)} /> : null}
+            >
+              {!similarityNeighbors.length ? (
+                <EmptyState title="No similarity panel yet" description="The backend could not recover enough strategy-rule payloads to compute nearest neighbors for this strategy." />
+              ) : (
+                <div className="dashboard-stack">
+                  <div className="panel">
+                    <p>{compactValue(similarityPanel.summary ?? similarityPanel.headline)}</p>
+                  </div>
+
+                  <section className="stats-grid">
+                    <StatCard
+                      label="Nearest similarity"
+                      value={formatPercent(pickFirstNumber(similarityNearest.similarity, similarityTarget.research_nearest_similarity))}
+                      hint={compactValue(similarityNearest.name ?? "Research nearest snapshot")}
+                      tone={toneFromBadgeTone(similarityPanel.tone)}
+                    />
+                    <StatCard
+                      label="Novelty score"
+                      value={formatNumber(pickFirstNumber(similarityTarget.research_novelty_score))}
+                      hint="Higher is less clone-like"
+                      tone={(() => {
+                        const novelty = pickFirstNumber(similarityTarget.research_novelty_score);
+                        if (novelty == null) return "neutral" as const;
+                        if (novelty <= 0.08) return "critical" as const;
+                        if (novelty <= 0.12) return "warning" as const;
+                        return "success" as const;
+                      })()}
+                    />
+                    <StatCard
+                      label="High-sim neighbors"
+                      value={formatNumber(pickFirstNumber(similarityPanel.high_similarity_count))}
+                      hint=">= 85% semantic similarity"
+                      tone={toneFromMagnitude(pickFirstNumber(similarityPanel.high_similarity_count), 1, 3)}
+                    />
+                    <StatCard
+                      label="Structural clones"
+                      value={formatNumber(pickFirstNumber(similarityPanel.structural_clone_count))}
+                      hint="Exact core-rule matches"
+                      tone={pickFirstNumber(similarityPanel.structural_clone_count) ? "critical" : "success"}
+                    />
+                  </section>
+
+                  <DataTable
+                    columns={["Neighbor", "Similarity", "Relationship", "Status", "Research / live", "Novelty", "Risk"]}
+                    rows={similarityNeighbors.map((item, index) => [
+                      <div key={`neighbor-${index}`}>
+                        <strong>{compactValue(item.name)}</strong>
+                        <div className="table-subtext">{compactValue(`${item.symbol ?? "?"} / ${item.timeframe ?? "?"} · ${item.family ?? "unknown"}`)}</div>
+                      </div>,
+                      formatPercent(pickFirstNumber(item.similarity)),
+                      compactValue(item.relationship),
+                      <StatusBadge key={`neighbor-status-${index}`} label={compactValue(item.status)} tone={toneFromStrategyStatus(pickFirstString(item.status))} />,
+                      `${formatPercent(pickFirstNumber(item.research_return_pct))} · ${formatCurrency(pickFirstNumber(item.live_total_pnl))}`,
+                      formatNumber(pickFirstNumber(item.research_novelty_score)),
+                      <StatusBadge key={`neighbor-risk-${index}`} label={compactValue(item.risk_label)} tone={toneFromBadgeTone(item.risk_tone)} />,
+                    ])}
+                    emptyTitle="No comparable neighbors"
+                    emptyDescription="The current pool did not surface any comparable strategy rules for this selection."
+                  />
+
+                  <div className="detail-grid-2">
+                    <Section title="Nearest neighbor reading" description="Why the top neighbor matters operationally.">
+                      <div className="panel">
+                        <p>
+                          {compactValue(similarityPanel.headline)} Same-slot high-similarity neighbors: {formatNumber(pickFirstNumber(similarityPanel.same_slot_high_similarity_count))}. Use this panel to see whether the pool is gaining true diversity or just adding variants of the same playbook.
+                        </p>
+                      </div>
+                    </Section>
+                    <Section title="Operator cue" description="What to do with high similarity.">
+                      <div className="panel">
+                        <p>
+                          When similarity is high but novelty stays low, extra strategies may add concentration more than coverage. The strongest risk is a same-slot structural clone that can make the pool look broader than it really is.
+                        </p>
+                      </div>
+                    </Section>
+                  </div>
+                </div>
+              )}
             </Section>
 
             <section className="stats-grid">

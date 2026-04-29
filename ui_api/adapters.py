@@ -11,14 +11,16 @@ try:
     from ..execution.audit_utils import POOL_AUDIT_TRAIL_PATH, UNMATCHED_CLOSED_DEALS_PATH
     from ..execution.live_state_utils import LIVE_STATE_PATH
     from ..execution.strategy_live_stats import STATS_PATH
+    from ..strategies.base import StrategyDefinition
     from ..strategies.live_manifest import LIVE_MANIFEST_PATH, STRATEGY_INDEX_PATH, load_live_manifest, load_strategy_index
-    from ..strategies.pool import POOL_STATE_PATH, load_pool, summarize_status_counts
+    from ..strategies.pool import POOL_STATE_PATH, load_pool, semantic_similarity, strategy_motif, summarize_status_counts
 except ImportError:
     from execution.audit_utils import POOL_AUDIT_TRAIL_PATH, UNMATCHED_CLOSED_DEALS_PATH
     from execution.live_state_utils import LIVE_STATE_PATH
     from execution.strategy_live_stats import STATS_PATH
+    from strategies.base import StrategyDefinition
     from strategies.live_manifest import LIVE_MANIFEST_PATH, STRATEGY_INDEX_PATH, load_live_manifest, load_strategy_index
-    from strategies.pool import POOL_STATE_PATH, load_pool, summarize_status_counts
+    from strategies.pool import POOL_STATE_PATH, load_pool, semantic_similarity, strategy_motif, summarize_status_counts
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 EXECUTION_DIR = BASE_DIR / "execution"
@@ -291,6 +293,279 @@ def _average_or_none(total: float, count: int) -> Optional[float]:
     if count <= 0:
         return None
     return total / count
+
+
+def _build_strategy_definition(
+    *,
+    name: str,
+    symbol: str,
+    timeframe: str,
+    payload: Dict[str, Any],
+) -> Optional[StrategyDefinition]:
+    if not isinstance(payload, dict):
+        return None
+
+    exit_rule = payload.get("exit_rule")
+    if not exit_rule:
+        return None
+
+    try:
+        return StrategyDefinition(
+            name=name,
+            symbol=str(symbol or payload.get("symbol") or "unknown"),
+            timeframe=str(timeframe or payload.get("timeframe") or "unknown"),
+            long_entry_rule=payload.get("long_entry_rule"),
+            short_entry_rule=payload.get("short_entry_rule"),
+            exit_rule=str(exit_rule),
+            stop_loss_pips=float(payload.get("stop_loss_pips") or 0.0),
+            take_profit_pips=float(payload.get("take_profit_pips") or 0.0),
+            sl_atr_mult=_safe_float(payload.get("sl_atr_mult")),
+            tp_atr_mult=_safe_float(payload.get("tp_atr_mult")),
+            params=dict(payload.get("params") or {}),
+        )
+    except Exception:
+        return None
+
+
+def _resolve_strategy_definition(
+    *,
+    name: str,
+    symbol: str,
+    timeframe: str,
+    pool_record: Dict[str, Any] | None,
+    manifest_entry: Dict[str, Any] | None,
+    index_entry: Dict[str, Any] | None,
+) -> Optional[StrategyDefinition]:
+    pool_stats = (pool_record or {}).get("stats") if isinstance(pool_record, dict) else {}
+    strategy_payload = (pool_stats or {}).get("strategy") if isinstance(pool_stats, dict) else None
+    if isinstance(strategy_payload, dict):
+        definition = _build_strategy_definition(name=name, symbol=symbol, timeframe=timeframe, payload=strategy_payload)
+        if definition is not None:
+            return definition
+
+    fallback_payload = {
+        "long_entry_rule": (manifest_entry or {}).get("long_entry_rule") or (index_entry or {}).get("long_entry_rule"),
+        "short_entry_rule": (manifest_entry or {}).get("short_entry_rule") or (index_entry or {}).get("short_entry_rule"),
+        "exit_rule": (manifest_entry or {}).get("exit_rule") or (index_entry or {}).get("exit_rule"),
+        "stop_loss_pips": (manifest_entry or {}).get("stop_loss_pips") or (index_entry or {}).get("stop_loss_pips"),
+        "take_profit_pips": (manifest_entry or {}).get("take_profit_pips") or (index_entry or {}).get("take_profit_pips"),
+        "sl_atr_mult": (manifest_entry or {}).get("sl_atr_mult") or (index_entry or {}).get("sl_atr_mult"),
+        "tp_atr_mult": (manifest_entry or {}).get("tp_atr_mult") or (index_entry or {}).get("tp_atr_mult"),
+        "params": (manifest_entry or {}).get("params") or (index_entry or {}).get("params") or {},
+    }
+    return _build_strategy_definition(name=name, symbol=symbol, timeframe=timeframe, payload=fallback_payload)
+
+
+def _is_structural_clone(a: StrategyDefinition, b: StrategyDefinition) -> bool:
+    return (
+        str(a.long_entry_rule or "") == str(b.long_entry_rule or "")
+        and str(a.short_entry_rule or "") == str(b.short_entry_rule or "")
+        and str(a.exit_rule or "") == str(b.exit_rule or "")
+        and _safe_float(a.sl_atr_mult) == _safe_float(b.sl_atr_mult)
+        and _safe_float(a.tp_atr_mult) == _safe_float(b.tp_atr_mult)
+        and _safe_float(a.stop_loss_pips) == _safe_float(b.stop_loss_pips)
+        and _safe_float(a.take_profit_pips) == _safe_float(b.take_profit_pips)
+    )
+
+
+def _build_strategy_similarity_panel(
+    *,
+    target_name: str,
+    pool: Any,
+    manifest_by_name: Dict[str, Dict[str, Any]],
+    index_by_name: Dict[str, Dict[str, Any]],
+    live_strategy_rows: Dict[str, Any],
+) -> Dict[str, Any]:
+    target_rec = pool.strategies.get(target_name) if hasattr(pool, "strategies") else None
+    if target_rec is None:
+        return {}
+
+    target_pool_record = target_rec.to_dict() if hasattr(target_rec, "to_dict") else {}
+    target_manifest = manifest_by_name.get(target_name) or {}
+    target_index = index_by_name.get(target_name) or {}
+    target_definition = _resolve_strategy_definition(
+        name=target_name,
+        symbol=str(target_rec.symbol or "unknown"),
+        timeframe=str(target_rec.timeframe or "unknown"),
+        pool_record=target_pool_record,
+        manifest_entry=target_manifest,
+        index_entry=target_index,
+    )
+    if target_definition is None:
+        return {}
+
+    target_stats = (target_pool_record.get("stats") or {}) if isinstance(target_pool_record, dict) else {}
+    target_strategy_payload = (target_stats.get("strategy") or {}) if isinstance(target_stats, dict) else {}
+    target_family = str(
+        target_manifest.get("family")
+        or target_index.get("family")
+        or target_strategy_payload.get("family")
+        or target_stats.get("family")
+        or "unknown"
+    )
+    target_motif = str(target_stats.get("research_motif") or target_stats.get("motif") or strategy_motif(target_definition) or "unknown")
+    target_status = str(target_rec.status or target_manifest.get("status") or target_index.get("status") or "unknown")
+
+    neighbor_rows: List[Dict[str, Any]] = []
+    high_similarity_count = 0
+    same_slot_high_similarity_count = 0
+    structural_clone_count = 0
+
+    for other_name, other_rec in pool.strategies.items():
+        if other_name == target_name:
+            continue
+
+        other_pool_record = other_rec.to_dict() if hasattr(other_rec, "to_dict") else {}
+        other_manifest = manifest_by_name.get(other_name) or {}
+        other_index = index_by_name.get(other_name) or {}
+        other_definition = _resolve_strategy_definition(
+            name=other_name,
+            symbol=str(other_rec.symbol or "unknown"),
+            timeframe=str(other_rec.timeframe or "unknown"),
+            pool_record=other_pool_record,
+            manifest_entry=other_manifest,
+            index_entry=other_index,
+        )
+        if other_definition is None:
+            continue
+
+        similarity = round(float(semantic_similarity(target_definition, other_definition)), 4)
+        other_stats = (other_pool_record.get("stats") or {}) if isinstance(other_pool_record, dict) else {}
+        other_strategy_payload = (other_stats.get("strategy") or {}) if isinstance(other_stats, dict) else {}
+        other_family = str(
+            other_manifest.get("family")
+            or other_index.get("family")
+            or other_strategy_payload.get("family")
+            or other_stats.get("family")
+            or "unknown"
+        )
+        other_motif = str(other_stats.get("research_motif") or other_stats.get("motif") or strategy_motif(other_definition) or "unknown")
+        same_slot = target_definition.symbol == other_definition.symbol and target_definition.timeframe == other_definition.timeframe
+        same_family = target_family == other_family
+        same_motif = target_motif == other_motif
+        structural_clone = _is_structural_clone(target_definition, other_definition)
+
+        if similarity >= 0.85:
+            high_similarity_count += 1
+            if same_slot:
+                same_slot_high_similarity_count += 1
+        if structural_clone:
+            structural_clone_count += 1
+
+        relationship_parts: List[str] = []
+        if same_slot:
+            relationship_parts.append("same slot")
+        if same_family:
+            relationship_parts.append("same family")
+        if same_motif:
+            relationship_parts.append("same motif")
+        if structural_clone:
+            relationship_parts.append("structural clone")
+        if not relationship_parts:
+            relationship_parts.append("cross-lineage neighbor")
+
+        if structural_clone or similarity >= 0.92:
+            risk_tone = "critical"
+            risk_label = "clone risk"
+        elif similarity >= 0.85:
+            risk_tone = "warning"
+            risk_label = "near clone"
+        elif similarity >= 0.75:
+            risk_tone = "info"
+            risk_label = "adjacent"
+        else:
+            risk_tone = "neutral"
+            risk_label = "distant"
+
+        other_live = live_strategy_rows.get(other_name) if isinstance(live_strategy_rows.get(other_name), dict) else {}
+        neighbor_rows.append({
+            "name": other_name,
+            "status": str(other_rec.status or other_manifest.get("status") or other_index.get("status") or "unknown"),
+            "score": _safe_float(other_rec.score),
+            "symbol": str(other_rec.symbol or other_definition.symbol),
+            "timeframe": str(other_rec.timeframe or other_definition.timeframe),
+            "family": other_family,
+            "motif": other_motif,
+            "similarity": similarity,
+            "relationship": ", ".join(relationship_parts),
+            "same_slot": same_slot,
+            "same_family": same_family,
+            "same_motif": same_motif,
+            "structural_clone": structural_clone,
+            "risk_tone": risk_tone,
+            "risk_label": risk_label,
+            "research_return_pct": _safe_float(other_stats.get("return_pct")),
+            "research_sharpe": _safe_float(other_stats.get("sharpe_ratio")),
+            "research_nearest_similarity": _safe_float(other_stats.get("research_nearest_similarity")),
+            "research_novelty_score": _safe_float(other_stats.get("research_novelty_score")),
+            "live_total_pnl": _safe_float((other_live or {}).get("total_pnl")),
+            "live_num_trades": _safe_int((other_live or {}).get("num_trades")),
+        })
+
+    neighbor_rows.sort(
+        key=lambda row: (
+            bool(row.get("structural_clone")),
+            bool(row.get("same_slot")),
+            bool(row.get("same_family")),
+            float(row.get("similarity") or 0.0),
+            float(row.get("score") or float("-inf")),
+        ),
+        reverse=True,
+    )
+
+    nearest_neighbor = neighbor_rows[0] if neighbor_rows else None
+    target_research_nearest_similarity = _safe_float(target_stats.get("research_nearest_similarity"))
+    target_novelty_score = _safe_float(target_stats.get("research_novelty_score"))
+    duplicate_risk = "low"
+    duplicate_tone = "success"
+    if structural_clone_count > 0 or (nearest_neighbor and float(nearest_neighbor.get("similarity") or 0.0) >= 0.92):
+        duplicate_risk = "high"
+        duplicate_tone = "critical"
+    elif same_slot_high_similarity_count > 0 or (nearest_neighbor and float(nearest_neighbor.get("similarity") or 0.0) >= 0.85):
+        duplicate_risk = "watch"
+        duplicate_tone = "warning"
+    elif high_similarity_count > 0:
+        duplicate_risk = "moderate"
+        duplicate_tone = "info"
+
+    if nearest_neighbor:
+        headline = f"Nearest live neighbor is {nearest_neighbor['name']} at {float(nearest_neighbor['similarity']) * 100:.1f}% similarity."
+    else:
+        headline = "No comparable live neighbors were recoverable from the current pool payload."
+
+    summary_parts = [
+        f"{_humanize_token(target_family).title()} posture is {duplicate_risk}",
+        f"{high_similarity_count} neighbor(s) clear the 85% similarity line",
+        f"{same_slot_high_similarity_count} of those sit in the same slot",
+    ]
+    if structural_clone_count:
+        summary_parts.append(f"{structural_clone_count} structural clone(s) share the same core rules")
+    if target_novelty_score is not None:
+        summary_parts.append(f"research novelty score is {target_novelty_score:.2f}")
+
+    return {
+        "headline": headline,
+        "summary": ", ".join(summary_parts) + ".",
+        "target": {
+            "name": target_name,
+            "status": target_status,
+            "family": target_family,
+            "motif": target_motif,
+            "research_nearest_similarity": target_research_nearest_similarity,
+            "research_novelty_score": target_novelty_score,
+        },
+        "duplicate_risk": duplicate_risk,
+        "tone": duplicate_tone,
+        "high_similarity_count": high_similarity_count,
+        "same_slot_high_similarity_count": same_slot_high_similarity_count,
+        "structural_clone_count": structural_clone_count,
+        "nearest_neighbor": nearest_neighbor,
+        "neighbors": neighbor_rows[:8],
+        "thresholds": {
+            "near_clone": 0.85,
+            "clone_risk": 0.92,
+        },
+    }
 
 
 def _build_strategy_identity(
@@ -2109,11 +2384,16 @@ def load_strategies_summary() -> List[Dict[str, Any]]:
 
 
 def load_strategy_detail(name: str) -> Dict[str, Any] | None:
-    manifest_entry = next((entry for entry in load_manifest_entries() if entry.get("name") == name), None)
-    index_entry = next((entry for entry in load_strategy_index_entries() if entry.get("name") == name), None)
+    manifest_entries = load_manifest_entries()
+    index_entries = load_strategy_index_entries()
+    manifest_by_name = {str(entry.get("name") or ""): entry for entry in manifest_entries if isinstance(entry, dict)}
+    index_by_name = {str(entry.get("name") or ""): entry for entry in index_entries if isinstance(entry, dict)}
+    manifest_entry = manifest_by_name.get(name)
+    index_entry = index_by_name.get(name)
     pool = load_pool()
     pool_rec = pool.strategies.get(name)
-    stats = load_strategy_live_stats_snapshot().get("strategies", {}).get(name)
+    live_strategy_rows = load_strategy_live_stats_snapshot().get("strategies", {})
+    stats = live_strategy_rows.get(name)
     if not any([manifest_entry, index_entry, pool_rec, stats]):
         return None
 
@@ -2368,6 +2648,13 @@ def load_strategy_detail(name: str) -> Dict[str, Any] | None:
             "decision_label": f"{_humanize_token(current_status).title()} posture",
             "decay_warning_count": decay_warning_count,
         },
+        "similarity_panel": _build_strategy_similarity_panel(
+            target_name=name,
+            pool=pool,
+            manifest_by_name=manifest_by_name,
+            index_by_name=index_by_name,
+            live_strategy_rows=live_strategy_rows if isinstance(live_strategy_rows, dict) else {},
+        ),
     }
 
     return {

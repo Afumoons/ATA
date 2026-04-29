@@ -131,7 +131,7 @@ Transform the current Operator UI from a read-only monitoring surface into a dec
 ### U5B — Comparison tools
 - [x] Add compare-two-strategies view
 - [x] Add compare-family view
-- [ ] Add nearest-neighbor / clone similarity panel
+- [x] Add nearest-neighbor / clone similarity panel
 - [ ] Add duplicate-risk visibility from semantic similarity / memory veto context
 
 ---
@@ -176,7 +176,7 @@ Transform the current Operator UI from a read-only monitoring surface into a dec
 4. [x] Expand U1C Research diagnostics controls
 5. [x] Add U1C funnel visualization and change summary
 6. [ ] Expand U4 Execution / Reconciliation cockpit
-7. [ ] Add remaining U5B Strategy DNA comparison tools
+7. [ ] Add remaining U5B duplicate-risk visibility from semantic similarity / memory veto context
 8. [ ] Finish U7 design polish pass
 
 ---

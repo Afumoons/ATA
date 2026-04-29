@@ -67,3 +67,6 @@
 - The Pool page now surfaces family-comparison stat cards, an operator-readable family scoreboard table, and a quick reading panel so lineage strength can be compared before drilling into single strategies.
 - Verified the compare-family slice with `python -m compileall ui_api`, a direct `load_pool_summary_payload()` smoke test for `family_comparison`, and production `npm run build` in `ui-front`.
 - Marked the compare-family item complete in roadmap/task notes; next slice is U5B nearest-neighbor / clone similarity panel.
+- Added a U5B nearest-neighbor / clone similarity panel to Strategy detail, deriving semantic-neighbor rankings from pool strategy payloads plus same-slot overlap, structural clone detection, and research novelty cues.
+- Verified the nearest-neighbor slice with `python -m compileall ui_api`, a direct `load_strategy_detail('core15_BTCUSDm_M15_b13d')` smoke test for `derived.similarity_panel`, and production `npm run build` in `ui-front`.
+- Marked the nearest-neighbor / clone similarity item complete in roadmap/task notes; next slice is U5B duplicate-risk visibility from semantic similarity / memory veto context.
