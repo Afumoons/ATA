@@ -128,6 +128,10 @@ export default function ExecutionPage() {
   const openTradeSummary = data.open_trades.summary ?? {};
   const openTradeDrilldown = data.open_trades.drilldown ?? [];
   const openTradeBySymbol = openTradeSummary.by_symbol ?? [];
+  const recentActivity = data.recent_activity ?? {};
+  const recentFills = recentActivity.fills ?? {};
+  const recentExits = recentActivity.exits ?? {};
+  const recentWindowHours = Number(recentActivity.window_hours ?? 24);
   const attentionEvents = (auditQuery.data?.events ?? []).filter((event) => {
     const source = String(event.source ?? "").toLowerCase();
     return source.includes("unmatched") || source.includes("trade");
@@ -173,6 +177,71 @@ export default function ExecutionPage() {
           tone={toneFromSignedNumber(data.strategy_live_stats.total_realized_pnl)}
         />
       </section>
+
+      <Section title="Recent fills and exits" description={`Compact execution flow over the last ${formatNumber(recentWindowHours)} hour(s), combining fresh fill traces with the trade-context exit journal.`}>
+        <div className="dashboard-stack">
+          <section className="stats-grid">
+            <StatCard
+              label="Recent fills"
+              value={formatNumber(Number(recentFills.count ?? 0))}
+              hint={`Vol ${compactValue(recentFills.total_volume)} · top ${compactValue(recentFills.top_symbol)}`}
+              tone={Number(recentFills.count ?? 0) > 0 ? "info" : "neutral"}
+            />
+            <StatCard
+              label="Long / short"
+              value={`${formatNumber(Number(recentFills.buy_count ?? 0))} / ${formatNumber(Number(recentFills.sell_count ?? 0))}`}
+              hint={recentFills.latest_at ? `Latest fill ${formatDateTime(recentFills.latest_at)}` : "No recent fill timestamp"}
+              tone="neutral"
+            />
+            <StatCard
+              label="Recent exits"
+              value={formatNumber(Number(recentExits.count ?? 0))}
+              hint={`${formatNumber(Number(recentExits.win_count ?? 0))} win · ${formatNumber(Number(recentExits.loss_count ?? 0))} loss`}
+              tone={Number(recentExits.count ?? 0) > 0 ? "success" : "neutral"}
+            />
+            <StatCard
+              label="Exit net PnL"
+              value={formatCurrency(Number(recentExits.net_pnl ?? 0))}
+              hint={recentExits.latest_at ? `Latest exit ${formatDateTime(recentExits.latest_at)} · top ${compactValue(recentExits.top_symbol)}` : "No recent exit timestamp"}
+              tone={toneFromSignedNumber(Number(recentExits.net_pnl ?? 0))}
+            />
+          </section>
+
+          <div className="detail-grid-2">
+            <DataTable
+              columns={["Fill time", "Strategy", "Side / symbol", "Volume", "Price"]}
+              rows={(recentFills.recent ?? []).map((fill) => [
+                compactValue(formatDateTime(fill.timestamp)),
+                compactValue(fill.strategy_name),
+                <div key={`${compactValue(fill.ticket)}-fill-side`} className="table-stack">
+                  <strong>{compactValue(fill.side)}</strong>
+                  <span>{compactValue(fill.symbol)}</span>
+                </div>,
+                compactValue(fill.volume),
+                compactValue(fill.price),
+              ])}
+              emptyTitle="No recent fills"
+              emptyDescription="The latest execution window did not surface any recent fill traces from trades.log."
+            />
+
+            <DataTable
+              columns={["Exit time", "Strategy", "Symbol", "PnL", "Context"]}
+              rows={(recentExits.recent ?? []).map((exit) => [
+                compactValue(formatDateTime(exit.timestamp)),
+                compactValue(exit.strategy_name),
+                compactValue(exit.symbol),
+                <strong key={`${compactValue(exit.ticket)}-exit-pnl`} className={`tone-${toneFromSignedNumber(Number(exit.pnl ?? 0))}`}>{formatCurrency(Number(exit.pnl ?? 0))}</strong>,
+                <div key={`${compactValue(exit.ticket)}-exit-context`} className="table-stack">
+                  <span>{compactValue(exit.session)}</span>
+                  <span>{compactValue(exit.regime)}</span>
+                </div>,
+              ])}
+              emptyTitle="No recent exits"
+              emptyDescription="The trade-context journal did not surface any recent exit rows inside the active lookback window."
+            />
+          </div>
+        </div>
+      </Section>
 
       <Section
         title="Execution diagnosis summary"

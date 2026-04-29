@@ -37,3 +37,7 @@
 - Added per-symbol execution posture cards on `/execution`, summarizing protection gaps, floating pressure, trade balance, age, and log/live-stat alignment per engaged symbol.
 - Verified the posture-card slice with production `npm run build` in `ui-front`.
 - Marked the U4A per-symbol execution posture card item complete in roadmap/task notes; next slice is U4A recent fills / exits summary cards.
+- Added recent fills / exits summary cards on `/execution`, pairing the parsed `trades.log` fill stream with recent exit rows from `execution/trade_context_journal.json`.
+- Extended the execution summary API payload with a bounded `recent_activity` block so the page can surface recent fill count, side mix, exit PnL, and compact recent fill/exit tables.
+- Verified the recent-activity slice with `python -m compileall ui_api`, a direct `load_execution_summary()` smoke test for `recent_activity`, and production `npm run build` in `ui-front`.
+- Marked the U4A recent fills / exits summary card item complete in roadmap/task notes; next slice is U4A no-trade diagnosis breakdown by cause.

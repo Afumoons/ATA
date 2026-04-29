@@ -24,6 +24,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 EXECUTION_DIR = BASE_DIR / "execution"
 OPEN_TRADES_PATH = EXECUTION_DIR / "open_trades.json"
 TRADES_LOG_PATH = EXECUTION_DIR / "trades.log"
+TRADE_CONTEXT_JOURNAL_PATH = EXECUTION_DIR / "trade_context_journal.json"
 RESEARCH_SUMMARY_DIR = BASE_DIR / "tmp" / "research_family_stage_summaries"
 
 TRADE_LOG_PATTERN = re.compile(r"(\w+)=([^\s]+)")
@@ -458,6 +459,96 @@ def load_recent_trade_log(limit: int = 30) -> List[Dict[str, Any]]:
     return rows
 
 
+def load_trade_context_journal() -> Dict[str, Any]:
+    data = read_json_file(TRADE_CONTEXT_JOURNAL_PATH, default={})
+    if not isinstance(data, dict):
+        return {}
+    trades = data.get("trades")
+    if not isinstance(trades, dict):
+        trades = {}
+    data["trades"] = trades
+    return data
+
+
+def _build_recent_fill_exit_summary(recent_trade_log: List[Dict[str, Any]], trade_context_journal: Dict[str, Any], *, window_hours: int = 24) -> Dict[str, Any]:
+    fill_rows: List[Dict[str, Any]] = []
+    now = datetime.now(timezone.utc)
+    window_start = now - timedelta(hours=window_hours)
+
+    for row in recent_trade_log:
+        if not isinstance(row, dict):
+            continue
+        reason = str(row.get("reason") or row.get("event") or row.get("type") or "").strip().lower()
+        if reason and reason not in {"executed", "filled", "opened", "open"}:
+            continue
+
+        timestamp = parse_iso_datetime(row.get("ts") or row.get("timestamp") or row.get("recorded_at") or row.get("time"))
+        volume = _safe_float(row.get("vol") or row.get("volume") or row.get("lots"))
+        fill_rows.append({
+            "timestamp": timestamp.replace(microsecond=0).isoformat() if timestamp else None,
+            "strategy_name": row.get("strategy") or row.get("strategy_name"),
+            "symbol": row.get("symbol"),
+            "side": _canonical_trade_side(row.get("dir") or row.get("direction") or row.get("side")),
+            "ticket": row.get("ticket") or row.get("position_id"),
+            "volume": volume,
+            "price": _safe_float(row.get("price")),
+            "reason": reason or "executed",
+            "within_window": bool(timestamp and timestamp >= window_start),
+        })
+
+    fill_rows.sort(key=lambda item: str(item.get("timestamp") or ""), reverse=True)
+    fills_in_window = [row for row in fill_rows if row.get("within_window")]
+    fill_symbol_counts = Counter(str(row.get("symbol") or "unknown") for row in fills_in_window)
+
+    exit_rows: List[Dict[str, Any]] = []
+    journal_trades = trade_context_journal.get("trades") or {}
+    if isinstance(journal_trades, dict):
+        for ticket, row in journal_trades.items():
+            if not isinstance(row, dict) or not row.get("exit_time"):
+                continue
+            timestamp = parse_iso_datetime(row.get("exit_time"))
+            pnl = _safe_float(row.get("pnl"))
+            exit_context = row.get("exit_context") if isinstance(row.get("exit_context"), dict) else {}
+            exit_rows.append({
+                "timestamp": timestamp.replace(microsecond=0).isoformat() if timestamp else None,
+                "strategy_name": row.get("strategy_name"),
+                "symbol": row.get("symbol") or row.get("symbol_canonical"),
+                "ticket": row.get("ticket") or ticket,
+                "pnl": pnl,
+                "session": exit_context.get("session"),
+                "regime": exit_context.get("regime"),
+                "within_window": bool(timestamp and timestamp >= window_start),
+            })
+
+    exit_rows.sort(key=lambda item: str(item.get("timestamp") or ""), reverse=True)
+    exits_in_window = [row for row in exit_rows if row.get("within_window")]
+    exit_symbol_counts = Counter(str(row.get("symbol") or "unknown") for row in exits_in_window)
+    exit_pnls = [float(row.get("pnl") or 0.0) for row in exits_in_window]
+
+    return {
+        "window_hours": window_hours,
+        "fills": {
+            "count": len(fills_in_window),
+            "total_volume": round(sum(float(row.get("volume") or 0.0) for row in fills_in_window), 2),
+            "buy_count": sum(1 for row in fills_in_window if row.get("side") == "long"),
+            "sell_count": sum(1 for row in fills_in_window if row.get("side") == "short"),
+            "latest_at": fill_rows[0].get("timestamp") if fill_rows else None,
+            "top_symbol": fill_symbol_counts.most_common(1)[0][0] if fill_symbol_counts else None,
+            "recent": fill_rows[:8],
+        },
+        "exits": {
+            "count": len(exits_in_window),
+            "net_pnl": round(sum(exit_pnls), 2),
+            "avg_pnl": round(sum(exit_pnls) / len(exit_pnls), 2) if exit_pnls else 0.0,
+            "win_count": sum(1 for pnl in exit_pnls if pnl > 0),
+            "loss_count": sum(1 for pnl in exit_pnls if pnl < 0),
+            "latest_at": exit_rows[0].get("timestamp") if exit_rows else None,
+            "top_symbol": exit_symbol_counts.most_common(1)[0][0] if exit_symbol_counts else None,
+            "recent": exit_rows[:8],
+        },
+    }
+
+
 def _normalize_symbol_key(value: Any) -> str:
     symbol = str(value or "").strip().upper()
     if symbol.endswith("M") and len(symbol) > 3:
@@ -649,7 +740,9 @@ def load_execution_summary() -> Dict[str, Any]:
     live_stats = load_strategy_live_stats_snapshot()
     open_trades = load_open_trades_snapshot()
     recent_trade_log = load_recent_trade_log()
+    trade_context_journal = load_trade_context_journal()
     open_trade_context = _build_open_trade_drilldown(open_trades.get("trades") or [], live_stats, recent_trade_log)
+    recent_activity = _build_recent_fill_exit_summary(recent_trade_log, trade_context_journal)
     unmatched_rows = read_json_file(UNMATCHED_CLOSED_DEALS_PATH, default=[])
     if not isinstance(unmatched_rows, list):
         unmatched_rows = []
@@ -670,6 +763,7 @@ def load_execution_summary() -> Dict[str, Any]:
             "count": len(unmatched_rows),
             "recent": unmatched_rows[-20:],
         },
+        "recent_activity": recent_activity,
         "recent_trade_log": recent_trade_log,
     }
 

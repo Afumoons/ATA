@@ -44,6 +44,28 @@ export interface ExecutionSummaryResponse {
     count?: number;
     recent?: Array<Record<string, unknown>>;
   };
+  recent_activity?: {
+    window_hours?: number;
+    fills?: {
+      count?: number;
+      total_volume?: number;
+      buy_count?: number;
+      sell_count?: number;
+      latest_at?: string | null;
+      top_symbol?: string | null;
+      recent?: Array<Record<string, unknown>>;
+    };
+    exits?: {
+      count?: number;
+      net_pnl?: number;
+      avg_pnl?: number;
+      win_count?: number;
+      loss_count?: number;
+      latest_at?: string | null;
+      top_symbol?: string | null;
+      recent?: Array<Record<string, unknown>>;
+    };
+  };
   recent_trade_log: Array<Record<string, unknown>>;
 }
 
