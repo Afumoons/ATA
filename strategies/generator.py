@@ -805,7 +805,11 @@ def _build_strategy_from_templates(
 # Public API
 # ---------------------------------------------------------------------------
 
-from ..config import canonical_symbol as _canon
+try:
+    from ..config import canonical_symbol as _canon
+except ImportError:
+    from config import canonical_symbol as _canon
+
 
 def random_strategy(symbol: str, timeframe: str, family: Optional[str] = None) -> StrategyDefinition:
     """Generate a deterministic-rule strategy.
