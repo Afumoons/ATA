@@ -44,6 +44,7 @@ Implement and advance `docs/ui-roadmap-tasklist.md` until the tasklist is fully 
 - U7A operator attention grouping pass added on Drift, Review, and Execution pages in current workstream
 - U7A review queue dossier / hierarchy pass added in current workstream
 - U7A execution hierarchy / de-genericization pass added in current workstream
+- U7A drift dossier / severity-language pass added in current workstream
 
 ## Milestone Order
 1. Commit roadmap tasklist doc cleanly
@@ -93,5 +94,7 @@ For each autonomous run:
 - Verified the U7A review dossier slice with `python -m compileall ui_api` and a production `npm run build` in `ui-front`
 - U7A execution hierarchy / de-genericization pass is now complete for the Execution page, adding incident cards for no-trade and registration failures plus reconciliation dossiers for unresolved closed deals
 - Verified the U7A Execution-page hierarchy slice with a production `npm run build` in `ui-front`
-- Next highest-value slice is continuing U7A/U7B polish on the Drift page, especially denser hierarchy reduction and stronger severity language for the manual review/readout blocks
+- U7A Drift-page dossier / severity-language pass is now complete for the highest-priority readouts, replacing the top attention and manual-review tables with operator dossiers and a stronger severity legend while keeping the full leaderboard ledger below
+- Verified the U7A Drift-page dossier / severity-language slice with a production `npm run build` in `ui-front`
+- Next highest-value slice is continuing U7B polish across the remaining pages, especially cohesive empty-state/operator-meaning improvements and spacing/scannability consistency
 - User explicitly wants progress reports, not approval questions

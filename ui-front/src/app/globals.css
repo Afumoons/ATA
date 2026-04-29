@@ -291,6 +291,25 @@ pre {
   gap: 14px;
 }
 
+.drift-lane-grid,
+.drift-signal-grid,
+.drift-review-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.drift-lane-grid {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.drift-signal-grid,
+.drift-review-grid {
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+
+.drift-lane-card,
+.drift-signal-card,
+.drift-review-card,
 .review-dossier-card {
   position: relative;
   display: flex;
@@ -304,6 +323,9 @@ pre {
     linear-gradient(135deg, rgba(76, 139, 245, 0.14), rgba(17, 22, 29, 0.14));
 }
 
+.drift-lane-card::after,
+.drift-signal-card::after,
+.drift-review-card::after,
 .review-dossier-card::after {
   content: "";
   position: absolute;
@@ -316,6 +338,12 @@ pre {
   pointer-events: none;
 }
 
+.drift-lane-header,
+.drift-signal-header,
+.drift-signal-badges,
+.drift-signal-footer,
+.drift-review-header,
+.drift-review-badges,
 .review-dossier-header,
 .review-dossier-badges,
 .review-dossier-footer {
@@ -323,10 +351,160 @@ pre {
   gap: 12px;
 }
 
+.drift-lane-header,
+.drift-signal-header,
+.drift-signal-footer,
+.drift-review-header,
 .review-dossier-header,
 .review-dossier-footer {
   align-items: flex-start;
   justify-content: space-between;
+}
+
+.drift-lane-card {
+  min-height: 188px;
+}
+
+.drift-lane-card strong,
+.drift-signal-heading h4,
+.drift-review-heading h4 {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  letter-spacing: -0.04em;
+}
+
+.drift-lane-card strong {
+  font-size: 1.3rem;
+  line-height: 1.15;
+}
+
+.drift-lane-card p,
+.drift-signal-heading p,
+.drift-signal-copy p,
+.drift-review-heading p,
+.review-dossier-heading p,
+.review-dossier-copy p {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.drift-lane-eyebrow,
+.drift-signal-eyebrow,
+.drift-review-eyebrow,
+.review-dossier-eyebrow,
+.review-dossier-label,
+.review-dossier-metric span {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.drift-signal-heading,
+.drift-review-heading,
+.review-dossier-heading {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.drift-signal-heading h4,
+.drift-review-heading h4,
+.review-dossier-heading h4 {
+  font-size: 1.18rem;
+  line-height: 1.1;
+}
+
+.drift-signal-badges,
+.drift-review-badges,
+.review-dossier-badges {
+  position: relative;
+  z-index: 1;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.drift-chip-row,
+.review-chip-row {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.drift-chip,
+.review-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 0.78rem;
+  line-height: 1;
+}
+
+.drift-signal-metrics,
+.drift-review-metrics,
+.review-dossier-metrics {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.drift-signal-metrics div,
+.drift-review-metrics div,
+.review-dossier-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.drift-signal-metrics span,
+.drift-review-metrics span,
+.review-dossier-metric span {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.drift-signal-metrics strong,
+.drift-review-metrics strong,
+.review-dossier-metric strong {
+  color: var(--text);
+  line-height: 1.45;
+}
+
+.drift-signal-footer,
+.review-dossier-footer {
+  position: relative;
+  z-index: 1;
+  flex-wrap: wrap;
+}
+
+.drift-signal-copy,
+.review-dossier-copy {
+  display: flex;
+  min-width: min(100%, 240px);
+  max-width: 100%;
+  flex: 1 1 240px;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .review-dossier-heading {
@@ -371,62 +549,10 @@ pre {
   justify-content: flex-end;
 }
 
-.review-chip-row {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.review-chip {
-  display: inline-flex;
-  align-items: center;
-  padding: 7px 10px;
-  border: 1px solid var(--line-strong);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.04);
-  font-size: 0.78rem;
-  line-height: 1;
-}
-
-.review-dossier-metrics {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.review-dossier-metric {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 12px;
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.03);
-}
-
 .review-dossier-metric strong {
   color: var(--text);
   font-size: 1rem;
   line-height: 1.35;
-}
-
-.review-dossier-footer {
-  position: relative;
-  z-index: 1;
-  flex-wrap: wrap;
-}
-
-.review-dossier-copy {
-  display: flex;
-  min-width: min(100%, 240px);
-  max-width: 100%;
-  flex: 1 1 240px;
-  flex-direction: column;
-  gap: 8px;
 }
 
 .execution-posture-card {

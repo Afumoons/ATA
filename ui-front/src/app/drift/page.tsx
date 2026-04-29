@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/app-shell";
 import {
   AttentionCard,
   DataTable,
+  EmptyState,
   ErrorState,
   FreshnessBadge,
   KeyValueGrid,
@@ -16,7 +17,7 @@ import {
 } from "@/components/dashboard";
 import { useQuery } from "@/hooks/use-query";
 import { uiApi } from "@/lib/api";
-import { compactValue, formatCurrency, formatDateTime, formatNumber, formatPercent } from "@/lib/format";
+import { compactValue, formatCurrency, formatDateTime, formatNumber, formatPercent, formatRelativeAge } from "@/lib/format";
 import type { DriftSummaryRow, StatusTone } from "@/lib/types";
 
 const severityTone: Record<string, StatusTone> = {
@@ -47,6 +48,20 @@ const regimeAlignmentLabel: Record<string, string> = {
   unknown: "Unknown",
 };
 
+const severityLabel: Record<string, string> = {
+  healthy: "Stable edge",
+  watch: "Watch drift",
+  drifting: "Drifting edge",
+  broken: "Broken thesis",
+};
+
+const severityNarrative: Record<string, string> = {
+  healthy: "Live behavior is still reading close to the research thesis, so operator effort can stay elsewhere.",
+  watch: "Early mismatch is visible, but it has not stacked into a full breakdown yet.",
+  drifting: "Live results are leaning away from the research edge and deserve a near-term read.",
+  broken: "The live thesis is no longer matching research expectations and should be treated as an active incident.",
+};
+
 const sortPresetOptions = [
   { value: "highest-drift", label: "Highest drift" },
   { value: "negative-recent-avg", label: "Negative recent avg" },
@@ -66,8 +81,8 @@ function normalizeFilterValue(value: string) {
 }
 
 function severityBadge(value: string | null | undefined) {
-  const label = value ? value[0].toUpperCase() + value.slice(1) : "Unknown";
-  return <StatusBadge label={label} tone={severityTone[value ?? ""] ?? "neutral"} />;
+  const key = value ?? "";
+  return <StatusBadge label={severityLabel[key] ?? "Unknown"} tone={severityTone[key] ?? "neutral"} />;
 }
 
 function lastUpdateTimestamp(value: string | null | undefined) {
@@ -101,6 +116,50 @@ function reviewReasonSummary(row: DriftSummaryRow) {
   return compactValue(reasons.join(" • "));
 }
 
+function buildDriftHeadline(row: DriftSummaryRow) {
+  if (row.severity === "broken") {
+    return "Treat as an active incident";
+  }
+  if (row.severity === "drifting") {
+    return "Momentum is bending away from research";
+  }
+  if (row.regime_alignment === "mismatch") {
+    return "Edge is showing up in the wrong regime";
+  }
+  if (row.decay_warning_count && row.decay_warning_count >= 2) {
+    return "Repeated decay warnings are stacking up";
+  }
+  return "Monitor for further divergence";
+}
+
+function buildDriftNarrative(row: DriftSummaryRow) {
+  const segments: string[] = [];
+  if (row.recent_avg_pnl != null) {
+    segments.push(`Recent average ${formatCurrency(Number(row.recent_avg_pnl))}.`);
+  }
+  if (row.regime_alignment === "mismatch") {
+    segments.push(`Research prefers ${row.best_regime ?? "unknown"}, while live is reading ${row.live_observed_regime ?? "unknown"}.`);
+  }
+  if ((row.unresolved_anomalies ?? []).length) {
+    segments.push(`Unresolved anomalies: ${(row.unresolved_anomalies ?? []).map((value) => anomalyLabel[value] ?? value).join(", ")}.`);
+  }
+  if (!segments.length && row.latest_decay_reason) {
+    segments.push(row.latest_decay_reason);
+  }
+  return segments.join(" ") || "This row is elevated because live behavior no longer cleanly matches the original research posture.";
+}
+
+function driftPriority(row: DriftSummaryRow) {
+  return (
+    (severityRank[row.severity ?? ""] ?? 0) * 100 +
+    Number(Boolean(row.regime_alignment === "mismatch")) * 20 +
+    Number(row.decay_warning_count ?? 0) * 6 +
+    Number(row.unresolved_anomaly_count ?? 0) * 8 +
+    Number(Boolean(row.decay_warning)) * 4 +
+    Math.max(0, Number(row.drift_score ?? 0))
+  );
+}
+
 function RecentPnlSparkline({ values }: { values?: number[] | null }) {
   const sequence = (values ?? []).filter((value) => Number.isFinite(value));
 
@@ -128,7 +187,7 @@ function RecentPnlSparkline({ values }: { values?: number[] | null }) {
   const stroke = sequence.at(-1)! >= 0 ? "var(--success)" : "var(--critical)";
 
   return (
-    <div className="flex flex-col gap-1 min-w-[120px]">
+    <div className="flex min-w-[120px] flex-col gap-1">
       <svg viewBox={`0 0 ${width} ${height}`} className="h-9 w-[120px] overflow-visible">
         <line x1={padding} y1={zeroY} x2={width - padding} y2={zeroY} stroke="rgba(148, 163, 184, 0.35)" strokeDasharray="3 3" strokeWidth="1" />
         <polyline fill="none" points={points} stroke={stroke} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -137,6 +196,105 @@ function RecentPnlSparkline({ values }: { values?: number[] | null }) {
         {formatCurrency(sequence[0])} to {formatCurrency(sequence.at(-1))}
       </span>
     </div>
+  );
+}
+
+function DriftSignalCard({ row }: { row: DriftSummaryRow }) {
+  const tone = severityTone[row.severity ?? ""] ?? "neutral";
+
+  return (
+    <article className={`drift-signal-card tone-${tone}`}>
+      <div className="drift-signal-header">
+        <div className="drift-signal-heading">
+          <span className="drift-signal-eyebrow">{row.symbol ?? "Unknown symbol"} · {row.family ?? "Unknown family"}</span>
+          <h4>{row.name}</h4>
+          <p>{buildDriftHeadline(row)}</p>
+        </div>
+        <div className="drift-signal-badges">
+          {severityBadge(row.severity)}
+          {regimeAlignmentBadge(row.regime_alignment)}
+        </div>
+      </div>
+
+      <div className="drift-chip-row">
+        <span className="drift-chip">Status {compactValue(row.status)}</span>
+        <span className="drift-chip">Drift {formatNumber(Number(row.drift_score ?? 0))}</span>
+        <span className="drift-chip">Decay {formatNumber(Number(row.decay_warning_count ?? 0))}</span>
+        <span className="drift-chip">Updated {formatRelativeAge(row.last_update)}</span>
+      </div>
+
+      <div className="drift-signal-metrics">
+        <div>
+          <span>Live PnL</span>
+          <strong>{formatCurrency(Number(row.live_total_pnl ?? 0))}</strong>
+        </div>
+        <div>
+          <span>Recent avg</span>
+          <strong>{formatCurrency(Number(row.recent_avg_pnl ?? 0))}</strong>
+        </div>
+        <div>
+          <span>Live trades</span>
+          <strong>{formatNumber(Number(row.live_trades ?? 0))}</strong>
+        </div>
+        <div>
+          <span>Research best → live</span>
+          <strong>{regimePairValue(row)}</strong>
+        </div>
+      </div>
+
+      <div className="drift-signal-footer">
+        <div className="drift-signal-copy">
+          <p>{buildDriftNarrative(row)}</p>
+          {row.review_reasons?.length ? <p>Review reasons: {row.review_reasons.join(" • ")}.</p> : null}
+        </div>
+        <RecentPnlSparkline values={row.recent_pnls} />
+      </div>
+    </article>
+  );
+}
+
+function DriftReviewCard({ row }: { row: DriftSummaryRow }) {
+  const tone = severityTone[row.severity ?? ""] ?? "neutral";
+
+  return (
+    <article className={`drift-review-card tone-${tone}`}>
+      <div className="drift-review-header">
+        <div className="drift-review-heading">
+          <span className="drift-review-eyebrow">Manual review dossier</span>
+          <h4>{row.name}</h4>
+          <p>{buildDriftHeadline(row)}</p>
+        </div>
+        <div className="drift-review-badges">
+          {severityBadge(row.severity)}
+          {row.decay_warning ? <StatusBadge label="Decay warning" tone="critical" /> : null}
+        </div>
+      </div>
+
+      <div className="drift-chip-row">
+        <span className="drift-chip">{row.symbol ?? "Unknown symbol"}</span>
+        <span className="drift-chip">{row.family ?? "Unknown family"}</span>
+        <span className="drift-chip">{compactValue(row.status)}</span>
+      </div>
+
+      <div className="drift-review-metrics">
+        <div>
+          <span>Review stack</span>
+          <strong>{reviewReasonSummary(row)}</strong>
+        </div>
+        <div>
+          <span>Anomalies</span>
+          <strong>{anomalySummary(row)}</strong>
+        </div>
+        <div>
+          <span>Regime posture</span>
+          <strong>{regimePairValue(row)}</strong>
+        </div>
+        <div>
+          <span>Last update</span>
+          <strong>{compactValue(formatDateTime(row.last_update))}</strong>
+        </div>
+      </div>
+    </article>
   );
 }
 
@@ -194,11 +352,18 @@ export default function DriftPage() {
   }
 
   const filterOptions = data.summary?.available_filters ?? {};
-  const topAttention = sortedRows.filter((row) => row.severity === "drifting" || row.severity === "broken" || Boolean(row.decay_warning)).slice(0, 12);
+  const topAttention = [...sortedRows]
+    .filter((row) => row.severity === "drifting" || row.severity === "broken" || Boolean(row.decay_warning))
+    .sort((left, right) => driftPriority(right) - driftPriority(left))
+    .slice(0, 6);
   const severityCounts = data.summary?.severity_counts ?? {};
   const regimeAlignmentCounts = data.summary?.regime_alignment_counts ?? {};
   const anomalyGroups = data.summary?.unresolved_anomaly_groups ?? {};
-  const manualReviewQueue = data.manual_review_queue ?? [];
+  const manualReviewQueue = [...(data.manual_review_queue ?? [])].sort((left, right) => driftPriority(right) - driftPriority(left));
+  const visibleBroken = filteredRows.filter((row) => row.severity === "broken").length;
+  const visibleDrifting = filteredRows.filter((row) => row.severity === "drifting").length;
+  const visibleMismatch = filteredRows.filter((row) => row.regime_alignment === "mismatch").length;
+  const visibleAnomalyRows = filteredRows.filter((row) => Number(row.unresolved_anomaly_count ?? 0) > 0).length;
 
   return (
     <div className="dashboard-stack">
@@ -263,28 +428,43 @@ export default function DriftPage() {
         <div className="attention-grid">
           <AttentionCard
             label="Broken drift"
-            value={formatNumber(Number(severityCounts.broken ?? 0))}
-            detail="Highest-risk rows where live behavior is sharply separated from research expectations."
+            value={formatNumber(visibleBroken)}
+            detail="Rows where the live thesis is no longer behaving like the research edge and should be handled as incidents."
             tone="critical"
           />
           <AttentionCard
-            label="Negative momentum"
-            value={formatNumber(Number(severityCounts.drifting ?? 0))}
-            detail="Strategies still alive, but recent averages and drift score are now leaning the wrong way."
+            label="Drifting edge"
+            value={formatNumber(visibleDrifting)}
+            detail="Strategies still active, but the recent slope is bending away from the profile that originally earned a slot."
             tone="warning"
           />
           <AttentionCard
             label="Regime disagreement"
-            value={formatNumber(Number(regimeAlignmentCounts.mismatch ?? 0))}
-            detail="Research thinks the edge lives somewhere else than what live traffic is currently showing."
+            value={formatNumber(visibleMismatch)}
+            detail="Research expects the edge in one market regime, but live evidence is currently forming somewhere else."
             tone="critical"
           />
           <AttentionCard
-            label="Manual review queue"
-            value={formatNumber(manualReviewQueue.length)}
-            detail="Rows where repeated decay, anomalies, or mismatch stack up enough to justify human triage."
-            tone={manualReviewQueue.length > 0 ? "critical" : "neutral"}
+            label="Anomaly-backed rows"
+            value={formatNumber(visibleAnomalyRows)}
+            detail="Rows where unresolved closes, missing live stats, or stale updates make the drift read less trustworthy."
+            tone={visibleAnomalyRows > 0 ? "warning" : "neutral"}
           />
+        </div>
+      </Section>
+
+      <Section title="Severity language" description="Translate each severity bucket into an operator meaning before dropping into row-by-row triage.">
+        <div className="drift-lane-grid">
+          {(["broken", "drifting", "watch", "healthy"] as const).map((key) => (
+            <article key={key} className={`drift-lane-card tone-${severityTone[key]}`}>
+              <div className="drift-lane-header">
+                <span className="drift-lane-eyebrow">{severityLabel[key]}</span>
+                <StatusBadge label={formatNumber(Number(severityCounts[key] ?? 0))} tone={severityTone[key]} />
+              </div>
+              <strong>{key === "broken" ? "Intervene now" : key === "drifting" ? "Review next" : key === "watch" ? "Track closely" : "Low urgency"}</strong>
+              <p>{severityNarrative[key]}</p>
+            </article>
+          ))}
         </div>
       </Section>
 
@@ -300,48 +480,35 @@ export default function DriftPage() {
         />
       </Section>
 
-      <Section title="Attention queue" description="Highest-priority rows where live behavior is diverging or degrading.">
-        <DataTable
-          columns={["Strategy", "Symbol", "Family", "Status", "Severity", "Research return", "Live PnL", "Recent avg", "Recent sequence", "Decay", "Decay count", "Regime alignment", "Research best → live observed"]}
-          rows={topAttention.map((row: DriftSummaryRow) => [
-            compactValue(row.name),
-            compactValue(row.symbol),
-            compactValue(row.family),
-            compactValue(row.status),
-            severityBadge(row.severity),
-            formatPercent(Number(row.research_return_pct ?? 0)),
-            formatCurrency(Number(row.live_total_pnl ?? 0)),
-            formatCurrency(Number(row.recent_avg_pnl ?? 0)),
-            <RecentPnlSparkline key={`${String(row.name)}-attention-sequence`} values={row.recent_pnls} />,
-            <StatusBadge key={`${String(row.name)}-decay`} label={row.decay_warning ? "Warning" : "Stable"} tone={row.decay_warning ? "critical" : "success"} />,
-            formatNumber(Number(row.decay_warning_count ?? 0)),
-            regimeAlignmentBadge(row.regime_alignment),
-            regimePairValue(row),
-          ])}
-          emptyTitle="No attention rows"
-          emptyDescription="No filtered rows currently cross the drift attention heuristics."
-        />
+      <Section title="Priority drift dossiers" description="Top mismatches rewritten as operator briefs so the riskiest rows do not hide inside a dense table.">
+        {topAttention.length ? (
+          <div className="drift-signal-grid">
+            {topAttention.map((row) => <DriftSignalCard key={`${row.name}-signal`} row={row} />)}
+          </div>
+        ) : (
+          <EmptyState
+            title="No priority dossiers"
+            description="No filtered rows currently cross the drift attention heuristics."
+            compact
+          />
+        )}
       </Section>
 
-      <Section title="Needs manual review" description="Strategies with repeated decay warnings, severe drift, regime mismatch, or unresolved anomalies.">
-        <DataTable
-          columns={["Strategy", "Status", "Severity", "Review reasons", "Unresolved anomalies", "Decay count", "Drift score", "Last update"]}
-          rows={manualReviewQueue.map((row: DriftSummaryRow) => [
-            compactValue(row.name),
-            compactValue(row.status),
-            severityBadge(row.severity),
-            reviewReasonSummary(row),
-            anomalySummary(row),
-            formatNumber(Number(row.decay_warning_count ?? 0)),
-            formatNumber(Number(row.drift_score ?? 0)),
-            compactValue(formatDateTime(row.last_update)),
-          ])}
-          emptyTitle="No manual review queue"
-          emptyDescription="The drift snapshot did not surface any rows that need manual review right now."
-        />
+      <Section title="Manual review dossiers" description="Rows where repeated decay, severe mismatch, or anomaly stacking make a human pass worthwhile.">
+        {manualReviewQueue.length ? (
+          <div className="drift-review-grid">
+            {manualReviewQueue.map((row) => <DriftReviewCard key={`${row.name}-review`} row={row} />)}
+          </div>
+        ) : (
+          <EmptyState
+            title="No manual review queue"
+            description="The drift snapshot did not surface any rows that need manual review right now."
+            compact
+          />
+        )}
       </Section>
 
-      <Section title="Drift leaderboard" description="Sorted rows with live-vs-research mismatch context for review and triage.">
+      <Section title="Drift leaderboard" description="The full ledger remains here for sort-heavy review once the high-priority dossiers are understood.">
         <DataTable
           columns={["Strategy", "Symbol", "Family", "Status", "Severity", "Regime alignment", "Research best → live observed", "Trades", "Research return", "Research sharpe", "Live PnL", "Recent avg", "Recent sequence", "Decay count", "Anomalies", "Drift score", "Last update"]}
           rows={sortedRows.map((row: DriftSummaryRow) => [

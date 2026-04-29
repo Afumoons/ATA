@@ -86,3 +86,6 @@
 - Added a U7A execution hierarchy pass on `/execution`, promoting no-trade causes and registration failures into incident cards and unresolved closed deals into reconciliation dossiers before the raw tables.
 - Verified the Execution-page hierarchy slice with a production `npm run build` in `ui-front`.
 - Updated notes to move the next polish slice toward Drift-page hierarchy reduction and stronger severity language.
+- Added a U7A Drift-page hierarchy pass, replacing the top attention and manual-review tables with operator dossiers, a severity-language legend, and clearer priority framing while keeping the sortable leaderboard as the raw ledger.
+- Verified the Drift-page dossier slice with a production `npm run build` in `ui-front`.
+- Updated notes to point the next polish slice at broader U7B consistency work, especially empty-state/operator-meaning improvements and cross-page spacing/scannability.
