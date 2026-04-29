@@ -287,6 +287,12 @@ def _strategy_identity_tone(level: str) -> str:
     return "neutral"
 
 
+def _average_or_none(total: float, count: int) -> Optional[float]:
+    if count <= 0:
+        return None
+    return total / count
+
+
 def _build_strategy_identity(
     *,
     family: str,
@@ -1841,15 +1847,219 @@ def load_execution_summary() -> Dict[str, Any]:
 
 def load_pool_summary_payload() -> Dict[str, Any]:
     pool = load_pool()
+    manifest_by_name = {str(entry.get("name") or ""): entry for entry in load_manifest_entries() if isinstance(entry, dict)}
+    index_by_name = {str(entry.get("name") or ""): entry for entry in load_strategy_index_entries() if isinstance(entry, dict)}
+    live_strategy_rows = load_strategy_live_stats_snapshot().get("strategies") or {}
     by_slot: Dict[Tuple[str, str], int] = defaultdict(int)
     family_counts: Counter[str] = Counter()
     symbol_counts: Counter[str] = Counter()
+    family_rollups: Dict[str, Dict[str, Any]] = {}
     top_strategies = sorted(pool.strategies.values(), key=lambda rec: float(rec.score or 0.0), reverse=True)[:15]
     for rec in pool.strategies.values():
+        name = str(rec.name or "")
+        manifest_entry = manifest_by_name.get(name) or {}
+        index_entry = index_by_name.get(name) or {}
+        live_stats = live_strategy_rows.get(name) if isinstance(live_strategy_rows, dict) else {}
+        pool_dict = rec.to_dict()
+        stats_block = ((pool_dict or {}).get("stats") or {}) if isinstance(pool_dict, dict) else {}
+        explain = ((stats_block.get("strategy_explain") or {}) if isinstance(stats_block, dict) else {})
+        meta = explain.get("meta") or {}
+        regime_pnl = explain.get("regime_pnl") or {}
+        session_pnl = explain.get("session_pnl") or {}
+        stability = explain.get("stability") or {}
+        risk_behavior = explain.get("risk_behavior") or {}
+        live_decay = (stats_block.get("live_decay") or {}) if isinstance(stats_block, dict) else {}
+
         by_slot[(rec.symbol, rec.timeframe)] += 1
         symbol_counts[str(rec.symbol or "unknown")] += 1
-        family = str((((rec.stats or {}).get("strategy") or {}).get("family") or ((rec.stats or {}).get("family")) or "unknown"))
+        family = str(
+            manifest_entry.get("family")
+            or index_entry.get("family")
+            or ((stats_block.get("strategy") or {}).get("family") if isinstance(stats_block, dict) else None)
+            or stats_block.get("family")
+            or (((rec.stats or {}).get("strategy") or {}).get("family") if isinstance(rec.stats, dict) else None)
+            or ((rec.stats or {}).get("family") if isinstance(rec.stats, dict) else None)
+            or "unknown"
+        )
         family_counts[family] += 1
+
+        current_status = str(rec.status or index_entry.get("status") or manifest_entry.get("status") or "unknown")
+        score = _safe_float(rec.score)
+        research_return_pct = _safe_float(stats_block.get("return_pct"))
+        research_sharpe = _safe_float(stats_block.get("sharpe_ratio"))
+        live_total_pnl = _safe_float((live_stats or {}).get("total_pnl"))
+        live_trade_count = _safe_int((live_stats or {}).get("num_trades"))
+        live_vs_research_delta = None
+        if live_total_pnl is not None and research_return_pct is not None:
+            live_vs_research_delta = live_total_pnl - research_return_pct
+        identity = _build_strategy_identity(
+            family=family,
+            current_status=current_status,
+            meta=meta if isinstance(meta, dict) else {},
+            risk_behavior=risk_behavior if isinstance(risk_behavior, dict) else {},
+            regime_pnl=regime_pnl if isinstance(regime_pnl, dict) else {},
+            session_pnl=session_pnl if isinstance(session_pnl, dict) else {},
+            stability=stability if isinstance(stability, dict) else {},
+            live_decay=live_decay if isinstance(live_decay, dict) else {},
+        )
+
+        family_bucket = family_rollups.setdefault(
+            family,
+            {
+                "family": family,
+                "label": _humanize_token(family).title(),
+                "strategy_count": 0,
+                "manifest_count": 0,
+                "live_count": 0,
+                "active_count": 0,
+                "candidate_count": 0,
+                "exploratory_count": 0,
+                "disabled_count": 0,
+                "score_total": 0.0,
+                "score_count": 0,
+                "research_return_total": 0.0,
+                "research_return_count": 0,
+                "research_sharpe_total": 0.0,
+                "research_sharpe_count": 0,
+                "live_pnl_total": 0.0,
+                "live_trades_total": 0,
+                "live_vs_research_delta_total": 0.0,
+                "live_vs_research_delta_count": 0,
+                "warning_count": 0,
+                "warning_strategy_count": 0,
+                "fragility_count": 0,
+                "fragility_strategy_count": 0,
+                "archetype_counts": Counter(),
+                "top_regime_totals": Counter(),
+                "top_session_totals": Counter(),
+            },
+        )
+        family_bucket["strategy_count"] += 1
+        if name in manifest_by_name:
+            family_bucket["manifest_count"] += 1
+        if isinstance(live_stats, dict) and live_stats:
+            family_bucket["live_count"] += 1
+        if current_status == "active":
+            family_bucket["active_count"] += 1
+        elif current_status == "candidate":
+            family_bucket["candidate_count"] += 1
+        elif current_status == "exploratory":
+            family_bucket["exploratory_count"] += 1
+        elif current_status in {"disabled", "retired"}:
+            family_bucket["disabled_count"] += 1
+        if score is not None:
+            family_bucket["score_total"] += score
+            family_bucket["score_count"] += 1
+        if research_return_pct is not None:
+            family_bucket["research_return_total"] += research_return_pct
+            family_bucket["research_return_count"] += 1
+        if research_sharpe is not None:
+            family_bucket["research_sharpe_total"] += research_sharpe
+            family_bucket["research_sharpe_count"] += 1
+        if live_total_pnl is not None:
+            family_bucket["live_pnl_total"] += live_total_pnl
+        if live_trade_count is not None:
+            family_bucket["live_trades_total"] += live_trade_count
+        if live_vs_research_delta is not None:
+            family_bucket["live_vs_research_delta_total"] += live_vs_research_delta
+            family_bucket["live_vs_research_delta_count"] += 1
+
+        warnings = identity.get("warnings") if isinstance(identity, dict) else []
+        fragility_markers = identity.get("fragility_markers") if isinstance(identity, dict) else []
+        warning_count = len(warnings) if isinstance(warnings, list) else 0
+        fragility_count = len(fragility_markers) if isinstance(fragility_markers, list) else 0
+        family_bucket["warning_count"] += warning_count
+        family_bucket["fragility_count"] += fragility_count
+        if warning_count:
+            family_bucket["warning_strategy_count"] += 1
+        if fragility_count:
+            family_bucket["fragility_strategy_count"] += 1
+
+        archetype = str((identity or {}).get("archetype") or "")
+        if archetype:
+            family_bucket["archetype_counts"][archetype] += 1
+        best_regime = str(meta.get("best_regime") or "unknown")
+        if best_regime and best_regime != "unknown":
+            family_bucket["top_regime_totals"][best_regime] += 1
+        best_session = str(meta.get("best_session") or "unknown")
+        if best_session and best_session != "unknown":
+            family_bucket["top_session_totals"][best_session] += 1
+
+    family_comparison_rows: List[Dict[str, Any]] = []
+    for family, bucket in family_rollups.items():
+        dominant_archetype = None
+        if bucket["archetype_counts"]:
+            dominant_archetype = bucket["archetype_counts"].most_common(1)[0][0]
+        top_regime = None
+        if bucket["top_regime_totals"]:
+            top_regime = bucket["top_regime_totals"].most_common(1)[0][0]
+        top_session = None
+        if bucket["top_session_totals"]:
+            top_session = bucket["top_session_totals"].most_common(1)[0][0]
+
+        strategy_count = int(bucket["strategy_count"])
+        warning_density = (float(bucket["warning_strategy_count"]) / strategy_count) if strategy_count else 0.0
+        fragility_density = (float(bucket["fragility_strategy_count"]) / strategy_count) if strategy_count else 0.0
+        family_comparison_rows.append(
+            {
+                "family": family,
+                "label": bucket["label"],
+                "strategy_count": strategy_count,
+                "manifest_count": int(bucket["manifest_count"]),
+                "live_count": int(bucket["live_count"]),
+                "active_count": int(bucket["active_count"]),
+                "candidate_count": int(bucket["candidate_count"]),
+                "exploratory_count": int(bucket["exploratory_count"]),
+                "disabled_count": int(bucket["disabled_count"]),
+                "avg_score": _average_or_none(float(bucket["score_total"]), int(bucket["score_count"])),
+                "avg_research_return_pct": _average_or_none(float(bucket["research_return_total"]), int(bucket["research_return_count"])),
+                "avg_research_sharpe": _average_or_none(float(bucket["research_sharpe_total"]), int(bucket["research_sharpe_count"])),
+                "live_total_pnl": float(bucket["live_pnl_total"]),
+                "live_trades_total": int(bucket["live_trades_total"]),
+                "avg_live_vs_research_delta": _average_or_none(float(bucket["live_vs_research_delta_total"]), int(bucket["live_vs_research_delta_count"])),
+                "warning_count": int(bucket["warning_count"]),
+                "warning_strategy_count": int(bucket["warning_strategy_count"]),
+                "warning_density": warning_density,
+                "fragility_count": int(bucket["fragility_count"]),
+                "fragility_strategy_count": int(bucket["fragility_strategy_count"]),
+                "fragility_density": fragility_density,
+                "dominant_archetype": dominant_archetype,
+                "top_regime": top_regime,
+                "top_session": top_session,
+            }
+        )
+
+    family_comparison_rows.sort(
+        key=lambda row: (
+            int(row["manifest_count"]),
+            int(row["active_count"]),
+            float(row["avg_research_return_pct"] or float("-inf")),
+            int(row["strategy_count"]),
+            str(row["family"]),
+        ),
+        reverse=True,
+    )
+
+    strongest_research_family = max(
+        family_comparison_rows,
+        key=lambda row: float(row["avg_research_return_pct"] or float("-inf")),
+        default=None,
+    )
+    strongest_live_family = max(
+        family_comparison_rows,
+        key=lambda row: float(row["live_total_pnl"] or float("-inf")),
+        default=None,
+    )
+    deepest_manifest_family = max(
+        family_comparison_rows,
+        key=lambda row: (int(row["manifest_count"]), int(row["strategy_count"])),
+        default=None,
+    )
+    highest_warning_density_family = max(
+        family_comparison_rows,
+        key=lambda row: (float(row["warning_density"] or 0.0), int(row["warning_strategy_count"]), int(row["strategy_count"])),
+        default=None,
+    )
     return {
         "generated_at": utc_now_iso(),
         "total": len(pool.strategies),
@@ -1870,6 +2080,16 @@ def load_pool_summary_payload() -> Dict[str, Any]:
         ],
         "family_counts": dict(sorted(family_counts.items())),
         "symbol_counts": dict(sorted(symbol_counts.items())),
+        "family_comparison": {
+            "rows": family_comparison_rows,
+            "summary": {
+                "family_count": len(family_comparison_rows),
+                "strongest_research_family": strongest_research_family,
+                "strongest_live_family": strongest_live_family,
+                "deepest_manifest_family": deepest_manifest_family,
+                "highest_warning_density_family": highest_warning_density_family,
+            },
+        },
     }
 
 

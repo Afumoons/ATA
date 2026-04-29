@@ -63,3 +63,7 @@
 - Added a U5B compare-two-strategies view on `/pool`, including dual strategy selectors, head-to-head posture cards, a comparison matrix, regime/session contrast tables, and DNA warning/fragility summaries.
 - Verified the U5B compare-two-strategies slice with production `npm run build` in `ui-front`.
 - Marked the compare-two-strategies item complete in roadmap/task notes; next slice is U5B compare-family view.
+- Added a U5B compare-family view on `/pool`, extending the pool summary payload with family-level rollups for manifest depth, live traction, research return, DNA warning density, dominant archetypes, and regime/session posture.
+- The Pool page now surfaces family-comparison stat cards, an operator-readable family scoreboard table, and a quick reading panel so lineage strength can be compared before drilling into single strategies.
+- Verified the compare-family slice with `python -m compileall ui_api`, a direct `load_pool_summary_payload()` smoke test for `family_comparison`, and production `npm run build` in `ui-front`.
+- Marked the compare-family item complete in roadmap/task notes; next slice is U5B nearest-neighbor / clone similarity panel.

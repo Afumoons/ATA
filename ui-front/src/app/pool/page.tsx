@@ -45,6 +45,7 @@ function toneFromBadgeTone(value: unknown) {
 
 const EMPTY_STRATEGY_ROWS: Awaited<ReturnType<typeof uiApi.strategies>> = [];
 type StrategyDetailData = Awaited<ReturnType<typeof uiApi.strategyDetail>>;
+type PoolSummaryData = Awaited<ReturnType<typeof uiApi.poolSummary>>;
 
 function humanizeDecisionReason(value: unknown) {
   if (typeof value !== "string" || !value.trim()) return "No explicit reason recorded";
@@ -118,6 +119,18 @@ function compareEdgeLabel(primary: number | null | undefined, secondary: number 
 function renderMapComparisonRows(left: Record<string, unknown>, right: Record<string, unknown>) {
   const keys = Array.from(new Set([...Object.keys(left), ...Object.keys(right)])).sort((a, b) => a.localeCompare(b));
   return keys.map((key) => [key, compactValue(left[key]), compactValue(right[key])]);
+}
+
+function familyRowLabel(row: Record<string, unknown> | null | undefined) {
+  const record = coerceRecord(row);
+  return pickFirstString(record.label, record.family) ?? "Unknown family";
+}
+
+function familyComparisonRows(data: PoolSummaryData | null | undefined) {
+  const rows = Array.isArray(data?.family_comparison?.rows)
+    ? data.family_comparison.rows.filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object" && !Array.isArray(item))
+    : [];
+  return rows;
 }
 
 export default function PoolPage() {
@@ -232,6 +245,12 @@ export default function PoolPage() {
   );
 
   const tierOptions = Array.from(new Set(strategyRows.map((row) => String(row.tier ?? "unknown")))).sort();
+  const familyCompareRows = familyComparisonRows(data);
+  const familyCompareSummary = coerceRecord(data.family_comparison?.summary);
+  const strongestResearchFamily = coerceRecord(familyCompareSummary.strongest_research_family);
+  const strongestLiveFamily = coerceRecord(familyCompareSummary.strongest_live_family);
+  const deepestManifestFamily = coerceRecord(familyCompareSummary.deepest_manifest_family);
+  const highestWarningDensityFamily = coerceRecord(familyCompareSummary.highest_warning_density_family);
 
   return (
     <div className="dashboard-stack">
@@ -652,6 +671,112 @@ export default function PoolPage() {
           emptyTitle="No top strategy rows"
           emptyDescription="The pool summary returned no top-ranked strategies for this snapshot."
         />
+      </Section>
+
+      <Section
+        title="Compare families"
+        description="Family-level scoreboard so operators can see which research lineage owns manifest depth, live traction, and the highest DNA risk density."
+        action={familyCompareRows.length ? <StatusBadge label={`${formatNumber(familyCompareRows.length)} families`} tone="info" /> : null}
+      >
+        {!familyCompareRows.length ? (
+          <EmptyState title="No family comparison available" description="The backend did not return any aggregated family comparison rows for this pool snapshot." />
+        ) : (
+          <div className="dashboard-stack">
+            <section className="stats-grid">
+              <StatCard
+                label="Strongest research family"
+                value={familyRowLabel(strongestResearchFamily)}
+                hint={formatPercent(pickFirstNumber(strongestResearchFamily.avg_research_return_pct))}
+                tone="success"
+              />
+              <StatCard
+                label="Strongest live family"
+                value={familyRowLabel(strongestLiveFamily)}
+                hint={formatCurrency(pickFirstNumber(strongestLiveFamily.live_total_pnl))}
+                tone="info"
+              />
+              <StatCard
+                label="Deepest manifest family"
+                value={familyRowLabel(deepestManifestFamily)}
+                hint={`${formatNumber(pickFirstNumber(deepestManifestFamily.manifest_count))} manifest strategies`}
+                tone="neutral"
+              />
+              <StatCard
+                label="Highest warning density"
+                value={familyRowLabel(highestWarningDensityFamily)}
+                hint={formatPercent(pickFirstNumber(highestWarningDensityFamily.warning_density))}
+                tone="warning"
+              />
+            </section>
+
+            <DataTable
+              columns={[
+                "Family",
+                "Inventory",
+                "Manifest / live",
+                "Status mix",
+                "Avg score",
+                "Research return",
+                "Live PnL / trades",
+                "Delta",
+                "DNA risk",
+                "Dominant posture",
+              ]}
+              rows={familyCompareRows.map((row) => {
+                const record = coerceRecord(row);
+                const strategyCount = pickFirstNumber(record.strategy_count);
+                const manifestCount = pickFirstNumber(record.manifest_count);
+                const liveCount = pickFirstNumber(record.live_count);
+                const activeCount = pickFirstNumber(record.active_count);
+                const candidateCount = pickFirstNumber(record.candidate_count);
+                const exploratoryCount = pickFirstNumber(record.exploratory_count);
+                const disabledCount = pickFirstNumber(record.disabled_count);
+                const avgScore = pickFirstNumber(record.avg_score);
+                const avgResearchReturnPct = pickFirstNumber(record.avg_research_return_pct);
+                const avgResearchSharpe = pickFirstNumber(record.avg_research_sharpe);
+                const liveTotalPnl = pickFirstNumber(record.live_total_pnl);
+                const liveTradesTotal = pickFirstNumber(record.live_trades_total);
+                const avgLiveVsResearchDelta = pickFirstNumber(record.avg_live_vs_research_delta);
+                const warningDensity = pickFirstNumber(record.warning_density);
+                const fragilityDensity = pickFirstNumber(record.fragility_density);
+                return [
+                  <div key={`family-${compactValue(record.family)}`}>
+                    <strong>{familyRowLabel(record)}</strong>
+                    <div className="table-subtext">{compactValue(record.family)}</div>
+                  </div>,
+                  formatNumber(strategyCount),
+                  `${formatNumber(manifestCount)} / ${formatNumber(liveCount)}`,
+                  `A ${formatNumber(activeCount)} · C ${formatNumber(candidateCount)} · E ${formatNumber(exploratoryCount)} · D ${formatNumber(disabledCount)}`,
+                  formatNumber(avgScore),
+                  `${formatPercent(avgResearchReturnPct)} · Sharpe ${formatNumber(avgResearchSharpe)}`,
+                  `${formatCurrency(liveTotalPnl)} · ${formatNumber(liveTradesTotal)}`,
+                  formatNumber(avgLiveVsResearchDelta),
+                  `${formatPercent(warningDensity)} warn · ${formatPercent(fragilityDensity)} fragile`,
+                  `${compactValue(record.dominant_archetype)} · ${compactValue(record.top_regime)} / ${compactValue(record.top_session)}`,
+                ];
+              })}
+              emptyTitle="No family rows"
+              emptyDescription="No family-level aggregates could be formed from the current pool snapshot."
+            />
+
+            <div className="detail-grid-2">
+              <Section title="Family operator reading" description="Quick synthesis of the current family pecking order.">
+                <div className="panel">
+                  <p>
+                    {familyRowLabel(strongestResearchFamily)} currently leads research return, while {familyRowLabel(strongestLiveFamily)} carries the strongest live PnL. Use the manifest-depth and DNA-risk columns to decide whether the same family deserves more exposure or tighter review.
+                  </p>
+                </div>
+              </Section>
+              <Section title="Why this matters" description="Family comparison helps separate a single standout strategy from a repeatable lineage.">
+                <div className="panel">
+                  <p>
+                    When one family owns both manifest depth and live traction, the pool is leaning into a clear research lineage. If warning density rises at the same time, that concentration can become a governance risk instead of a strength.
+                  </p>
+                </div>
+              </Section>
+            </div>
+          </div>
+        )}
       </Section>
 
       <Section

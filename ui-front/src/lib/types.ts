@@ -130,6 +130,16 @@ export interface PoolSummaryResponse {
   }>;
   family_counts: Record<string, number>;
   symbol_counts: Record<string, number>;
+  family_comparison?: {
+    summary?: {
+      family_count?: number;
+      strongest_research_family?: Record<string, unknown> | null;
+      strongest_live_family?: Record<string, unknown> | null;
+      deepest_manifest_family?: Record<string, unknown> | null;
+      highest_warning_density_family?: Record<string, unknown> | null;
+    };
+    rows?: Array<Record<string, unknown>>;
+  };
 }
 
 export interface ManifestResponse {

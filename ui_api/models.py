@@ -53,6 +53,7 @@ class PoolSummaryResponse(BaseModel):
     top_strategies: List[Dict[str, Any]] = Field(default_factory=list)
     family_counts: Dict[str, int] = Field(default_factory=dict)
     symbol_counts: Dict[str, int] = Field(default_factory=dict)
+    family_comparison: Dict[str, Any] = Field(default_factory=dict)
 
 
 class ManifestResponse(BaseModel):

@@ -130,7 +130,7 @@ Transform the current Operator UI from a read-only monitoring surface into a dec
 
 ### U5B — Comparison tools
 - [x] Add compare-two-strategies view
-- [ ] Add compare-family view
+- [x] Add compare-family view
 - [ ] Add nearest-neighbor / clone similarity panel
 - [ ] Add duplicate-risk visibility from semantic similarity / memory veto context
 

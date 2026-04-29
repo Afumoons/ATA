@@ -37,6 +37,7 @@ Implement and advance `docs/ui-roadmap-tasklist.md` until the tasklist is fully 
 - U4A richer open trade drilldown added on Execution page in current workstream
 - U5A strategy identity / DNA card added on Strategy detail in current workstream
 - U5B compare-two-strategies view added on Pool page in current workstream
+- U5B compare-family view added on Pool page in current workstream
 
 ## Milestone Order
 1. Commit roadmap tasklist doc cleanly
@@ -78,5 +79,5 @@ For each autonomous run:
 - U4B stale execution artifact warnings are now complete, adding core artifact freshness diagnostics and operator-readable impact warnings on the Execution page
 - U5A strategy identity layer is now complete, including DNA summary, true-edge badges, family/regime mismatch warnings, session dependence warnings, and fragility markers on Strategy detail
 - U5B compare-two-strategies view is now complete, including head-to-head posture, DNA, regime/session contrast, and warning comparison on Pool
-- Next highest-value slice is U5B compare-family view
+- Next highest-value slice is U5B nearest-neighbor / clone similarity panel
 - User explicitly wants progress reports, not approval questions
