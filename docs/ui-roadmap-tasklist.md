@@ -92,14 +92,14 @@ Transform the current Operator UI from a read-only monitoring surface into a dec
 - [x] Add recent status transition history on Strategy detail page
 
 ### U3B — Review queue
-- [ ] Add dedicated review queue page
-- [ ] Queue strategies that are:
-  - [ ] almost accepted
-  - [ ] live-drifting
-  - [ ] family/regime mismatched
-  - [ ] stale but still active
-  - [ ] showing repeated reconciliation anomalies
-- [ ] Add triage buckets: promote watch, demote watch, inspect, archive
+- [x] Add dedicated review queue page
+- [x] Queue strategies that are:
+  - [x] almost accepted
+  - [x] live-drifting
+  - [x] family/regime mismatched
+  - [x] stale but still active
+  - [x] showing repeated reconciliation anomalies
+- [x] Add triage buckets: promote watch, demote watch, inspect, archive
 
 ---
 
@@ -171,8 +171,8 @@ Transform the current Operator UI from a read-only monitoring surface into a dec
 
 ### Current practical order
 1. [x] Finish U2B Drift depth improvements
-2. [ ] Build U3A Promotion / Demotion Explainability
-3. [ ] Build U3B Review Queue
+2. [x] Build U3A Promotion / Demotion Explainability
+3. [x] Build U3B Review Queue
 4. [ ] Expand U1C Research diagnostics controls
 5. [ ] Expand U4 Execution / Reconciliation cockpit
 6. [ ] Add U5 Strategy DNA comparison tools
@@ -193,7 +193,7 @@ Transform the current Operator UI from a read-only monitoring surface into a dec
 
 ### Milestone M3 — Governance cockpit
 - [x] U3A complete
-- [ ] U3B complete
+- [x] U3B complete
 
 ### Milestone M4 — Full decision cockpit
 - [ ] U4 complete

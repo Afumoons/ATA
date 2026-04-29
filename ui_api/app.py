@@ -10,6 +10,7 @@ from .adapters import (
     load_manifest_payload,
     load_pool_summary_payload,
     load_research_summary,
+    load_review_queue,
     load_strategies_summary,
     load_strategy_detail,
 )
@@ -23,6 +24,7 @@ from .models import (
     OverviewResponse,
     PoolSummaryResponse,
     ResearchSummaryResponse,
+    ReviewQueueResponse,
     StrategyDetailResponse,
 )
 
@@ -84,6 +86,11 @@ def api_research_summary(symbol: str = "XAUUSDm", timeframe: str = "M15") -> Res
 @app.get("/api/drift/summary", response_model=DriftSummaryResponse)
 def api_drift_summary() -> DriftSummaryResponse:
     return DriftSummaryResponse.model_validate(load_drift_summary())
+
+
+@app.get("/api/review/queue", response_model=ReviewQueueResponse)
+def api_review_queue() -> ReviewQueueResponse:
+    return ReviewQueueResponse.model_validate(load_review_queue())
 
 
 @app.get("/api/audit/timeline", response_model=AuditTimelineResponse)

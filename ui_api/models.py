@@ -81,6 +81,13 @@ class ResearchSummaryResponse(BaseModel):
 class DriftSummaryResponse(BaseModel):
     generated_at: str
     rows: List[Dict[str, Any]] = Field(default_factory=list)
+    manual_review_queue: List[Dict[str, Any]] = Field(default_factory=list)
+    summary: Dict[str, Any] = Field(default_factory=dict)
+
+
+class ReviewQueueResponse(BaseModel):
+    generated_at: str
+    rows: List[Dict[str, Any]] = Field(default_factory=list)
     summary: Dict[str, Any] = Field(default_factory=dict)
 
 

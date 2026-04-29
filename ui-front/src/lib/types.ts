@@ -117,6 +117,7 @@ export interface DriftSummaryRow {
   latest_decay_reason?: string | null;
   severity?: "healthy" | "watch" | "drifting" | "broken" | null;
   last_update?: string | null;
+  unmatched_close_count?: number | null;
   unresolved_anomalies?: string[] | null;
   unresolved_anomaly_count?: number | null;
   needs_manual_review?: boolean | null;
@@ -142,6 +143,53 @@ export interface DriftSummaryResponse {
       families?: string[];
       statuses?: string[];
       severities?: string[];
+    };
+    [key: string]: unknown;
+  };
+}
+
+export interface ReviewQueueRow {
+  name: string;
+  symbol?: string | null;
+  timeframe?: string | null;
+  status?: string | null;
+  tier?: string | null;
+  family?: string | null;
+  score?: number | null;
+  manifest_rank?: number | null;
+  manifest_floor_score?: number | null;
+  promotion_gap?: number | null;
+  category_flags?: string[] | null;
+  triage_bucket?: "promote_watch" | "demote_watch" | "inspect" | "archive" | null;
+  triage_reasons?: string[] | null;
+  drift_severity?: "healthy" | "watch" | "drifting" | "broken" | null;
+  drift_score?: number | null;
+  research_return_pct?: number | null;
+  live_total_pnl?: number | null;
+  recent_avg_pnl?: number | null;
+  regime_alignment?: "aligned" | "mismatch" | "insufficient_live_data" | "unknown" | null;
+  last_update?: string | null;
+  stale_hours?: number | null;
+  unmatched_close_count?: number | null;
+  decay_warning_count?: number | null;
+  unresolved_anomaly_count?: number | null;
+  family_mismatch?: boolean | null;
+  regime_mismatch?: boolean | null;
+}
+
+export interface ReviewQueueResponse {
+  generated_at: string;
+  rows: ReviewQueueRow[];
+  summary: {
+    queue_count?: number;
+    category_counts?: Record<string, number>;
+    triage_counts?: Record<string, number>;
+    status_counts?: Record<string, number>;
+    available_filters?: {
+      symbols?: string[];
+      statuses?: string[];
+      categories?: string[];
+      triage_buckets?: Array<"promote_watch" | "demote_watch" | "inspect" | "archive">;
     };
     [key: string]: unknown;
   };

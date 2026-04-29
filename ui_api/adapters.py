@@ -803,6 +803,7 @@ def load_drift_summary() -> Dict[str, Any]:
             "latest_decay_reason": latest_decay_reason.get(name),
             "severity": severity,
             "last_update": last_update,
+            "unmatched_close_count": int(unmatched_counts.get(name, 0)),
             "unresolved_anomalies": unresolved_anomalies,
             "unresolved_anomaly_count": len(unresolved_anomalies),
             "needs_manual_review": needs_manual_review,
@@ -847,6 +848,202 @@ def load_drift_summary() -> Dict[str, Any]:
                 "families": sorted(families.keys()),
                 "statuses": sorted(statuses.keys()),
                 "severities": ["healthy", "watch", "drifting", "broken"],
+            },
+        },
+    }
+
+
+def load_review_queue() -> Dict[str, Any]:
+    pool = load_pool()
+    drift_payload = load_drift_summary()
+    drift_rows = drift_payload.get("rows") or []
+    drift_by_name = {
+        str(row.get("name") or ""): row
+        for row in drift_rows
+        if isinstance(row, dict) and row.get("name")
+    }
+
+    manifest_entries = load_manifest_entries()
+    manifest_by_name = {
+        str(entry.get("name") or ""): entry
+        for entry in manifest_entries
+        if isinstance(entry, dict) and entry.get("name")
+    }
+    index_entries = load_strategy_index_entries()
+    index_by_name = {
+        str(entry.get("name") or ""): entry
+        for entry in index_entries
+        if isinstance(entry, dict) and entry.get("name")
+    }
+
+    manifest_floor_by_slot: Dict[Tuple[str, str], float] = {}
+    for entry in manifest_entries:
+        if not isinstance(entry, dict):
+            continue
+        score = _safe_float(entry.get("score"))
+        if score is None:
+            continue
+        slot = (str(entry.get("symbol") or "unknown"), str(entry.get("timeframe") or "unknown"))
+        manifest_floor_by_slot[slot] = min(score, manifest_floor_by_slot.get(slot, score))
+
+    rows: List[Dict[str, Any]] = []
+    category_counts: Counter[str] = Counter()
+    triage_counts: Counter[str] = Counter()
+    status_counts: Counter[str] = Counter()
+    bucket_rank = {"promote_watch": 0, "demote_watch": 1, "inspect": 2, "archive": 3}
+
+    for name, rec in pool.strategies.items():
+        manifest_entry = manifest_by_name.get(name) or {}
+        index_entry = index_by_name.get(name) or {}
+        drift_row = drift_by_name.get(name) or {}
+        stats = rec.stats or {}
+        strategy_stats = (stats.get("strategy") or {}) if isinstance(stats, dict) else {}
+
+        symbol = str(rec.symbol or index_entry.get("symbol") or manifest_entry.get("symbol") or "unknown")
+        timeframe = str(rec.timeframe or index_entry.get("timeframe") or manifest_entry.get("timeframe") or "unknown")
+        status = str(rec.status or index_entry.get("status") or manifest_entry.get("status") or "unknown")
+        tier = str(index_entry.get("tier") or manifest_entry.get("tier") or "unknown")
+        score = _safe_float(rec.score if rec.score is not None else index_entry.get("score") or manifest_entry.get("score"))
+        family_values = {
+            str(value)
+            for value in [
+                manifest_entry.get("family"),
+                index_entry.get("family"),
+                strategy_stats.get("family"),
+                stats.get("family") if isinstance(stats, dict) else None,
+            ]
+            if value not in {None, "", "unknown"}
+        }
+        family = next(iter(family_values), str(index_entry.get("family") or manifest_entry.get("family") or strategy_stats.get("family") or stats.get("family") or "unknown"))
+        family_mismatch = len(family_values) >= 2
+        regime_mismatch = str(drift_row.get("regime_alignment") or "") == "mismatch"
+        severity = str(drift_row.get("severity") or "unknown")
+        unresolved_anomalies = [str(value) for value in (drift_row.get("unresolved_anomalies") or []) if value]
+        unmatched_close_count = int(drift_row.get("unmatched_close_count") or 0)
+        unresolved_anomaly_count = int(drift_row.get("unresolved_anomaly_count") or 0)
+        decay_warning_count = int(drift_row.get("decay_warning_count") or 0)
+        last_update = drift_row.get("last_update")
+        parsed_last_update = parse_iso_datetime(last_update)
+        stale_hours = None
+        if parsed_last_update is not None:
+            stale_hours = max((datetime.now(timezone.utc) - parsed_last_update).total_seconds() / 3600.0, 0.0)
+
+        slot = (symbol, timeframe)
+        manifest_floor = manifest_floor_by_slot.get(slot)
+        promotion_gap = None if score is None or manifest_floor is None else score - manifest_floor
+        almost_accepted = (
+            status == "candidate"
+            and bool(stats.get("accepted"))
+            and score is not None
+            and manifest_floor is not None
+            and promotion_gap >= -0.25
+        )
+        live_drifting = status in {"active", "exploratory"} and severity in {"drifting", "broken"}
+        stale_but_active = status in {"active", "exploratory"} and "stale_update" in unresolved_anomalies
+        repeated_reconciliation_anomalies = unmatched_close_count >= 2 or ("unmatched_close" in unresolved_anomalies and unresolved_anomaly_count >= 2)
+        family_or_regime_mismatched = family_mismatch or regime_mismatch
+
+        category_flags: List[str] = []
+        triage_reasons: List[str] = []
+
+        if almost_accepted:
+            category_flags.append("almost_accepted")
+            if promotion_gap is not None:
+                triage_reasons.append(f"Promotion gap {promotion_gap:+.2f} vs live manifest floor")
+        if live_drifting:
+            category_flags.append("live_drifting")
+            triage_reasons.append(f"Live severity is {severity}")
+        if family_or_regime_mismatched:
+            category_flags.append("family_or_regime_mismatched")
+            if family_mismatch:
+                triage_reasons.append("Family metadata disagrees across manifest, index, or pool")
+            if regime_mismatch:
+                triage_reasons.append("Research best regime disagrees with live observed regime")
+        if stale_but_active:
+            category_flags.append("stale_but_active")
+            if stale_hours is not None:
+                triage_reasons.append(f"Live update is stale by {stale_hours:.1f}h")
+        if repeated_reconciliation_anomalies:
+            category_flags.append("repeated_reconciliation_anomalies")
+            triage_reasons.append(f"{unmatched_close_count} unmatched closes remain unresolved")
+
+        if not category_flags:
+            continue
+
+        if status in {"disabled", "retired"} or tier == "archive":
+            triage_bucket = "archive"
+        elif almost_accepted:
+            triage_bucket = "promote_watch"
+        elif family_or_regime_mismatched or repeated_reconciliation_anomalies:
+            triage_bucket = "inspect"
+        elif live_drifting or stale_but_active:
+            triage_bucket = "demote_watch"
+        else:
+            triage_bucket = "inspect"
+
+        for category in category_flags:
+            category_counts[category] += 1
+        triage_counts[triage_bucket] += 1
+        status_counts[status] += 1
+
+        rows.append({
+            "name": name,
+            "symbol": symbol,
+            "timeframe": timeframe,
+            "status": status,
+            "tier": tier,
+            "family": family,
+            "score": score,
+            "manifest_rank": manifest_entry.get("manifest_rank"),
+            "manifest_floor_score": manifest_floor,
+            "promotion_gap": promotion_gap,
+            "category_flags": category_flags,
+            "triage_bucket": triage_bucket,
+            "triage_reasons": triage_reasons,
+            "drift_severity": drift_row.get("severity"),
+            "drift_score": drift_row.get("drift_score"),
+            "research_return_pct": drift_row.get("research_return_pct"),
+            "live_total_pnl": drift_row.get("live_total_pnl"),
+            "recent_avg_pnl": drift_row.get("recent_avg_pnl"),
+            "regime_alignment": drift_row.get("regime_alignment"),
+            "last_update": last_update,
+            "stale_hours": stale_hours,
+            "unmatched_close_count": unmatched_close_count,
+            "decay_warning_count": decay_warning_count,
+            "unresolved_anomaly_count": unresolved_anomaly_count,
+            "family_mismatch": family_mismatch,
+            "regime_mismatch": regime_mismatch,
+        })
+
+    rows.sort(
+        key=lambda row: (
+            bucket_rank.get(str(row.get("triage_bucket") or "inspect"), 99),
+            -len(row.get("category_flags") or []),
+            -float(row.get("promotion_gap") or -9999.0),
+            -float(row.get("drift_score") or 0.0),
+            str(row.get("name") or ""),
+        )
+    )
+
+    return {
+        "generated_at": utc_now_iso(),
+        "rows": rows,
+        "summary": {
+            "queue_count": len(rows),
+            "category_counts": dict(sorted(category_counts.items())),
+            "triage_counts": dict(sorted(triage_counts.items())),
+            "status_counts": dict(sorted(status_counts.items())),
+            "available_filters": {
+                "symbols": sorted({str(row.get("symbol") or "unknown") for row in rows}),
+                "statuses": sorted(status_counts.keys()),
+                "categories": [
+                    "almost_accepted",
+                    "live_drifting",
+                    "family_or_regime_mismatched",
+                    "stale_but_active",
+                    "repeated_reconciliation_anomalies",
+                ],
+                "triage_buckets": ["promote_watch", "demote_watch", "inspect", "archive"],
             },
         },
     }
