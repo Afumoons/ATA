@@ -79,7 +79,7 @@ Transform the current Operator UI from a read-only monitoring surface into a dec
 - [ ] Add repeated decay-warning counter per strategy
 - [ ] Add unresolved anomaly grouping (unmatched close, missing stats, stale updates)
 - [ ] Add “needs manual review” queue section
-- [ ] Add sort presets (highest drift, negative recent avg, most live trades, newest warnings)
+- [x] Add sort presets (highest drift, negative recent avg, most live trades, newest warnings)
 
 ---
 

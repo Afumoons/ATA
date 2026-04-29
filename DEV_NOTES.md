@@ -27,6 +27,7 @@ Implement and advance `docs/ui-roadmap-tasklist.md` until the tasklist is fully 
 - U1B complete and committed
 - U2 Drift Page committed as `fb9fd25`
 - UI roadmap tasklist documented in `docs/ui-roadmap-tasklist.md`
+- U2B sort presets added on Drift page and committed as `937e9ef`
 
 ## Milestone Order
 1. Commit roadmap tasklist doc cleanly
@@ -53,5 +54,5 @@ For each autonomous run:
 
 ## Working Notes
 - Drift page shipped in commit `fb9fd25`
-- Next clean slice is the roadmap/tasklist docs commit, then U2B filters and severity work
+- Drift filters and severity are already present, next U2B depth slices are sparkline, regime mismatch, anomaly grouping, and manual review queue
 - User explicitly wants progress reports, not approval questions
