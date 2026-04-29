@@ -77,6 +77,153 @@ def list_research_summary_artifacts() -> Dict[str, List[str]]:
     }
 
 
+def _coerce_int(value: Any) -> int:
+    try:
+        return int(value or 0)
+    except Exception:
+        return 0
+
+
+def _summarize_research_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
+    families = payload.get("families") or {}
+    funnel_totals: Counter[str] = Counter()
+    rejection_totals: Counter[str] = Counter()
+    family_rows: List[Dict[str, Any]] = []
+    top_rejection_samples: Dict[str, List[str]] = {}
+
+    for family_name, family_payload in families.items():
+        if not isinstance(family_payload, dict):
+            continue
+        stages = family_payload.get("stages") or {}
+        skips = family_payload.get("skip_reasons") or {}
+        samples = family_payload.get("skip_samples") or {}
+        generated = _coerce_int(stages.get("generated"))
+        accepted = _coerce_int(stages.get("accepted"))
+        rejection_count = sum(_coerce_int(value) for value in skips.values())
+        conversion_pct = (accepted / generated * 100.0) if generated > 0 else 0.0
+
+        for key, value in stages.items():
+            funnel_totals[key] += _coerce_int(value)
+        for key, value in skips.items():
+            rejection_totals[key] += _coerce_int(value)
+        for key, value in samples.items():
+            if key not in top_rejection_samples and isinstance(value, list):
+                top_rejection_samples[key] = value[:3]
+
+        top_rejection = "-"
+        if isinstance(skips, dict) and skips:
+            top_rejection = max(skips.items(), key=lambda item: _coerce_int(item[1]))[0]
+
+        family_rows.append({
+            "family": str(family_name),
+            "generated": generated,
+            "accepted": accepted,
+            "rejection_count": rejection_count,
+            "conversion_pct": round(conversion_pct, 2),
+            "top_rejection": top_rejection,
+        })
+
+    family_rows.sort(key=lambda row: (row["accepted"], row["generated"], row["family"]), reverse=True)
+    return {
+        "families": families,
+        "funnel_totals": dict(sorted(funnel_totals.items())),
+        "rejection_totals": dict(sorted(rejection_totals.items(), key=lambda item: item[1], reverse=True)),
+        "top_rejection_samples": top_rejection_samples,
+        "family_rows": family_rows,
+    }
+
+
+def _load_previous_research_summary(symbol: str, timeframe: str, current_generated_at: Any) -> Tuple[Dict[str, Any], Path] | Tuple[None, None]:
+    current_stamp = parse_iso_datetime(current_generated_at)
+    candidates: List[Tuple[datetime, Path, Dict[str, Any]]] = []
+
+    for path in RESEARCH_SUMMARY_DIR.rglob(f"{symbol}_{timeframe}.json"):
+        if path.parent == RESEARCH_SUMMARY_DIR:
+            continue
+        payload = read_json_file(path, default=None)
+        if not isinstance(payload, dict):
+            continue
+        generated_at = parse_iso_datetime(payload.get("generated_at"))
+        if generated_at is None:
+            continue
+        if current_stamp and generated_at >= current_stamp:
+            continue
+        candidates.append((generated_at, path, payload))
+
+    if not candidates:
+        return None, None
+
+    candidates.sort(key=lambda item: item[0], reverse=True)
+    _, path, payload = candidates[0]
+    return payload, path
+
+
+def _build_research_comparison(symbol: str, timeframe: str, current_payload: Dict[str, Any], current_summary: Dict[str, Any]) -> Dict[str, Any]:
+    previous_payload, previous_path = _load_previous_research_summary(symbol, timeframe, current_payload.get("generated_at"))
+    if not previous_payload or previous_path is None:
+        return {}
+
+    previous_summary = _summarize_research_payload(previous_payload)
+    current_rows = {str(row["family"]): row for row in current_summary["family_rows"]}
+    previous_rows = {str(row["family"]): row for row in previous_summary["family_rows"]}
+
+    funnel_delta = {
+        key: _coerce_int(current_summary["funnel_totals"].get(key)) - _coerce_int(previous_summary["funnel_totals"].get(key))
+        for key in sorted(set(current_summary["funnel_totals"].keys()) | set(previous_summary["funnel_totals"].keys()))
+    }
+    rejection_delta = {
+        key: _coerce_int(current_summary["rejection_totals"].get(key)) - _coerce_int(previous_summary["rejection_totals"].get(key))
+        for key in sorted(set(current_summary["rejection_totals"].keys()) | set(previous_summary["rejection_totals"].keys()))
+    }
+
+    family_deltas: List[Dict[str, Any]] = []
+    for family in sorted(set(current_rows.keys()) | set(previous_rows.keys())):
+        current_row = current_rows.get(family, {})
+        previous_row = previous_rows.get(family, {})
+        family_deltas.append({
+            "family": family,
+            "generated_delta": _coerce_int(current_row.get("generated")) - _coerce_int(previous_row.get("generated")),
+            "accepted_delta": _coerce_int(current_row.get("accepted")) - _coerce_int(previous_row.get("accepted")),
+            "rejection_delta": _coerce_int(current_row.get("rejection_count")) - _coerce_int(previous_row.get("rejection_count")),
+            "conversion_pct_delta": round(float(current_row.get("conversion_pct", 0.0) or 0.0) - float(previous_row.get("conversion_pct", 0.0) or 0.0), 2),
+            "current_conversion_pct": float(current_row.get("conversion_pct", 0.0) or 0.0),
+            "previous_conversion_pct": float(previous_row.get("conversion_pct", 0.0) or 0.0),
+            "current_top_rejection": current_row.get("top_rejection") or "-",
+            "previous_top_rejection": previous_row.get("top_rejection") or "-",
+        })
+
+    family_deltas.sort(key=lambda row: (abs(float(row["accepted_delta"])), abs(float(row["conversion_pct_delta"])), abs(float(row["generated_delta"]))), reverse=True)
+
+    current_generated = _coerce_int(current_summary["funnel_totals"].get("generated"))
+    previous_generated = _coerce_int(previous_summary["funnel_totals"].get("generated"))
+    current_accepted = _coerce_int(current_summary["funnel_totals"].get("accepted"))
+    previous_accepted = _coerce_int(previous_summary["funnel_totals"].get("accepted"))
+    current_conversion_pct = (current_accepted / current_generated * 100.0) if current_generated > 0 else 0.0
+    previous_conversion_pct = (previous_accepted / previous_generated * 100.0) if previous_generated > 0 else 0.0
+
+    positive_families = [row for row in family_deltas if float(row["accepted_delta"]) > 0 or float(row["conversion_pct_delta"]) > 0]
+    negative_families = [row for row in family_deltas if float(row["accepted_delta"]) < 0 or float(row["conversion_pct_delta"]) < 0]
+    relative_parent = previous_path.parent.relative_to(RESEARCH_SUMMARY_DIR)
+    comparison_label = "previous snapshot" if str(relative_parent) == "." else str(relative_parent)
+
+    return {
+        "label": comparison_label,
+        "previous_generated_at": previous_payload.get("generated_at") or utc_now_iso(),
+        "previous_path": str(previous_path.relative_to(BASE_DIR)),
+        "summary": {
+            "generated_delta": current_generated - previous_generated,
+            "accepted_delta": current_accepted - previous_accepted,
+            "conversion_pct_delta": round(current_conversion_pct - previous_conversion_pct, 2),
+            "family_count_delta": len(current_rows) - len(previous_rows),
+            "largest_gain_family": positive_families[0] if positive_families else None,
+            "largest_drop_family": negative_families[0] if negative_families else None,
+        },
+        "funnel_deltas": funnel_delta,
+        "rejection_deltas": rejection_delta,
+        "family_deltas": family_deltas[:8],
+    }
+
+
 def _humanize_token(value: Any, fallback: str = "unknown") -> str:
     text = str(value or "").strip()
     if not text:
@@ -629,39 +776,17 @@ def load_research_summary(symbol: str = "XAUUSDm", timeframe: str = "M15") -> Di
     if not isinstance(payload, dict):
         return None
 
-    families = payload.get("families") or {}
-    funnel_totals: Counter[str] = Counter()
-    rejection_totals: Counter[str] = Counter()
-    top_rejection_samples: Dict[str, List[str]] = {}
-
-    for family_name, family_payload in families.items():
-        if not isinstance(family_payload, dict):
-            continue
-        stages = family_payload.get("stages") or {}
-        skips = family_payload.get("skip_reasons") or {}
-        samples = family_payload.get("skip_samples") or {}
-        for key, value in stages.items():
-            try:
-                funnel_totals[key] += int(value or 0)
-            except Exception:
-                pass
-        for key, value in skips.items():
-            try:
-                rejection_totals[key] += int(value or 0)
-            except Exception:
-                pass
-        for key, value in samples.items():
-            if key not in top_rejection_samples and isinstance(value, list):
-                top_rejection_samples[key] = value[:3]
+    summary = _summarize_research_payload(payload)
 
     return {
         "generated_at": payload.get("generated_at") or utc_now_iso(),
         "symbol": payload.get("symbol") or symbol,
         "timeframe": payload.get("timeframe") or timeframe,
-        "families": families,
-        "funnel_totals": dict(sorted(funnel_totals.items())),
-        "rejection_totals": dict(sorted(rejection_totals.items(), key=lambda item: item[1], reverse=True)),
-        "top_rejection_samples": top_rejection_samples,
+        "families": summary["families"],
+        "funnel_totals": summary["funnel_totals"],
+        "rejection_totals": summary["rejection_totals"],
+        "top_rejection_samples": summary["top_rejection_samples"],
+        "comparison": _build_research_comparison(symbol, timeframe, payload, summary),
         "available_filters": artifacts,
     }
 

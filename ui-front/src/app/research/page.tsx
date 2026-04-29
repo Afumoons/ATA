@@ -26,8 +26,30 @@ const researchSortOptions = [
   { value: "family-asc", label: "Family A-Z" },
 ] as const;
 
+const funnelStageOrder = ["generated", "cheap_prescreen_pass", "backtest_pass", "wf_pass", "mc_pass", "accepted"] as const;
+
+const funnelStageLabels: Record<(typeof funnelStageOrder)[number], string> = {
+  generated: "Generated",
+  cheap_prescreen_pass: "Cheap pass",
+  backtest_pass: "Backtest pass",
+  wf_pass: "WF pass",
+  mc_pass: "MC pass",
+  accepted: "Accepted",
+};
+
 function normalizeFilterValue(value: string) {
   return value === "__all__" ? "" : value;
+}
+
+function coerceNumber(value: unknown) {
+  return typeof value === "number" ? value : Number(value ?? 0);
+}
+
+function formatDelta(value: number, suffix = "") {
+  if (!Number.isFinite(value)) return `0${suffix}`;
+  const rounded = Math.abs(value) >= 10 ? Math.round(value) : Math.round(value * 100) / 100;
+  if (rounded === 0) return `0${suffix}`;
+  return `${rounded > 0 ? "+" : ""}${rounded}${suffix}`;
 }
 
 type FamilyRow = {
@@ -41,6 +63,18 @@ type FamilyRow = {
   rejectionCount: number;
   conversionPct: number;
   topRejection: string;
+};
+
+type ComparisonFamilyDelta = {
+  family: string;
+  generated_delta: number;
+  accepted_delta: number;
+  rejection_delta: number;
+  conversion_pct_delta: number;
+  current_conversion_pct: number;
+  previous_conversion_pct: number;
+  current_top_rejection: string;
+  previous_top_rejection: string;
 };
 
 export default function ResearchPage() {
@@ -131,6 +165,20 @@ export default function ResearchPage() {
   const visibleRejections = filteredRows.reduce((sum, row) => sum + row.rejectionCount, 0);
   const visibleConversionPct = visibleGenerated > 0 ? (visibleAccepted / visibleGenerated) * 100 : 0;
   const bestVisibleFamily = sortedRows[0]?.family ?? "—";
+  const totalGenerated = coerceNumber(data.funnel_totals?.generated);
+  const totalAccepted = coerceNumber(data.funnel_totals?.accepted);
+  const totalConversionPct = totalGenerated > 0 ? (totalAccepted / totalGenerated) * 100 : 0;
+  const maxVisibleStage = Math.max(...funnelStageOrder.map((stage) => coerceNumber(data.funnel_totals?.[stage])), 1);
+  const comparison = (data.comparison as Record<string, unknown> | undefined) ?? {};
+  const comparisonSummary = (comparison.summary as Record<string, unknown> | undefined) ?? {};
+  const comparisonFamilyDeltas = ((comparison.family_deltas as ComparisonFamilyDelta[] | undefined) ?? []).filter((row) => {
+    if (!familyFilter) return true;
+    return row.family === familyFilter;
+  });
+  const fragileFamilies = filteredRows
+    .filter((row) => row.generated >= 3 && (row.accepted === 0 || row.conversionPct < 5 || row.rejectionCount >= row.generated))
+    .sort((left, right) => left.conversionPct - right.conversionPct || right.generated - left.generated)
+    .slice(0, 5);
 
   return (
     <div className="dashboard-stack">
@@ -198,6 +246,72 @@ export default function ResearchPage() {
 
       <Section title="Funnel totals" description="Aggregate stage counts across all families in the current research artifact.">
         <KeyValueGrid data={data.funnel_totals} emptyTitle="No funnel totals" emptyDescription="The research summary did not provide aggregate stage counts." />
+      </Section>
+
+      <Section title="Funnel shape" description="Stage-by-stage stacked bars make the current research throughput easier to scan than raw counts alone.">
+        <div className="research-funnel-grid">
+          {funnelStageOrder.map((stage) => {
+            const value = coerceNumber(data.funnel_totals?.[stage]);
+            const width = `${Math.max((value / maxVisibleStage) * 100, value > 0 ? 8 : 0)}%`;
+            return (
+              <div key={stage} className="research-funnel-card">
+                <div className="research-funnel-topline">
+                  <span>{funnelStageLabels[stage]}</span>
+                  <strong>{formatNumber(value)}</strong>
+                </div>
+                <div className="research-funnel-track">
+                  <div className="research-funnel-fill" style={{ width }} />
+                </div>
+                <p>{stage === "accepted" ? formatPercent(totalConversionPct) : `${formatPercent(totalGenerated > 0 ? (value / totalGenerated) * 100 : 0)} of generated`}</p>
+              </div>
+            );
+          })}
+        </div>
+      </Section>
+
+      <Section title="Since previous run" description="Batch-to-batch comparison against the latest older snapshot found for this symbol/timeframe.">
+        {comparison.previous_generated_at ? (
+          <div className="dashboard-stack">
+            <div className="stats-grid">
+              <StatCard label="Compared to" value={compactValue(String(comparison.label ?? "previous snapshot"))} hint={formatDateTime(comparison.previous_generated_at)} tone="info" />
+              <StatCard label="Generated delta" value={formatDelta(coerceNumber(comparisonSummary.generated_delta))} hint="Current minus previous snapshot" tone={toneFromMagnitude(coerceNumber(comparisonSummary.generated_delta), 0, 5)} />
+              <StatCard label="Accepted delta" value={formatDelta(coerceNumber(comparisonSummary.accepted_delta))} hint="Pool-ready candidates gained or lost" tone={toneFromMagnitude(coerceNumber(comparisonSummary.accepted_delta), 0, 2)} />
+              <StatCard label="Conversion delta" value={formatDelta(coerceNumber(comparisonSummary.conversion_pct_delta), "%")} hint="Accepted ÷ generated shift" tone={toneFromMagnitude(coerceNumber(comparisonSummary.conversion_pct_delta), 0.5, 3)} />
+            </div>
+            <DataTable
+              columns={["Family", "Generated Δ", "Accepted Δ", "Conversion Δ", "Rejections Δ", "Top rejection now", "Top rejection before"]}
+              rows={comparisonFamilyDeltas.map((row) => [
+                compactValue(row.family),
+                formatDelta(coerceNumber(row.generated_delta)),
+                formatDelta(coerceNumber(row.accepted_delta)),
+                formatDelta(coerceNumber(row.conversion_pct_delta), "%"),
+                formatDelta(coerceNumber(row.rejection_delta)),
+                compactValue(row.current_top_rejection),
+                compactValue(row.previous_top_rejection),
+              ])}
+              emptyTitle="No comparison rows"
+              emptyDescription="No family-level deltas were available for the previous snapshot comparison."
+            />
+          </div>
+        ) : (
+          <EmptyState title="No previous snapshot" description="Only one research snapshot is available for this symbol/timeframe, so change tracking cannot be derived yet." />
+        )}
+      </Section>
+
+      <Section title="Fragile families" description="Families with meaningful generation volume but weak conversion or heavy rejection pressure should get operator attention first.">
+        <DataTable
+          columns={["Family", "Generated", "Accepted", "Conversion", "Rejections", "Primary issue"]}
+          rows={fragileFamilies.map((row) => [
+            compactValue(row.family),
+            formatNumber(row.generated),
+            formatNumber(row.accepted),
+            formatPercent(row.conversionPct),
+            formatNumber(row.rejectionCount),
+            compactValue(row.accepted === 0 ? "No accepted output" : row.topRejection),
+          ])}
+          emptyTitle="No fragile families"
+          emptyDescription="No currently visible family meets the low-conversion or high-rejection attention threshold."
+        />
       </Section>
 
       <Section title="Top rejection reasons" description="Most common reasons strategies are dropping out of the research pipeline.">

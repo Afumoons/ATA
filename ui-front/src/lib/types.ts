@@ -93,6 +93,7 @@ export interface ResearchSummaryResponse {
   funnel_totals: Record<string, number>;
   rejection_totals: Record<string, number>;
   top_rejection_samples: Record<string, string[]>;
+  comparison?: Record<string, unknown>;
   available_filters?: {
     symbols?: string[];
     timeframes?: string[];

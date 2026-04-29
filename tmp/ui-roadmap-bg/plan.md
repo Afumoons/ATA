@@ -9,7 +9,8 @@
 - [x] Add Promotion / Demotion explainability surface
 - [x] Add Review Queue page
 - [x] Add U1C research symbol/timeframe/family filter controls
-- [ ] Add U1C funnel visualization and change summary
+- [x] Add U1C funnel visualization and change summary
+- [ ] Add U1C skip-reason drilldown with counts and per-family examples
 
 ## Completion Rule
 When every item in `docs/ui-roadmap-tasklist.md` is checked or intentionally closed, mark this plan completed and stop/remove the background cron loop.

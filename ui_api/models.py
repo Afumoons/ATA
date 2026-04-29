@@ -77,6 +77,7 @@ class ResearchSummaryResponse(BaseModel):
     rejection_totals: Dict[str, int] = Field(default_factory=dict)
     top_rejection_samples: Dict[str, List[str]] = Field(default_factory=dict)
     available_filters: Dict[str, Any] = Field(default_factory=dict)
+    comparison: Dict[str, Any] = Field(default_factory=dict)
 
 
 class DriftSummaryResponse(BaseModel):

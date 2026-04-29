@@ -21,3 +21,8 @@
 - The Research page now shows filtered family counts, conversion rate, rejection totals, and top visible family so operator filtering changes are immediately legible.
 - Verified the U1C filter-controls slice with Python compile checks for `ui_api`, a direct adapter smoke test for BTC/XAG/XAU summaries, and production `npm run build` in `ui-front`.
 - Marked the first U1C control items complete in roadmap/task notes; next slice is funnel visualization plus a change-summary layer.
+- Added U1C funnel visualization cards on `/research` so stage throughput is scannable as stacked progress bars instead of only key-value totals.
+- Extended `load_research_summary()` with previous-snapshot comparison support by discovering the latest older artifact for the same symbol/timeframe, including the `pre_d4a_baseline` snapshots under `tmp/research_family_stage_summaries/`.
+- The Research page now shows batch-to-batch deltas, a “since previous run” summary, and a fragile-family table for low-conversion/high-rejection families.
+- Verified the U1C comparison slice with `python -m compileall ui_api`, a package-context smoke test for `load_research_summary('XAUUSDm', 'M15')`, and production `npm run build` in `ui-front`.
+- Marked U1C funnel visualization, previous-run comparison, and fragile-family highlighting complete in roadmap/task notes; next slice is per-family skip-reason drilldown with counts and examples.

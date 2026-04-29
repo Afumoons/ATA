@@ -52,11 +52,11 @@ Transform the current Operator UI from a read-only monitoring surface into a dec
 - [x] Add symbol switcher (XAU/BTC/XAG/etc.) to Research page
 - [x] Add timeframe switcher to Research page
 - [x] Add family filter and sorting controls
-- [ ] Add funnel visualization cards or stacked bars
-- [ ] Add batch-to-batch comparison view
-- [ ] Add “what changed since previous run” summary
+- [x] Add funnel visualization cards or stacked bars
+- [x] Add batch-to-batch comparison view
+- [x] Add “what changed since previous run” summary
 - [ ] Add skip-reason drilldown with counts + examples per family
-- [ ] Highlight fragile families with low generated-to-accepted conversion
+- [x] Highlight fragile families with low generated-to-accepted conversion
 
 ---
 
@@ -174,7 +174,7 @@ Transform the current Operator UI from a read-only monitoring surface into a dec
 2. [x] Build U3A Promotion / Demotion Explainability
 3. [x] Build U3B Review Queue
 4. [x] Expand U1C Research diagnostics controls
-5. [ ] Add U1C funnel visualization and change summary
+5. [x] Add U1C funnel visualization and change summary
 6. [ ] Expand U4 Execution / Reconciliation cockpit
 7. [ ] Add U5 Strategy DNA comparison tools
 8. [ ] Finish U7 design polish pass
