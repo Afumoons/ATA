@@ -549,6 +549,220 @@ def _build_recent_fill_exit_summary(recent_trade_log: List[Dict[str, Any]], trad
     }
 
 
+def _build_no_trade_diagnosis(
+    live_state: Dict[str, Any],
+    live_stats: Dict[str, Any],
+    open_trades: Dict[str, Any],
+    recent_trade_log: List[Dict[str, Any]],
+    recent_activity: Dict[str, Any],
+    unmatched_rows: List[Dict[str, Any]],
+) -> Dict[str, Any]:
+    locked_for_day = bool(live_state.get("locked_for_day"))
+    open_trade_count = _coerce_int(open_trades.get("count"))
+    trades_today = _coerce_int(live_state.get("trades_today"))
+    live_strategy_count = _coerce_int(live_stats.get("strategy_count"))
+    total_live_trades = _coerce_int(live_stats.get("total_trades"))
+    fills = (recent_activity.get("fills") or {}) if isinstance(recent_activity, dict) else {}
+    exits = (recent_activity.get("exits") or {}) if isinstance(recent_activity, dict) else {}
+    recent_fill_count = _coerce_int(fills.get("count"))
+    recent_exit_count = _coerce_int(exits.get("count"))
+    unmatched_count = len(unmatched_rows)
+    log_timestamps = [
+        parse_iso_datetime(row.get("ts") or row.get("timestamp") or row.get("recorded_at") or row.get("time"))
+        for row in recent_trade_log
+        if isinstance(row, dict)
+    ]
+    latest_log_time = max((timestamp for timestamp in log_timestamps if timestamp is not None), default=None)
+    minutes_since_log = None
+    if latest_log_time is not None:
+        minutes_since_log = max(int((datetime.now(timezone.utc) - latest_log_time).total_seconds() // 60), 0)
+
+    causes: List[Dict[str, Any]] = []
+
+    def add_cause(key: str, label: str, tone: str, status: str, evidence: str, detail: str) -> None:
+        causes.append({
+            "key": key,
+            "label": label,
+            "tone": tone,
+            "status": status,
+            "evidence": evidence,
+            "detail": detail,
+        })
+
+    if locked_for_day:
+        add_cause(
+            "day_lock",
+            "Daily lock is suppressing new trades",
+            "warning",
+            "active",
+            f"locked_for_day=true with {trades_today} trade(s) recorded today",
+            "Current inactivity can be intentional because the runtime reports the trading day as locked.",
+        )
+    else:
+        add_cause(
+            "day_lock",
+            "Daily lock is not active",
+            "success",
+            "clear",
+            f"locked_for_day=false with {trades_today} trade(s) today",
+            "The backend does not report a day-level lock, so inactivity needs another explanation.",
+        )
+
+    if open_trade_count > 0:
+        add_cause(
+            "open_positions",
+            "Open positions are already engaged",
+            "info",
+            "context",
+            f"{open_trade_count} open trade(s) visible in the latest snapshot",
+            "This is not a true no-trade state because the executor is already carrying live exposure.",
+        )
+    else:
+        add_cause(
+            "open_positions",
+            "No open positions in the current snapshot",
+            "warning",
+            "active",
+            "0 open trades reported by execution/open_trades.json",
+            "If the desk expected live exposure right now, the operator should look to fills, exits, and telemetry freshness next.",
+        )
+
+    if recent_fill_count > 0:
+        add_cause(
+            "recent_fills",
+            "Recent fills show the executor was active",
+            "info",
+            "context",
+            f"{recent_fill_count} fill(s) in the last {recent_activity.get('window_hours', 24)}h",
+            "The system has traded recently, so zero open positions may simply mean entries were short-lived or already closed.",
+        )
+    else:
+        add_cause(
+            "recent_fills",
+            "No recent fills in the active lookback window",
+            "warning",
+            "active",
+            f"0 fills in the last {recent_activity.get('window_hours', 24)}h",
+            "Recent execution traces do not show fresh entries, which strengthens the no-trade diagnosis.",
+        )
+
+    if recent_exit_count > 0 and recent_fill_count == 0 and open_trade_count == 0:
+        add_cause(
+            "recent_exits_only",
+            "Recent exits without new entries",
+            "warning",
+            "active",
+            f"{recent_exit_count} exit(s) but no fills in the same lookback window",
+            "Positions may have been closed out while no replacement entries were triggered afterward.",
+        )
+    elif recent_exit_count > 0:
+        add_cause(
+            "recent_exits_only",
+            "Recent exits are visible",
+            "neutral",
+            "context",
+            f"{recent_exit_count} exit(s) in the last {recent_activity.get('window_hours', 24)}h",
+            "Recent exits provide context for posture changes even if they do not explain the current state by themselves.",
+        )
+
+    if live_strategy_count == 0:
+        add_cause(
+            "live_strategy_stats",
+            "Live strategy stats are missing",
+            "critical",
+            "active",
+            "strategy_live_stats returned zero active strategy rows",
+            "No-trade diagnosis is weak because backend telemetry for live strategies is currently absent.",
+        )
+    else:
+        add_cause(
+            "live_strategy_stats",
+            "Live strategy telemetry is present",
+            "success",
+            "clear",
+            f"{live_strategy_count} strategy row(s), {total_live_trades} total live trades",
+            "Backend strategy telemetry is populated, so inactivity is less likely to be caused by a total stats outage.",
+        )
+
+    if unmatched_count > 0:
+        add_cause(
+            "reconciliation",
+            "Reconciliation anomalies still need cleanup",
+            "critical" if unmatched_count >= 5 else "warning",
+            "active",
+            f"{unmatched_count} unmatched closed deal(s) remain unresolved",
+            "Execution may still be trading, but reconciliation noise reduces trust in the runtime picture and deserves operator review.",
+        )
+    else:
+        add_cause(
+            "reconciliation",
+            "Closed-deal reconciliation is clean",
+            "success",
+            "clear",
+            "0 unmatched closed deals in the latest snapshot",
+            "There is no current evidence that pairing failures are masking trade activity.",
+        )
+
+    if minutes_since_log is None:
+        add_cause(
+            "log_freshness",
+            "Trade log freshness is unknown",
+            "warning",
+            "active",
+            "No parsable timestamps were found in the recent trade log sample",
+            "Without fresh log timestamps, it is harder to separate true inactivity from missing execution traces.",
+        )
+    elif minutes_since_log >= 360 and open_trade_count == 0:
+        add_cause(
+            "log_freshness",
+            "Execution traces look stale",
+            "warning",
+            "active",
+            f"Latest trade-log event is {minutes_since_log} minute(s) old",
+            "The runtime has not emitted a recent trade trace, which makes a genuine no-trade lull more plausible.",
+        )
+    else:
+        add_cause(
+            "log_freshness",
+            "Execution trace freshness looks acceptable",
+            "success" if minutes_since_log <= 120 else "info",
+            "clear" if minutes_since_log <= 120 else "context",
+            f"Latest trade-log event is {minutes_since_log} minute(s) old",
+            "Recent trade-log timestamps are still fresh enough to support operator diagnosis.",
+        )
+
+    active_causes = [cause for cause in causes if cause.get("status") == "active"]
+    if locked_for_day:
+        posture = "locked"
+        headline = "Inactivity currently looks intentional"
+        detail = "The strongest visible cause is the day-level lock, with supporting context from the latest execution snapshot."
+    elif open_trade_count > 0:
+        posture = "engaged"
+        headline = "The executor is active, not fully idle"
+        detail = "Open positions or recent fills indicate the runtime is already engaged, so this section is mostly explaining posture rather than a true no-trade gap."
+    elif live_strategy_count == 0:
+        posture = "telemetry_gap"
+        headline = "Telemetry gap is the main blocker"
+        detail = "The most important issue is missing live strategy stats, which limits confidence in every other no-trade signal."
+    elif active_causes:
+        posture = "inactive_watch"
+        headline = "No-trade risk deserves operator review"
+        detail = "There are active causes that explain why the system currently has little or no visible execution activity."
+    else:
+        posture = "clear"
+        headline = "No strong no-trade blocker is visible"
+        detail = "The runtime snapshot does not currently point to a dominant cause for inactivity."
+
+    return {
+        "posture": posture,
+        "headline": headline,
+        "detail": detail,
+        "primary_cause": active_causes[0].get("label") if active_causes else None,
+        "active_cause_count": len(active_causes),
+        "causes": causes,
+    }
+
+
 def _normalize_symbol_key(value: Any) -> str:
     symbol = str(value or "").strip().upper()
     if symbol.endswith("M") and len(symbol) > 3:
@@ -746,6 +960,14 @@ def load_execution_summary() -> Dict[str, Any]:
     unmatched_rows = read_json_file(UNMATCHED_CLOSED_DEALS_PATH, default=[])
     if not isinstance(unmatched_rows, list):
         unmatched_rows = []
+    no_trade_diagnosis = _build_no_trade_diagnosis(
+        live_state,
+        live_stats,
+        open_trades,
+        recent_trade_log,
+        recent_activity,
+        unmatched_rows,
+    )
     return {
         "generated_at": utc_now_iso(),
         "live_state": live_state,
@@ -764,6 +986,7 @@ def load_execution_summary() -> Dict[str, Any]:
             "recent": unmatched_rows[-20:],
         },
         "recent_activity": recent_activity,
+        "no_trade_diagnosis": no_trade_diagnosis,
         "recent_trade_log": recent_trade_log,
     }
 

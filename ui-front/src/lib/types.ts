@@ -66,6 +66,21 @@ export interface ExecutionSummaryResponse {
       recent?: Array<Record<string, unknown>>;
     };
   };
+  no_trade_diagnosis?: {
+    posture?: string;
+    headline?: string;
+    detail?: string;
+    primary_cause?: string;
+    active_cause_count?: number;
+    causes?: Array<{
+      key: string;
+      label: string;
+      tone: StatusTone;
+      status: "active" | "context" | "clear";
+      evidence?: string;
+      detail?: string;
+    }>;
+  };
   recent_trade_log: Array<Record<string, unknown>>;
 }
 

@@ -41,3 +41,7 @@
 - Extended the execution summary API payload with a bounded `recent_activity` block so the page can surface recent fill count, side mix, exit PnL, and compact recent fill/exit tables.
 - Verified the recent-activity slice with `python -m compileall ui_api`, a direct `load_execution_summary()` smoke test for `recent_activity`, and production `npm run build` in `ui-front`.
 - Marked the U4A recent fills / exits summary card item complete in roadmap/task notes; next slice is U4A no-trade diagnosis breakdown by cause.
+- Added backend-shaped no-trade diagnosis breakdown data to the execution summary API, classifying inactivity signals across day lock, open positions, recent fills/exits, live telemetry, reconciliation, and log freshness.
+- Extended `/execution` with a dedicated no-trade diagnosis breakdown section, including posture headline, active-cause stat cards, and a cause-by-cause operator table.
+- Verified the no-trade diagnosis slice with `python -m compileall ui_api`, a direct `load_execution_summary()` smoke test for `no_trade_diagnosis`, and production `npm run build` in `ui-front`.
+- Marked U4A fully complete in roadmap/task notes; next slice is U4B unmatched-closed-deal resolution dashboard.

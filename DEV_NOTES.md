@@ -69,5 +69,6 @@ For each autonomous run:
 - U4A richer open trade drilldown is now complete, including per-symbol posture rollups, protection coverage, hold-age context, and per-position review flags
 - U4A per-symbol execution posture cards are now complete, adding operator-readable symbol cards for protection gaps, stale updates, trade balance, and log/live-stat alignment
 - U4A recent fills / exits summary cards are now complete, combining trades.log fill traces with trade-context journal exits on the Execution page
-- Next highest-value slice is U4A no-trade diagnosis breakdown by cause on the Execution page
+- U4A no-trade diagnosis breakdown by cause is now complete, adding a backend-shaped cause matrix plus operator-facing breakdown cards/table on the Execution page
+- Next highest-value slice is U4B unmatched-closed-deal resolution dashboard
 - User explicitly wants progress reports, not approval questions

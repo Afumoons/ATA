@@ -132,6 +132,9 @@ export default function ExecutionPage() {
   const recentFills = recentActivity.fills ?? {};
   const recentExits = recentActivity.exits ?? {};
   const recentWindowHours = Number(recentActivity.window_hours ?? 24);
+  const noTradeDiagnosis = data.no_trade_diagnosis ?? {};
+  const noTradeCauses = noTradeDiagnosis.causes ?? [];
+  const activeNoTradeCauses = noTradeCauses.filter((cause) => cause.status === "active");
   const attentionEvents = (auditQuery.data?.events ?? []).filter((event) => {
     const source = String(event.source ?? "").toLowerCase();
     return source.includes("unmatched") || source.includes("trade");
@@ -260,6 +263,74 @@ export default function ExecutionPage() {
               <p>{item.detail}</p>
             </article>
           ))}
+        </div>
+      </Section>
+
+      <Section
+        title="No-trade diagnosis breakdown"
+        description="Cause-by-cause readout explaining whether inactivity is intentional, telemetry-driven, or simply a flat execution window."
+        action={
+          noTradeDiagnosis.posture ? (
+            <StatusBadge
+              label={`Posture: ${String(noTradeDiagnosis.posture).replace(/_/g, " ")}`}
+              tone={noTradeDiagnosis.posture === "telemetry_gap" ? "critical" : noTradeDiagnosis.posture === "locked" || noTradeDiagnosis.posture === "inactive_watch" ? "warning" : noTradeDiagnosis.posture === "engaged" ? "info" : "success"}
+            />
+          ) : undefined
+        }
+      >
+        <div className="dashboard-stack">
+          <section className="stats-grid">
+            <StatCard
+              label="Primary cause"
+              value={compactValue(noTradeDiagnosis.primary_cause ?? noTradeDiagnosis.headline ?? "—")}
+              hint={compactValue(noTradeDiagnosis.detail ?? "No diagnosis detail")}
+              tone={activeNoTradeCauses.length > 0 ? "warning" : "success"}
+            />
+            <StatCard
+              label="Active causes"
+              value={formatNumber(Number(noTradeDiagnosis.active_cause_count ?? activeNoTradeCauses.length))}
+              hint={`${formatNumber(noTradeCauses.length)} cause row(s) evaluated`}
+              tone={activeNoTradeCauses.length > 0 ? "warning" : "success"}
+            />
+            <StatCard
+              label="Open / fills"
+              value={`${formatNumber(Number(data.open_trades.count ?? 0))} / ${formatNumber(Number(recentFills.count ?? 0))}`}
+              hint={`Open trades vs fills in last ${formatNumber(recentWindowHours)}h`}
+              tone={Number(data.open_trades.count ?? 0) > 0 || Number(recentFills.count ?? 0) > 0 ? "info" : "warning"}
+            />
+            <StatCard
+              label="Live telemetry"
+              value={formatNumber(Number(data.strategy_live_stats.strategy_count ?? 0))}
+              hint={`${formatNumber(Number(data.strategy_live_stats.total_trades ?? 0))} total live trade(s)`}
+              tone={Number(data.strategy_live_stats.strategy_count ?? 0) > 0 ? "success" : "critical"}
+            />
+          </section>
+
+          {noTradeDiagnosis.headline ? (
+            <InlineNotice
+              tone={activeNoTradeCauses.length > 0 ? "warning" : "info"}
+              title={String(noTradeDiagnosis.headline)}
+              description={String(noTradeDiagnosis.detail ?? "")}
+            />
+          ) : null}
+
+          <DataTable
+            columns={["Cause", "Status", "Evidence", "Operator meaning"]}
+            rows={noTradeCauses.map((cause) => [
+              <div key={`${cause.key}-label`} className="table-stack">
+                <strong>{compactValue(cause.label)}</strong>
+                <span>{compactValue(cause.key)}</span>
+              </div>,
+              <div key={`${cause.key}-status`} className="table-stack">
+                <StatusBadge label={compactValue(cause.status)} tone={cause.tone} />
+                <span>{compactValue(cause.tone)}</span>
+              </div>,
+              compactValue(cause.evidence),
+              compactValue(cause.detail),
+            ])}
+            emptyTitle="No no-trade causes shaped"
+            emptyDescription="The execution payload did not return a cause breakdown for inactivity diagnosis."
+          />
         </div>
       </Section>
 

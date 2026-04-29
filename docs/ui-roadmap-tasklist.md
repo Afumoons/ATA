@@ -109,7 +109,7 @@ Transform the current Operator UI from a read-only monitoring surface into a dec
 - [x] Add richer open trade drilldown
 - [x] Add per-symbol execution posture card
 - [x] Add recent fills / exits summary cards
-- [ ] Add no-trade diagnosis breakdown by cause
+- [x] Add no-trade diagnosis breakdown by cause
 
 ### U4B — Reconciliation tools
 - [ ] Add unmatched-closed-deal resolution dashboard

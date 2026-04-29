@@ -14,6 +14,7 @@
 - [x] Add U4A richer open trade drilldown on `/execution`
 - [x] Add U4A per-symbol execution posture cards on `/execution`
 - [x] Add U4A recent fills / exits summary cards on `/execution`
+- [x] Add U4A no-trade diagnosis breakdown by cause on `/execution`
 
 ## Completion Rule
 When every item in `docs/ui-roadmap-tasklist.md` is checked or intentionally closed, mark this plan completed and stop/remove the background cron loop.
