@@ -53,6 +53,13 @@ const sortPresetOptions = [
   { value: "newest-warnings", label: "Newest warnings" },
 ] as const;
 
+const anomalyLabel: Record<string, string> = {
+  unmatched_close: "Unmatched close",
+  missing_live_stats: "Missing live stats",
+  stale_update: "Stale update",
+  unmatched_without_strategy: "Unmatched without strategy",
+};
+
 function normalizeFilterValue(value: string) {
   return value === "__all__" ? "" : value;
 }
@@ -75,6 +82,22 @@ function regimeAlignmentBadge(value: DriftSummaryRow["regime_alignment"]) {
 
 function regimePairValue(row: DriftSummaryRow) {
   return compactValue(`${row.best_regime ?? "?"} → ${row.live_observed_regime ?? "?"}`);
+}
+
+function anomalySummary(row: DriftSummaryRow) {
+  const anomalies = (row.unresolved_anomalies ?? []).map((value) => anomalyLabel[value] ?? value);
+  if (!anomalies.length) {
+    return <span className="text-xs text-muted-foreground">None</span>;
+  }
+  return compactValue(anomalies.join(", "));
+}
+
+function reviewReasonSummary(row: DriftSummaryRow) {
+  const reasons = row.review_reasons ?? [];
+  if (!reasons.length) {
+    return <span className="text-xs text-muted-foreground">No manual review flag</span>;
+  }
+  return compactValue(reasons.join(" • "));
 }
 
 function RecentPnlSparkline({ values }: { values?: number[] | null }) {
@@ -173,6 +196,8 @@ export default function DriftPage() {
   const topAttention = sortedRows.filter((row) => row.severity === "drifting" || row.severity === "broken" || Boolean(row.decay_warning)).slice(0, 12);
   const severityCounts = data.summary?.severity_counts ?? {};
   const regimeAlignmentCounts = data.summary?.regime_alignment_counts ?? {};
+  const anomalyGroups = data.summary?.unresolved_anomaly_groups ?? {};
+  const manualReviewQueue = data.manual_review_queue ?? [];
 
   return (
     <div className="dashboard-stack">
@@ -194,6 +219,8 @@ export default function DriftPage() {
         <StatCard label="Broken" value={formatNumber(Number(severityCounts.broken ?? 0))} hint="Highest-risk drift severity" tone="critical" />
         <StatCard label="Drifting" value={formatNumber(Number(severityCounts.drifting ?? 0))} hint="Negative or widening mismatch" tone="warning" />
         <StatCard label="Regime mismatch" value={formatNumber(Number(regimeAlignmentCounts.mismatch ?? 0))} hint="Research best regime disagrees with live observed regime" tone="critical" />
+        <StatCard label="Repeated decay" value={formatNumber(Number(data.summary?.repeated_decay_strategy_count ?? 0))} hint="Strategies with 2+ logged decay warnings" tone="warning" />
+        <StatCard label="Manual review" value={formatNumber(Number(data.summary?.manual_review_count ?? 0))} hint="Strategies currently queued for operator review" tone="critical" />
       </section>
 
       <Section title="Drift filters" description="Slice the drift snapshot by symbol, family, lifecycle status, severity, and triage sort preset.">
@@ -235,9 +262,17 @@ export default function DriftPage() {
         <KeyValueGrid data={data.summary ?? {}} emptyTitle="No drift summary" emptyDescription="The drift endpoint did not return aggregate drift metadata." />
       </Section>
 
+      <Section title="Unresolved anomaly groups" description="Grouped unresolved issues that should shape operator triage across reconciliation and live-stat freshness.">
+        <KeyValueGrid
+          data={Object.fromEntries(Object.entries(anomalyGroups).map(([key, value]) => [anomalyLabel[key] ?? key, value]))}
+          emptyTitle="No grouped anomalies"
+          emptyDescription="The current drift snapshot did not detect unresolved anomaly groups."
+        />
+      </Section>
+
       <Section title="Attention queue" description="Highest-priority rows where live behavior is diverging or degrading.">
         <DataTable
-          columns={["Strategy", "Symbol", "Family", "Status", "Severity", "Research return", "Live PnL", "Recent avg", "Recent sequence", "Decay", "Regime alignment", "Research best → live observed"]}
+          columns={["Strategy", "Symbol", "Family", "Status", "Severity", "Research return", "Live PnL", "Recent avg", "Recent sequence", "Decay", "Decay count", "Regime alignment", "Research best → live observed"]}
           rows={topAttention.map((row: DriftSummaryRow) => [
             compactValue(row.name),
             compactValue(row.symbol),
@@ -249,6 +284,7 @@ export default function DriftPage() {
             formatCurrency(Number(row.recent_avg_pnl ?? 0)),
             <RecentPnlSparkline key={`${String(row.name)}-attention-sequence`} values={row.recent_pnls} />,
             <StatusBadge key={`${String(row.name)}-decay`} label={row.decay_warning ? "Warning" : "Stable"} tone={row.decay_warning ? "critical" : "success"} />,
+            formatNumber(Number(row.decay_warning_count ?? 0)),
             regimeAlignmentBadge(row.regime_alignment),
             regimePairValue(row),
           ])}
@@ -257,9 +293,27 @@ export default function DriftPage() {
         />
       </Section>
 
+      <Section title="Needs manual review" description="Strategies with repeated decay warnings, severe drift, regime mismatch, or unresolved anomalies.">
+        <DataTable
+          columns={["Strategy", "Status", "Severity", "Review reasons", "Unresolved anomalies", "Decay count", "Drift score", "Last update"]}
+          rows={manualReviewQueue.map((row: DriftSummaryRow) => [
+            compactValue(row.name),
+            compactValue(row.status),
+            severityBadge(row.severity),
+            reviewReasonSummary(row),
+            anomalySummary(row),
+            formatNumber(Number(row.decay_warning_count ?? 0)),
+            formatNumber(Number(row.drift_score ?? 0)),
+            compactValue(formatDateTime(row.last_update)),
+          ])}
+          emptyTitle="No manual review queue"
+          emptyDescription="The drift snapshot did not surface any rows that need manual review right now."
+        />
+      </Section>
+
       <Section title="Drift leaderboard" description="Sorted rows with live-vs-research mismatch context for review and triage.">
         <DataTable
-          columns={["Strategy", "Symbol", "Family", "Status", "Severity", "Regime alignment", "Research best → live observed", "Trades", "Research return", "Research sharpe", "Live PnL", "Recent avg", "Recent sequence", "Drift score", "Last update"]}
+          columns={["Strategy", "Symbol", "Family", "Status", "Severity", "Regime alignment", "Research best → live observed", "Trades", "Research return", "Research sharpe", "Live PnL", "Recent avg", "Recent sequence", "Decay count", "Anomalies", "Drift score", "Last update"]}
           rows={sortedRows.map((row: DriftSummaryRow) => [
             compactValue(row.name),
             compactValue(row.symbol),
@@ -274,6 +328,8 @@ export default function DriftPage() {
             formatCurrency(Number(row.live_total_pnl ?? 0)),
             formatCurrency(Number(row.recent_avg_pnl ?? 0)),
             <RecentPnlSparkline key={`${String(row.name)}-leaderboard-sequence`} values={row.recent_pnls} />,
+            formatNumber(Number(row.decay_warning_count ?? 0)),
+            anomalySummary(row),
             formatNumber(Number(row.drift_score ?? 0)),
             compactValue(formatDateTime(row.last_update)),
           ])}

@@ -113,20 +113,30 @@ export interface DriftSummaryRow {
   regime_alignment?: "aligned" | "mismatch" | "insufficient_live_data" | "unknown" | null;
   drift_score?: number | null;
   decay_warning?: boolean | null;
+  decay_warning_count?: number | null;
+  latest_decay_reason?: string | null;
   severity?: "healthy" | "watch" | "drifting" | "broken" | null;
   last_update?: string | null;
+  unresolved_anomalies?: string[] | null;
+  unresolved_anomaly_count?: number | null;
+  needs_manual_review?: boolean | null;
+  review_reasons?: string[] | null;
 }
 
 export interface DriftSummaryResponse {
   generated_at: string;
   rows: DriftSummaryRow[];
+  manual_review_queue?: DriftSummaryRow[];
   summary: {
     strategy_count?: number;
     attention_count?: number;
     decay_warning_count?: number;
+    repeated_decay_strategy_count?: number;
     negative_recent_avg_count?: number;
+    manual_review_count?: number;
     severity_counts?: Record<string, number>;
     regime_alignment_counts?: Record<string, number>;
+    unresolved_anomaly_groups?: Record<string, number>;
     available_filters?: {
       symbols?: string[];
       families?: string[];

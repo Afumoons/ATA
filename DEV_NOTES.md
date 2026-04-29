@@ -30,13 +30,13 @@ Implement and advance `docs/ui-roadmap-tasklist.md` until the tasklist is fully 
 - U2B sort presets added on Drift page and committed as `937e9ef`
 - U2B recent PnL sparkline added on Drift page in current workstream
 - U2B regime mismatch indicator added on Drift page in current workstream
+- U2B repeated decay counter, unresolved anomaly grouping, and manual review queue added on Drift page in current workstream
 
 ## Milestone Order
 1. Commit roadmap tasklist doc cleanly
-2. Advance U2B drift depth improvements
-3. Advance U3 Promotion / Demotion Explainability
-4. Advance U3B Review Queue
-5. Continue through remaining roadmap items in priority order
+2. Advance U3 Promotion / Demotion Explainability
+3. Advance U3B Review Queue
+4. Continue through remaining roadmap items in priority order
 
 ## Operating Loop
 For each autonomous run:
@@ -56,5 +56,5 @@ For each autonomous run:
 
 ## Working Notes
 - Drift page shipped in commit `fb9fd25`
-- Drift filters and severity are already present, next U2B depth slices are anomaly grouping, repeated decay counting, and manual review queue
+- U2B drift depth is now complete, next highest-value slice is U3A explainability on Strategy detail
 - User explicitly wants progress reports, not approval questions

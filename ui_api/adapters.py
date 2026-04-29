@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import re
 from collections import Counter, defaultdict, deque
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Tuple
 
@@ -31,6 +31,18 @@ TRADE_LOG_PATTERN = re.compile(r"(\w+)=([^\s]+)")
 
 def utc_now_iso() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+
+
+def parse_iso_datetime(value: Any) -> datetime | None:
+    if not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(str(value))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=timezone.utc)
+    return parsed
 
 
 def read_json_file(path: Path, *, default: Any) -> Any:
@@ -390,12 +402,45 @@ def load_research_summary(symbol: str = "XAUUSDm", timeframe: str = "M15") -> Di
 def load_drift_summary() -> Dict[str, Any]:
     pool = load_pool()
     live_stats = load_strategy_live_stats_snapshot().get("strategies", {})
+    audit_rows = read_json_file(POOL_AUDIT_TRAIL_PATH, default=[])
+    unmatched_rows = read_json_file(UNMATCHED_CLOSED_DEALS_PATH, default=[])
+    if not isinstance(audit_rows, list):
+        audit_rows = []
+    if not isinstance(unmatched_rows, list):
+        unmatched_rows = []
+
+    decay_warning_counts: Counter[str] = Counter()
+    latest_decay_reason: Dict[str, str] = {}
+    for row in audit_rows:
+        if not isinstance(row, dict) or row.get("event") != "live_decay_warning":
+            continue
+        strategy_name = str(row.get("strategy_name") or "")
+        if not strategy_name:
+            continue
+        decay_warning_counts[strategy_name] += 1
+        if strategy_name not in latest_decay_reason:
+            latest_decay_reason[strategy_name] = str(row.get("reason") or "live_decay_warning")
+
+    unmatched_counts: Counter[str] = Counter()
+    unmatched_without_strategy = 0
+    for row in unmatched_rows:
+        if not isinstance(row, dict):
+            continue
+        strategy_name = str(row.get("strategy_name") or row.get("strategy") or "")
+        if strategy_name:
+            unmatched_counts[strategy_name] += 1
+        else:
+            unmatched_without_strategy += 1
+
     rows: List[Dict[str, Any]] = []
     symbols: Counter[str] = Counter()
     families: Counter[str] = Counter()
     statuses: Counter[str] = Counter()
     severities: Counter[str] = Counter()
     regime_alignment_counts: Counter[str] = Counter()
+    unresolved_anomaly_groups: Counter[str] = Counter()
+    now = datetime.now(timezone.utc)
+    stale_threshold = now - timedelta(hours=12)
 
     def pick_live_observed_regime(explain: Dict[str, Any]) -> Optional[str]:
         live_meta = explain.get("live_meta") or {}
@@ -427,6 +472,7 @@ def load_drift_summary() -> Dict[str, Any]:
         explain = (stats.get("strategy_explain") or {}) if isinstance(stats, dict) else {}
         meta = (explain.get("meta") or {}) if isinstance(explain, dict) else {}
         live = live_stats.get(name) or {}
+        live_missing = not isinstance(live_stats.get(name), dict)
 
         research_return_pct = float(stats.get("return_pct", 0.0) or 0.0)
         research_sharpe = float(stats.get("sharpe_ratio", 0.0) or 0.0)
@@ -457,12 +503,40 @@ def load_drift_summary() -> Dict[str, Any]:
         family = ((stats.get("strategy") or {}).get("family") if isinstance(stats, dict) else None) or stats.get("family") or "unknown"
         symbol = str(rec.symbol or "unknown")
         status = str(rec.status or "unknown")
+        last_update = live.get("last_update") if isinstance(live, dict) else None
+        parsed_last_update = parse_iso_datetime(last_update)
+        decay_warning_count = int(decay_warning_counts.get(name, 0))
+
+        unresolved_anomalies: List[str] = []
+        if unmatched_counts.get(name, 0):
+            unresolved_anomalies.append("unmatched_close")
+        if live_missing:
+            unresolved_anomalies.append("missing_live_stats")
+        if parsed_last_update and parsed_last_update < stale_threshold:
+            unresolved_anomalies.append("stale_update")
+
+        review_reasons: List[str] = []
+        if decay_warning_count >= 2:
+            review_reasons.append(f"{decay_warning_count} decay warnings logged")
+        if severity in {"drifting", "broken"}:
+            review_reasons.append(f"severity {severity}")
+        if regime_alignment == "mismatch":
+            review_reasons.append("regime mismatch")
+        if unmatched_counts.get(name, 0):
+            review_reasons.append(f"{int(unmatched_counts[name])} unmatched closes")
+        if live_missing:
+            review_reasons.append("missing live stats")
+        if parsed_last_update and parsed_last_update < stale_threshold:
+            review_reasons.append("stale live update")
+        needs_manual_review = bool(review_reasons)
 
         symbols[symbol] += 1
         families[str(family)] += 1
         statuses[status] += 1
         severities[severity] += 1
         regime_alignment_counts[regime_alignment] += 1
+        for anomaly in unresolved_anomalies:
+            unresolved_anomaly_groups[anomaly] += 1
 
         rows.append({
             "name": name,
@@ -482,23 +556,49 @@ def load_drift_summary() -> Dict[str, Any]:
             "regime_alignment": regime_alignment,
             "drift_score": drift_score,
             "decay_warning": decay_warning,
+            "decay_warning_count": decay_warning_count,
+            "latest_decay_reason": latest_decay_reason.get(name),
             "severity": severity,
-            "last_update": live.get("last_update") if isinstance(live, dict) else None,
+            "last_update": last_update,
+            "unresolved_anomalies": unresolved_anomalies,
+            "unresolved_anomaly_count": len(unresolved_anomalies),
+            "needs_manual_review": needs_manual_review,
+            "review_reasons": review_reasons,
         })
 
     rows.sort(key=lambda row: (float({"healthy": 0, "watch": 1, "drifting": 2, "broken": 3}.get(str(row.get("severity")), 0)), bool(row.get("decay_warning")), float(row.get("drift_score", 0.0))), reverse=True)
     attention = [row for row in rows if row.get("severity") in {"drifting", "broken"} or row.get("decay_warning") or abs(float(row.get("recent_avg_pnl", 0.0))) > 0]
+    manual_review_queue = [
+        row for row in sorted(
+            rows,
+            key=lambda row: (
+                int(row.get("unresolved_anomaly_count", 0)),
+                int(row.get("decay_warning_count", 0)),
+                float({"healthy": 0, "watch": 1, "drifting": 2, "broken": 3}.get(str(row.get("severity")), 0)),
+                float(row.get("drift_score", 0.0)),
+            ),
+            reverse=True,
+        )
+        if row.get("needs_manual_review")
+    ]
 
     return {
         "generated_at": utc_now_iso(),
         "rows": rows[:50],
+        "manual_review_queue": manual_review_queue[:15],
         "summary": {
             "strategy_count": len(rows),
             "attention_count": len(attention),
             "decay_warning_count": sum(1 for row in rows if row.get("decay_warning")),
+            "repeated_decay_strategy_count": sum(1 for row in rows if int(row.get("decay_warning_count", 0)) >= 2),
             "negative_recent_avg_count": sum(1 for row in rows if float(row.get("recent_avg_pnl", 0.0)) < 0),
+            "manual_review_count": len(manual_review_queue),
             "severity_counts": dict(sorted(severities.items())),
             "regime_alignment_counts": dict(sorted(regime_alignment_counts.items())),
+            "unresolved_anomaly_groups": {
+                **dict(sorted(unresolved_anomaly_groups.items())),
+                "unmatched_without_strategy": unmatched_without_strategy,
+            },
             "available_filters": {
                 "symbols": sorted(symbols.keys()),
                 "families": sorted(families.keys()),

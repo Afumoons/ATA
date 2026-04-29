@@ -76,9 +76,9 @@ Transform the current Operator UI from a read-only monitoring surface into a dec
 - [x] Add severity badges (healthy / watch / drifting / broken)
 - [x] Add sparkline for recent PnL sequence
 - [x] Add regime mismatch indicator (research best regime vs live observed regime)
-- [ ] Add repeated decay-warning counter per strategy
-- [ ] Add unresolved anomaly grouping (unmatched close, missing stats, stale updates)
-- [ ] Add “needs manual review” queue section
+- [x] Add repeated decay-warning counter per strategy
+- [x] Add unresolved anomaly grouping (unmatched close, missing stats, stale updates)
+- [x] Add “needs manual review” queue section
 - [x] Add sort presets (highest drift, negative recent avg, most live trades, newest warnings)
 
 ---
@@ -170,7 +170,7 @@ Transform the current Operator UI from a read-only monitoring surface into a dec
 ## Suggested Execution Order
 
 ### Current practical order
-1. [ ] Finish U2B Drift depth improvements
+1. [x] Finish U2B Drift depth improvements
 2. [ ] Build U3A Promotion / Demotion Explainability
 3. [ ] Build U3B Review Queue
 4. [ ] Expand U1C Research diagnostics controls
@@ -189,7 +189,7 @@ Transform the current Operator UI from a read-only monitoring surface into a dec
 
 ### Milestone M2 — Drift cockpit
 - [x] U2A committed
-- [ ] U2B complete
+- [x] U2B complete
 
 ### Milestone M3 — Governance cockpit
 - [ ] U3A complete
