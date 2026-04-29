@@ -35,6 +35,7 @@ Implement and advance `docs/ui-roadmap-tasklist.md` until the tasklist is fully 
 - U3B review queue page added in current workstream
 - U1C research filters added on Research page in current workstream
 - U4A richer open trade drilldown added on Execution page in current workstream
+- U5A strategy identity / DNA card added on Strategy detail in current workstream
 
 ## Milestone Order
 1. Commit roadmap tasklist doc cleanly
@@ -74,5 +75,6 @@ For each autonomous run:
 - U4B pairing confidence explanation is now complete, including confidence buckets, evidence-signal explanations, and per-row confidence detail on the Execution page
 - U4B recent trade-context registration failures panel is now complete, adding system-log exception parsing plus operator-facing cause/strategy tables and traceback hints on the Execution page
 - U4B stale execution artifact warnings are now complete, adding core artifact freshness diagnostics and operator-readable impact warnings on the Execution page
-- Next highest-value slice is U5A strategy identity / DNA card
+- U5A strategy identity layer is now complete, including DNA summary, true-edge badges, family/regime mismatch warnings, session dependence warnings, and fragility markers on Strategy detail
+- Next highest-value slice is U5B compare-two-strategies view
 - User explicitly wants progress reports, not approval questions

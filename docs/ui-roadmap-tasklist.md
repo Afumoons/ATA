@@ -122,11 +122,11 @@ Transform the current Operator UI from a read-only monitoring surface into a dec
 ## Phase U5 — Strategy Identity and DNA Layer
 
 ### U5A — Identity view
-- [ ] Add Strategy DNA card
-- [ ] Add “true edge identity” badges
-- [ ] Add family/regime mismatch warnings
-- [ ] Add session dependence warnings
-- [ ] Add fragility markers (exit-rule dependency, ultra-short holding behavior, etc.)
+- [x] Add Strategy DNA card
+- [x] Add “true edge identity” badges
+- [x] Add family/regime mismatch warnings
+- [x] Add session dependence warnings
+- [x] Add fragility markers (exit-rule dependency, ultra-short holding behavior, etc.)
 
 ### U5B — Comparison tools
 - [ ] Add compare-two-strategies view
@@ -176,7 +176,7 @@ Transform the current Operator UI from a read-only monitoring surface into a dec
 4. [x] Expand U1C Research diagnostics controls
 5. [x] Add U1C funnel visualization and change summary
 6. [ ] Expand U4 Execution / Reconciliation cockpit
-7. [ ] Add U5 Strategy DNA comparison tools
+7. [ ] Add U5B Strategy DNA comparison tools
 8. [ ] Finish U7 design polish pass
 
 ---

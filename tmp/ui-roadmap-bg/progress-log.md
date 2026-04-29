@@ -57,3 +57,6 @@
 - Added U4B stale execution artifact warnings to the execution summary API and `/execution`, checking freshness across live state, strategy stats, open trades, trades.log, trade-context journal, unmatched-close backlog, and the latest system log feed.
 - Verified the stale-artifact-warning slice with `python -m compileall ui_api`, a direct `load_execution_summary()` smoke test for `execution_artifact_warnings`, and production `npm run build` in `ui-front`.
 - Marked U4 fully complete in roadmap/task notes; next slice is U5A strategy identity / DNA card.
+- Added a U5A strategy identity layer to the strategy detail payload and Pool page, including a Strategy DNA summary, true-edge identity badges, family/regime mismatch warnings, session dependence detection, and fragility markers derived from research explain + live decay context.
+- Verified the U5A identity slice with `python -m compileall ui_api`, a direct `load_strategy_detail()` smoke test for `derived.strategy_identity`, and production `npm run build` in `ui-front`.
+- Marked U5A complete in roadmap/task notes; next slice is U5B compare-two-strategies view.

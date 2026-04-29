@@ -281,6 +281,227 @@ def _safe_int(value: Any) -> Optional[int]:
         return None
 
 
+def _strategy_identity_tone(level: str) -> str:
+    if level in {"success", "info", "warning", "critical", "neutral"}:
+        return level
+    return "neutral"
+
+
+def _build_strategy_identity(
+    *,
+    family: str,
+    current_status: str,
+    meta: Dict[str, Any],
+    risk_behavior: Dict[str, Any],
+    regime_pnl: Dict[str, Any],
+    session_pnl: Dict[str, Any],
+    stability: Dict[str, Any],
+    live_decay: Dict[str, Any],
+) -> Dict[str, Any]:
+    best_regime = str(meta.get("best_regime") or "unknown")
+    best_session = str(meta.get("best_session") or "unknown")
+    allowed_regimes = [str(item) for item in (meta.get("allowed_regimes") or []) if item]
+    allowed_sessions = [str(item) for item in (meta.get("allowed_sessions") or []) if item]
+    is_trend_follower = bool(meta.get("is_trend_follower"))
+    is_range_trader = bool(meta.get("is_range_trader"))
+    avg_holding_bars = _safe_float(risk_behavior.get("avg_holding_bars"))
+    exit_rule_ratio = _safe_float(risk_behavior.get("exit_rule_ratio"))
+    max_consecutive_losses = _safe_int(risk_behavior.get("max_consecutive_losses"))
+    sharpe_std = _safe_float(stability.get("sharpe_std"))
+    live_negative_ratio = _safe_float(live_decay.get("negative_ratio"))
+    live_loss_streak = _safe_int(live_decay.get("loss_streak"))
+
+    session_rows: List[Tuple[str, float]] = []
+    for session_name, payload in session_pnl.items():
+        if not isinstance(payload, dict):
+            continue
+        session_rows.append((str(session_name), _safe_float(payload.get("return_pct")) or 0.0))
+    session_rows.sort(key=lambda item: item[1], reverse=True)
+    positive_sessions = [item for item in session_rows if item[1] > 0]
+    strongest_session_share = None
+    if positive_sessions:
+        positive_total = sum(item[1] for item in positive_sessions)
+        if positive_total > 0:
+            strongest_session_share = positive_sessions[0][1] / positive_total
+
+    regime_rows: List[Tuple[str, float]] = []
+    for regime_name, payload in regime_pnl.items():
+        if not isinstance(payload, dict):
+            continue
+        regime_rows.append((str(regime_name), _safe_float(payload.get("return_pct")) or 0.0))
+    regime_rows.sort(key=lambda item: item[1], reverse=True)
+    positive_regimes = [item for item in regime_rows if item[1] > 0]
+    strongest_regime_share = None
+    if positive_regimes:
+        positive_total = sum(item[1] for item in positive_regimes)
+        if positive_total > 0:
+            strongest_regime_share = positive_regimes[0][1] / positive_total
+
+    archetype_bits: List[str] = []
+    if is_range_trader:
+        archetype_bits.append("range specialist")
+    if is_trend_follower:
+        archetype_bits.append("trend follower")
+    if strongest_session_share is not None and strongest_session_share >= 0.55 and best_session != "unknown":
+        archetype_bits.append(f"{_humanize_token(best_session)}-session dependent")
+    if strongest_regime_share is not None and strongest_regime_share >= 0.6 and best_regime != "unknown":
+        archetype_bits.append(f"{_humanize_token(best_regime)} regime specialist")
+    if not archetype_bits:
+        archetype_bits.append(f"{_humanize_token(family)} operator")
+    archetype = ", ".join(dict.fromkeys(archetype_bits))
+
+    edge_badges: List[Dict[str, Any]] = [
+        {
+            "label": _humanize_token(family).title(),
+            "tone": "info",
+            "detail": "Declared strategy family from manifest/index research lineage.",
+        },
+        {
+            "label": f"Best regime: {_humanize_token(best_regime).title()}",
+            "tone": "success" if best_regime != "unknown" else "neutral",
+            "detail": "Highest-return detected market regime from research explain metadata.",
+        },
+        {
+            "label": f"Best session: {_humanize_token(best_session).title()}",
+            "tone": "success" if best_session != "unknown" else "neutral",
+            "detail": "Trading session that contributes the strongest research return.",
+        },
+    ]
+    if is_range_trader:
+        edge_badges.append({
+            "label": "Range trader",
+            "tone": "info",
+            "detail": "Research metadata classifies this strategy as a mean-reversion / range operator.",
+        })
+    if is_trend_follower:
+        edge_badges.append({
+            "label": "Trend follower",
+            "tone": "info",
+            "detail": "Research metadata classifies this strategy as momentum / trend-following.",
+        })
+    if allowed_regimes:
+        edge_badges.append({
+            "label": f"Regime allowance: {len(allowed_regimes)}",
+            "tone": "neutral" if len(allowed_regimes) > 2 else "warning",
+            "detail": f"Allowed regimes: {', '.join(_humanize_token(item) for item in allowed_regimes)}.",
+        })
+    if allowed_sessions:
+        edge_badges.append({
+            "label": f"Session allowance: {len(allowed_sessions)}",
+            "tone": "neutral" if len(allowed_sessions) > 2 else "warning",
+            "detail": f"Allowed sessions: {', '.join(_humanize_token(item) for item in allowed_sessions)}.",
+        })
+
+    warnings: List[Dict[str, Any]] = []
+    family_lower = family.lower()
+    best_regime_lower = best_regime.lower()
+    if "range" in family_lower and is_trend_follower:
+        warnings.append({
+            "label": "Family vs style mismatch",
+            "tone": "warning",
+            "detail": "The family names this as a range setup, but research metadata still flags trend-following behavior.",
+        })
+    if "trend" in family_lower and is_range_trader:
+        warnings.append({
+            "label": "Family vs style mismatch",
+            "tone": "warning",
+            "detail": "The family names this as a trend setup, but research metadata still flags range-trading behavior.",
+        })
+    if "range" in family_lower and "trend" in best_regime_lower:
+        warnings.append({
+            "label": "Family / regime mismatch",
+            "tone": "warning",
+            "detail": f"The family reads range-oriented while the strongest regime comes from {_humanize_token(best_regime)} conditions.",
+        })
+    if "trend" in family_lower and "rang" in best_regime_lower:
+        warnings.append({
+            "label": "Family / regime mismatch",
+            "tone": "warning",
+            "detail": f"The family reads trend-oriented while the strongest regime comes from {_humanize_token(best_regime)} conditions.",
+        })
+    if strongest_session_share is not None and strongest_session_share >= 0.6 and best_session != "unknown":
+        warnings.append({
+            "label": "Session dependence",
+            "tone": "warning",
+            "detail": f"About {strongest_session_share * 100:.0f}% of positive session return comes from {_humanize_token(best_session)}.",
+        })
+    if positive_sessions and len(positive_sessions) == 1:
+        warnings.append({
+            "label": "Single-session edge",
+            "tone": "critical",
+            "detail": f"Only {_humanize_token(positive_sessions[0][0])} contributes positive session return in the current research snapshot.",
+        })
+
+    fragility_markers: List[Dict[str, Any]] = []
+    if exit_rule_ratio is not None and exit_rule_ratio >= 0.8:
+        fragility_markers.append({
+            "label": "Exit-rule dependency",
+            "tone": "warning",
+            "detail": f"{exit_rule_ratio * 100:.0f}% of exits come from the explicit exit rule instead of TP/SL resolution.",
+        })
+    if avg_holding_bars is not None and avg_holding_bars <= 1.0:
+        fragility_markers.append({
+            "label": "Ultra-short holding",
+            "tone": "warning",
+            "detail": f"Average hold is only {avg_holding_bars:.1f} bars, so execution friction can distort live edge quickly.",
+        })
+    if max_consecutive_losses is not None and max_consecutive_losses >= 5:
+        fragility_markers.append({
+            "label": "Loss-streak sensitivity",
+            "tone": "warning" if max_consecutive_losses < 7 else "critical",
+            "detail": f"Research already saw a {max_consecutive_losses}-trade consecutive loss streak.",
+        })
+    if sharpe_std is not None and sharpe_std >= 0.9:
+        fragility_markers.append({
+            "label": "Subperiod instability",
+            "tone": "warning",
+            "detail": f"Subperiod Sharpe dispersion is {sharpe_std:.2f}, suggesting the edge shape moves across windows.",
+        })
+    if live_negative_ratio is not None and live_negative_ratio >= 0.7:
+        fragility_markers.append({
+            "label": "Live decay pressure",
+            "tone": "critical" if current_status in {"active", "exploratory"} else "warning",
+            "detail": f"Recent live negative-trade ratio is {live_negative_ratio * 100:.0f}% with loss streak {live_loss_streak or 0}.",
+        })
+
+    summary_parts = [f"{_humanize_token(family).title()} DNA points to a {archetype}"]
+    if best_regime != "unknown":
+        summary_parts.append(f"best in {_humanize_token(best_regime)} regimes")
+    if best_session != "unknown":
+        summary_parts.append(f"and strongest during {_humanize_token(best_session)}")
+    if warnings:
+        summary_parts.append(f"with {len(warnings)} operator warning{'s' if len(warnings) != 1 else ''}")
+    if fragility_markers:
+        summary_parts.append(f"plus {len(fragility_markers)} fragility marker{'s' if len(fragility_markers) != 1 else ''}")
+
+    return {
+        "archetype": archetype,
+        "summary": ", ".join(summary_parts) + ".",
+        "edge_badges": [
+            {**item, "tone": _strategy_identity_tone(str(item.get("tone") or "neutral"))}
+            for item in edge_badges
+        ],
+        "warnings": [
+            {**item, "tone": _strategy_identity_tone(str(item.get("tone") or "neutral"))}
+            for item in warnings
+        ],
+        "fragility_markers": [
+            {**item, "tone": _strategy_identity_tone(str(item.get("tone") or "neutral"))}
+            for item in fragility_markers
+        ],
+        "metrics": {
+            "allowed_regime_count": len(allowed_regimes),
+            "allowed_session_count": len(allowed_sessions),
+            "strongest_session_share": strongest_session_share,
+            "strongest_regime_share": strongest_regime_share,
+            "avg_holding_bars": avg_holding_bars,
+            "exit_rule_ratio": exit_rule_ratio,
+            "max_consecutive_losses": max_consecutive_losses,
+            "sharpe_std": sharpe_std,
+        },
+    }
+
+
 def load_live_state_snapshot() -> Dict[str, Any]:
     data = read_json_file(LIVE_STATE_PATH, default={})
     return data if isinstance(data, dict) else {}
@@ -1683,6 +1904,7 @@ def load_strategy_detail(name: str) -> Dict[str, Any] | None:
     session_pnl = explain.get("session_pnl") or {}
     meta = explain.get("meta") or {}
     stability = explain.get("stability") or {}
+    risk_behavior = explain.get("risk_behavior") or {}
     live_decay = (stats_block.get("live_decay") or {}) if isinstance(stats_block, dict) else {}
     live_total_pnl = float(((stats or {}).get("total_pnl", 0.0)) or 0.0) if isinstance(stats, dict) else 0.0
     research_return_pct = float((stats_block.get("return_pct", 0.0)) or 0.0) if isinstance(stats_block, dict) else 0.0
@@ -1900,6 +2122,16 @@ def load_strategy_detail(name: str) -> Dict[str, Any] | None:
         "live_total_pnl": live_total_pnl,
         "research_return_pct": research_return_pct,
         "research_sharpe": research_sharpe,
+        "strategy_identity": _build_strategy_identity(
+            family=family,
+            current_status=current_status,
+            meta=meta if isinstance(meta, dict) else {},
+            risk_behavior=risk_behavior if isinstance(risk_behavior, dict) else {},
+            regime_pnl=regime_pnl if isinstance(regime_pnl, dict) else {},
+            session_pnl=session_pnl if isinstance(session_pnl, dict) else {},
+            stability=stability if isinstance(stability, dict) else {},
+            live_decay=live_decay if isinstance(live_decay, dict) else {},
+        ),
         "decision_context": {
             "current_status": current_status,
             "current_tier": current_tier,

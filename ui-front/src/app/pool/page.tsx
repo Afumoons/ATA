@@ -26,6 +26,23 @@ import {
   toneFromSignedNumber,
 } from "@/lib/ui-state";
 
+function normalizeDetailRows(value: unknown) {
+  if (!Array.isArray(value)) return [] as Array<Record<string, unknown>>;
+  return value.filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object" && !Array.isArray(item));
+}
+
+function toneFromBadgeTone(value: unknown) {
+  switch (value) {
+    case "success":
+    case "info":
+    case "warning":
+    case "critical":
+      return value;
+    default:
+      return "neutral" as const;
+  }
+}
+
 const EMPTY_STRATEGY_ROWS: Awaited<ReturnType<typeof uiApi.strategies>> = [];
 
 function humanizeDecisionReason(value: unknown) {
@@ -108,6 +125,11 @@ export default function PoolPage() {
   const selectedPool = coerceRecord(selectedDetail?.pool_record);
   const selectedLiveStats = coerceRecord(selectedDetail?.live_stats);
   const selectedDerived = coerceRecord(selectedDetail?.derived);
+  const strategyIdentity = coerceRecord(selectedDerived.strategy_identity);
+  const identityMetrics = coerceRecord(strategyIdentity.metrics);
+  const identityBadges = normalizeDetailRows(strategyIdentity.edge_badges);
+  const identityWarnings = normalizeDetailRows(strategyIdentity.warnings);
+  const fragilityMarkers = normalizeDetailRows(strategyIdentity.fragility_markers);
   const decisionContext = coerceRecord(selectedDerived.decision_context);
   const transitionHistory = Array.isArray(decisionContext.transition_history)
     ? decisionContext.transition_history.filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object" && !Array.isArray(item))
@@ -327,6 +349,91 @@ export default function PoolPage() {
                       ])}
                       emptyTitle="No transition history yet"
                       emptyDescription="The current audit trail does not include explicit promotion or demotion rows for this strategy yet, but the posture panel above still explains the current state from snapshot context."
+                    />
+                  </Section>
+                </div>
+              </div>
+            </Section>
+
+            <Section
+              title="Strategy DNA"
+              description="Identity layer that turns research metadata into an operator-readable edge profile, mismatch warnings, session dependence, and fragility markers."
+              action={strategyIdentity.archetype ? <StatusBadge label={compactValue(strategyIdentity.archetype)} tone="info" /> : null}
+            >
+              <div className="dashboard-stack">
+                <div className="panel">
+                  <p>{compactValue(strategyIdentity.summary)}</p>
+                </div>
+
+                <section className="stats-grid">
+                  <StatCard
+                    label="Archetype"
+                    value={compactValue(strategyIdentity.archetype)}
+                    hint="True edge identity"
+                    tone="info"
+                  />
+                  <StatCard
+                    label="Session concentration"
+                    value={formatPercent(pickFirstNumber(identityMetrics.strongest_session_share))}
+                    hint="Share of positive session return from the top session"
+                    tone={toneFromMagnitude(pickFirstNumber(identityMetrics.strongest_session_share), 0.45, 0.6)}
+                  />
+                  <StatCard
+                    label="Regime concentration"
+                    value={formatPercent(pickFirstNumber(identityMetrics.strongest_regime_share))}
+                    hint="Share of positive regime return from the top regime"
+                    tone={toneFromMagnitude(pickFirstNumber(identityMetrics.strongest_regime_share), 0.45, 0.6)}
+                  />
+                  <StatCard
+                    label="Fragility markers"
+                    value={formatNumber(fragilityMarkers.length)}
+                    hint={compactValue(`${identityWarnings.length} mismatch / dependence warnings`)}
+                    tone={fragilityMarkers.length ? "warning" : "success"}
+                  />
+                </section>
+
+                <Section title="True edge identity badges" description="Concise badges describing how the strategy actually wins, not just what family named it.">
+                  {identityBadges.length ? (
+                    <div className="dashboard-stack">
+                      <div className="badge-row">
+                        {identityBadges.map((item, index) => (
+                          <StatusBadge key={`${item.label ?? "identity"}-${index}`} label={compactValue(item.label)} tone={toneFromBadgeTone(item.tone)} />
+                        ))}
+                      </div>
+                      <DataTable
+                        columns={["Badge", "Detail"]}
+                        rows={identityBadges.map((item, index) => [
+                          <StatusBadge key={`${item.label ?? "identity-row"}-${index}`} label={compactValue(item.label)} tone={toneFromBadgeTone(item.tone)} />,
+                          compactValue(item.detail),
+                        ])}
+                      />
+                    </div>
+                  ) : (
+                    <EmptyState title="No identity badges yet" description="The backend did not produce any distilled DNA labels for this strategy." />
+                  )}
+                </Section>
+
+                <div className="detail-grid-2">
+                  <Section title="Mismatch and dependence warnings" description="Warnings when family naming, regime fit, or session dependence create operator risk.">
+                    <DataTable
+                      columns={["Warning", "Detail"]}
+                      rows={identityWarnings.map((item, index) => [
+                        <StatusBadge key={`${item.label ?? "warning"}-${index}`} label={compactValue(item.label)} tone={toneFromBadgeTone(item.tone)} />,
+                        compactValue(item.detail),
+                      ])}
+                      emptyTitle="No mismatch warnings"
+                      emptyDescription="This strategy currently has no surfaced family/regime conflict or severe session dependence warning."
+                    />
+                  </Section>
+                  <Section title="Fragility markers" description="Execution or research traits that can make the edge brittle in live routing.">
+                    <DataTable
+                      columns={["Marker", "Detail"]}
+                      rows={fragilityMarkers.map((item, index) => [
+                        <StatusBadge key={`${item.label ?? "fragility"}-${index}`} label={compactValue(item.label)} tone={toneFromBadgeTone(item.tone)} />,
+                        compactValue(item.detail),
+                      ])}
+                      emptyTitle="No fragility markers"
+                      emptyDescription="No brittle edge markers were detected from the current research explain and live decay payloads."
                     />
                   </Section>
                 </div>
