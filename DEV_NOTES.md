@@ -67,5 +67,6 @@ For each autonomous run:
 - U1C research diagnostics is now complete, including skip-reason drilldown with counts and examples per family
 - U1C funnel visualization, previous-run comparison, and fragile-family highlighting are now complete
 - U4A richer open trade drilldown is now complete, including per-symbol posture rollups, protection coverage, hold-age context, and per-position review flags
-- Next highest-value slice is U4A per-symbol execution posture cards on the Execution page
+- U4A per-symbol execution posture cards are now complete, adding operator-readable symbol cards for protection gaps, stale updates, trade balance, and log/live-stat alignment
+- Next highest-value slice is U4A recent fills / exits summary cards on the Execution page
 - User explicitly wants progress reports, not approval questions

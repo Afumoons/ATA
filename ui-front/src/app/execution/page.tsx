@@ -59,6 +59,52 @@ function labelForProtectionStatus(value: unknown) {
   }
 }
 
+function buildSymbolPosture(trades: Array<Record<string, unknown>>): {
+  incompleteProtectionCount: number;
+  staleUpdateCount: number;
+  agedCount: number;
+  noRecentLogCount: number;
+  missingLiveStatsCount: number;
+  longCount: number;
+  shortCount: number;
+  tone: "success" | "warning" | "critical";
+  label: string;
+} {
+  const incompleteProtectionCount = trades.filter((trade) => trade.protection_status !== "sl_tp").length;
+  const staleUpdateCount = trades.filter((trade) => typeof trade.minutes_since_update === "number" && Number(trade.minutes_since_update) >= 60).length;
+  const agedCount = trades.filter((trade) => typeof trade.holding_minutes === "number" && Number(trade.holding_minutes) >= 240).length;
+  const noRecentLogCount = trades.filter((trade) => Array.isArray(trade.operator_flags) && trade.operator_flags.includes("no_recent_log_match")).length;
+  const missingLiveStatsCount = trades.filter((trade) => Array.isArray(trade.operator_flags) && trade.operator_flags.includes("missing_live_stats")).length;
+  const longCount = trades.filter((trade) => trade.side === "long").length;
+  const shortCount = trades.filter((trade) => trade.side === "short").length;
+
+  const tone = incompleteProtectionCount > 0 || staleUpdateCount > 0
+    ? "critical"
+    : agedCount > 0 || noRecentLogCount > 0 || missingLiveStatsCount > 0
+      ? "warning"
+      : "success";
+
+  const label = incompleteProtectionCount > 0
+    ? "Protection gap"
+    : staleUpdateCount > 0
+      ? "Stale updates"
+      : agedCount > 0 || noRecentLogCount > 0 || missingLiveStatsCount > 0
+        ? "Needs operator watch"
+        : "Healthy posture";
+
+  return {
+    incompleteProtectionCount,
+    staleUpdateCount,
+    agedCount,
+    noRecentLogCount,
+    missingLiveStatsCount,
+    longCount,
+    shortCount,
+    tone,
+    label,
+  };
+}
+
 export default function ExecutionPage() {
   const executionQuery = useQuery("execution-summary", uiApi.executionSummary, { refetchIntervalMs: 45_000 });
   const auditQuery = useQuery("execution-audit-context", () => uiApi.auditTimeline(30), { refetchIntervalMs: 60_000 });
@@ -226,6 +272,74 @@ export default function ExecutionPage() {
               tone={Number(openTradeSummary.aged_trade_count ?? 0) > 0 || Number(openTradeSummary.stale_update_count ?? 0) > 0 ? "warning" : "neutral"}
             />
           </section>
+
+          {openTradeBySymbol.length ? (
+            <div className="execution-posture-grid">
+              {openTradeBySymbol.map((row) => {
+                const symbol = String(row.symbol ?? "unknown");
+                const symbolTrades = openTradeDrilldown.filter((trade) => String(trade.symbol ?? "") === symbol);
+                const posture = buildSymbolPosture(symbolTrades);
+                return (
+                  <article key={`${symbol}-posture-card`} className={`panel execution-posture-card tone-${posture.tone}`}>
+                    <div className="execution-posture-topline">
+                      <div>
+                        <span className="execution-posture-eyebrow">Symbol posture</span>
+                        <h4>{symbol}</h4>
+                      </div>
+                      <StatusBadge label={posture.label} tone={posture.tone} />
+                    </div>
+
+                    <div className="execution-posture-metrics">
+                      <div>
+                        <span>Net floating</span>
+                        <strong className={`tone-${toneFromSignedNumber(Number(row.net_floating_pnl ?? 0))}`}>{formatCurrency(Number(row.net_floating_pnl ?? 0))}</strong>
+                      </div>
+                      <div>
+                        <span>Exposure</span>
+                        <strong>{formatNumber(Number(row.open_trade_count ?? 0))} trade(s) · vol {compactValue(row.total_volume)}</strong>
+                      </div>
+                      <div>
+                        <span>Structure</span>
+                        <strong>{formatNumber(posture.longCount)} long · {formatNumber(posture.shortCount)} short</strong>
+                      </div>
+                      <div>
+                        <span>Oldest position</span>
+                        <strong>{formatDurationMinutes(typeof row.oldest_age_minutes === "number" ? row.oldest_age_minutes : Number.NaN)}</strong>
+                      </div>
+                    </div>
+
+                    <div className="badge-row">
+                      <StatusBadge
+                        label={posture.incompleteProtectionCount > 0 ? `${formatNumber(posture.incompleteProtectionCount)} incomplete SL/TP` : "Protection covered"}
+                        tone={posture.incompleteProtectionCount > 0 ? "critical" : "success"}
+                      />
+                      <StatusBadge
+                        label={Number(row.floating_loss_count ?? 0) > 0 ? `${formatNumber(Number(row.floating_loss_count ?? 0))} floating loss` : "No underwater trades"}
+                        tone={Number(row.floating_loss_count ?? 0) > 0 ? "warning" : "success"}
+                      />
+                      <StatusBadge
+                        label={posture.agedCount > 0 ? `${formatNumber(posture.agedCount)} aged > 4h` : "Age within 4h"}
+                        tone={posture.agedCount > 0 ? "warning" : "info"}
+                      />
+                      <StatusBadge
+                        label={posture.staleUpdateCount > 0 ? `${formatNumber(posture.staleUpdateCount)} stale update` : "Fresh update trail"}
+                        tone={posture.staleUpdateCount > 0 ? "critical" : "info"}
+                      />
+                    </div>
+
+                    <p className="execution-posture-copy">
+                      {Array.isArray(row.strategies) && row.strategies.length ? row.strategies.join(", ") : "No strategy names surfaced"}
+                    </p>
+                    <p className="execution-posture-copy">
+                      {posture.noRecentLogCount > 0 || posture.missingLiveStatsCount > 0
+                        ? `${formatNumber(posture.noRecentLogCount)} trade(s) missing recent log match, ${formatNumber(posture.missingLiveStatsCount)} trade(s) missing live stats.`
+                        : `Recent logs and live stats align for the visible ${formatNumber(Number(row.open_trade_count ?? 0))} trade(s).`}
+                    </p>
+                  </article>
+                );
+              })}
+            </div>
+          ) : null}
 
           <DataTable
             columns={["Symbol", "Open trades", "Net floating", "Volume", "Strategies", "Oldest position"]}

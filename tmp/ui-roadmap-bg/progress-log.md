@@ -34,3 +34,6 @@
 - Extended `/execution` with open-trade posture summary cards, per-symbol posture aggregation, and a richer drilldown table for position-level triage.
 - Verified the open-trade drilldown slice with `python -m compileall ui_api`, a direct `load_execution_summary()` smoke test, and production `npm run build` in `ui-front`.
 - Marked the U4A richer open-trade drilldown item complete in roadmap/task notes; next slice is U4A per-symbol execution posture cards.
+- Added per-symbol execution posture cards on `/execution`, summarizing protection gaps, floating pressure, trade balance, age, and log/live-stat alignment per engaged symbol.
+- Verified the posture-card slice with production `npm run build` in `ui-front`.
+- Marked the U4A per-symbol execution posture card item complete in roadmap/task notes; next slice is U4A recent fills / exits summary cards.

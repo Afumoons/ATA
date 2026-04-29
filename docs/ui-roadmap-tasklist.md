@@ -107,7 +107,7 @@ Transform the current Operator UI from a read-only monitoring surface into a dec
 
 ### U4A — Execution depth
 - [x] Add richer open trade drilldown
-- [ ] Add per-symbol execution posture card
+- [x] Add per-symbol execution posture card
 - [ ] Add recent fills / exits summary cards
 - [ ] Add no-trade diagnosis breakdown by cause
 

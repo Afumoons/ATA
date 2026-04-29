@@ -12,6 +12,7 @@
 - [x] Add U1C funnel visualization and change summary
 - [x] Add U1C skip-reason drilldown with counts and per-family examples
 - [x] Add U4A richer open trade drilldown on `/execution`
+- [x] Add U4A per-symbol execution posture cards on `/execution`
 
 ## Completion Rule
 When every item in `docs/ui-roadmap-tasklist.md` is checked or intentionally closed, mark this plan completed and stop/remove the background cron loop.
