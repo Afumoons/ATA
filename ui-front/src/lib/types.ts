@@ -340,6 +340,11 @@ export interface ManualTradeRiskCalcResponse {
   preview_payload: Record<string, unknown>;
 }
 
+export interface ManualTradePreviewAuditResponse {
+  generated_at: string;
+  audit_event: Record<string, unknown>;
+}
+
 export interface OperatorValidationDetail {
   code?: string;
   message?: string;

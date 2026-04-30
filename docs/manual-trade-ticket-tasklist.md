@@ -115,6 +115,7 @@ Specification reference: `docs/manual-trade-ticket-spec.md`
 - [x] Ensure manual trades do not pollute research attribution
 - [x] Ensure drift/audit views can distinguish manual vs autonomous trades
 - [ ] Add audit trail entries for manual ticket creation and execution
+  - Preview-intent audit endpoint/helper is in place; final broker-response audit wiring still lands with live submit
 
 ---
 

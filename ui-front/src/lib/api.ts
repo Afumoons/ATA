@@ -2,6 +2,7 @@ import type {
   AuditTimelineResponse,
   ExecutionSummaryResponse,
   ManifestResponse,
+  ManualTradePreviewAuditResponse,
   ManualTradeRiskCalcRequest,
   ManualTradeRiskCalcResponse,
   OverviewResponse,
@@ -125,6 +126,11 @@ export const uiApi = {
   strategyDetail: (name: string) => request<StrategyDetailResponse>(`/strategies/${encodeURIComponent(name)}`),
   auditTimeline: (limit = 100) => request<AuditTimelineResponse>(`/audit/timeline?limit=${limit}`),
   manualTradeRiskCalc: (payload: ManualTradeRiskCalcRequest) => request<ManualTradeRiskCalcResponse>("/execution/risk-calc", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  }),
+  manualTradePreviewIntent: (payload: ManualTradeRiskCalcRequest) => request<ManualTradePreviewAuditResponse>("/execution/manual-ticket/preview-intent", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),

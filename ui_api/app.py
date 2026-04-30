@@ -25,6 +25,7 @@ from .models import (
     ExecutionSummaryResponse,
     HealthResponse,
     ManifestResponse,
+    ManualTradePreviewAuditResponse,
     ManualTradeRiskCalcRequest,
     ManualTradeRiskCalcResponse,
     OverviewResponse,
@@ -34,6 +35,7 @@ from .models import (
     ReviewQueueResponse,
     StrategyDetailResponse,
 )
+from ..execution.manual_trade_audit import record_manual_ticket_preview_intent
 from ..execution.manual_trade_identity import manual_trade_marker_payload
 from ..execution.manual_trade_risk import (
     ManualTradeRiskError,
@@ -119,6 +121,29 @@ def api_audit_timeline(limit: int = 100) -> AuditTimelineResponse:
     responses={422: {"model": OperatorValidationErrorResponse}},
 )
 def api_execution_risk_calc(payload: ManualTradeRiskCalcRequest) -> ManualTradeRiskCalcResponse:
+    return _build_manual_trade_risk_calc_response(payload)
+
+
+@app.post(
+    "/api/execution/manual-ticket/preview-intent",
+    response_model=ManualTradePreviewAuditResponse,
+    responses={422: {"model": OperatorValidationErrorResponse}},
+)
+def api_execution_manual_ticket_preview_intent(payload: ManualTradeRiskCalcRequest) -> ManualTradePreviewAuditResponse:
+    response = _build_manual_trade_risk_calc_response(payload)
+    audit_event = record_manual_ticket_preview_intent(
+        preview_payload=response.preview_payload,
+        derived=response.derived,
+        symbol_spec=response.symbol_spec,
+        symbol_spec_warnings=response.symbol_spec_warnings,
+    )
+    return ManualTradePreviewAuditResponse(
+        generated_at=datetime.now(timezone.utc).isoformat(),
+        audit_event=audit_event,
+    )
+
+
+def _build_manual_trade_risk_calc_response(payload: ManualTradeRiskCalcRequest) -> ManualTradeRiskCalcResponse:
     order_type = _normalize_order_type(payload.order_type)
     spec_snapshot = _resolve_symbol_spec(payload)
     account_equity = payload.account_equity

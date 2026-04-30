@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { uiApi, UiApiError } from "@/lib/api";
 import { compactValue, formatCurrency, formatDateTime, formatNumber, formatPercent } from "@/lib/format";
-import type { ManualTradeRiskCalcResponse, OperatorValidationDetail } from "@/lib/types";
+import type { ManualTradePreviewAuditResponse, ManualTradeRiskCalcResponse, OperatorValidationDetail } from "@/lib/types";
 
 const COMMON_SYMBOLS = ["XAUUSDm", "BTCUSDm", "XAGUSDm", "EURUSDm"] as const;
 
@@ -111,6 +111,9 @@ export default function ManualTicketPage() {
   const [calc, setCalc] = useState<ManualTradeRiskCalcResponse | null>(null);
   const [calcError, setCalcError] = useState<unknown>(null);
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [previewAudit, setPreviewAudit] = useState<ManualTradePreviewAuditResponse | null>(null);
+  const [previewAuditStatus, setPreviewAuditStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [previewAuditError, setPreviewAuditError] = useState<unknown>(null);
   const requestSeq = useRef(0);
 
   const payload = useMemo(() => buildPayload(form), [form]);
@@ -123,6 +126,7 @@ export default function ManualTicketPage() {
     ...(calc?.symbol_spec_warnings ?? []),
     ...((Array.isArray(derived.warnings) ? derived.warnings : []) as string[]),
   ];
+  const previewAuditEvent = previewAudit?.audit_event ?? {};
 
   useEffect(() => {
     if (!payload) {
@@ -142,12 +146,15 @@ export default function ManualTicketPage() {
           setCalc(response);
           setCalcError(null);
           setStatus("success");
+          setPreviewAuditStatus("idle");
+          setPreviewAuditError(null);
         })
         .catch((error) => {
           if (currentSeq !== requestSeq.current) return;
           setCalc(null);
           setCalcError(error);
           setStatus("error");
+          setPreviewAuditStatus("idle");
         });
     }, 350);
 
@@ -158,6 +165,20 @@ export default function ManualTicketPage() {
 
   const symbolLabel = form.symbolMode === "custom" ? form.customSymbol.trim().toUpperCase() || "Custom symbol" : form.presetSymbol;
   const entryLabel = form.orderType === "market" ? "Reference market price" : "Pending entry price";
+
+  async function handleRecordPreviewIntent() {
+    if (!payload || !calc) return;
+    setPreviewAuditStatus("loading");
+    setPreviewAuditError(null);
+    try {
+      const response = await uiApi.manualTradePreviewIntent(payload);
+      setPreviewAudit(response);
+      setPreviewAuditStatus("success");
+    } catch (error) {
+      setPreviewAuditError(error);
+      setPreviewAuditStatus("error");
+    }
+  }
 
   return (
     <div className="dashboard-stack">
@@ -371,6 +392,31 @@ export default function ManualTicketPage() {
               emptyTitle="No preview payload yet"
               emptyDescription="Once the calculator succeeds, the preview payload block shows the exact manual-only markers that must survive into submit and audit layers."
             />
+            <div className="manual-ticket-inline-row">
+              <Button onClick={() => void handleRecordPreviewIntent()} disabled={!payload || !calc || status !== "success" || previewAuditStatus === "loading"}>
+                {previewAuditStatus === "loading" ? "Recording preview..." : "Record preview intent to audit"}
+              </Button>
+              {previewAuditStatus === "success" ? <StatusBadge label="Audit preview recorded" tone="success" /> : null}
+            </div>
+            {previewAuditStatus === "success" ? (
+              <KeyValueGrid
+                data={{
+                  audit_recorded_at: previewAudit?.generated_at,
+                  preview_fingerprint: previewAuditEvent.preview_fingerprint,
+                  audit_stage: previewAuditEvent.audit_stage,
+                  event: previewAuditEvent.event,
+                }}
+                emptyTitle=""
+                emptyDescription=""
+              />
+            ) : null}
+            {previewAuditStatus === "error" ? (
+              <InlineNotice
+                tone="warning"
+                title="Preview audit gagal direkam"
+                description={getOperatorValidationDetail(previewAuditError)?.message ?? (previewAuditError instanceof Error ? previewAuditError.message : "Preview audit request gagal.")}
+              />
+            ) : null}
           </Section>
         </div>
       </div>

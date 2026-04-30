@@ -144,5 +144,10 @@ class ManualTradeRiskCalcResponse(BaseModel):
     preview_payload: Dict[str, Any] = Field(default_factory=dict)
 
 
+class ManualTradePreviewAuditResponse(BaseModel):
+    generated_at: str
+    audit_event: Dict[str, Any] = Field(default_factory=dict)
+
+
 class OperatorValidationErrorResponse(BaseModel):
     detail: Dict[str, Any]

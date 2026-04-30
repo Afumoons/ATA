@@ -5,6 +5,8 @@ import importlib
 import pytest
 from fastapi.testclient import TestClient
 
+from autonomous_trading_ai.ui_api import adapters
+
 api_app = importlib.import_module("autonomous_trading_ai.ui_api.app")
 
 
@@ -257,6 +259,61 @@ def test_manual_trade_risk_calc_api_reports_missing_symbol_metadata(monkeypatch)
     assert data["code"] == "symbol_metadata_unavailable"
     assert data["field"] == "symbol"
     assert data["meta"]["symbol"] == "UNKNOWN"
+
+
+def test_manual_trade_preview_intent_api_records_audit_event(tmp_path, monkeypatch):
+    symbol_spec = {
+        "symbol": "XAUUSDm",
+        "symbol_canonical": "XAUUSDm",
+        "execution_symbol": "XAUUSDm",
+        "instrument_class": "metals",
+        "digits": 2,
+        "point_size": 0.01,
+        "tick_size": 0.01,
+        "tick_value": 1.0,
+        "contract_size": 100.0,
+        "min_lot": 0.01,
+        "lot_step": 0.01,
+        "max_lot": 100.0,
+    }
+    pool_audit_path = tmp_path / "pool_audit_trail.json"
+    pool_audit_path.write_text("[]", encoding="utf-8")
+
+    monkeypatch.setattr(api_app, "fetch_symbol_spec", lambda symbol: _snapshot(symbol_spec))
+    monkeypatch.setattr(api_app, "load_live_state_snapshot", lambda: {"equity_current": 10000.0})
+    monkeypatch.setattr(importlib.import_module("autonomous_trading_ai.execution.audit_utils"), "POOL_AUDIT_TRAIL_PATH", pool_audit_path)
+    monkeypatch.setattr(adapters, "POOL_AUDIT_TRAIL_PATH", pool_audit_path)
+    monkeypatch.setattr(adapters, "load_recent_trade_log", lambda limit=100: [])
+
+    response = client.post(
+        "/api/execution/manual-ticket/preview-intent",
+        json={
+            "symbol": "XAUUSDm",
+            "side": "buy",
+            "entry_price": 2300.0,
+            "risk_mode": "equity_pct",
+            "risk_value": 1.0,
+            "stop_loss_mode": "price",
+            "stop_loss_input": 2295.0,
+            "take_profit_mode": "price",
+            "take_profit_input": 2310.0,
+        },
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["audit_event"]["event"] == "manual_ticket_preview_intent"
+    assert data["audit_event"]["audit_stage"] == "preview_intent"
+    assert data["audit_event"]["order_origin"] == "manual_user"
+    assert data["audit_event"]["execution_origin"] == "operator_ui"
+    assert data["audit_event"]["is_manual"] is True
+    assert data["audit_event"]["exclude_from_strategy_eval"] is True
+    assert data["audit_event"]["preview_fingerprint"]
+
+    timeline = adapters.load_audit_timeline(limit=10)
+    preview_event = next(event for event in timeline["events"] if event.get("event") == "manual_ticket_preview_intent")
+    assert preview_event["event_origin"] == "manual_user"
+    assert preview_event["exclude_from_strategy_eval"] is True
 
 
 def _snapshot(spec: dict):
