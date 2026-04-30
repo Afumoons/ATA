@@ -141,9 +141,9 @@ Specification reference: `docs/manual-trade-ticket-spec.md`
 ---
 
 ## Phase T7 — Monitoring / UI Integration
-- [ ] Surface manual trades in execution views with explicit label
-- [ ] Add filters for manual vs autonomous trades
-- [ ] Add separate bucket or panel for manual trades
+- [x] Surface manual trades in execution views with explicit label
+- [x] Add filters for manual vs autonomous trades
+- [x] Add separate bucket or panel for manual trades
 - [ ] Add journal/reconciliation support for manual trade lifecycle
 - [ ] Add manual trade visibility in audit timeline
 

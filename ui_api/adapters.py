@@ -1742,10 +1742,13 @@ def _build_open_trade_drilldown(
     stale_update_count = 0
     floating_loss_count = 0
     total_floating_pnl = 0.0
+    manual_open_trade_count = 0
+    manual_net_floating_pnl = 0.0
 
     now = datetime.now(timezone.utc)
 
     for trade in trades:
+        is_manual = is_manual_trade_payload(trade)
         strategy_name = str(trade.get("strategy_name") or trade.get("comment") or "")
         symbol = str(trade.get("symbol") or "")
         normalized_symbol = _normalize_symbol_key(symbol)
@@ -1777,6 +1780,10 @@ def _build_open_trade_drilldown(
         if floating_pnl < 0:
             flags.append("floating_loss")
             floating_loss_count += 1
+        if is_manual:
+            flags.append("manual_user")
+            manual_open_trade_count += 1
+            manual_net_floating_pnl += floating_pnl
         if protection_status != "sl_tp":
             flags.append("incomplete_protection")
             incomplete_protection_count += 1
@@ -1806,11 +1813,14 @@ def _build_open_trade_drilldown(
                 "oldest_open_time": None,
                 "aged_trade_count": 0,
                 "floating_loss_count": 0,
+                "manual_open_trade_count": 0,
             },
         )
         symbol_bucket["open_trade_count"] += 1
         symbol_bucket["net_floating_pnl"] += floating_pnl
         symbol_bucket["total_volume"] += volume
+        if is_manual:
+            symbol_bucket["manual_open_trade_count"] += 1
         if strategy_name:
             symbol_bucket["strategies"].add(strategy_name)
         if age_minutes is not None and age_minutes >= 240:
@@ -1840,6 +1850,11 @@ def _build_open_trade_drilldown(
             "live_total_pnl": live_total_pnl,
             "live_num_trades": live_num_trades,
             "recent_realized_pnls": recent_pnls,
+            "is_manual": is_manual,
+            "order_origin": str(trade.get("order_origin") or ("manual_user" if is_manual else "autonomous_strategy")),
+            "origin_label": "Manual user" if is_manual else "Autonomous strategy",
+            "origin_tone": "warning" if is_manual else "info",
+            "exclude_from_strategy_eval": bool(trade.get("exclude_from_strategy_eval")) or is_manual,
             "operator_flags": flags,
         })
 
@@ -1862,6 +1877,7 @@ def _build_open_trade_drilldown(
             "oldest_age_minutes": oldest_age_minutes,
             "aged_trade_count": bucket["aged_trade_count"],
             "floating_loss_count": bucket["floating_loss_count"],
+            "manual_open_trade_count": bucket["manual_open_trade_count"],
         })
 
     by_symbol_rows.sort(key=lambda row: (abs(float(row["net_floating_pnl"])), int(row["open_trade_count"])), reverse=True)
@@ -1883,6 +1899,9 @@ def _build_open_trade_drilldown(
             "aged_trade_count": aged_trade_count,
             "stale_update_count": stale_update_count,
             "floating_loss_count": floating_loss_count,
+            "manual_open_trade_count": manual_open_trade_count,
+            "autonomous_open_trade_count": max(len(drilldown_rows) - manual_open_trade_count, 0),
+            "manual_net_floating_pnl": round(manual_net_floating_pnl, 2),
             "by_symbol": by_symbol_rows,
         },
         "drilldown": drilldown_rows,

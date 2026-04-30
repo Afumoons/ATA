@@ -199,3 +199,62 @@ def test_load_drift_summary_surfaces_manual_exclusion_counts(tmp_path, monkeypat
     assert payload["summary"]["manual_total_trades"] == 1
     assert payload["summary"]["manual_total_realized_pnl"] == -25.0
     assert "excluded" in payload["summary"]["manual_exclusion_note"]
+
+
+def test_open_trade_drilldown_marks_manual_positions_and_separates_counts():
+    drilldown = adapters._build_open_trade_drilldown(
+        [
+            {
+                "ticket": 101,
+                "symbol": "XAUUSDm",
+                "comment": "clio-manual-user",
+                "order_origin": "manual_user",
+                "volume": 0.1,
+                "profit": 12.5,
+                "open_price": 3200.0,
+                "sl": 3190.0,
+                "tp": 3220.0,
+                "open_time": "2026-04-30T16:00:00+00:00",
+                "last_update": "2026-04-30T16:05:00+00:00",
+                "side": "buy",
+            },
+            {
+                "ticket": 202,
+                "symbol": "BTCUSDm",
+                "strategy_name": "alpha_strategy",
+                "volume": 0.2,
+                "profit": -5.0,
+                "open_price": 95000.0,
+                "sl": 95500.0,
+                "tp": 94000.0,
+                "open_time": "2026-04-30T15:00:00+00:00",
+                "last_update": "2026-04-30T15:30:00+00:00",
+                "side": "sell",
+            },
+        ],
+        {
+            "strategies": {
+                "alpha_strategy": {
+                    "total_pnl": 50.0,
+                    "num_trades": 2,
+                    "recent_pnls": [20.0, 30.0],
+                }
+            }
+        },
+        [],
+    )
+
+    summary = drilldown["summary"]
+    rows = drilldown["drilldown"]
+    manual_row = next(row for row in rows if row["ticket"] == 101)
+    auto_row = next(row for row in rows if row["ticket"] == 202)
+
+    assert summary["manual_open_trade_count"] == 1
+    assert summary["autonomous_open_trade_count"] == 1
+    assert summary["manual_net_floating_pnl"] == 12.5
+    assert manual_row["is_manual"] is True
+    assert manual_row["order_origin"] == "manual_user"
+    assert manual_row["exclude_from_strategy_eval"] is True
+    assert "manual_user" in manual_row["operator_flags"]
+    assert auto_row["is_manual"] is False
+    assert auto_row["order_origin"] == "autonomous_strategy"

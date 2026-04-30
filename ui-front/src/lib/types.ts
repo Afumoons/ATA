@@ -36,6 +36,9 @@ export interface ExecutionSummaryResponse {
       aged_trade_count?: number;
       stale_update_count?: number;
       floating_loss_count?: number;
+      manual_open_trade_count?: number;
+      autonomous_open_trade_count?: number;
+      manual_net_floating_pnl?: number;
       by_symbol?: Array<Record<string, unknown>>;
     };
     drilldown?: Array<Record<string, unknown>>;

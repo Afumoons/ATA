@@ -1,11 +1,15 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import { PageHeader } from "@/components/app-shell";
 import {
   AttentionCard,
   DataTable,
   EmptyState,
   ErrorState,
+  FilterField,
+  FilterSelect,
+  FilterToolbar,
   FreshnessBadge,
   InlineNotice,
   KeyValueGrid,
@@ -122,7 +126,24 @@ function buildSymbolPosture(trades: Array<Record<string, unknown>>): {
   };
 }
 
+type OriginFilter = "all" | "manual" | "autonomous";
+
+function isManualOrigin(row: Record<string, unknown>) {
+  if (Boolean(row.is_manual)) return true;
+  const origin = String(row.order_origin ?? row.event_origin ?? "").toLowerCase();
+  if (origin === "manual_user") return true;
+  const comment = String(row.comment ?? row.raw ?? "").toLowerCase();
+  return comment.includes("clio-manual-user");
+}
+
+function matchesOriginFilter(row: Record<string, unknown>, filter: OriginFilter) {
+  if (filter === "all") return true;
+  const manual = isManualOrigin(row);
+  return filter === "manual" ? manual : !manual;
+}
+
 export default function ExecutionPage() {
+  const [originFilter, setOriginFilter] = useState<OriginFilter>("all");
   const executionQuery = useQuery("execution-summary", uiApi.executionSummary, { refetchIntervalMs: 45_000 });
   const auditQuery = useQuery("execution-audit-context", () => uiApi.auditTimeline(30), { refetchIntervalMs: 60_000 });
 
@@ -172,6 +193,25 @@ export default function ExecutionPage() {
     const source = String(event.source ?? "").toLowerCase();
     return source.includes("unmatched") || source.includes("trade");
   }).slice(0, 8);
+  const filteredOpenTradeLedger = useMemo(
+    () => (data.open_trades.trades ?? []).filter((trade) => matchesOriginFilter(trade as Record<string, unknown>, originFilter)),
+    [data.open_trades.trades, originFilter],
+  );
+  const filteredOpenTradeDrilldown = useMemo(
+    () => openTradeDrilldown.filter((trade) => matchesOriginFilter(trade as Record<string, unknown>, originFilter)),
+    [openTradeDrilldown, originFilter],
+  );
+  const manualLifecycleEvents = useMemo(
+    () => (auditQuery.data?.events ?? []).filter((event) => {
+      const source = String(event.source ?? "").toLowerCase();
+      const eventName = String(event.event ?? "").toLowerCase();
+      return isManualOrigin(event as Record<string, unknown>) && (source.includes("trade") || source.includes("unmatched") || eventName.includes("manual_ticket"));
+    }).slice(0, 10),
+    [auditQuery.data?.events],
+  );
+  const manualOpenTradeCount = Number(openTradeSummary.manual_open_trade_count ?? 0);
+  const autonomousOpenTradeCount = Number(openTradeSummary.autonomous_open_trade_count ?? Math.max(Number(data.open_trades.count ?? 0) - manualOpenTradeCount, 0));
+  const manualNetFloatingPnl = Number(openTradeSummary.manual_net_floating_pnl ?? 0);
 
   return (
     <div className="dashboard-stack">
@@ -510,16 +550,79 @@ export default function ExecutionPage() {
 
       <Section title="Recent attention events" description="Latest high-signal execution and audit events promoted near the top for operator triage.">
         <DataTable
-          columns={["Time", "Source", "Summary", "Symbol / PnL"]}
+          columns={["Time", "Source", "Origin", "Summary", "Symbol / PnL"]}
           rows={attentionEvents.map((event) => [
             formatDateTime(event.recorded_at ?? event.last_update ?? event.timestamp),
             compactValue(event.source),
+            <StatusBadge
+              key={`${compactValue(event.source)}-${compactValue(event.recorded_at ?? event.timestamp)}-origin`}
+              label={compactValue(event.event_origin_label ?? event.event_origin ?? "Unlabeled")}
+              tone={(event.event_origin_tone as "neutral" | "info" | "success" | "warning" | "critical") ?? "neutral"}
+            />,
             summarizeEvent(event),
             compactValue(event.symbol ?? event.profit ?? event.floating_pnl),
           ])}
           emptyTitle="No recent attention events"
           emptyDescription="The recent audit/runtime feed does not currently show unmatched-close or trade-log events that need promotion here."
         />
+      </Section>
+
+      <Section title="Manual trade monitoring bucket" description="Keep operator-initiated manual_user trades visible in execution without letting them blend into autonomous strategy attribution.">
+        <div className="dashboard-stack">
+          <section className="stats-grid">
+            <StatCard
+              label="Manual open trades"
+              value={formatNumber(manualOpenTradeCount)}
+              hint="Open positions explicitly tagged manual_user"
+              tone={manualOpenTradeCount > 0 ? "warning" : "neutral"}
+            />
+            <StatCard
+              label="Manual floating PnL"
+              value={formatCurrency(manualNetFloatingPnl)}
+              hint="Visible separately from autonomous strategy live stats"
+              tone={toneFromSignedNumber(manualNetFloatingPnl)}
+            />
+            <StatCard
+              label="Manual lifecycle events"
+              value={formatNumber(manualLifecycleEvents.length)}
+              hint="Preview, submit, execution-result, and manual reconciliation rows"
+              tone={manualLifecycleEvents.length > 0 ? "info" : "neutral"}
+            />
+            <StatCard
+              label="Autonomous open trades"
+              value={formatNumber(autonomousOpenTradeCount)}
+              hint="Remaining open positions that still belong to engine monitoring"
+              tone={autonomousOpenTradeCount > 0 ? "success" : "neutral"}
+            />
+          </section>
+
+          <InlineNotice
+            tone={manualOpenTradeCount > 0 || manualLifecycleEvents.length > 0 ? "warning" : "info"}
+            title="Manual bucket stays visible but excluded from strategy evaluation"
+            description="Every row in this bucket should stay marked manual_user, remain outside autonomous strategy attribution and research-live stats, and still be easy to reconcile from preview through broker response."
+          />
+
+          <DataTable
+            columns={["When", "Stage", "Symbol / ticket", "Status"]}
+            rows={manualLifecycleEvents.map((event) => [
+              formatDateTime(event.recorded_at ?? event.timestamp ?? event.last_update),
+              <div key={`${compactValue(event.event ?? event.source)}-${compactValue(event.recorded_at ?? event.timestamp)}-stage`} className="table-stack">
+                <strong>{compactValue(event.event ?? event.source)}</strong>
+                <span>{compactValue(event.source)}</span>
+              </div>,
+              <div key={`${compactValue(event.symbol)}-${compactValue(event.ticket ?? event.position_id)}-ticket`} className="table-stack">
+                <strong>{compactValue(event.symbol ?? "No symbol")}</strong>
+                <span>Ticket {compactValue(event.ticket ?? event.position_id ?? event.order ?? event.client_submission_id)}</span>
+              </div>,
+              <div key={`${compactValue(event.event ?? event.source)}-${compactValue(event.retcode ?? event.message)}-status`} className="table-stack">
+                <StatusBadge label={compactValue(event.event_origin_label ?? "Manual user")} tone="warning" />
+                <span>{compactValue(event.message ?? event.reason ?? event.retcode ?? "No status detail")}</span>
+              </div>,
+            ])}
+            emptyTitle="No recent manual lifecycle rows"
+            emptyDescription="The audit feed has not surfaced manual preview, submit, execution-result, or manual-bucket reconciliation rows in the current lookback window."
+          />
+        </div>
       </Section>
 
       <Section title="Top live strategies snapshot" description="Most active live strategies according to the execution summary.">
@@ -537,10 +640,24 @@ export default function ExecutionPage() {
         />
       </Section>
 
-      <Section title="Open trade ledger" description="Current open-trade records returned by the execution summary endpoint.">
+      <Section title="Open trade ledger" description="Current open-trade records returned by the execution summary endpoint, with explicit separation between manual_user and autonomous positions.">
+        <FilterToolbar>
+          <FilterField label="Origin filter">
+            <FilterSelect value={originFilter} onChange={(event) => setOriginFilter(event.target.value as OriginFilter)}>
+              <option value="all">All open trades</option>
+              <option value="manual">Manual only</option>
+              <option value="autonomous">Autonomous only</option>
+            </FilterSelect>
+          </FilterField>
+        </FilterToolbar>
         <DataTable
-          columns={["Symbol", "Side", "Volume", "Open time", "Floating PnL"]}
-          rows={(data.open_trades.trades ?? []).map((trade) => [
+          columns={["Origin", "Symbol", "Side", "Volume", "Open time", "Floating PnL"]}
+          rows={filteredOpenTradeLedger.map((trade) => [
+            <StatusBadge
+              key={`${compactValue(trade.ticket ?? trade.position_id)}-origin`}
+              label={isManualOrigin(trade as Record<string, unknown>) ? "Manual user" : "Autonomous"}
+              tone={isManualOrigin(trade as Record<string, unknown>) ? "warning" : "info"}
+            />,
             compactValue(trade.symbol),
             compactValue(trade.side ?? trade.direction),
             compactValue(trade.volume ?? trade.lots),
@@ -669,10 +786,15 @@ export default function ExecutionPage() {
         </div>
       </Section>
 
-      <Section title="Open trade drilldown" description="Per-position operator context including hold age, protection completeness, live strategy context, and flags that deserve review.">
+      <Section title="Open trade drilldown" description="Per-position operator context including explicit manual-user labeling, hold age, protection completeness, live strategy context, and flags that deserve review.">
         <DataTable
-          columns={["Strategy", "Position", "Live context", "Protection", "Flags"]}
-          rows={openTradeDrilldown.map((trade) => [
+          columns={["Origin", "Strategy", "Position", "Live context", "Protection", "Flags"]}
+          rows={filteredOpenTradeDrilldown.map((trade) => [
+            <div key={`${compactValue(trade.ticket)}-origin-badges`} className="table-stack">
+              <StatusBadge label={compactValue(trade.origin_label ?? (Boolean(trade.is_manual) ? "Manual user" : "Autonomous strategy"))} tone={(trade.origin_tone as "neutral" | "info" | "success" | "warning" | "critical") ?? "neutral"} />
+              <span>{compactValue(trade.order_origin ?? "autonomous_strategy")}</span>
+              {Boolean(trade.exclude_from_strategy_eval) ? <span>Excluded from strategy eval</span> : <span>Counts toward strategy live stats</span>}
+            </div>,
             <div key={`${compactValue(trade.ticket)}-strategy`} className="table-stack">
               <strong>{compactValue(trade.strategy_name ?? trade.comment)}</strong>
               <span>{compactValue(trade.symbol)}</span>
