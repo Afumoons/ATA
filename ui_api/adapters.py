@@ -10,14 +10,14 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 try:
     from ..execution.audit_utils import POOL_AUDIT_TRAIL_PATH, UNMATCHED_CLOSED_DEALS_PATH
     from ..execution.live_state_utils import LIVE_STATE_PATH
-    from ..execution.strategy_live_stats import STATS_PATH
+    from ..execution.strategy_live_stats import STATS_PATH, is_manual_strategy_bucket
     from ..strategies.base import StrategyDefinition
     from ..strategies.live_manifest import LIVE_MANIFEST_PATH, STRATEGY_INDEX_PATH, load_live_manifest, load_strategy_index
     from ..strategies.pool import POOL_STATE_PATH, load_pool, semantic_similarity, strategy_motif, summarize_status_counts
 except ImportError:
     from execution.audit_utils import POOL_AUDIT_TRAIL_PATH, UNMATCHED_CLOSED_DEALS_PATH
     from execution.live_state_utils import LIVE_STATE_PATH
-    from execution.strategy_live_stats import STATS_PATH
+    from execution.strategy_live_stats import STATS_PATH, is_manual_strategy_bucket
     from strategies.base import StrategyDefinition
     from strategies.live_manifest import LIVE_MANIFEST_PATH, STRATEGY_INDEX_PATH, load_live_manifest, load_strategy_index
     from strategies.pool import POOL_STATE_PATH, load_pool, semantic_similarity, strategy_motif, summarize_status_counts
@@ -1031,8 +1031,20 @@ def load_strategy_live_stats_snapshot() -> Dict[str, Any]:
     strategies = data.get("strategies") if isinstance(data, dict) else {}
     if not isinstance(strategies, dict):
         strategies = {}
-    total_pnl = sum(float((row or {}).get("total_pnl", 0.0) or 0.0) for row in strategies.values())
-    total_trades = sum(int((row or {}).get("num_trades", 0) or 0) for row in strategies.values())
+
+    autonomous_strategies = {
+        name: row
+        for name, row in strategies.items()
+        if not is_manual_strategy_bucket(name)
+    }
+    manual_buckets = {
+        name: row
+        for name, row in strategies.items()
+        if is_manual_strategy_bucket(name)
+    }
+
+    total_pnl = sum(float((row or {}).get("total_pnl", 0.0) or 0.0) for row in autonomous_strategies.values())
+    total_trades = sum(int((row or {}).get("num_trades", 0) or 0) for row in autonomous_strategies.values())
     ranked = sorted(
         (
             {
@@ -1042,17 +1054,23 @@ def load_strategy_live_stats_snapshot() -> Dict[str, Any]:
                 "last_update": (row or {}).get("last_update"),
                 "recent_pnls": list((row or {}).get("recent_pnls") or []),
             }
-            for name, row in strategies.items()
+            for name, row in autonomous_strategies.items()
         ),
         key=lambda row: (row["num_trades"], row["total_pnl"]),
         reverse=True,
     )
+    manual_total_pnl = sum(float((row or {}).get("total_pnl", 0.0) or 0.0) for row in manual_buckets.values())
+    manual_total_trades = sum(int((row or {}).get("num_trades", 0) or 0) for row in manual_buckets.values())
     return {
-        "strategy_count": len(strategies),
+        "strategy_count": len(autonomous_strategies),
         "total_realized_pnl": total_pnl,
         "total_trades": total_trades,
         "top_active": ranked[:10],
-        "strategies": strategies,
+        "strategies": autonomous_strategies,
+        "manual_bucket_count": len(manual_buckets),
+        "manual_total_realized_pnl": manual_total_pnl,
+        "manual_total_trades": manual_total_trades,
+        "manual_buckets": manual_buckets,
     }
 
 

@@ -34,6 +34,7 @@ from .models import (
     ReviewQueueResponse,
     StrategyDetailResponse,
 )
+from ..execution.manual_trade_identity import manual_trade_marker_payload
 from ..execution.manual_trade_risk import (
     ManualTradeRiskError,
     ManualTradeRiskRequest,
@@ -166,11 +167,7 @@ def api_execution_risk_calc(payload: ManualTradeRiskCalcRequest) -> ManualTradeR
             "stop_loss_input": payload.stop_loss_input,
             "take_profit_mode": payload.take_profit_mode,
             "take_profit_input": payload.take_profit_input,
-            "order_origin": "manual_user",
-            "execution_origin": "operator_ui",
-            "is_manual": True,
-            "exclude_from_strategy_eval": True,
-            "comment_tag": "clio-manual-user",
+            **manual_trade_marker_payload(),
             "warnings": list(result.warnings),
         },
     )

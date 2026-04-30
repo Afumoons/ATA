@@ -102,16 +102,16 @@ Specification reference: `docs/manual-trade-ticket-spec.md`
 ---
 
 ## Phase T4 — Manual Trade Identity / Segregation Layer
-- [ ] Define dedicated manual trade marker strategy
-- [ ] Add MT5/comment tag
-  - [ ] `clio-manual-user`
+- [x] Define dedicated manual trade marker strategy
+- [x] Add MT5/comment tag
+  - [x] `clio-manual-user`
 - [ ] Add dedicated magic number or execution origin marker if supported
-- [ ] Add internal fields
-  - [ ] `order_origin = manual_user`
-  - [ ] `execution_origin = operator_ui`
-  - [ ] `is_manual = true`
-  - [ ] `exclude_from_strategy_eval = true`
-- [ ] Ensure manual trades do not pollute strategy live stats
+- [x] Add internal fields
+  - [x] `order_origin = manual_user`
+  - [x] `execution_origin = operator_ui`
+  - [x] `is_manual = true`
+  - [x] `exclude_from_strategy_eval = true`
+- [x] Ensure manual trades do not pollute strategy live stats
 - [ ] Ensure manual trades do not pollute research attribution
 - [ ] Ensure drift/audit views can distinguish manual vs autonomous trades
 - [ ] Add audit trail entries for manual ticket creation and execution
