@@ -3302,6 +3302,33 @@ def _annotate_audit_event_origin(event: Dict[str, Any]) -> Dict[str, Any]:
     annotated["event_origin_tone"] = tone
     if is_manual:
         annotated["exclude_from_strategy_eval"] = True
+        stage = str(annotated.get("audit_stage") or "").strip().lower()
+        if stage == "preview_intent":
+            annotated["manual_lifecycle_stage"] = "preview_intent"
+            annotated["manual_lifecycle_label"] = "Preview intent"
+            annotated["manual_lifecycle_tone"] = "info"
+        elif stage == "submit_intent":
+            annotated["manual_lifecycle_stage"] = "submit_intent"
+            annotated["manual_lifecycle_label"] = "Submit intent"
+            annotated["manual_lifecycle_tone"] = "warning"
+        elif stage == "execution_result":
+            submit_status = str(annotated.get("submit_status") or "").strip().lower()
+            lifecycle_tone = "success" if submit_status in {"submitted", "placed", "filled", "done", "success", "ok"} else "critical"
+            annotated["manual_lifecycle_stage"] = "execution_result"
+            annotated["manual_lifecycle_label"] = "Broker result"
+            annotated["manual_lifecycle_tone"] = lifecycle_tone
+        elif source == "unmatched_closed_deal" or annotated.get("manual_bucket"):
+            annotated["manual_lifecycle_stage"] = "reconciliation_gap"
+            annotated["manual_lifecycle_label"] = "Reconciliation gap"
+            annotated["manual_lifecycle_tone"] = "critical"
+        elif source == "trades_log":
+            annotated["manual_lifecycle_stage"] = "trade_log_activity"
+            annotated["manual_lifecycle_label"] = "Trade log activity"
+            annotated["manual_lifecycle_tone"] = "info"
+        else:
+            annotated["manual_lifecycle_stage"] = "manual_activity"
+            annotated["manual_lifecycle_label"] = "Manual activity"
+            annotated["manual_lifecycle_tone"] = "warning"
     return annotated
 
 

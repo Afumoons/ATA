@@ -86,6 +86,8 @@ function AuditPageContent() {
   const auditUrlDefaults = useMemo(
     () => ({
       source: "all",
+      origin: "all",
+      lifecycle: "all",
       strategy: "all",
       symbol: "all",
       range: "24h",
@@ -97,6 +99,8 @@ function AuditPageContent() {
   );
   const { state: auditUrlState, setState: setAuditUrlState } = useUrlState(auditUrlDefaults);
   const sourceFilter = auditUrlState.source;
+  const originFilter = auditUrlState.origin;
+  const lifecycleFilter = auditUrlState.lifecycle;
   const strategyFilter = auditUrlState.strategy;
   const symbolFilter = auditUrlState.symbol;
   const dateRange = auditUrlState.range as (typeof DATE_RANGE_OPTIONS)[number]["value"];
@@ -113,6 +117,8 @@ function AuditPageContent() {
   const events = data?.events ?? EMPTY_EVENTS;
 
   const sourceOptions = Array.from(new Set(events.map((event) => String(event.source ?? "event")))).sort();
+  const originOptions = Array.from(new Set(events.map((event) => String(event.event_origin ?? "")).filter(Boolean))).sort();
+  const lifecycleOptions = Array.from(new Set(events.map((event) => String(event.manual_lifecycle_stage ?? "")).filter(Boolean))).sort();
   const strategyOptions = Array.from(new Set(events.map((event) => getEventStrategyName(event)).filter(Boolean) as string[])).sort();
   const symbolOptions = Array.from(new Set(events.map((event) => getEventSymbol(event)).filter(Boolean) as string[])).sort();
 
@@ -120,6 +126,8 @@ function AuditPageContent() {
     const cutoff = dateRangeCutoff(dateRange);
     return events.filter((event) => {
       const source = String(event.source ?? "event");
+      const origin = String(event.event_origin ?? "");
+      const lifecycle = String(event.manual_lifecycle_stage ?? "");
       const strategy = getEventStrategyName(event) ?? "";
       const symbol = getEventSymbol(event) ?? "";
       const timestamp = getEventTimestamp(event);
@@ -134,6 +142,8 @@ function AuditPageContent() {
       if (preset === "execution" && !String(event.source ?? "").toLowerCase().includes("trade")) return false;
       if (preset === "pool" && !String(event.source ?? "").toLowerCase().includes("pool")) return false;
       if (sourceFilter !== "all" && source !== sourceFilter) return false;
+      if (originFilter !== "all" && origin !== originFilter) return false;
+      if (lifecycleFilter !== "all" && lifecycle !== lifecycleFilter) return false;
       if (strategyFilter !== "all" && strategy !== strategyFilter) return false;
       if (symbolFilter !== "all" && symbol !== symbolFilter) return false;
       if (cutoff != null) {
@@ -142,11 +152,13 @@ function AuditPageContent() {
       }
       return true;
     });
-  }, [dateRange, events, preset, sourceFilter, strategyFilter, symbolFilter]);
+  }, [dateRange, events, lifecycleFilter, originFilter, preset, sourceFilter, strategyFilter, symbolFilter]);
 
   const auditSummary = useMemo(() => {
     const toneCounts = new Map<StatusTone, number>();
     const sourceCounts = new Map<string, number>();
+    const originCounts = new Map<string, number>();
+    const manualLifecycleCounts = new Map<string, number>();
     const strategyCounts = new Map<string, number>();
     const symbolCounts = new Map<string, number>();
     const sortedEvents = [...filteredEvents].sort((left, right) => {
@@ -161,6 +173,12 @@ function AuditPageContent() {
 
       const source = String(event.source ?? "event");
       sourceCounts.set(source, (sourceCounts.get(source) ?? 0) + 1);
+
+      const origin = String(event.event_origin ?? "");
+      if (origin) originCounts.set(origin, (originCounts.get(origin) ?? 0) + 1);
+
+      const lifecycle = String(event.manual_lifecycle_stage ?? "");
+      if (lifecycle) manualLifecycleCounts.set(lifecycle, (manualLifecycleCounts.get(lifecycle) ?? 0) + 1);
 
       const strategy = getEventStrategyName(event);
       if (strategy) strategyCounts.set(strategy, (strategyCounts.get(strategy) ?? 0) + 1);
@@ -180,6 +198,8 @@ function AuditPageContent() {
       highestTone,
       toneCounts,
       topSources: getTopEntries(sourceCounts),
+      topOrigins: getTopEntries(originCounts),
+      topManualLifecycleStages: getTopEntries(manualLifecycleCounts),
       topStrategies: getTopEntries(strategyCounts),
       topSymbols: getTopEntries(symbolCounts),
     };
@@ -197,6 +217,7 @@ function AuditPageContent() {
   const criticalCount = auditSummary.toneCounts.get("critical") ?? 0;
   const warningCount = auditSummary.toneCounts.get("warning") ?? 0;
   const infoCount = auditSummary.toneCounts.get("info") ?? 0;
+  const manualVisibleCount = filteredEvents.filter((event) => Boolean(event.is_manual)).length;
   const latestAttentionEvent = auditSummary.latestAttentionEvent;
   const latestEvent = auditSummary.latestEvent;
 
@@ -219,6 +240,7 @@ function AuditPageContent() {
       <section className="stats-grid">
         <StatCard label="Events" value={formatNumber(data.events.length)} hint="Timeline records returned" tone="info" />
         <StatCard label="Visible" value={formatNumber(filteredEvents.length)} hint="Rows after filters" tone="success" />
+        <StatCard label="Manual rows" value={formatNumber(manualVisibleCount)} hint="manual_user rows visible in current lens" tone={manualVisibleCount ? "warning" : "neutral"} />
         <StatCard label="Priority rows" value={formatNumber(criticalCount + warningCount)} hint="Critical + warning events in lens" tone={criticalCount ? "critical" : warningCount ? "warning" : "neutral"} />
         <StatCard label="Lens" value={presetMeta.label} hint={DATE_RANGE_OPTIONS.find((option) => option.value === dateRange)?.label ?? "Current range"} tone={auditSummary.highestTone} />
       </section>
@@ -249,6 +271,28 @@ function AuditPageContent() {
               {sourceOptions.map((source) => (
                 <option key={source} value={source}>
                   {source}
+                </option>
+              ))}
+            </FilterSelect>
+          </FilterField>
+
+          <FilterField label="Origin">
+            <FilterSelect value={originFilter} onChange={(event) => setAuditUrlState({ origin: event.target.value })}>
+              <option value="all">All origins</option>
+              {originOptions.map((origin) => (
+                <option key={origin} value={origin}>
+                  {prettifyKey(origin)}
+                </option>
+              ))}
+            </FilterSelect>
+          </FilterField>
+
+          <FilterField label="Manual stage">
+            <FilterSelect value={lifecycleFilter} onChange={(event) => setAuditUrlState({ lifecycle: event.target.value })}>
+              <option value="all">All stages</option>
+              {lifecycleOptions.map((lifecycle) => (
+                <option key={lifecycle} value={lifecycle}>
+                  {prettifyKey(lifecycle)}
                 </option>
               ))}
             </FilterSelect>
@@ -312,7 +356,7 @@ function AuditPageContent() {
             ]}
             footer={
               <span>
-                Filters: {sourceFilter === "all" ? "all sources" : sourceFilter}, {strategyFilter === "all" ? "all strategies" : truncateMiddle(strategyFilter, 36)}, {symbolFilter === "all" ? "all symbols" : symbolFilter}.
+                Filters: {sourceFilter === "all" ? "all sources" : sourceFilter}, {originFilter === "all" ? "all origins" : prettifyKey(originFilter)}, {lifecycleFilter === "all" ? "all manual stages" : prettifyKey(lifecycleFilter)}, {strategyFilter === "all" ? "all strategies" : truncateMiddle(strategyFilter, 36)}, {symbolFilter === "all" ? "all symbols" : symbolFilter}.
               </span>
             }
           />
@@ -376,6 +420,22 @@ function AuditPageContent() {
             description="Which event source is dominating this lens right now."
             tone={auditSummary.topSources[0] ? "info" : "neutral"}
             metrics={auditSummary.topSources.map(([label, count]) => ({ label: prettifyKey(label), value: formatNumber(count) }))}
+          />
+
+          <InsightCard
+            eyebrow="Origin split"
+            title={auditSummary.topOrigins[0] ? prettifyKey(auditSummary.topOrigins[0][0]) : "No origin split yet"}
+            description="Use origin filtering to separate manual_user evidence from autonomous strategy and execution audit flow."
+            tone={auditSummary.topOrigins[0]?.[0] === "manual_user" ? "warning" : auditSummary.topOrigins[0] ? "info" : "neutral"}
+            metrics={auditSummary.topOrigins.map(([label, count]) => ({ label: prettifyKey(label), value: formatNumber(count) }))}
+          />
+
+          <InsightCard
+            eyebrow="Manual lifecycle"
+            title={auditSummary.topManualLifecycleStages[0] ? prettifyKey(auditSummary.topManualLifecycleStages[0][0]) : "No manual lifecycle rows in current lens"}
+            description="When manual_user rows appear, this shows whether the ticket is still at preview, submit, broker result, or reconciliation-gap stage."
+            tone={auditSummary.topManualLifecycleStages[0]?.[0] === "reconciliation_gap" ? "critical" : auditSummary.topManualLifecycleStages[0] ? "warning" : "neutral"}
+            metrics={auditSummary.topManualLifecycleStages.map(([label, count]) => ({ label: prettifyKey(label), value: formatNumber(count) }))}
           />
 
           <InsightCard

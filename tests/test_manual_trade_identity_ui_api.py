@@ -120,6 +120,52 @@ def test_load_audit_timeline_marks_manual_bucket_events(tmp_path, monkeypatch):
     assert event["event_origin"] == "manual_user"
     assert event["event_origin_label"] == "Manual user"
     assert event["exclude_from_strategy_eval"] is True
+    assert event["manual_lifecycle_stage"] == "reconciliation_gap"
+    assert event["manual_lifecycle_label"] == "Reconciliation gap"
+
+
+def test_load_audit_timeline_marks_manual_ticket_lifecycle_stages(tmp_path, monkeypatch):
+    pool_audit_path = tmp_path / "pool_audit_trail.json"
+    pool_audit_path.write_text(
+        json.dumps(
+            [
+                {
+                    "recorded_at": "2026-04-30T16:10:00+00:00",
+                    "event": "manual_ticket_preview_intent",
+                    "audit_stage": "preview_intent",
+                    **manual_trade_marker_payload(),
+                },
+                {
+                    "recorded_at": "2026-04-30T16:11:00+00:00",
+                    "event": "manual_ticket_submit_intent",
+                    "audit_stage": "submit_intent",
+                    **manual_trade_marker_payload(),
+                },
+                {
+                    "recorded_at": "2026-04-30T16:12:00+00:00",
+                    "event": "manual_ticket_execution_result",
+                    "audit_stage": "execution_result",
+                    "submit_status": "submitted",
+                    **manual_trade_marker_payload(),
+                },
+            ]
+        ),
+        encoding="utf-8",
+    )
+    unmatched_path = tmp_path / "unmatched_closed_deals.json"
+    unmatched_path.write_text("[]", encoding="utf-8")
+
+    monkeypatch.setattr(adapters, "POOL_AUDIT_TRAIL_PATH", pool_audit_path)
+    monkeypatch.setattr(adapters, "UNMATCHED_CLOSED_DEALS_PATH", unmatched_path)
+    monkeypatch.setattr(adapters, "load_recent_trade_log", lambda limit=100: [])
+
+    payload = adapters.load_audit_timeline(limit=20)
+
+    events_by_name = {str(event.get("event")): event for event in payload["events"]}
+    assert events_by_name["manual_ticket_preview_intent"]["manual_lifecycle_stage"] == "preview_intent"
+    assert events_by_name["manual_ticket_submit_intent"]["manual_lifecycle_stage"] == "submit_intent"
+    assert events_by_name["manual_ticket_execution_result"]["manual_lifecycle_stage"] == "execution_result"
+    assert events_by_name["manual_ticket_execution_result"]["manual_lifecycle_tone"] == "success"
 
 
 def test_load_pool_summary_payload_excludes_manual_buckets_from_family_attribution(tmp_path, monkeypatch):

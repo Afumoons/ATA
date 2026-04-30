@@ -145,7 +145,7 @@ Specification reference: `docs/manual-trade-ticket-spec.md`
 - [x] Add filters for manual vs autonomous trades
 - [x] Add separate bucket or panel for manual trades
 - [ ] Add journal/reconciliation support for manual trade lifecycle
-- [ ] Add manual trade visibility in audit timeline
+- [x] Add manual trade visibility in audit timeline
 
 ---
 
