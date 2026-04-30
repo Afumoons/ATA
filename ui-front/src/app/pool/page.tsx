@@ -7,6 +7,7 @@ import {
   EmptyState,
   ErrorState,
   FreshnessBadge,
+  InsightCard,
   KeyValueGrid,
   LoadingState,
   Section,
@@ -252,6 +253,18 @@ export default function PoolPage() {
 
   const tierOptions = Array.from(new Set(strategyRows.map((row) => String(row.tier ?? "unknown")))).sort();
   const familyCompareRows = familyComparisonRows(data);
+  const familyCountEntries = Object.entries(data.family_counts ?? {}).sort((left, right) => Number(right[1] ?? 0) - Number(left[1] ?? 0));
+  const symbolCountEntries = Object.entries(data.symbol_counts ?? {}).sort((left, right) => Number(right[1] ?? 0) - Number(left[1] ?? 0));
+  const slotRows = [...data.by_slot].sort((left, right) => right.count - left.count);
+  const dominantFamily = familyCountEntries[0];
+  const secondFamily = familyCountEntries[1];
+  const dominantSymbol = symbolCountEntries[0];
+  const secondSymbol = symbolCountEntries[1];
+  const dominantSlot = slotRows[0];
+  const activeStatusCount = Number(data.status_counts?.active ?? 0);
+  const disabledStatusCount = Number(data.status_counts?.disabled ?? 0);
+  const dominantFamilyShare = data.total > 0 && dominantFamily ? Number(dominantFamily[1] ?? 0) / data.total : 0;
+  const dominantSymbolShare = data.total > 0 && dominantSymbol ? Number(dominantSymbol[1] ?? 0) / data.total : 0;
   const familyCompareSummary = coerceRecord(data.family_comparison?.summary);
   const strongestResearchFamily = coerceRecord(familyCompareSummary.strongest_research_family);
   const strongestLiveFamily = coerceRecord(familyCompareSummary.strongest_live_family);
@@ -286,6 +299,75 @@ export default function PoolPage() {
         <StatCard label="Status buckets" value={formatNumber(Object.keys(data.status_counts).length)} hint="Current pool status families" tone="warning" />
       </section>
 
+      <Section title="Pool posture dossier" description="A faster read on whether the inventory is balanced across statuses, families, symbols, and slots before you dive into the raw ledgers.">
+        <div className="insight-grid">
+          <InsightCard
+            eyebrow="Workflow mix"
+            title={`${formatNumber(activeStatusCount)} active, ${formatNumber(disabledStatusCount)} disabled`}
+            description="Status distribution shows whether the pool is still deployable or quietly drifting into parked inventory and candidate backlog."
+            tone={disabledStatusCount > activeStatusCount ? "warning" : activeStatusCount > 0 ? "success" : "critical"}
+            badges={
+              <>
+                <StatusBadge label={`${formatNumber(Object.keys(data.status_counts ?? {}).length)} status lanes`} tone="info" />
+                <StatusBadge label={`${formatNumber(data.top_strategies.length)} surfaced leaders`} tone="neutral" />
+              </>
+            }
+            metrics={[
+              { label: "Candidate", value: formatNumber(Number(data.status_counts?.candidate ?? 0)) },
+              { label: "Exploratory", value: formatNumber(Number(data.status_counts?.exploratory ?? 0)) },
+              { label: "Disabled/active", value: activeStatusCount > 0 ? `${formatNumber(disabledStatusCount / activeStatusCount)}x` : "No baseline" },
+              { label: "Distinct slots", value: formatNumber(data.by_slot.length) },
+            ]}
+            footer={<p>{disabledStatusCount > activeStatusCount ? "Parked inventory is outweighing active inventory, so pruning or promotion flow likely deserves attention." : "Active inventory still outweighs parked inventory, so the pool remains shaped more like a deployment surface than a graveyard."}</p>}
+          />
+
+          <InsightCard
+            eyebrow="Family concentration"
+            title={dominantFamily ? compactValue(dominantFamily[0]) : "No family mix"}
+            description="The top family defines how much of the pool is really diversified versus repeated inside one research lineage."
+            tone={dominantFamilyShare >= 0.45 ? "warning" : dominantFamilyShare >= 0.3 ? "info" : "success"}
+            badges={dominantFamily ? <StatusBadge label={`${formatPercent(dominantFamilyShare)} of pool`} tone={dominantFamilyShare >= 0.45 ? "warning" : dominantFamilyShare >= 0.3 ? "info" : "success"} /> : null}
+            metrics={[
+              { label: "Top family count", value: formatNumber(Number(dominantFamily?.[1] ?? 0)) },
+              { label: "Runner-up", value: secondFamily ? `${secondFamily[0]} (${formatNumber(Number(secondFamily[1] ?? 0))})` : "None" },
+              { label: "Distinct families", value: formatNumber(familyCountEntries.length) },
+              { label: "Family spread", value: familyCountEntries.length >= 4 ? "Broad" : familyCountEntries.length >= 2 ? "Narrow" : "Single-lineage" },
+            ]}
+            footer={<p>{dominantFamily ? `${dominantFamily[0]} is the biggest lineage in the current pool. Compare it against the family scoreboard below before assuming inventory breadth equals idea breadth.` : "Family concentration data is unavailable in this snapshot."}</p>}
+          />
+
+          <InsightCard
+            eyebrow="Symbol concentration"
+            title={dominantSymbol ? compactValue(dominantSymbol[0]) : "No symbol mix"}
+            description="Symbol skew tells you where exposure and research attention are clustering, even before execution or governance pages add more context."
+            tone={dominantSymbolShare >= 0.45 ? "warning" : dominantSymbolShare >= 0.3 ? "info" : "success"}
+            badges={dominantSymbol ? <StatusBadge label={`${formatPercent(dominantSymbolShare)} of pool`} tone={dominantSymbolShare >= 0.45 ? "warning" : dominantSymbolShare >= 0.3 ? "info" : "success"} /> : null}
+            metrics={[
+              { label: "Top symbol count", value: formatNumber(Number(dominantSymbol?.[1] ?? 0)) },
+              { label: "Runner-up", value: secondSymbol ? `${secondSymbol[0]} (${formatNumber(Number(secondSymbol[1] ?? 0))})` : "None" },
+              { label: "Distinct symbols", value: formatNumber(symbolCountEntries.length) },
+              { label: "Explorer visible", value: formatNumber(filteredStrategies.length) },
+            ]}
+            footer={<p>{dominantSymbol ? `${dominantSymbol[0]} is carrying the heaviest inventory load right now, so any family concentration inside that symbol compounds slot-level exposure.` : "Symbol concentration data is unavailable in this snapshot."}</p>}
+          />
+
+          <InsightCard
+            eyebrow="Slot pressure"
+            title={dominantSlot ? `${dominantSlot.symbol} ${dominantSlot.timeframe}` : "No slot rows"}
+            description="Slot distribution makes repeated symbol and timeframe clustering obvious before you inspect single strategies one by one."
+            tone={dominantSlot && dominantSlot.count >= 4 ? "warning" : dominantSlot ? "info" : "neutral"}
+            badges={dominantSlot ? <StatusBadge label={`${formatNumber(dominantSlot.count)} strategies`} tone={dominantSlot.count >= 4 ? "warning" : "info"} /> : null}
+            metrics={[
+              { label: "Top slot", value: dominantSlot ? `${dominantSlot.symbol} / ${dominantSlot.timeframe}` : "None" },
+              { label: "Second slot", value: slotRows[1] ? `${slotRows[1].symbol} / ${slotRows[1].timeframe}` : "None" },
+              { label: "Top-3 slot load", value: formatNumber(slotRows.slice(0, 3).reduce((sum, slot) => sum + slot.count, 0)) },
+              { label: "Distinct slots", value: formatNumber(slotRows.length) },
+            ]}
+            footer={<p>{dominantSlot ? `The heaviest slot is ${dominantSlot.symbol} ${dominantSlot.timeframe}. Use the explorer and compare views below to check whether that density represents genuine variation or slot-level clones.` : "Slot distribution data is unavailable in this snapshot."}</p>}
+          />
+        </div>
+      </Section>
+
       <Section title="Pool status counts" description="How current pool inventory is distributed across workflow states.">
         {Object.keys(data.status_counts ?? {}).length ? (
           <KeyValueGrid data={data.status_counts} />
@@ -295,18 +377,18 @@ export default function PoolPage() {
       </Section>
 
       <div className="detail-grid-2">
-        <Section title="Family concentration" description="Which strategy families dominate the current pool.">
+        <Section title="Family concentration ledger" description="Raw family counts stay visible here after the operator dossier above frames the dominant lineage story.">
           <KeyValueGrid data={data.family_counts ?? {}} emptyTitle="No family mix" emptyDescription="Family concentration was not returned by the backend." />
         </Section>
-        <Section title="Symbol concentration" description="How inventory is split across tradable symbols.">
+        <Section title="Symbol concentration ledger" description="Raw symbol counts for the same inventory, kept as a ledger after the higher-level concentration read.">
           <KeyValueGrid data={data.symbol_counts ?? {}} emptyTitle="No symbol mix" emptyDescription="Symbol concentration was not returned by the backend." />
         </Section>
       </div>
 
-      <Section title="Slot distribution" description="Volume concentration by symbol and timeframe.">
+      <Section title="Slot distribution ledger" description="Volume concentration by symbol and timeframe, kept sortable as the raw ledger below the slot-pressure dossier.">
         <DataTable
           columns={["Symbol", "Timeframe", "Count"]}
-          rows={data.by_slot.map((slot) => [slot.symbol, slot.timeframe, formatNumber(slot.count)])}
+          rows={slotRows.map((slot) => [slot.symbol, slot.timeframe, formatNumber(slot.count)])}
           emptyTitle="No slot distribution"
           emptyDescription="No symbol/timeframe distribution was returned for the pool snapshot."
         />

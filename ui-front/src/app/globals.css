@@ -266,10 +266,18 @@ pre {
   gap: 14px;
 }
 
-.attention-grid {
+.attention-grid,
+.insight-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 14px;
+}
+
+.attention-grid {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.insight-grid {
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
 }
 
 .execution-posture-grid {
@@ -866,41 +874,75 @@ pre {
   background: linear-gradient(180deg, var(--panel-strong), var(--panel-soft));
 }
 
-.attention-card {
+.attention-card,
+.insight-card {
   position: relative;
   display: flex;
-  min-height: 168px;
   flex-direction: column;
-  gap: 12px;
-  justify-content: space-between;
   overflow: hidden;
-  padding: 18px;
-  border-radius: 20px;
   border: 1px solid var(--line-strong);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01));
   box-shadow: var(--shadow);
 }
 
-.attention-card::after {
+.attention-card {
+  min-height: 168px;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 18px;
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01));
+}
+
+.attention-card::after,
+.insight-card::after {
   content: "";
   position: absolute;
-  inset: auto -36px -48px auto;
-  width: 132px;
-  height: 132px;
   border-radius: 999px;
   background: radial-gradient(circle, currentColor 0%, transparent 72%);
   opacity: 0.14;
   pointer-events: none;
 }
 
-.attention-card-topline {
+.attention-card::after {
+  inset: auto -36px -48px auto;
+  width: 132px;
+  height: 132px;
+}
+
+.insight-card {
+  min-height: 248px;
+  gap: 18px;
+  padding: 20px;
+  border-radius: 24px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.015)),
+    linear-gradient(135deg, rgba(76, 139, 245, 0.12), rgba(17, 22, 29, 0.14));
+}
+
+.insight-card::after {
+  inset: auto -52px -70px auto;
+  width: 168px;
+  height: 168px;
+}
+
+.attention-card-topline,
+.insight-card-header,
+.insight-card-badges,
+.insight-card-footer {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
   gap: 12px;
 }
 
-.attention-card-label {
+.attention-card-topline,
+.insight-card-header,
+.insight-card-footer {
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.attention-card-label,
+.insight-card-eyebrow,
+.insight-card-metrics span {
   color: var(--text-muted);
   font-family: var(--font-mono);
   font-size: 0.74rem;
@@ -917,12 +959,65 @@ pre {
   color: var(--text);
 }
 
-.attention-card p {
+.attention-card p,
+.insight-card-heading p,
+.insight-card-footer p {
   position: relative;
   z-index: 1;
   margin: 0;
   color: var(--text-muted);
   line-height: 1.55;
+}
+
+.insight-card-heading {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.insight-card-heading strong {
+  position: relative;
+  z-index: 1;
+  font-size: 1.34rem;
+  line-height: 1.1;
+  letter-spacing: -0.05em;
+}
+
+.insight-card-badges {
+  position: relative;
+  z-index: 1;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.insight-card-metrics {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.insight-card-metrics div {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.insight-card-metrics strong {
+  color: var(--text);
+  line-height: 1.4;
+}
+
+.insight-card-footer {
+  position: relative;
+  z-index: 1;
+  flex-wrap: wrap;
 }
 
 .stat-label,
@@ -1405,6 +1500,7 @@ table td:first-child,
   }
 
   .review-dossier-metrics,
+  .insight-card-metrics,
   .filter-toolbar,
   .timeline-grid,
   .kv-grid,
@@ -1471,6 +1567,7 @@ table td:first-child,
   .status-strip,
   .stats-grid,
   .review-dossier-metrics,
+  .insight-card-metrics,
   .filter-toolbar,
   .timeline-grid,
   .kv-grid,

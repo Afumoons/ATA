@@ -92,3 +92,6 @@
 - Added a U7B empty-state/operator-meaning pass by upgrading the shared EmptyState treatment with tone, operator-meaning, and next-read guidance blocks, then applying it on Research, Governance, Manifest, and Pool where passive empty reads were still too quiet.
 - Verified the U7B empty-state/operator-meaning slice with a production `npm run build` in `ui-front`.
 - Marked the roadmap empty-state/operator-meaning item complete; next slice is continuing U7B with cross-page spacing/scannability consistency and restrained emphasis/transitions.
+- Added a shared InsightCard treatment plus a Pool-page hierarchy/scannability pass, turning the top of `/pool` into operator dossiers for workflow mix, family concentration, symbol concentration, and slot pressure before the raw ledgers.
+- Verified the Pool-page hierarchy/scannability slice with a production `npm run build` in `ui-front`.
+- Updated roadmap/notes to reflect that Review, Execution, Drift, and Pool now have dedicated hierarchy passes; next slice is Overview/Manifest consistency and remaining responsive polish.

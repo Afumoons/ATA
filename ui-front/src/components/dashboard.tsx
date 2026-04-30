@@ -152,6 +152,48 @@ export function AttentionCard({
   );
 }
 
+export function InsightCard({
+  eyebrow,
+  title,
+  description,
+  tone = "neutral",
+  badges,
+  metrics,
+  footer,
+}: {
+  eyebrow: string;
+  title: ReactNode;
+  description: string;
+  tone?: StatusTone;
+  badges?: ReactNode;
+  metrics?: Array<{ label: string; value: ReactNode }>;
+  footer?: ReactNode;
+}) {
+  return (
+    <Card className={cn("insight-card", `tone-${tone}`)}>
+      <div className="insight-card-header">
+        <div className="insight-card-heading">
+          <span className="insight-card-eyebrow">{eyebrow}</span>
+          <strong>{title}</strong>
+          <p>{description}</p>
+        </div>
+        {badges ? <div className="insight-card-badges">{badges}</div> : null}
+      </div>
+      {metrics?.length ? (
+        <div className="insight-card-metrics">
+          {metrics.map((metric) => (
+            <div key={`${metric.label}-${String(metric.value)}`}>
+              <span>{metric.label}</span>
+              <strong>{metric.value}</strong>
+            </div>
+          ))}
+        </div>
+      ) : null}
+      {footer ? <div className="insight-card-footer">{footer}</div> : null}
+    </Card>
+  );
+}
+
 export function DataTable({
   columns,
   rows,

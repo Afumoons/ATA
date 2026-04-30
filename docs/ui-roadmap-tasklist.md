@@ -158,7 +158,7 @@ Transform the current Operator UI from a read-only monitoring surface into a dec
 - [x] Add better visual grouping of operator attention items
 - [ ] Reduce generic table feel on key pages
 - [ ] Add more expressive badges / severity color language
-- Note: Review, Execution, and Drift now have dedicated hierarchy/dossier passes, but the roadmap item stays open until the same polish is consistent across the remaining dense pages.
+- Note: Review, Execution, Drift, and Pool now have dedicated hierarchy/dossier passes, but the roadmap item stays open until the same polish is consistent across the remaining dense pages.
 
 ### U7B — Frontend design pass
 - [ ] Apply cohesive design system direction across pages
