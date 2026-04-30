@@ -123,3 +123,8 @@ For each autonomous run:
 - U6B is now intentionally closed for this roadmap: no write-adjacent operator controls were added, and any future simulation/proposal work should begin as a separate approved roadmap
 - User explicitly wants progress reports, not approval questions
 - This background UI roadmap workstream is complete and should be stopped/removed by the scheduler after this final clean commit
+
+## Parallel Track — Manual Trade Ticket
+- Manual trade ticket scope is documented in `docs/manual-trade-ticket-tasklist.md`
+- This track must support risk-based lot sizing, market/pending entries, SL/TP by pips or price, and explicit manual-user trade tagging
+- Manual trades must be excluded from autonomous strategy attribution and strategy live/research evaluation paths
