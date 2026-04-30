@@ -154,7 +154,7 @@ Specification reference: `docs/manual-trade-ticket-spec.md`
 - [x] Add edge-case handling for symbol spec fetch failure
 - [x] Add better explanation text for risk and sizing warnings
 - [x] Add mobile / narrow layout support if needed
-- [ ] Improve input ergonomics for fast operator use
+- [x] Improve input ergonomics for fast operator use
 
 ---
 

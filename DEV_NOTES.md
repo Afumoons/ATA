@@ -163,4 +163,6 @@ For each autonomous run:
 - Verified the T8 warning-explanation slice with a production `npm run build` in `ui-front`
 - T8 mobile / narrow layout support is now complete: `ui-front/src/app/manual-ticket/page.tsx` adds a compact three-step workflow strip for draft/preview/submit state visibility, while `ui-front/src/app/globals.css` gives the manual ticket narrower-screen stage stacking, full-width action buttons, and cleaner chip/card behavior without changing manual_user execution semantics
 - Verified the T8 mobile / narrow layout slice with a production `npm run build` in `ui-front`
-- Next highest-value unchecked slice after this is T8 input ergonomics for fast operator use, focused on reducing repetitive field entry and speeding common manual ticket presets without loosening the manual_user confirmation gates
+- T8 input ergonomics for fast operator use is now complete: `ui-front/src/app/manual-ticket/page.tsx` adds local draft persistence, one-tap symbol/risk shortcuts, quick TP 1R/2R/3R derivation from the current SL geometry, and a fast reset path without loosening any manual_user preview/submit confirmation gates
+- Verified the T8 input-ergonomics slice with a production `npm run build` in `ui-front`
+- The manual trade ticket tasklist is now fully complete and ready for this background cron to be removed

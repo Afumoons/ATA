@@ -1307,6 +1307,29 @@ table th,
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.manual-ticket-quick-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.manual-ticket-quick-group {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--panel-soft) 78%, transparent);
+}
+
+.manual-ticket-quick-label {
+  margin: 0;
+  color: var(--text-soft);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
 .manual-ticket-inline-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

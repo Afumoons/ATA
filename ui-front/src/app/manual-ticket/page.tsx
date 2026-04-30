@@ -24,6 +24,7 @@ import type {
 } from "@/lib/types";
 
 const COMMON_SYMBOLS = ["XAUUSDm", "BTCUSDm", "XAGUSDm", "EURUSDm"] as const;
+const MANUAL_TICKET_DRAFT_STORAGE_KEY = "ata-manual-ticket-draft";
 
 type ManualTicketFormState = {
   symbolMode: "preset" | "custom";
@@ -61,11 +62,29 @@ const DEFAULT_FORM: ManualTicketFormState = {
   leverage: "100",
 };
 
+const QUICK_RISK_PRESETS = [
+  { label: "$50", riskMode: "money" as const, riskValue: "50" },
+  { label: "$100", riskMode: "money" as const, riskValue: "100" },
+  { label: "0.5% eq", riskMode: "equity_pct" as const, riskValue: "0.5" },
+  { label: "1% eq", riskMode: "equity_pct" as const, riskValue: "1" },
+];
+
 function parseOptionalNumber(value: string) {
   const trimmed = value.trim();
   if (!trimmed) return undefined;
   const parsed = Number(trimmed);
   return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function countDecimals(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed.includes(".")) return 0;
+  return trimmed.split(".")[1]?.length ?? 0;
+}
+
+function formatDerivedInput(value: number, decimals: number) {
+  if (!Number.isFinite(value)) return "";
+  return value.toFixed(Math.max(0, Math.min(decimals, 8)));
 }
 
 function buildPayload(form: ManualTicketFormState) {
@@ -120,6 +139,63 @@ function buildClientSubmissionId() {
 
 function formatWarningLabel(value: string) {
   return value.replace(/_/g, " ");
+}
+
+function buildTakeProfitFromRiskReward(form: ManualTicketFormState, rewardMultiple: number) {
+  if (!Number.isFinite(rewardMultiple) || rewardMultiple <= 0) return null;
+  if (form.stopLossMode === "pips") {
+    const stopLossPips = parseOptionalNumber(form.stopLossInput);
+    if (stopLossPips == null || stopLossPips <= 0) return null;
+    return {
+      takeProfitEnabled: true,
+      takeProfitMode: "pips" as const,
+      takeProfitInput: formatDerivedInput(stopLossPips * rewardMultiple, Math.max(countDecimals(form.stopLossInput), 0)),
+    };
+  }
+
+  const entryPrice = parseOptionalNumber(form.entryPrice);
+  const stopLossPrice = parseOptionalNumber(form.stopLossInput);
+  if (entryPrice == null || stopLossPrice == null) return null;
+
+  const riskDistance = Math.abs(entryPrice - stopLossPrice);
+  if (!(riskDistance > 0)) return null;
+  const direction = form.side === "buy" ? 1 : -1;
+  const takeProfitPrice = entryPrice + direction * riskDistance * rewardMultiple;
+  const decimals = Math.max(countDecimals(form.entryPrice), countDecimals(form.stopLossInput));
+
+  return {
+    takeProfitEnabled: true,
+    takeProfitMode: "price" as const,
+    takeProfitInput: formatDerivedInput(takeProfitPrice, decimals),
+  };
+}
+
+function sanitizeStoredForm(value: unknown): ManualTicketFormState | null {
+  if (!value || typeof value !== "object") return null;
+  const candidate = value as Partial<ManualTicketFormState>;
+  if ((candidate.symbolMode !== "preset" && candidate.symbolMode !== "custom") || typeof candidate.presetSymbol !== "string") {
+    return null;
+  }
+
+  return {
+    ...DEFAULT_FORM,
+    ...candidate,
+    symbolMode: candidate.symbolMode,
+    presetSymbol: candidate.presetSymbol,
+    customSymbol: typeof candidate.customSymbol === "string" ? candidate.customSymbol : DEFAULT_FORM.customSymbol,
+    side: candidate.side === "sell" ? "sell" : "buy",
+    orderType: candidate.orderType === "limit" ? "limit" : "market",
+    riskMode: candidate.riskMode === "equity_pct" ? "equity_pct" : "money",
+    stopLossMode: candidate.stopLossMode === "pips" ? "pips" : "price",
+    takeProfitEnabled: typeof candidate.takeProfitEnabled === "boolean" ? candidate.takeProfitEnabled : DEFAULT_FORM.takeProfitEnabled,
+    takeProfitMode: candidate.takeProfitMode === "pips" ? "pips" : "price",
+    entryPrice: typeof candidate.entryPrice === "string" ? candidate.entryPrice : DEFAULT_FORM.entryPrice,
+    riskValue: typeof candidate.riskValue === "string" ? candidate.riskValue : DEFAULT_FORM.riskValue,
+    stopLossInput: typeof candidate.stopLossInput === "string" ? candidate.stopLossInput : DEFAULT_FORM.stopLossInput,
+    takeProfitInput: typeof candidate.takeProfitInput === "string" ? candidate.takeProfitInput : DEFAULT_FORM.takeProfitInput,
+    accountEquity: typeof candidate.accountEquity === "string" ? candidate.accountEquity : DEFAULT_FORM.accountEquity,
+    leverage: typeof candidate.leverage === "string" ? candidate.leverage : DEFAULT_FORM.leverage,
+  };
 }
 
 function explainManualTicketWarning(
@@ -183,6 +259,7 @@ function explainManualTicketWarning(
 
 export default function ManualTicketPage() {
   const [form, setForm] = useState<ManualTicketFormState>(DEFAULT_FORM);
+  const [draftHydrated, setDraftHydrated] = useState(false);
   const [calc, setCalc] = useState<ManualTradeRiskCalcResponse | null>(null);
   const [calcError, setCalcError] = useState<unknown>(null);
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
@@ -223,6 +300,28 @@ export default function ManualTicketPage() {
   const submitOperatorError = getOperatorValidationDetail(submitError);
   const submitBrokerResponse: Record<string, unknown> = submitResponse?.broker_response ?? {};
   const submitAuditAfter: Record<string, unknown> = submitResponse?.audit_event_after ?? {};
+
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem(MANUAL_TICKET_DRAFT_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored) as unknown;
+        const restored = sanitizeStoredForm(parsed);
+        if (restored) {
+          setForm(restored);
+        }
+      }
+    } catch {
+      // Ignore malformed local draft data and fall back to defaults.
+    } finally {
+      setDraftHydrated(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!draftHydrated) return;
+    window.localStorage.setItem(MANUAL_TICKET_DRAFT_STORAGE_KEY, JSON.stringify(form));
+  }, [draftHydrated, form]);
 
   useEffect(() => {
     if (!payload) {
@@ -315,6 +414,28 @@ export default function ManualTicketPage() {
     }
   }
 
+  function applyFormPatch(patch: Partial<ManualTicketFormState>) {
+    setForm((current) => ({ ...current, ...patch }));
+  }
+
+  function handleRiskPreset(riskMode: ManualTicketFormState["riskMode"], riskValue: string) {
+    applyFormPatch({ riskMode, riskValue });
+  }
+
+  function handleRewardMultiple(rewardMultiple: number) {
+    setForm((current) => {
+      const patch = buildTakeProfitFromRiskReward(current, rewardMultiple);
+      if (!patch) return current;
+      return { ...current, ...patch };
+    });
+  }
+
+  function handleResetDraft() {
+    setForm(DEFAULT_FORM);
+    setPreviewConfirmed(false);
+    setSubmitConfirmed(false);
+  }
+
   return (
     <div className="dashboard-stack">
       <PageHeader
@@ -364,6 +485,50 @@ export default function ManualTicketPage() {
             <CardDescription>Choose the manual order geometry, risk mode, and SL/TP definition. The calculator refreshes automatically once required fields are valid.</CardDescription>
           </CardHeader>
           <CardContent className="dashboard-stack">
+            <Section title="Operator quick actions" description="Shortcut untuk draft berulang. Draft terakhir disimpan lokal di browser ini, tanpa mengubah marker manual_user atau gate konfirmasi.">
+              <div className="manual-ticket-quick-grid">
+                <div className="manual-ticket-quick-group">
+                  <p className="manual-ticket-quick-label">Fast symbol</p>
+                  <div className="manual-ticket-chip-row">
+                    {COMMON_SYMBOLS.map((symbol) => (
+                      <Button key={symbol} variant={form.symbolMode === "preset" && form.presetSymbol === symbol ? "secondary" : "outline"} size="sm" onClick={() => applyFormPatch({ symbolMode: "preset", presetSymbol: symbol, customSymbol: "" })}>
+                        {symbol}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="manual-ticket-quick-group">
+                  <p className="manual-ticket-quick-label">Fast risk</p>
+                  <div className="manual-ticket-chip-row">
+                    {QUICK_RISK_PRESETS.map((preset) => (
+                      <Button key={preset.label} variant={form.riskMode === preset.riskMode && form.riskValue === preset.riskValue ? "secondary" : "outline"} size="sm" onClick={() => handleRiskPreset(preset.riskMode, preset.riskValue)}>
+                        {preset.label}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="manual-ticket-quick-group">
+                  <p className="manual-ticket-quick-label">Fast TP from SL</p>
+                  <div className="manual-ticket-chip-row">
+                    <Button variant="outline" size="sm" onClick={() => handleRewardMultiple(1)}>
+                      Set TP 1R
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => handleRewardMultiple(2)}>
+                      Set TP 2R
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => handleRewardMultiple(3)}>
+                      Set TP 3R
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={handleResetDraft}>
+                      Reset draft
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </Section>
+
             <FilterToolbar className="manual-ticket-form-grid">
               <FilterField label="Symbol source">
                 <FilterSelect value={form.symbolMode} onChange={(event) => setForm((current) => ({ ...current, symbolMode: event.target.value as "preset" | "custom" }))}>
@@ -454,6 +619,7 @@ export default function ManualTicketPage() {
               <StatusBadge label={form.orderType === "market" ? "Market reference pricing" : "Limit entry pricing"} tone="info" />
               <StatusBadge label={form.riskMode === "money" ? "Fixed cash risk" : "% equity risk"} tone="neutral" />
               <StatusBadge label="Live submit remains operator-gated" tone="warning" />
+              <StatusBadge label={draftHydrated ? "Local draft restore active" : "Loading local draft"} tone="info" />
             </div>
 
             {form.orderType === "market" ? (
