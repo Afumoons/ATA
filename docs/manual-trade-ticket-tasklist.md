@@ -112,7 +112,7 @@ Specification reference: `docs/manual-trade-ticket-spec.md`
   - [x] `is_manual = true`
   - [x] `exclude_from_strategy_eval = true`
 - [x] Ensure manual trades do not pollute strategy live stats
-- [ ] Ensure manual trades do not pollute research attribution
+- [x] Ensure manual trades do not pollute research attribution
 - [x] Ensure drift/audit views can distinguish manual vs autonomous trades
 - [ ] Add audit trail entries for manual ticket creation and execution
 

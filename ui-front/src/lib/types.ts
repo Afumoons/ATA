@@ -137,6 +137,10 @@ export interface PoolSummaryResponse {
       strongest_live_family?: Record<string, unknown> | null;
       deepest_manifest_family?: Record<string, unknown> | null;
       highest_warning_density_family?: Record<string, unknown> | null;
+      manual_bucket_count?: number;
+      manual_total_trades?: number;
+      manual_total_realized_pnl?: number;
+      manual_exclusion_note?: string;
     };
     rows?: Array<Record<string, unknown>>;
   };

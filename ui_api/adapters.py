@@ -2262,7 +2262,8 @@ def load_pool_summary_payload() -> Dict[str, Any]:
     pool = load_pool()
     manifest_by_name = {str(entry.get("name") or ""): entry for entry in load_manifest_entries() if isinstance(entry, dict)}
     index_by_name = {str(entry.get("name") or ""): entry for entry in load_strategy_index_entries() if isinstance(entry, dict)}
-    live_strategy_rows = load_strategy_live_stats_snapshot().get("strategies") or {}
+    live_stats_snapshot = load_strategy_live_stats_snapshot()
+    live_strategy_rows = live_stats_snapshot.get("strategies") or {}
     by_slot: Dict[Tuple[str, str], int] = defaultdict(int)
     family_counts: Counter[str] = Counter()
     symbol_counts: Counter[str] = Counter()
@@ -2501,6 +2502,10 @@ def load_pool_summary_payload() -> Dict[str, Any]:
                 "strongest_live_family": strongest_live_family,
                 "deepest_manifest_family": deepest_manifest_family,
                 "highest_warning_density_family": highest_warning_density_family,
+                "manual_bucket_count": int(live_stats_snapshot.get("manual_bucket_count", 0) or 0),
+                "manual_total_trades": int(live_stats_snapshot.get("manual_total_trades", 0) or 0),
+                "manual_total_realized_pnl": float(live_stats_snapshot.get("manual_total_realized_pnl", 0.0) or 0.0),
+                "manual_exclusion_note": "manual_user buckets are excluded from pool family scoreboards and live-vs-research attribution.",
             },
         },
     }

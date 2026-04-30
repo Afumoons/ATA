@@ -7,6 +7,7 @@ import {
   EmptyState,
   ErrorState,
   FreshnessBadge,
+  InlineNotice,
   InsightCard,
   KeyValueGrid,
   LoadingState,
@@ -288,6 +289,10 @@ function PoolPageContent() {
   const strongestLiveFamily = coerceRecord(familyCompareSummary.strongest_live_family);
   const deepestManifestFamily = coerceRecord(familyCompareSummary.deepest_manifest_family);
   const highestWarningDensityFamily = coerceRecord(familyCompareSummary.highest_warning_density_family);
+  const manualBucketCount = pickFirstNumber(familyCompareSummary.manual_bucket_count) ?? 0;
+  const manualTradeCount = pickFirstNumber(familyCompareSummary.manual_total_trades) ?? 0;
+  const manualRealizedPnl = pickFirstNumber(familyCompareSummary.manual_total_realized_pnl) ?? 0;
+  const manualExclusionNote = pickFirstString(familyCompareSummary.manual_exclusion_note);
 
   return (
     <div className="dashboard-stack">
@@ -311,6 +316,14 @@ function PoolPageContent() {
       />
 
       <QueryStateNotice error={error} refreshing={refreshing} hasData={hasData} resourceLabel="pool summary" lastSuccessAt={lastSuccessAt} />
+
+      {manualBucketCount > 0 ? (
+        <InlineNotice
+          tone="warning"
+          title={`Manual-user buckets excluded from family attribution (${formatNumber(manualBucketCount)})`}
+          description={`${manualExclusionNote || "manual_user buckets stay outside the autonomous family scoreboard."} Current manual buckets carry ${formatNumber(manualTradeCount)} trades and ${formatCurrency(manualRealizedPnl)} realized PnL without changing research-family or live-vs-research comparisons below.`}
+        />
+      ) : null}
 
       <section className="stats-grid">
         <StatCard label="Total strategies" value={formatNumber(data.total)} hint="Pool inventory count" tone="info" />
