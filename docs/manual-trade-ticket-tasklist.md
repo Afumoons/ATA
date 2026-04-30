@@ -120,11 +120,11 @@ Specification reference: `docs/manual-trade-ticket-spec.md`
 ---
 
 ## Phase T5 — Preview and Confirmation Layer
-- [ ] Add order preview card
-- [ ] Show final entry / SL / TP values
-- [ ] Show final lot size and expected loss/profit
-- [ ] Show manual-trade marker preview
-- [ ] Add explicit confirmation gate before live submit
+- [x] Add order preview card
+- [x] Show final entry / SL / TP values
+- [x] Show final lot size and expected loss/profit
+- [x] Show manual-trade marker preview
+- [x] Add explicit confirmation gate before live submit
 - [ ] Add error state for broker-side validation failure
 
 ---

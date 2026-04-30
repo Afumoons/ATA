@@ -114,6 +114,7 @@ export default function ManualTicketPage() {
   const [previewAudit, setPreviewAudit] = useState<ManualTradePreviewAuditResponse | null>(null);
   const [previewAuditStatus, setPreviewAuditStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [previewAuditError, setPreviewAuditError] = useState<unknown>(null);
+  const [previewConfirmed, setPreviewConfirmed] = useState(false);
   const requestSeq = useRef(0);
 
   const payload = useMemo(() => buildPayload(form), [form]);
@@ -138,6 +139,7 @@ export default function ManualTicketPage() {
 
     const currentSeq = ++requestSeq.current;
     setStatus("loading");
+    setPreviewConfirmed(false);
 
     const timeout = window.setTimeout(() => {
       void uiApi.manualTradeRiskCalc(payload)
@@ -167,7 +169,7 @@ export default function ManualTicketPage() {
   const entryLabel = form.orderType === "market" ? "Reference market price" : "Pending entry price";
 
   async function handleRecordPreviewIntent() {
-    if (!payload || !calc) return;
+    if (!payload || !calc || !previewConfirmed) return;
     setPreviewAuditStatus("loading");
     setPreviewAuditError(null);
     try {
@@ -371,7 +373,16 @@ export default function ManualTicketPage() {
             />
           </Section>
 
-          <Section title="Manual identity preview" description="Preview payload markers reserved for manual trades only, before any live-submit endpoint exists.">
+          <Section title="Preview and confirmation" description="Review the final manual ticket payload before any future live-submit endpoint is allowed to reuse it.">
+            <section className="stats-grid">
+              <StatCard label="Final entry" value={formatPlainNumber(Number(derived.entry_price), 5)} hint={form.orderType === "market" ? "Reference market quote" : "Pending limit entry"} tone="info" />
+              <StatCard label="Final stop loss" value={formatPlainNumber(Number(derived.stop_loss_price), 5)} hint={compactValue(previewPayload.stop_loss_mode)} tone="warning" />
+              <StatCard label="Final take profit" value={formatPlainNumber(Number(derived.take_profit_price), 5)} hint={form.takeProfitEnabled ? compactValue(previewPayload.take_profit_mode) : "TP disabled"} tone="success" />
+              <StatCard label="Final lot size" value={formatPlainNumber(Number(derived.lot_size), 4)} hint="Rounded broker lot size" tone="success" />
+              <StatCard label="Expected loss" value={formatCurrency(typeof derived.estimated_loss_at_stop === "number" ? derived.estimated_loss_at_stop : null)} hint="At normalized stop loss" tone="warning" />
+              <StatCard label="Expected profit" value={formatCurrency(typeof derived.estimated_profit_at_take_profit === "number" ? derived.estimated_profit_at_take_profit : null)} hint="At normalized take profit" tone="success" />
+            </section>
+
             <div className="manual-ticket-chip-row">
               <StatusBadge label={`order_origin=${compactValue(previewPayload.order_origin)}`} tone="warning" />
               <StatusBadge label={`execution_origin=${compactValue(previewPayload.execution_origin)}`} tone="info" />
@@ -392,9 +403,30 @@ export default function ManualTicketPage() {
               emptyTitle="No preview payload yet"
               emptyDescription="Once the calculator succeeds, the preview payload block shows the exact manual-only markers that must survive into submit and audit layers."
             />
+
+            <InlineNotice
+              tone={previewConfirmed ? "success" : "warning"}
+              title={previewConfirmed ? "Preview confirmed" : "Explicit confirmation required"}
+              description={previewConfirmed
+                ? "This draft is now confirmed as an operator-initiated manual_user trade preview and can be recorded into audit before a later live-submit slice is built."
+                : "Confirm that this ticket is a manual_user trade, excluded from autonomous strategy attribution, and still requires a separate live-submit confirmation step."}
+            />
+
+            <label className="manual-ticket-confirmation">
+              <input
+                type="checkbox"
+                checked={previewConfirmed}
+                onChange={(event) => setPreviewConfirmed(event.target.checked)}
+                disabled={!payload || !calc || status !== "success"}
+              />
+              <span>
+                Saya konfirmasi draft ini adalah manual trade operator, tetap bertag <code>manual_user</code>, dan belum boleh dikirim live tanpa gate konfirmasi submit terpisah.
+              </span>
+            </label>
+
             <div className="manual-ticket-inline-row">
-              <Button onClick={() => void handleRecordPreviewIntent()} disabled={!payload || !calc || status !== "success" || previewAuditStatus === "loading"}>
-                {previewAuditStatus === "loading" ? "Recording preview..." : "Record preview intent to audit"}
+              <Button onClick={() => void handleRecordPreviewIntent()} disabled={!payload || !calc || status !== "success" || !previewConfirmed || previewAuditStatus === "loading"}>
+                {previewAuditStatus === "loading" ? "Recording preview..." : "Record confirmed preview to audit"}
               </Button>
               {previewAuditStatus === "success" ? <StatusBadge label="Audit preview recorded" tone="success" /> : null}
             </div>

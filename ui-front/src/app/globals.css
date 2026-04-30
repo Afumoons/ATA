@@ -1270,6 +1270,25 @@ table th,
   flex-direction: column;
 }
 
+.manual-ticket-confirmation {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  border-radius: 18px;
+  padding: 14px 16px;
+  background: rgba(245, 158, 11, 0.08);
+  color: var(--text-primary);
+}
+
+.manual-ticket-confirmation input {
+  margin-top: 3px;
+}
+
+.manual-ticket-confirmation code {
+  font-size: 0.9em;
+}
+
 .table-panel,
 .kv-grid,
 .timeline-item,
