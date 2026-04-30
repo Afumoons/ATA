@@ -164,6 +164,7 @@ def test_manual_trade_risk_calc_api_supports_representative_symbols(monkeypatch,
     assert data["preview_payload"]["is_manual"] is True
     assert data["preview_payload"]["exclude_from_strategy_eval"] is True
     assert data["preview_payload"]["comment_tag"] == "clio-manual-user"
+    assert isinstance(data["preview_payload"]["magic_number"], int)
 
 
 def test_manual_trade_risk_calc_api_uses_live_state_equity_when_missing(monkeypatch):
@@ -281,6 +282,7 @@ def test_manual_trade_preview_intent_api_records_audit_event(tmp_path, monkeypat
 
     monkeypatch.setattr(api_app, "fetch_symbol_spec", lambda symbol: _snapshot(symbol_spec))
     monkeypatch.setattr(api_app, "load_live_state_snapshot", lambda: {"equity_current": 10000.0})
+    monkeypatch.setattr(api_app, "validate_manual_trade_preview", lambda preview_payload: {"ok": True, "retcode": 0, "message": "validated", "request": {"magic": preview_payload.get("magic_number")}})
     monkeypatch.setattr(importlib.import_module("autonomous_trading_ai.execution.audit_utils"), "POOL_AUDIT_TRAIL_PATH", pool_audit_path)
     monkeypatch.setattr(adapters, "POOL_AUDIT_TRAIL_PATH", pool_audit_path)
     monkeypatch.setattr(adapters, "load_recent_trade_log", lambda limit=100: [])
@@ -302,6 +304,8 @@ def test_manual_trade_preview_intent_api_records_audit_event(tmp_path, monkeypat
 
     assert response.status_code == 200
     data = response.json()
+    assert data["broker_validation"]["ok"] is True
+    assert data["broker_validation"]["retcode"] == 0
     assert data["audit_event"]["event"] == "manual_ticket_preview_intent"
     assert data["audit_event"]["audit_stage"] == "preview_intent"
     assert data["audit_event"]["order_origin"] == "manual_user"
@@ -314,6 +318,46 @@ def test_manual_trade_preview_intent_api_records_audit_event(tmp_path, monkeypat
     preview_event = next(event for event in timeline["events"] if event.get("event") == "manual_ticket_preview_intent")
     assert preview_event["event_origin"] == "manual_user"
     assert preview_event["exclude_from_strategy_eval"] is True
+
+
+
+
+def test_manual_trade_preview_intent_api_surfaces_broker_validation_failure(monkeypatch):
+    symbol_spec = {
+        "symbol": "XAUUSDm",
+        "symbol_canonical": "XAUUSDm",
+        "execution_symbol": "XAUUSDm",
+        "instrument_class": "metals",
+        "digits": 2,
+        "point_size": 0.01,
+        "tick_size": 0.01,
+        "tick_value": 1.0,
+        "contract_size": 100.0,
+        "min_lot": 0.01,
+        "lot_step": 0.01,
+        "max_lot": 100.0,
+    }
+    monkeypatch.setattr(api_app, "fetch_symbol_spec", lambda symbol: _snapshot(symbol_spec))
+    monkeypatch.setattr(api_app, "validate_manual_trade_preview", lambda preview_payload: {"ok": False, "retcode": 10016, "message": "Invalid stops", "request": {"magic": preview_payload.get("magic_number")}, "last_error": None})
+
+    response = client.post(
+        "/api/execution/manual-ticket/preview-intent",
+        json={
+            "symbol": "XAUUSDm",
+            "side": "buy",
+            "entry_price": 2300.0,
+            "risk_mode": "money",
+            "risk_value": 100.0,
+            "stop_loss_mode": "price",
+            "stop_loss_input": 2299.99,
+        },
+    )
+
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert detail["code"] == "broker_validation_failed"
+    assert detail["meta"]["retcode"] == 10016
+    assert detail["meta"]["message"] == "Invalid stops"
 
 
 def _snapshot(spec: dict):

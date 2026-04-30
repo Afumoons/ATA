@@ -128,6 +128,8 @@ export default function ManualTicketPage() {
     ...((Array.isArray(derived.warnings) ? derived.warnings : []) as string[]),
   ];
   const previewAuditEvent = previewAudit?.audit_event ?? {};
+  const brokerValidation = previewAudit?.broker_validation ?? {};
+  const previewOperatorError = getOperatorValidationDetail(previewAuditError);
 
   useEffect(() => {
     if (!payload) {
@@ -387,6 +389,7 @@ export default function ManualTicketPage() {
               <StatusBadge label={`order_origin=${compactValue(previewPayload.order_origin)}`} tone="warning" />
               <StatusBadge label={`execution_origin=${compactValue(previewPayload.execution_origin)}`} tone="info" />
               <StatusBadge label={`is_manual=${compactValue(previewPayload.is_manual)}`} tone="success" />
+              <StatusBadge label={`magic_number=${compactValue(previewPayload.magic_number)}`} tone="neutral" />
               <StatusBadge label={`exclude_from_strategy_eval=${compactValue(previewPayload.exclude_from_strategy_eval)}`} tone="critical" />
             </div>
             <KeyValueGrid
@@ -399,6 +402,7 @@ export default function ManualTicketPage() {
                 take_profit_mode: previewPayload.take_profit_mode,
                 risk_mode: previewPayload.risk_mode,
                 risk_value: previewPayload.risk_value,
+                magic_number: previewPayload.magic_number,
               }}
               emptyTitle="No preview payload yet"
               emptyDescription="Once the calculator succeeds, the preview payload block shows the exact manual-only markers that must survive into submit and audit layers."
@@ -426,9 +430,9 @@ export default function ManualTicketPage() {
 
             <div className="manual-ticket-inline-row">
               <Button onClick={() => void handleRecordPreviewIntent()} disabled={!payload || !calc || status !== "success" || !previewConfirmed || previewAuditStatus === "loading"}>
-                {previewAuditStatus === "loading" ? "Recording preview..." : "Record confirmed preview to audit"}
+                {previewAuditStatus === "loading" ? "Validating broker + recording preview..." : "Validate with broker and record preview"}
               </Button>
-              {previewAuditStatus === "success" ? <StatusBadge label="Audit preview recorded" tone="success" /> : null}
+              {previewAuditStatus === "success" ? <StatusBadge label="Broker validated, audit recorded" tone="success" /> : null}
             </div>
             {previewAuditStatus === "success" ? (
               <KeyValueGrid
@@ -437,6 +441,9 @@ export default function ManualTicketPage() {
                   preview_fingerprint: previewAuditEvent.preview_fingerprint,
                   audit_stage: previewAuditEvent.audit_stage,
                   event: previewAuditEvent.event,
+                  broker_validation_retcode: brokerValidation.retcode,
+                  broker_validation_message: compactValue(brokerValidation.message),
+                  broker_magic_number: brokerValidation.request && typeof brokerValidation.request === "object" ? compactValue((brokerValidation.request as Record<string, unknown>).magic) : "—",
                 }}
                 emptyTitle=""
                 emptyDescription=""
@@ -444,9 +451,11 @@ export default function ManualTicketPage() {
             ) : null}
             {previewAuditStatus === "error" ? (
               <InlineNotice
-                tone="warning"
-                title="Preview audit gagal direkam"
-                description={getOperatorValidationDetail(previewAuditError)?.message ?? (previewAuditError instanceof Error ? previewAuditError.message : "Preview audit request gagal.")}
+                tone={previewOperatorError?.code === "broker_validation_failed" ? "critical" : "warning"}
+                title={previewOperatorError?.code === "broker_validation_failed" ? "Broker menolak draft order" : "Preview audit gagal direkam"}
+                description={previewOperatorError?.code === "broker_validation_failed"
+                  ? `${previewOperatorError.message}${previewOperatorError.meta?.message ? ` Detail broker: ${compactValue(previewOperatorError.meta.message)}.` : ""}`
+                  : previewOperatorError?.message ?? (previewAuditError instanceof Error ? previewAuditError.message : "Preview audit request gagal.")}
               />
             ) : null}
           </Section>

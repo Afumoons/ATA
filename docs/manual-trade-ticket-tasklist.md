@@ -105,7 +105,7 @@ Specification reference: `docs/manual-trade-ticket-spec.md`
 - [x] Define dedicated manual trade marker strategy
 - [x] Add MT5/comment tag
   - [x] `clio-manual-user`
-- [ ] Add dedicated magic number or execution origin marker if supported
+- [x] Add dedicated magic number or execution origin marker if supported
 - [x] Add internal fields
   - [x] `order_origin = manual_user`
   - [x] `execution_origin = operator_ui`
@@ -125,7 +125,7 @@ Specification reference: `docs/manual-trade-ticket-spec.md`
 - [x] Show final lot size and expected loss/profit
 - [x] Show manual-trade marker preview
 - [x] Add explicit confirmation gate before live submit
-- [ ] Add error state for broker-side validation failure
+- [x] Add error state for broker-side validation failure
 
 ---
 

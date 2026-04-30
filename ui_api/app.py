@@ -36,6 +36,7 @@ from .models import (
     StrategyDetailResponse,
 )
 from ..execution.manual_trade_audit import record_manual_ticket_preview_intent
+from ..execution.manual_trade_broker_validation import validate_manual_trade_preview
 from ..execution.manual_trade_identity import manual_trade_marker_payload
 from ..execution.manual_trade_risk import (
     ManualTradeRiskError,
@@ -131,6 +132,17 @@ def api_execution_risk_calc(payload: ManualTradeRiskCalcRequest) -> ManualTradeR
 )
 def api_execution_manual_ticket_preview_intent(payload: ManualTradeRiskCalcRequest) -> ManualTradePreviewAuditResponse:
     response = _build_manual_trade_risk_calc_response(payload)
+    broker_validation = validate_manual_trade_preview(response.preview_payload)
+    if not broker_validation.get("ok"):
+        raise _operator_validation_error(
+            "broker_validation_failed",
+            meta={
+                "retcode": broker_validation.get("retcode"),
+                "message": broker_validation.get("message"),
+                "request": broker_validation.get("request"),
+                "last_error": broker_validation.get("last_error"),
+            },
+        )
     audit_event = record_manual_ticket_preview_intent(
         preview_payload=response.preview_payload,
         derived=response.derived,
@@ -139,6 +151,7 @@ def api_execution_manual_ticket_preview_intent(payload: ManualTradeRiskCalcReque
     )
     return ManualTradePreviewAuditResponse(
         generated_at=datetime.now(timezone.utc).isoformat(),
+        broker_validation=broker_validation,
         audit_event=audit_event,
     )
 
@@ -280,5 +293,6 @@ def _operator_message_for(code: str) -> str:
         "take_profit_must_be_below_entry_for_sell": "Untuk posisi sell, take profit harus berada di bawah entry.",
         "raw_lot_size_non_positive": "Ukuran lot hasil kalkulasi tidak valid untuk parameter risiko ini.",
         "stop_loss_money_per_lot_non_positive": "Nilai uang per lot untuk stop loss tidak valid dari metadata simbol broker.",
+        "broker_validation_failed": "Broker menolak draft order manual ini pada tahap validasi. Cek geometri harga, volume, atau batas simbol broker sebelum lanjut.",
     }
     return messages.get(code, code.replace("_", " "))

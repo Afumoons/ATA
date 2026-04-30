@@ -342,6 +342,7 @@ export interface ManualTradeRiskCalcResponse {
 
 export interface ManualTradePreviewAuditResponse {
   generated_at: string;
+  broker_validation?: Record<string, unknown>;
   audit_event: Record<string, unknown>;
 }
 

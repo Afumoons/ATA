@@ -146,6 +146,7 @@ class ManualTradeRiskCalcResponse(BaseModel):
 
 class ManualTradePreviewAuditResponse(BaseModel):
     generated_at: str
+    broker_validation: Dict[str, Any] = Field(default_factory=dict)
     audit_event: Dict[str, Any] = Field(default_factory=dict)
 
 

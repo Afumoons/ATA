@@ -2,9 +2,12 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
+from ..config import execution_config
+
 MANUAL_ORDER_ORIGIN = "manual_user"
 MANUAL_EXECUTION_ORIGIN = "operator_ui"
 MANUAL_COMMENT_TAG = "clio-manual-user"
+MANUAL_ORDER_MAGIC = int(getattr(execution_config, "order_magic", 0)) + 1
 
 
 def manual_trade_marker_payload() -> Dict[str, Any]:
@@ -14,6 +17,7 @@ def manual_trade_marker_payload() -> Dict[str, Any]:
         "is_manual": True,
         "exclude_from_strategy_eval": True,
         "comment_tag": MANUAL_COMMENT_TAG,
+        "magic_number": MANUAL_ORDER_MAGIC,
     }
 
 

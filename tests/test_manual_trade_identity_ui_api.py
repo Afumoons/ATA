@@ -45,7 +45,9 @@ def test_manual_trade_marker_payload_matches_ticket_contract():
         "is_manual": True,
         "exclude_from_strategy_eval": True,
         "comment_tag": "clio-manual-user",
+        "magic_number": payload["magic_number"],
     }
+    assert isinstance(payload["magic_number"], int)
 
 
 def test_load_strategy_live_stats_snapshot_excludes_manual_buckets_from_autonomous_totals(tmp_path, monkeypatch):
