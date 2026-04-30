@@ -98,3 +98,8 @@
 - Added a U7A/U7B hierarchy and scannability pass on Overview and Manifest, introducing operator briefing / deployment dossier cards and replacing the last generic passive readouts with more operator-readable structures.
 - Verified the Overview/Manifest polish slice with a production `npm run build` in `ui-front`.
 - Updated roadmap/notes to reflect that Overview and Manifest now have dedicated hierarchy passes; next slice is shared responsive behavior for dense tables plus remaining U0/U7 polish foundations.
+- Added shared page-level filter primitives in `dashboard.tsx` (`FilterToolbar`, `FilterField`, `FilterSelect`) so the main operator pages stop hand-rolling symbol/family/timeframe controls.
+- Migrated Research, Drift, Review, and Audit to the shared filter primitives, and added a reusable Audit date-range filter (`6h`, `24h`, `72h`, `7d`, all time`) for tighter timeline triage.
+- Relaxed the shared filter toolbar grid to auto-fit available width so multi-control pages wrap more gracefully without page-specific layout hacks.
+- Verified the shared filter-primitives slice with a production `npm run build` in `ui-front`.
+- Marked the roadmap shared page-level filter primitives item complete; next slice is URL state sync for filters and selected rows.

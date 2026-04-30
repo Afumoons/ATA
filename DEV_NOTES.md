@@ -46,6 +46,7 @@ Implement and advance `docs/ui-roadmap-tasklist.md` until the tasklist is fully 
 - U7A execution hierarchy / de-genericization pass added in current workstream
 - U7A drift dossier / severity-language pass added in current workstream
 - U7A/U7B Overview and Manifest hierarchy / scannability pass added in current workstream
+- U0 shared page-level filter primitives added in current workstream
 
 ## Milestone Order
 1. Commit roadmap tasklist doc cleanly
@@ -103,5 +104,7 @@ For each autonomous run:
 - Verified the Pool-page hierarchy/scannability slice with a production `npm run build` in `ui-front`
 - U7A/U7B Overview and Manifest hierarchy/scannability pass is now complete, adding operator briefing / deployment dossier cards and reducing generic table feel on the remaining passive pages
 - Verified the Overview/Manifest hierarchy-scannability slice with a production `npm run build` in `ui-front`
-- Next highest-value slice is continuing U7 polish on the remaining unchecked items, especially shared responsive behavior for dense tables, stronger page-level filter primitives / URL state, and restrained transitions
+- Next highest-value slice is continuing the remaining unchecked foundations, especially URL state sync for filters/selected rows, stronger responsive behavior for dense tables, and restrained transitions
+- U0 shared page-level filter primitives are now complete, including reusable filter toolbar/select primitives across Research, Drift, Review, and Audit plus an Audit date-range control
+- Verified the shared filter-primitives slice with a production `npm run build` in `ui-front`
 - User explicitly wants progress reports, not approval questions

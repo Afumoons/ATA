@@ -7,6 +7,9 @@ import {
   DataTable,
   EmptyState,
   ErrorState,
+  FilterField,
+  FilterSelect,
+  FilterToolbar,
   FreshnessBadge,
   KeyValueGrid,
   LoadingState,
@@ -390,26 +393,36 @@ export default function DriftPage() {
       </section>
 
       <Section title="Drift filters" description="Slice the drift snapshot by symbol, family, lifecycle status, severity, and triage sort preset.">
-        <div className="flex flex-wrap gap-3">
-          <select className="rounded-md border bg-background px-3 py-2 text-sm" value={symbolFilter || "__all__"} onChange={(event) => setSymbolFilter(normalizeFilterValue(event.target.value))}>
-            <option value="__all__">All symbols</option>
-            {(filterOptions.symbols ?? []).map((value) => <option key={value} value={value}>{value}</option>)}
-          </select>
-          <select className="rounded-md border bg-background px-3 py-2 text-sm" value={familyFilter || "__all__"} onChange={(event) => setFamilyFilter(normalizeFilterValue(event.target.value))}>
-            <option value="__all__">All families</option>
-            {(filterOptions.families ?? []).map((value) => <option key={value} value={value}>{value}</option>)}
-          </select>
-          <select className="rounded-md border bg-background px-3 py-2 text-sm" value={statusFilter || "__all__"} onChange={(event) => setStatusFilter(normalizeFilterValue(event.target.value))}>
-            <option value="__all__">All statuses</option>
-            {(filterOptions.statuses ?? []).map((value) => <option key={value} value={value}>{value}</option>)}
-          </select>
-          <select className="rounded-md border bg-background px-3 py-2 text-sm" value={severityFilter || "__all__"} onChange={(event) => setSeverityFilter(normalizeFilterValue(event.target.value))}>
-            <option value="__all__">All severities</option>
-            {(filterOptions.severities ?? []).map((value) => <option key={value} value={value}>{value}</option>)}
-          </select>
-          <select className="rounded-md border bg-background px-3 py-2 text-sm" value={sortPreset} onChange={(event) => setSortPreset(event.target.value as (typeof sortPresetOptions)[number]["value"])}>
-            {sortPresetOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-          </select>
+        <FilterToolbar className="xl:grid-cols-5">
+          <FilterField label="Symbol">
+            <FilterSelect value={symbolFilter || "__all__"} onChange={(event) => setSymbolFilter(normalizeFilterValue(event.target.value))}>
+              <option value="__all__">All symbols</option>
+              {(filterOptions.symbols ?? []).map((value) => <option key={value} value={value}>{value}</option>)}
+            </FilterSelect>
+          </FilterField>
+          <FilterField label="Family">
+            <FilterSelect value={familyFilter || "__all__"} onChange={(event) => setFamilyFilter(normalizeFilterValue(event.target.value))}>
+              <option value="__all__">All families</option>
+              {(filterOptions.families ?? []).map((value) => <option key={value} value={value}>{value}</option>)}
+            </FilterSelect>
+          </FilterField>
+          <FilterField label="Status">
+            <FilterSelect value={statusFilter || "__all__"} onChange={(event) => setStatusFilter(normalizeFilterValue(event.target.value))}>
+              <option value="__all__">All statuses</option>
+              {(filterOptions.statuses ?? []).map((value) => <option key={value} value={value}>{value}</option>)}
+            </FilterSelect>
+          </FilterField>
+          <FilterField label="Severity">
+            <FilterSelect value={severityFilter || "__all__"} onChange={(event) => setSeverityFilter(normalizeFilterValue(event.target.value))}>
+              <option value="__all__">All severities</option>
+              {(filterOptions.severities ?? []).map((value) => <option key={value} value={value}>{value}</option>)}
+            </FilterSelect>
+          </FilterField>
+          <FilterField label="Sort view">
+            <FilterSelect value={sortPreset} onChange={(event) => setSortPreset(event.target.value as (typeof sortPresetOptions)[number]["value"])}>
+              {sortPresetOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+            </FilterSelect>
+          </FilterField>
           <ToolbarButton
             label="Reset filters"
             onClick={() => {
@@ -421,7 +434,7 @@ export default function DriftPage() {
             }}
             tone="neutral"
           />
-        </div>
+        </FilterToolbar>
       </Section>
 
       <Section title="Operator attention lanes" description="A faster read on which drift patterns deserve immediate review before you scan the full leaderboard.">

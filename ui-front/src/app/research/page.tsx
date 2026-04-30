@@ -6,6 +6,9 @@ import {
   DataTable,
   EmptyState,
   ErrorState,
+  FilterField,
+  FilterSelect,
+  FilterToolbar,
   FreshnessBadge,
   KeyValueGrid,
   LoadingState,
@@ -226,9 +229,9 @@ export default function ResearchPage() {
       </section>
 
       <Section title="Research filters" description="Switch symbol/timeframe artifacts, narrow to one family, and reorder the funnel table by the most useful operator lens.">
-        <div className="flex flex-wrap gap-3">
-          <select
-            className="rounded-md border bg-background px-3 py-2 text-sm"
+        <FilterToolbar>
+          <FilterField label="Symbol">
+            <FilterSelect
             value={symbol}
             onChange={(event) => {
               const nextSymbol = event.target.value;
@@ -238,19 +241,26 @@ export default function ResearchPage() {
                 setTimeframe(nextTimeframes[0]);
               }
             }}
-          >
-            {(data.available_filters?.symbols ?? [symbol]).map((value) => <option key={value} value={value}>{value}</option>)}
-          </select>
-          <select className="rounded-md border bg-background px-3 py-2 text-sm" value={timeframe} onChange={(event) => setTimeframe(event.target.value)}>
-            {(availableTimeframes.length ? availableTimeframes : [timeframe]).map((value) => <option key={value} value={value}>{value}</option>)}
-          </select>
-          <select className="rounded-md border bg-background px-3 py-2 text-sm" value={familyFilter || "__all__"} onChange={(event) => setFamilyFilter(normalizeFilterValue(event.target.value))}>
-            <option value="__all__">All families</option>
-            {familyOptions.map((value) => <option key={value} value={value}>{value}</option>)}
-          </select>
-          <select className="rounded-md border bg-background px-3 py-2 text-sm" value={sortPreset} onChange={(event) => setSortPreset(event.target.value as (typeof researchSortOptions)[number]["value"])}>
-            {researchSortOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-          </select>
+            >
+              {(data.available_filters?.symbols ?? [symbol]).map((value) => <option key={value} value={value}>{value}</option>)}
+            </FilterSelect>
+          </FilterField>
+          <FilterField label="Timeframe">
+            <FilterSelect value={timeframe} onChange={(event) => setTimeframe(event.target.value)}>
+              {(availableTimeframes.length ? availableTimeframes : [timeframe]).map((value) => <option key={value} value={value}>{value}</option>)}
+            </FilterSelect>
+          </FilterField>
+          <FilterField label="Family">
+            <FilterSelect value={familyFilter || "__all__"} onChange={(event) => setFamilyFilter(normalizeFilterValue(event.target.value))}>
+              <option value="__all__">All families</option>
+              {familyOptions.map((value) => <option key={value} value={value}>{value}</option>)}
+            </FilterSelect>
+          </FilterField>
+          <FilterField label="Sort view">
+            <FilterSelect value={sortPreset} onChange={(event) => setSortPreset(event.target.value as (typeof researchSortOptions)[number]["value"])}>
+              {researchSortOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+            </FilterSelect>
+          </FilterField>
           <ToolbarButton
             label="Reset filters"
             onClick={() => {
@@ -261,7 +271,7 @@ export default function ResearchPage() {
             }}
             tone="neutral"
           />
-        </div>
+        </FilterToolbar>
       </Section>
 
       <Section title="Funnel totals" description="Aggregate stage counts across all families in the current research artifact.">

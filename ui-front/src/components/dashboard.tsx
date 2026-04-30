@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ReactNode, SelectHTMLAttributes } from "react";
 import { compactValue, formatDateTime, prettifyKey, truncateMiddle } from "@/lib/format";
 import { attentionToneForEvent, describeQueryError, getEventTimestamp, getFreshnessState, summarizeEvent } from "@/lib/ui-state";
 import type { StatusTone } from "@/lib/types";
@@ -71,6 +71,39 @@ export function ToolbarButton({
     <Button type="button" variant="toolbar" className={cn(`tone-${tone}`)} onClick={onClick} disabled={busy}>
       {busy ? "Refreshing…" : label}
     </Button>
+  );
+}
+
+export function FilterToolbar({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return <div className={cn("filter-toolbar", "panel", className)}>{children}</div>;
+}
+
+export function FilterField({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <label className="filter-field">
+      <span>{label}</span>
+      {children}
+    </label>
+  );
+}
+
+export function FilterSelect({ className, children, ...props }: SelectHTMLAttributes<HTMLSelectElement>) {
+  return (
+    <select className={cn("filter-input", className)} {...props}>
+      {children}
+    </select>
   );
 }
 

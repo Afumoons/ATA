@@ -6,6 +6,9 @@ import {
   AttentionCard,
   DataTable,
   ErrorState,
+  FilterField,
+  FilterSelect,
+  FilterToolbar,
   FreshnessBadge,
   KeyValueGrid,
   LoadingState,
@@ -172,23 +175,31 @@ export default function ReviewPage() {
       </section>
 
       <Section title="Queue filters" description="Slice the review queue by triage bucket, queue category, current status, and symbol.">
-        <div className="flex flex-wrap gap-3">
-          <select className="rounded-md border bg-background px-3 py-2 text-sm" value={bucketFilter || "__all__"} onChange={(event) => setBucketFilter(normalizeFilterValue(event.target.value))}>
-            <option value="__all__">All buckets</option>
-            {(filterOptions.triage_buckets ?? []).map((value) => <option key={value} value={value}>{triageLabels[value] ?? value}</option>)}
-          </select>
-          <select className="rounded-md border bg-background px-3 py-2 text-sm" value={categoryFilter || "__all__"} onChange={(event) => setCategoryFilter(normalizeFilterValue(event.target.value))}>
-            <option value="__all__">All categories</option>
-            {(filterOptions.categories ?? []).map((value) => <option key={value} value={value}>{categoryLabels[value] ?? value}</option>)}
-          </select>
-          <select className="rounded-md border bg-background px-3 py-2 text-sm" value={statusFilter || "__all__"} onChange={(event) => setStatusFilter(normalizeFilterValue(event.target.value))}>
-            <option value="__all__">All statuses</option>
-            {(filterOptions.statuses ?? []).map((value) => <option key={value} value={value}>{value}</option>)}
-          </select>
-          <select className="rounded-md border bg-background px-3 py-2 text-sm" value={symbolFilter || "__all__"} onChange={(event) => setSymbolFilter(normalizeFilterValue(event.target.value))}>
-            <option value="__all__">All symbols</option>
-            {(filterOptions.symbols ?? []).map((value) => <option key={value} value={value}>{value}</option>)}
-          </select>
+        <FilterToolbar>
+          <FilterField label="Triage bucket">
+            <FilterSelect value={bucketFilter || "__all__"} onChange={(event) => setBucketFilter(normalizeFilterValue(event.target.value))}>
+              <option value="__all__">All buckets</option>
+              {(filterOptions.triage_buckets ?? []).map((value) => <option key={value} value={value}>{triageLabels[value] ?? value}</option>)}
+            </FilterSelect>
+          </FilterField>
+          <FilterField label="Category">
+            <FilterSelect value={categoryFilter || "__all__"} onChange={(event) => setCategoryFilter(normalizeFilterValue(event.target.value))}>
+              <option value="__all__">All categories</option>
+              {(filterOptions.categories ?? []).map((value) => <option key={value} value={value}>{categoryLabels[value] ?? value}</option>)}
+            </FilterSelect>
+          </FilterField>
+          <FilterField label="Status">
+            <FilterSelect value={statusFilter || "__all__"} onChange={(event) => setStatusFilter(normalizeFilterValue(event.target.value))}>
+              <option value="__all__">All statuses</option>
+              {(filterOptions.statuses ?? []).map((value) => <option key={value} value={value}>{value}</option>)}
+            </FilterSelect>
+          </FilterField>
+          <FilterField label="Symbol">
+            <FilterSelect value={symbolFilter || "__all__"} onChange={(event) => setSymbolFilter(normalizeFilterValue(event.target.value))}>
+              <option value="__all__">All symbols</option>
+              {(filterOptions.symbols ?? []).map((value) => <option key={value} value={value}>{value}</option>)}
+            </FilterSelect>
+          </FilterField>
           <ToolbarButton
             label="Reset filters"
             onClick={() => {
@@ -199,7 +210,7 @@ export default function ReviewPage() {
             }}
             tone="neutral"
           />
-        </div>
+        </FilterToolbar>
       </Section>
 
       <Section title="Triage lane spotlight" description="Visual grouping for the four operator lanes that matter most before reading the full queue.">

@@ -2,18 +2,35 @@
 
 import { useMemo, useState } from "react";
 import { PageHeader } from "@/components/app-shell";
-import { ErrorState, FreshnessBadge, LoadingState, Section, StatCard, Timeline, ToolbarButton } from "@/components/dashboard";
+import { ErrorState, FilterField, FilterSelect, FilterToolbar, FreshnessBadge, LoadingState, Section, StatCard, Timeline, ToolbarButton } from "@/components/dashboard";
 import { useQuery } from "@/hooks/use-query";
 import { uiApi } from "@/lib/api";
 import { formatDateTime, formatNumber } from "@/lib/format";
-import { getEventStrategyName, getEventSymbol } from "@/lib/ui-state";
+import { getEventStrategyName, getEventSymbol, getEventTimestamp } from "@/lib/ui-state";
 
 const EMPTY_EVENTS: Array<Record<string, unknown>> = [];
+const DATE_RANGE_OPTIONS = [
+  { value: "all", label: "All time" },
+  { value: "6h", label: "Last 6h" },
+  { value: "24h", label: "Last 24h" },
+  { value: "72h", label: "Last 72h" },
+  { value: "7d", label: "Last 7d" },
+] as const;
+
+function dateRangeCutoff(value: (typeof DATE_RANGE_OPTIONS)[number]["value"]) {
+  const now = Date.now();
+  if (value === "6h") return now - 6 * 60 * 60_000;
+  if (value === "24h") return now - 24 * 60 * 60_000;
+  if (value === "72h") return now - 72 * 60 * 60_000;
+  if (value === "7d") return now - 7 * 24 * 60 * 60_000;
+  return null;
+}
 
 export default function AuditPage() {
   const [sourceFilter, setSourceFilter] = useState("all");
   const [strategyFilter, setStrategyFilter] = useState("all");
   const [symbolFilter, setSymbolFilter] = useState("all");
+  const [dateRange, setDateRange] = useState<(typeof DATE_RANGE_OPTIONS)[number]["value"]>("24h");
   const [preset, setPreset] = useState<"all" | "attention" | "execution" | "pool">("all");
   const [expanded, setExpanded] = useState(false);
   const [showRaw, setShowRaw] = useState(false);
@@ -31,10 +48,12 @@ export default function AuditPage() {
   const symbolOptions = Array.from(new Set(events.map((event) => getEventSymbol(event)).filter(Boolean) as string[])).sort();
 
   const filteredEvents = useMemo(() => {
+    const cutoff = dateRangeCutoff(dateRange);
     return events.filter((event) => {
       const source = String(event.source ?? "event");
       const strategy = getEventStrategyName(event) ?? "";
       const symbol = getEventSymbol(event) ?? "";
+      const timestamp = getEventTimestamp(event);
 
       if (preset === "attention") {
         const lowerSource = source.toLowerCase();
@@ -48,9 +67,13 @@ export default function AuditPage() {
       if (sourceFilter !== "all" && source !== sourceFilter) return false;
       if (strategyFilter !== "all" && strategy !== strategyFilter) return false;
       if (symbolFilter !== "all" && symbol !== symbolFilter) return false;
+      if (cutoff != null) {
+        const parsed = timestamp ? Date.parse(timestamp) : Number.NaN;
+        if (!Number.isFinite(parsed) || parsed < cutoff) return false;
+      }
       return true;
     });
-  }, [events, preset, sourceFilter, strategyFilter, symbolFilter]);
+  }, [dateRange, events, preset, sourceFilter, strategyFilter, symbolFilter]);
 
   if (loading && !hasData) {
     return <LoadingState title="Loading audit timeline" description="Merging recent pool-audit, unmatched-close, and trade-log events for operator filtering." />;
@@ -82,7 +105,7 @@ export default function AuditPage() {
       </section>
 
       <Section title="Timeline controls" description="Slice the merged timeline to the operator lens you need right now.">
-        <div className="filter-toolbar panel">
+        <FilterToolbar>
           <div className="segmented-control">
             {[
               ["all", "All"],
@@ -101,41 +124,48 @@ export default function AuditPage() {
             ))}
           </div>
 
-          <label className="filter-field">
-            <span>Source</span>
-            <select className="filter-input" value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value)}>
+          <FilterField label="Source">
+            <FilterSelect value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value)}>
               <option value="all">All sources</option>
               {sourceOptions.map((source) => (
                 <option key={source} value={source}>
                   {source}
                 </option>
               ))}
-            </select>
-          </label>
+            </FilterSelect>
+          </FilterField>
 
-          <label className="filter-field">
-            <span>Strategy</span>
-            <select className="filter-input" value={strategyFilter} onChange={(event) => setStrategyFilter(event.target.value)}>
+          <FilterField label="Strategy">
+            <FilterSelect value={strategyFilter} onChange={(event) => setStrategyFilter(event.target.value)}>
               <option value="all">All strategies</option>
               {strategyOptions.map((strategy) => (
                 <option key={strategy} value={strategy}>
                   {strategy}
                 </option>
               ))}
-            </select>
-          </label>
+            </FilterSelect>
+          </FilterField>
 
-          <label className="filter-field">
-            <span>Symbol</span>
-            <select className="filter-input" value={symbolFilter} onChange={(event) => setSymbolFilter(event.target.value)}>
+          <FilterField label="Symbol">
+            <FilterSelect value={symbolFilter} onChange={(event) => setSymbolFilter(event.target.value)}>
               <option value="all">All symbols</option>
               {symbolOptions.map((symbol) => (
                 <option key={symbol} value={symbol}>
                   {symbol}
                 </option>
               ))}
-            </select>
-          </label>
+            </FilterSelect>
+          </FilterField>
+
+          <FilterField label="Date range">
+            <FilterSelect value={dateRange} onChange={(event) => setDateRange(event.target.value as (typeof DATE_RANGE_OPTIONS)[number]["value"])}>
+              {DATE_RANGE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </FilterSelect>
+          </FilterField>
 
           <div className="toggle-toolbar">
             <button type="button" className={`segmented-button${expanded ? " is-active" : ""}`} onClick={() => setExpanded((value) => !value)}>
@@ -145,7 +175,7 @@ export default function AuditPage() {
               {showRaw ? "Raw payload on" : "Raw payload off"}
             </button>
           </div>
-        </div>
+        </FilterToolbar>
       </Section>
 
       <Section title="Timeline" description="Event-by-event audit feed with filterable source, strategy, and symbol context.">

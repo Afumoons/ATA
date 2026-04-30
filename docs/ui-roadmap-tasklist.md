@@ -16,7 +16,7 @@ Transform the current Operator UI from a read-only monitoring surface into a dec
 - [x] Add UI API service layer and typed payload contracts
 
 ### Still useful
-- [ ] Add shared page-level filter primitives (symbol, timeframe, family, date range)
+- [x] Add shared page-level filter primitives (symbol, timeframe, family, date range)
 - [ ] Add URL state sync for filters and selected rows
 - [ ] Add empty/loading/error state consistency pass across all pages
 - [ ] Add stronger responsive behavior for dense operator tables
