@@ -10,6 +10,7 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 try:
     from ..execution.audit_utils import POOL_AUDIT_TRAIL_PATH, UNMATCHED_CLOSED_DEALS_PATH
     from ..execution.live_state_utils import LIVE_STATE_PATH
+    from ..execution.manual_trade_identity import is_manual_trade_payload
     from ..execution.strategy_live_stats import STATS_PATH, is_manual_strategy_bucket
     from ..strategies.base import StrategyDefinition
     from ..strategies.live_manifest import LIVE_MANIFEST_PATH, STRATEGY_INDEX_PATH, load_live_manifest, load_strategy_index
@@ -17,6 +18,7 @@ try:
 except ImportError:
     from execution.audit_utils import POOL_AUDIT_TRAIL_PATH, UNMATCHED_CLOSED_DEALS_PATH
     from execution.live_state_utils import LIVE_STATE_PATH
+    from execution.manual_trade_identity import is_manual_trade_payload
     from execution.strategy_live_stats import STATS_PATH, is_manual_strategy_bucket
     from strategies.base import StrategyDefinition
     from strategies.live_manifest import LIVE_MANIFEST_PATH, STRATEGY_INDEX_PATH, load_live_manifest, load_strategy_index
@@ -2838,7 +2840,8 @@ def load_research_summary(symbol: str = "XAUUSDm", timeframe: str = "M15") -> Di
 
 def load_drift_summary() -> Dict[str, Any]:
     pool = load_pool()
-    live_stats = load_strategy_live_stats_snapshot().get("strategies", {})
+    live_stats_snapshot = load_strategy_live_stats_snapshot()
+    live_stats = live_stats_snapshot.get("strategies", {})
     audit_rows = read_json_file(POOL_AUDIT_TRAIL_PATH, default=[])
     unmatched_rows = read_json_file(UNMATCHED_CLOSED_DEALS_PATH, default=[])
     if not isinstance(audit_rows, list):
@@ -3031,6 +3034,10 @@ def load_drift_summary() -> Dict[str, Any]:
             "repeated_decay_strategy_count": sum(1 for row in rows if int(row.get("decay_warning_count", 0)) >= 2),
             "negative_recent_avg_count": sum(1 for row in rows if float(row.get("recent_avg_pnl", 0.0)) < 0),
             "manual_review_count": len(manual_review_queue),
+            "manual_bucket_count": int(live_stats_snapshot.get("manual_bucket_count", 0) or 0),
+            "manual_total_trades": int(live_stats_snapshot.get("manual_total_trades", 0) or 0),
+            "manual_total_realized_pnl": float(live_stats_snapshot.get("manual_total_realized_pnl", 0.0) or 0.0),
+            "manual_exclusion_note": "manual_user buckets are excluded from autonomous drift rows and strategy-vs-research comparisons.",
             "severity_counts": dict(sorted(severities.items())),
             "regime_alignment_counts": dict(sorted(regime_alignment_counts.items())),
             "unresolved_anomaly_groups": {
@@ -3243,6 +3250,37 @@ def load_review_queue() -> Dict[str, Any]:
     }
 
 
+def _annotate_audit_event_origin(event: Dict[str, Any]) -> Dict[str, Any]:
+    source = str(event.get("source") or "")
+    annotated = dict(event)
+    is_manual = is_manual_trade_payload(annotated) or bool(annotated.get("manual_bucket"))
+
+    if is_manual:
+        origin = "manual_user"
+        label = "Manual user"
+        tone = "warning"
+    elif source == "pool_audit":
+        origin = "autonomous_strategy"
+        label = "Autonomous strategy"
+        tone = "info"
+    elif source == "trades_log":
+        origin = "autonomous_execution"
+        label = "Autonomous execution"
+        tone = "info"
+    else:
+        origin = "execution_audit"
+        label = "Execution audit"
+        tone = "neutral"
+
+    annotated["is_manual"] = bool(is_manual)
+    annotated["event_origin"] = origin
+    annotated["event_origin_label"] = label
+    annotated["event_origin_tone"] = tone
+    if is_manual:
+        annotated["exclude_from_strategy_eval"] = True
+    return annotated
+
+
 def load_audit_timeline(limit: int = 100) -> Dict[str, Any]:
     pool_rows = read_json_file(POOL_AUDIT_TRAIL_PATH, default=[])
     unmatched_rows = read_json_file(UNMATCHED_CLOSED_DEALS_PATH, default=[])
@@ -3254,12 +3292,12 @@ def load_audit_timeline(limit: int = 100) -> Dict[str, Any]:
     events: List[Dict[str, Any]] = []
     for row in pool_rows[-limit:]:
         if isinstance(row, dict):
-            events.append({"source": "pool_audit", **row})
+            events.append(_annotate_audit_event_origin({"source": "pool_audit", **row}))
     for row in unmatched_rows[-limit:]:
         if isinstance(row, dict):
-            events.append({"source": "unmatched_closed_deal", **row})
+            events.append(_annotate_audit_event_origin({"source": "unmatched_closed_deal", **row}))
     for row in load_recent_trade_log(limit=limit):
-        events.append({"source": "trades_log", **row})
+        events.append(_annotate_audit_event_origin({"source": "trades_log", **row}))
 
     events.sort(key=lambda row: str(row.get("recorded_at") or row.get("last_update") or row.get("raw") or ""), reverse=True)
     return {

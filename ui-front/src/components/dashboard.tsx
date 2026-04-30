@@ -336,6 +336,12 @@ export function Timeline({
             <div className="timeline-topline">
               <div className="timeline-heading-block">
                 <StatusBadge label={String(item.source ?? "event")} tone={tone === "neutral" ? "info" : tone} />
+                {item.event_origin_label ? (
+                  <StatusBadge
+                    label={String(item.event_origin_label)}
+                    tone={String(item.event_origin_tone ?? "neutral") as "critical" | "warning" | "info" | "success" | "neutral"}
+                  />
+                ) : null}
                 <strong>{summarizeEvent(item)}</strong>
               </div>
               <span>{formatDateTime(timestamp)}</span>

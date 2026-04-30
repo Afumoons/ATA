@@ -408,6 +408,7 @@ function DriftPageContent() {
         <StatCard label="Regime mismatch" value={formatNumber(Number(regimeAlignmentCounts.mismatch ?? 0))} hint="Research best regime disagrees with live observed regime" tone="critical" />
         <StatCard label="Repeated decay" value={formatNumber(Number(data.summary?.repeated_decay_strategy_count ?? 0))} hint="Strategies with 2+ logged decay warnings" tone="warning" />
         <StatCard label="Manual review" value={formatNumber(Number(data.summary?.manual_review_count ?? 0))} hint="Strategies currently queued for operator review" tone="critical" />
+        <StatCard label="Manual excluded" value={formatNumber(Number(data.summary?.manual_total_trades ?? 0))} hint={String(data.summary?.manual_exclusion_note ?? "Manual-user buckets stay outside autonomous drift totals.")} tone={Number(data.summary?.manual_total_trades ?? 0) > 0 ? "warning" : "neutral"} />
       </section>
 
       <Section title="Drift filters" description="Slice the drift snapshot by symbol, family, lifecycle status, severity, and triage sort preset.">

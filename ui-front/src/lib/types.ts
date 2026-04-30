@@ -244,6 +244,10 @@ export interface DriftSummaryResponse {
     repeated_decay_strategy_count?: number;
     negative_recent_avg_count?: number;
     manual_review_count?: number;
+    manual_bucket_count?: number;
+    manual_total_trades?: number;
+    manual_total_realized_pnl?: number;
+    manual_exclusion_note?: string;
     severity_counts?: Record<string, number>;
     regime_alignment_counts?: Record<string, number>;
     unresolved_anomaly_groups?: Record<string, number>;
