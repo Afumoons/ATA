@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo } from "react";
 import { PageHeader } from "@/components/app-shell";
 import {
   DataTable,
@@ -17,6 +17,7 @@ import {
   ToolbarButton,
 } from "@/components/dashboard";
 import { useQuery } from "@/hooks/use-query";
+import { useUrlState } from "@/hooks/use-url-state";
 import { uiApi } from "@/lib/api";
 import { compactValue, formatDateTime, formatNumber, formatPercent } from "@/lib/format";
 import { toneFromMagnitude } from "@/lib/ui-state";
@@ -96,11 +97,18 @@ type FamilySkipDrilldown = {
   reasons: FamilySkipReason[];
 };
 
-export default function ResearchPage() {
-  const [symbol, setSymbol] = useState("XAUUSDm");
-  const [timeframe, setTimeframe] = useState("M15");
-  const [familyFilter, setFamilyFilter] = useState("");
-  const [sortPreset, setSortPreset] = useState<(typeof researchSortOptions)[number]["value"]>("accepted-desc");
+function ResearchPageContent() {
+  const researchUrlDefaults = useMemo(() => ({
+    symbol: "XAUUSDm",
+    timeframe: "M15",
+    family: "",
+    sort: "accepted-desc",
+  }), []);
+  const { state: researchUrlState, setState: setResearchUrlState, resetState: resetResearchUrlState } = useUrlState(researchUrlDefaults);
+  const symbol = researchUrlState.symbol;
+  const timeframe = researchUrlState.timeframe;
+  const familyFilter = researchUrlState.family;
+  const sortPreset = researchUrlState.sort as (typeof researchSortOptions)[number]["value"];
 
   const researchQuery = useQuery(`research-summary:${symbol}:${timeframe}`, () => uiApi.researchSummary(symbol, timeframe), {
     refetchIntervalMs: 60_000,
@@ -117,7 +125,7 @@ export default function ResearchPage() {
   useEffect(() => {
     if (!availableTimeframes.length) return;
     if (!availableTimeframes.includes(timeframe)) {
-      setTimeframe(availableTimeframes[0]);
+      setResearchUrlState({ timeframe: availableTimeframes[0] });
     }
   }, [availableTimeframes, timeframe]);
 
@@ -236,39 +244,34 @@ export default function ResearchPage() {
             onChange={(event) => {
               const nextSymbol = event.target.value;
               const nextTimeframes = timeframesBySymbol[nextSymbol] ?? [];
-              setSymbol(nextSymbol);
-              if (nextTimeframes.length && !nextTimeframes.includes(timeframe)) {
-                setTimeframe(nextTimeframes[0]);
-              }
+              setResearchUrlState({
+                symbol: nextSymbol,
+                timeframe: nextTimeframes.length && !nextTimeframes.includes(timeframe) ? nextTimeframes[0] : timeframe,
+              });
             }}
             >
               {(data.available_filters?.symbols ?? [symbol]).map((value) => <option key={value} value={value}>{value}</option>)}
             </FilterSelect>
           </FilterField>
           <FilterField label="Timeframe">
-            <FilterSelect value={timeframe} onChange={(event) => setTimeframe(event.target.value)}>
+            <FilterSelect value={timeframe} onChange={(event) => setResearchUrlState({ timeframe: event.target.value })}>
               {(availableTimeframes.length ? availableTimeframes : [timeframe]).map((value) => <option key={value} value={value}>{value}</option>)}
             </FilterSelect>
           </FilterField>
           <FilterField label="Family">
-            <FilterSelect value={familyFilter || "__all__"} onChange={(event) => setFamilyFilter(normalizeFilterValue(event.target.value))}>
+            <FilterSelect value={familyFilter || "__all__"} onChange={(event) => setResearchUrlState({ family: normalizeFilterValue(event.target.value) })}>
               <option value="__all__">All families</option>
               {familyOptions.map((value) => <option key={value} value={value}>{value}</option>)}
             </FilterSelect>
           </FilterField>
           <FilterField label="Sort view">
-            <FilterSelect value={sortPreset} onChange={(event) => setSortPreset(event.target.value as (typeof researchSortOptions)[number]["value"])}>
+            <FilterSelect value={sortPreset} onChange={(event) => setResearchUrlState({ sort: event.target.value as (typeof researchSortOptions)[number]["value"] })}>
               {researchSortOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
             </FilterSelect>
           </FilterField>
           <ToolbarButton
             label="Reset filters"
-            onClick={() => {
-              setSymbol("XAUUSDm");
-              setTimeframe("M15");
-              setFamilyFilter("");
-              setSortPreset("accepted-desc");
-            }}
+            onClick={() => resetResearchUrlState()}
             tone="neutral"
           />
         </FilterToolbar>
@@ -431,5 +434,13 @@ export default function ResearchPage() {
         )}
       </Section>
     </div>
+  );
+}
+
+export default function ResearchPage() {
+  return (
+    <Suspense fallback={<LoadingState title="Loading research funnel" description="Restoring URL-driven operator filters." />}>
+      <ResearchPageContent />
+    </Suspense>
   );
 }

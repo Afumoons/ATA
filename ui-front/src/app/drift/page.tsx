@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Suspense, useMemo } from "react";
 import { PageHeader } from "@/components/app-shell";
 import {
   AttentionCard,
@@ -19,6 +19,7 @@ import {
   ToolbarButton,
 } from "@/components/dashboard";
 import { useQuery } from "@/hooks/use-query";
+import { useUrlState } from "@/hooks/use-url-state";
 import { uiApi } from "@/lib/api";
 import { compactValue, formatCurrency, formatDateTime, formatNumber, formatPercent, formatRelativeAge } from "@/lib/format";
 import type { DriftSummaryRow, StatusTone } from "@/lib/types";
@@ -301,14 +302,22 @@ function DriftReviewCard({ row }: { row: DriftSummaryRow }) {
   );
 }
 
-export default function DriftPage() {
+function DriftPageContent() {
+  const driftUrlDefaults = useMemo(() => ({
+    symbol: "",
+    family: "",
+    status: "",
+    severity: "",
+    sort: "highest-drift",
+  }), []);
+  const { state: driftUrlState, setState: setDriftUrlState, resetState: resetDriftUrlState } = useUrlState(driftUrlDefaults);
   const driftQuery = useQuery("drift-summary", uiApi.driftSummary, { refetchIntervalMs: 60_000 });
   const { data, error, loading, hasData, refreshing, refresh } = driftQuery;
-  const [symbolFilter, setSymbolFilter] = useState("");
-  const [familyFilter, setFamilyFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
-  const [severityFilter, setSeverityFilter] = useState("");
-  const [sortPreset, setSortPreset] = useState<(typeof sortPresetOptions)[number]["value"]>("highest-drift");
+  const symbolFilter = driftUrlState.symbol;
+  const familyFilter = driftUrlState.family;
+  const statusFilter = driftUrlState.status;
+  const severityFilter = driftUrlState.severity;
+  const sortPreset = driftUrlState.sort as (typeof sortPresetOptions)[number]["value"];
 
   const filteredRows = useMemo(() => {
     return (data?.rows ?? []).filter((row) => {
@@ -395,43 +404,37 @@ export default function DriftPage() {
       <Section title="Drift filters" description="Slice the drift snapshot by symbol, family, lifecycle status, severity, and triage sort preset.">
         <FilterToolbar className="xl:grid-cols-5">
           <FilterField label="Symbol">
-            <FilterSelect value={symbolFilter || "__all__"} onChange={(event) => setSymbolFilter(normalizeFilterValue(event.target.value))}>
+            <FilterSelect value={symbolFilter || "__all__"} onChange={(event) => setDriftUrlState({ symbol: normalizeFilterValue(event.target.value) })}>
               <option value="__all__">All symbols</option>
               {(filterOptions.symbols ?? []).map((value) => <option key={value} value={value}>{value}</option>)}
             </FilterSelect>
           </FilterField>
           <FilterField label="Family">
-            <FilterSelect value={familyFilter || "__all__"} onChange={(event) => setFamilyFilter(normalizeFilterValue(event.target.value))}>
+            <FilterSelect value={familyFilter || "__all__"} onChange={(event) => setDriftUrlState({ family: normalizeFilterValue(event.target.value) })}>
               <option value="__all__">All families</option>
               {(filterOptions.families ?? []).map((value) => <option key={value} value={value}>{value}</option>)}
             </FilterSelect>
           </FilterField>
           <FilterField label="Status">
-            <FilterSelect value={statusFilter || "__all__"} onChange={(event) => setStatusFilter(normalizeFilterValue(event.target.value))}>
+            <FilterSelect value={statusFilter || "__all__"} onChange={(event) => setDriftUrlState({ status: normalizeFilterValue(event.target.value) })}>
               <option value="__all__">All statuses</option>
               {(filterOptions.statuses ?? []).map((value) => <option key={value} value={value}>{value}</option>)}
             </FilterSelect>
           </FilterField>
           <FilterField label="Severity">
-            <FilterSelect value={severityFilter || "__all__"} onChange={(event) => setSeverityFilter(normalizeFilterValue(event.target.value))}>
+            <FilterSelect value={severityFilter || "__all__"} onChange={(event) => setDriftUrlState({ severity: normalizeFilterValue(event.target.value) })}>
               <option value="__all__">All severities</option>
               {(filterOptions.severities ?? []).map((value) => <option key={value} value={value}>{value}</option>)}
             </FilterSelect>
           </FilterField>
           <FilterField label="Sort view">
-            <FilterSelect value={sortPreset} onChange={(event) => setSortPreset(event.target.value as (typeof sortPresetOptions)[number]["value"])}>
+            <FilterSelect value={sortPreset} onChange={(event) => setDriftUrlState({ sort: event.target.value as (typeof sortPresetOptions)[number]["value"] })}>
               {sortPresetOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
             </FilterSelect>
           </FilterField>
           <ToolbarButton
             label="Reset filters"
-            onClick={() => {
-              setSymbolFilter("");
-              setFamilyFilter("");
-              setStatusFilter("");
-              setSeverityFilter("");
-              setSortPreset("highest-drift");
-            }}
+            onClick={() => resetDriftUrlState()}
             tone="neutral"
           />
         </FilterToolbar>
@@ -548,5 +551,13 @@ export default function DriftPage() {
         />
       </Section>
     </div>
+  );
+}
+
+export default function DriftPage() {
+  return (
+    <Suspense fallback={<LoadingState title="Loading drift diagnostics" description="Restoring URL-driven operator filters." />}>
+      <DriftPageContent />
+    </Suspense>
   );
 }

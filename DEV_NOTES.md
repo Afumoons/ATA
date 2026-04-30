@@ -104,7 +104,8 @@ For each autonomous run:
 - Verified the Pool-page hierarchy/scannability slice with a production `npm run build` in `ui-front`
 - U7A/U7B Overview and Manifest hierarchy/scannability pass is now complete, adding operator briefing / deployment dossier cards and reducing generic table feel on the remaining passive pages
 - Verified the Overview/Manifest hierarchy-scannability slice with a production `npm run build` in `ui-front`
-- Next highest-value slice is continuing the remaining unchecked foundations, especially URL state sync for filters/selected rows, stronger responsive behavior for dense tables, and restrained transitions
+- URL state sync for filters and selected rows is now complete across Research, Drift, Review, Audit, and Pool, including shareable query params plus Suspense-safe restore on App Router pages
+- Next highest-value slice is continuing the remaining unchecked foundations, especially stronger responsive behavior for dense tables and restrained transitions
 - U0 shared page-level filter primitives are now complete, including reusable filter toolbar/select primitives across Research, Drift, Review, and Audit plus an Audit date-range control
 - Verified the shared filter-primitives slice with a production `npm run build` in `ui-front`
 - User explicitly wants progress reports, not approval questions

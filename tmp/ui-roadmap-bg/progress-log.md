@@ -103,3 +103,7 @@
 - Relaxed the shared filter toolbar grid to auto-fit available width so multi-control pages wrap more gracefully without page-specific layout hacks.
 - Verified the shared filter-primitives slice with a production `npm run build` in `ui-front`.
 - Marked the roadmap shared page-level filter primitives item complete; next slice is URL state sync for filters and selected rows.
+- Added a shared `useUrlState` hook and wired Research, Drift, Review, Audit, and Pool to restore/share filter state and Pool strategy selection from query params.
+- Added Suspense wrappers around the URL-synced App Router pages so Next.js static builds accept `useSearchParams`-driven state restoration.
+- Verified the URL-state-sync slice with a production `npm run build` in `ui-front`.
+- Marked the roadmap URL state sync item complete; next slice is stronger responsive behavior for dense operator tables.

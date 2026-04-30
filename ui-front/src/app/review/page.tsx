@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Suspense, useMemo } from "react";
 import { PageHeader } from "@/components/app-shell";
 import {
   AttentionCard,
@@ -18,6 +18,7 @@ import {
   ToolbarButton,
 } from "@/components/dashboard";
 import { useQuery } from "@/hooks/use-query";
+import { useUrlState } from "@/hooks/use-url-state";
 import { uiApi } from "@/lib/api";
 import { compactValue, formatCurrency, formatDateTime, formatNumber, formatPercent } from "@/lib/format";
 import type { ReviewQueueRow, StatusTone } from "@/lib/types";
@@ -112,13 +113,20 @@ function reviewPriorityLabel(row: ReviewQueueRow) {
   return "Needs operator diagnosis";
 }
 
-export default function ReviewPage() {
+function ReviewPageContent() {
+  const reviewUrlDefaults = useMemo(() => ({
+    bucket: "",
+    category: "",
+    status: "",
+    symbol: "",
+  }), []);
+  const { state: reviewUrlState, setState: setReviewUrlState, resetState: resetReviewUrlState } = useUrlState(reviewUrlDefaults);
   const reviewQuery = useQuery("review-queue", uiApi.reviewQueue, { refetchIntervalMs: 60_000 });
   const { data, error, loading, hasData, refreshing, refresh } = reviewQuery;
-  const [bucketFilter, setBucketFilter] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
-  const [symbolFilter, setSymbolFilter] = useState("");
+  const bucketFilter = reviewUrlState.bucket;
+  const categoryFilter = reviewUrlState.category;
+  const statusFilter = reviewUrlState.status;
+  const symbolFilter = reviewUrlState.symbol;
 
   const filteredRows = useMemo(() => {
     return (data?.rows ?? []).filter((row) => {
@@ -177,37 +185,32 @@ export default function ReviewPage() {
       <Section title="Queue filters" description="Slice the review queue by triage bucket, queue category, current status, and symbol.">
         <FilterToolbar>
           <FilterField label="Triage bucket">
-            <FilterSelect value={bucketFilter || "__all__"} onChange={(event) => setBucketFilter(normalizeFilterValue(event.target.value))}>
+            <FilterSelect value={bucketFilter || "__all__"} onChange={(event) => setReviewUrlState({ bucket: normalizeFilterValue(event.target.value) })}>
               <option value="__all__">All buckets</option>
               {(filterOptions.triage_buckets ?? []).map((value) => <option key={value} value={value}>{triageLabels[value] ?? value}</option>)}
             </FilterSelect>
           </FilterField>
           <FilterField label="Category">
-            <FilterSelect value={categoryFilter || "__all__"} onChange={(event) => setCategoryFilter(normalizeFilterValue(event.target.value))}>
+            <FilterSelect value={categoryFilter || "__all__"} onChange={(event) => setReviewUrlState({ category: normalizeFilterValue(event.target.value) })}>
               <option value="__all__">All categories</option>
               {(filterOptions.categories ?? []).map((value) => <option key={value} value={value}>{categoryLabels[value] ?? value}</option>)}
             </FilterSelect>
           </FilterField>
           <FilterField label="Status">
-            <FilterSelect value={statusFilter || "__all__"} onChange={(event) => setStatusFilter(normalizeFilterValue(event.target.value))}>
+            <FilterSelect value={statusFilter || "__all__"} onChange={(event) => setReviewUrlState({ status: normalizeFilterValue(event.target.value) })}>
               <option value="__all__">All statuses</option>
               {(filterOptions.statuses ?? []).map((value) => <option key={value} value={value}>{value}</option>)}
             </FilterSelect>
           </FilterField>
           <FilterField label="Symbol">
-            <FilterSelect value={symbolFilter || "__all__"} onChange={(event) => setSymbolFilter(normalizeFilterValue(event.target.value))}>
+            <FilterSelect value={symbolFilter || "__all__"} onChange={(event) => setReviewUrlState({ symbol: normalizeFilterValue(event.target.value) })}>
               <option value="__all__">All symbols</option>
               {(filterOptions.symbols ?? []).map((value) => <option key={value} value={value}>{value}</option>)}
             </FilterSelect>
           </FilterField>
           <ToolbarButton
             label="Reset filters"
-            onClick={() => {
-              setBucketFilter("");
-              setCategoryFilter("");
-              setStatusFilter("");
-              setSymbolFilter("");
-            }}
+            onClick={() => resetReviewUrlState()}
             tone="neutral"
           />
         </FilterToolbar>
@@ -376,5 +379,13 @@ export default function ReviewPage() {
         </div>
       </Section>
     </div>
+  );
+}
+
+export default function ReviewPage() {
+  return (
+    <Suspense fallback={<LoadingState title="Loading review queue" description="Restoring URL-driven operator filters." />}>
+      <ReviewPageContent />
+    </Suspense>
   );
 }

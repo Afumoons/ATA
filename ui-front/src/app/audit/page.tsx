@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Suspense, useMemo } from "react";
 import { PageHeader } from "@/components/app-shell";
 import { ErrorState, FilterField, FilterSelect, FilterToolbar, FreshnessBadge, LoadingState, Section, StatCard, Timeline, ToolbarButton } from "@/components/dashboard";
 import { useQuery } from "@/hooks/use-query";
+import { useUrlState } from "@/hooks/use-url-state";
 import { uiApi } from "@/lib/api";
 import { formatDateTime, formatNumber } from "@/lib/format";
 import { getEventStrategyName, getEventSymbol, getEventTimestamp } from "@/lib/ui-state";
@@ -26,14 +27,24 @@ function dateRangeCutoff(value: (typeof DATE_RANGE_OPTIONS)[number]["value"]) {
   return null;
 }
 
-export default function AuditPage() {
-  const [sourceFilter, setSourceFilter] = useState("all");
-  const [strategyFilter, setStrategyFilter] = useState("all");
-  const [symbolFilter, setSymbolFilter] = useState("all");
-  const [dateRange, setDateRange] = useState<(typeof DATE_RANGE_OPTIONS)[number]["value"]>("24h");
-  const [preset, setPreset] = useState<"all" | "attention" | "execution" | "pool">("all");
-  const [expanded, setExpanded] = useState(false);
-  const [showRaw, setShowRaw] = useState(false);
+function AuditPageContent() {
+  const auditUrlDefaults = useMemo(() => ({
+    source: "all",
+    strategy: "all",
+    symbol: "all",
+    range: "24h",
+    preset: "all",
+    expanded: "0",
+    raw: "0",
+  }), []);
+  const { state: auditUrlState, setState: setAuditUrlState } = useUrlState(auditUrlDefaults);
+  const sourceFilter = auditUrlState.source;
+  const strategyFilter = auditUrlState.strategy;
+  const symbolFilter = auditUrlState.symbol;
+  const dateRange = auditUrlState.range as (typeof DATE_RANGE_OPTIONS)[number]["value"];
+  const preset = auditUrlState.preset as "all" | "attention" | "execution" | "pool";
+  const expanded = auditUrlState.expanded === "1";
+  const showRaw = auditUrlState.raw === "1";
 
   const { data, error, loading, hasData, refreshing, refresh } = useQuery(
     "audit-timeline",
@@ -117,7 +128,7 @@ export default function AuditPage() {
                 key={value}
                 type="button"
                 className={`segmented-button${preset === value ? " is-active" : ""}`}
-                onClick={() => setPreset(value as typeof preset)}
+                onClick={() => setAuditUrlState({ preset: value as typeof preset })}
               >
                 {label}
               </button>
@@ -125,7 +136,7 @@ export default function AuditPage() {
           </div>
 
           <FilterField label="Source">
-            <FilterSelect value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value)}>
+            <FilterSelect value={sourceFilter} onChange={(event) => setAuditUrlState({ source: event.target.value })}>
               <option value="all">All sources</option>
               {sourceOptions.map((source) => (
                 <option key={source} value={source}>
@@ -136,7 +147,7 @@ export default function AuditPage() {
           </FilterField>
 
           <FilterField label="Strategy">
-            <FilterSelect value={strategyFilter} onChange={(event) => setStrategyFilter(event.target.value)}>
+            <FilterSelect value={strategyFilter} onChange={(event) => setAuditUrlState({ strategy: event.target.value })}>
               <option value="all">All strategies</option>
               {strategyOptions.map((strategy) => (
                 <option key={strategy} value={strategy}>
@@ -147,7 +158,7 @@ export default function AuditPage() {
           </FilterField>
 
           <FilterField label="Symbol">
-            <FilterSelect value={symbolFilter} onChange={(event) => setSymbolFilter(event.target.value)}>
+            <FilterSelect value={symbolFilter} onChange={(event) => setAuditUrlState({ symbol: event.target.value })}>
               <option value="all">All symbols</option>
               {symbolOptions.map((symbol) => (
                 <option key={symbol} value={symbol}>
@@ -158,7 +169,7 @@ export default function AuditPage() {
           </FilterField>
 
           <FilterField label="Date range">
-            <FilterSelect value={dateRange} onChange={(event) => setDateRange(event.target.value as (typeof DATE_RANGE_OPTIONS)[number]["value"])}>
+            <FilterSelect value={dateRange} onChange={(event) => setAuditUrlState({ range: event.target.value as (typeof DATE_RANGE_OPTIONS)[number]["value"] })}>
               {DATE_RANGE_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
@@ -168,10 +179,10 @@ export default function AuditPage() {
           </FilterField>
 
           <div className="toggle-toolbar">
-            <button type="button" className={`segmented-button${expanded ? " is-active" : ""}`} onClick={() => setExpanded((value) => !value)}>
+            <button type="button" className={`segmented-button${expanded ? " is-active" : ""}`} onClick={() => setAuditUrlState({ expanded: expanded ? "0" : "1" })}>
               {expanded ? "Expanded rows" : "Compact rows"}
             </button>
-            <button type="button" className={`segmented-button${showRaw ? " is-active" : ""}`} onClick={() => setShowRaw((value) => !value)}>
+            <button type="button" className={`segmented-button${showRaw ? " is-active" : ""}`} onClick={() => setAuditUrlState({ raw: showRaw ? "0" : "1" })}>
               {showRaw ? "Raw payload on" : "Raw payload off"}
             </button>
           </div>
@@ -182,5 +193,13 @@ export default function AuditPage() {
         <Timeline items={filteredEvents} expanded={expanded} showRaw={showRaw} />
       </Section>
     </div>
+  );
+}
+
+export default function AuditPage() {
+  return (
+    <Suspense fallback={<LoadingState title="Loading audit timeline" description="Restoring URL-driven operator filters." />}>
+      <AuditPageContent />
+    </Suspense>
   );
 }

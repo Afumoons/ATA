@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo } from "react";
 import { PageHeader } from "@/components/app-shell";
 import {
   DataTable,
@@ -16,6 +16,7 @@ import {
   ToolbarButton,
 } from "@/components/dashboard";
 import { useQuery } from "@/hooks/use-query";
+import { useUrlState } from "@/hooks/use-url-state";
 import { uiApi } from "@/lib/api";
 import { compactValue, formatCurrency, formatDateTime, formatNumber, formatPercent } from "@/lib/format";
 import {
@@ -134,11 +135,18 @@ function familyComparisonRows(data: PoolSummaryData | null | undefined) {
   return rows;
 }
 
-export default function PoolPage() {
-  const [search, setSearch] = useState("");
-  const [tierFilter, setTierFilter] = useState("all");
-  const [selectedStrategy, setSelectedStrategy] = useState<string>("");
-  const [compareStrategy, setCompareStrategy] = useState<string>("");
+function PoolPageContent() {
+  const poolUrlDefaults = useMemo(() => ({
+    search: "",
+    tier: "all",
+    strategy: "",
+    compare: "",
+  }), []);
+  const { state: poolUrlState, setState: setPoolUrlState } = useUrlState(poolUrlDefaults);
+  const search = poolUrlState.search;
+  const tierFilter = poolUrlState.tier;
+  const selectedStrategy = poolUrlState.strategy;
+  const compareStrategy = poolUrlState.compare;
 
   const poolQuery = useQuery("pool-summary", uiApi.poolSummary, { refetchIntervalMs: 60_000 });
   const strategiesQuery = useQuery("strategies-summary", uiApi.strategies, { refetchIntervalMs: 90_000 });
@@ -185,6 +193,15 @@ export default function PoolPage() {
     }
     return comparisonCandidates[0]?.name ?? "";
   }, [compareStrategy, comparisonCandidates]);
+
+  useEffect(() => {
+    if (resolvedSelectedStrategy !== selectedStrategy || resolvedCompareStrategy !== compareStrategy) {
+      setPoolUrlState({
+        strategy: resolvedSelectedStrategy,
+        compare: resolvedCompareStrategy,
+      });
+    }
+  }, [compareStrategy, resolvedCompareStrategy, resolvedSelectedStrategy, selectedStrategy, setPoolUrlState]);
 
   const detailQuery = useQuery(
     `strategy-detail:${resolvedSelectedStrategy}`,
@@ -401,13 +418,13 @@ export default function PoolPage() {
             <input
               className="filter-input"
               value={search}
-              onChange={(event) => setSearch(event.target.value)}
+              onChange={(event) => setPoolUrlState({ search: event.target.value })}
               placeholder="name, symbol, family, motif"
             />
           </label>
           <label className="filter-field">
             <span>Tier</span>
-            <select className="filter-input" value={tierFilter} onChange={(event) => setTierFilter(event.target.value)}>
+            <select className="filter-input" value={tierFilter} onChange={(event) => setPoolUrlState({ tier: event.target.value })}>
               <option value="all">All tiers</option>
               {tierOptions.map((tier) => (
                 <option key={tier} value={tier}>
@@ -429,7 +446,7 @@ export default function PoolPage() {
               key={strategy.name}
               type="button"
               className={`table-link-button${resolvedSelectedStrategy === strategy.name ? " is-active" : ""}`}
-              onClick={() => setSelectedStrategy(strategy.name)}
+              onClick={() => setPoolUrlState({ strategy: strategy.name })}
             >
               {strategy.name}
             </button>,
@@ -1042,7 +1059,7 @@ export default function PoolPage() {
             <div className="filter-toolbar panel compare-toolbar">
               <label className="filter-field">
                 <span>Primary</span>
-                <select className="filter-input" value={resolvedSelectedStrategy} onChange={(event) => setSelectedStrategy(event.target.value)}>
+                <select className="filter-input" value={resolvedSelectedStrategy} onChange={(event) => setPoolUrlState({ strategy: event.target.value })}>
                   {filteredStrategies.map((strategy) => (
                     <option key={`primary-${strategy.name}`} value={strategy.name}>
                       {strategy.name}
@@ -1052,7 +1069,7 @@ export default function PoolPage() {
               </label>
               <label className="filter-field">
                 <span>Compare against</span>
-                <select className="filter-input" value={resolvedCompareStrategy} onChange={(event) => setCompareStrategy(event.target.value)}>
+                <select className="filter-input" value={resolvedCompareStrategy} onChange={(event) => setPoolUrlState({ compare: event.target.value })}>
                   {comparisonCandidates.map((strategy) => (
                     <option key={`compare-${strategy.name}`} value={strategy.name}>
                       {strategy.name}
@@ -1220,5 +1237,13 @@ export default function PoolPage() {
         )}
       </Section>
     </div>
+  );
+}
+
+export default function PoolPage() {
+  return (
+    <Suspense fallback={<LoadingState title="Loading pool overview" description="Restoring URL-driven strategy selection." />}>
+      <PoolPageContent />
+    </Suspense>
   );
 }
