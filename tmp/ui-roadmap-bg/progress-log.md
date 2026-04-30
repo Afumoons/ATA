@@ -95,3 +95,6 @@
 - Added a shared InsightCard treatment plus a Pool-page hierarchy/scannability pass, turning the top of `/pool` into operator dossiers for workflow mix, family concentration, symbol concentration, and slot pressure before the raw ledgers.
 - Verified the Pool-page hierarchy/scannability slice with a production `npm run build` in `ui-front`.
 - Updated roadmap/notes to reflect that Review, Execution, Drift, and Pool now have dedicated hierarchy passes; next slice is Overview/Manifest consistency and remaining responsive polish.
+- Added a U7A/U7B hierarchy and scannability pass on Overview and Manifest, introducing operator briefing / deployment dossier cards and replacing the last generic passive readouts with more operator-readable structures.
+- Verified the Overview/Manifest polish slice with a production `npm run build` in `ui-front`.
+- Updated roadmap/notes to reflect that Overview and Manifest now have dedicated hierarchy passes; next slice is shared responsive behavior for dense tables plus remaining U0/U7 polish foundations.

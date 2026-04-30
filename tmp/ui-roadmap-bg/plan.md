@@ -31,6 +31,7 @@
 - [x] Add U7A drift dossier / severity-language pass on `/drift`
 - [x] Add U7B empty-state / operator-meaning pass across remaining passive reads
 - [x] Add U7A/U7B Pool-page hierarchy and scannability pass
+- [x] Add U7A/U7B Overview and Manifest hierarchy / scannability pass
 
 ## Completion Rule
 When every item in `docs/ui-roadmap-tasklist.md` is checked or intentionally closed, mark this plan completed and stop/remove the background cron loop.
