@@ -253,13 +253,25 @@ export function DataTable({
             {rows.length ? (
               rows.map((row, rowIndex) => (
                 <tr key={rowIndex}>
-                  {row.map((cell, cellIndex) => (
-                    <td key={cellIndex}>{cell}</td>
-                  ))}
+                  {row.map((cell, cellIndex) => {
+                    const columnLabel = columns[cellIndex] ?? `Column ${cellIndex + 1}`;
+                    const isPrimaryCell = cellIndex === 0;
+
+                    return (
+                      <td
+                        key={cellIndex}
+                        data-column={columnLabel}
+                        data-primary-cell={isPrimaryCell ? "true" : undefined}
+                        aria-label={`${columnLabel}: ${typeof cell === "string" ? cell : "table cell"}`}
+                      >
+                        {cell}
+                      </td>
+                    );
+                  })}
                 </tr>
               ))
             ) : (
-              <tr>
+              <tr className="table-empty-row">
                 <td colSpan={columns.length}>
                   <EmptyState title={emptyTitle} description={emptyDescription} compact />
                 </td>

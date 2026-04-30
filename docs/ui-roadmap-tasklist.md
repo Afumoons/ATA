@@ -19,7 +19,7 @@ Transform the current Operator UI from a read-only monitoring surface into a dec
 - [x] Add shared page-level filter primitives (symbol, timeframe, family, date range)
 - [x] Add URL state sync for filters and selected rows
 - [ ] Add empty/loading/error state consistency pass across all pages
-- [ ] Add stronger responsive behavior for dense operator tables
+- [x] Add stronger responsive behavior for dense operator tables
 
 ---
 

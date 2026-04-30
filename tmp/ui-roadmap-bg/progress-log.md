@@ -107,3 +107,6 @@
 - Added Suspense wrappers around the URL-synced App Router pages so Next.js static builds accept `useSearchParams`-driven state restoration.
 - Verified the URL-state-sync slice with a production `npm run build` in `ui-front`.
 - Marked the roadmap URL state sync item complete; next slice is stronger responsive behavior for dense operator tables.
+- Added a shared responsive dense-table treatment in `dashboard.tsx` and `globals.css`, so DataTable rows collapse into labeled operator cards on narrow screens instead of only relying on horizontal scroll.
+- Verified the responsive dense-table slice with a production `npm run build` in `ui-front`.
+- Marked the roadmap dense-table responsive item complete; next slice is the remaining consistency polish, especially shared loading/error-state treatment and restrained transitions.
