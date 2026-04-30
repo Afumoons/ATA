@@ -48,12 +48,14 @@ Implement and advance `docs/ui-roadmap-tasklist.md` until the tasklist is fully 
 - U7A/U7B Overview and Manifest hierarchy / scannability pass added in current workstream
 - U0 shared page-level filter primitives added in current workstream
 - U7A/U7B Research hierarchy / scannability pass added in current workstream
+- U6B optional operator actions intentionally closed as deferred, leaving this roadmap complete without introducing write controls
 
 ## Milestone Order
 1. Commit roadmap tasklist doc cleanly
 2. Advance U3 Promotion / Demotion Explainability
 3. Advance U1C Research diagnostics improvements
 4. Continue through remaining roadmap items in priority order
+5. Close optional U6B explicitly once the read-only cockpit is complete, then stop/remove the background loop
 
 ## Operating Loop
 For each autonomous run:
@@ -118,5 +120,6 @@ For each autonomous run:
 - U7A/U7B Audit-page hierarchy and scannability pass is now complete, adding an operator brief, attention lanes, and hotspot summaries so the merged audit feed reads like a triage cockpit before the raw ledger
 - Verified the Audit-page hierarchy/scannability slice with a production `npm run build` in `ui-front`
 - U7 polish is now complete across the current roadmap pages; the only remaining unchecked roadmap area is optional U6B safe operator actions, which should stay read-only and explicitly gated if pursued later
+- U6B is now intentionally closed for this roadmap: no write-adjacent operator controls were added, and any future simulation/proposal work should begin as a separate approved roadmap
 - User explicitly wants progress reports, not approval questions
-- Next highest-value slice is deciding whether to intentionally defer/close optional U6B safe operator actions or to build the first read-only simulation card without enabling any writes
+- This background UI roadmap workstream is complete and should be stopped/removed by the scheduler after this final clean commit

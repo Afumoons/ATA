@@ -121,3 +121,9 @@
 - Added a U7A/U7B Audit-page hierarchy and scannability pass, turning `/audit` into a triage cockpit with an operator brief, attention lanes, hotspot summaries, and a clearer separation between briefing context and the raw merged-event ledger.
 - Verified the Audit-page hierarchy/scannability slice with a production `npm run build` in `ui-front`.
 - Marked U7 information-design and frontend-design polish complete in roadmap/task notes; only optional U6B safe operator actions remain open for later, explicitly gated work.
+
+## 2026-04-30
+- Reviewed the final unchecked roadmap area and chose the highest-value bounded slice: close optional U6B explicitly instead of adding write-adjacent controls to a read-only cockpit.
+- Updated `docs/ui-roadmap-tasklist.md`, `DEV_NOTES.md`, and `tmp/ui-roadmap-bg/plan.md` to mark U6B intentionally deferred/closed for this roadmap.
+- Verified the closure slice by checking the updated roadmap/notes diff and ensuring no UI/runtime code paths were changed.
+- This workstream is now complete and the background UI roadmap cron should be removed/stopped after the final commit.

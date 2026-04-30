@@ -1,6 +1,6 @@
 # Autonomous Trading AI UI Roadmap Tasklist
 
-_Last updated: 2026-04-30_
+_Last updated: 2026-04-30 (roadmap closed)_
 
 ## Goal
 Transform the current Operator UI from a read-only monitoring surface into a decision cockpit for research, execution, governance, and operator review.
@@ -145,9 +145,9 @@ Transform the current Operator UI from a read-only monitoring surface into a dec
 - [x] Add active-vs-disabled inventory imbalance warnings
 
 ### U6B — Safe operator actions (only if wanted later)
-- [ ] Add read-only simulation of promote/demote effects
-- [ ] Add “proposed action” cards before enabling any write action
-- [ ] Keep execution-changing actions gated behind explicit confirmation and audit logging
+- [x] Intentionally defer read-only simulation of promote/demote effects for a later operator-controls roadmap
+- [x] Intentionally defer “proposed action” cards until write-capable operator controls are explicitly approved
+- [x] Keep execution-changing actions gated behind explicit confirmation and audit logging, with no write actions added in this roadmap
 
 ---
 
@@ -180,6 +180,7 @@ Transform the current Operator UI from a read-only monitoring surface into a dec
 7. [x] Add remaining U5B duplicate-risk visibility from semantic similarity / memory veto context
 8. [x] Build U6A governance visibility surfaces
 9. [x] Finish U7 design polish pass
+10. [x] Close optional U6B by explicitly deferring write-adjacent controls and ending this background workstream
 
 ---
 
@@ -203,9 +204,14 @@ Transform the current Operator UI from a read-only monitoring surface into a dec
 - [x] U5 complete
 - [x] U7 polish complete
 
+### Milestone M5 — Roadmap closure
+- [x] Optional U6B intentionally closed without enabling operator writes
+- [x] Background UI roadmap workstream ready to stop
+
 ---
 
 ## Notes
 - Keep UI commits isolated from trading/runtime artifact changes.
 - Prefer read-only visibility first, then controlled explainability, then optional operator actions.
 - The highest-value UI principle remains: show not only what happened, but why the machine took this shape.
+- This roadmap is now complete. Any future operator-action work should start as a new explicitly approved roadmap, not as a continuation of this background build.

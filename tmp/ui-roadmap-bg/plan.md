@@ -38,9 +38,12 @@
 - [x] Add empty/loading/error state consistency pass across all pages
 - [x] Add Research-page hierarchy / scannability pass with restrained transitions
 - [x] Add Audit-page hierarchy / scannability pass and close the U7 polish pass
+- [x] Intentionally close optional U6B safe operator actions without enabling write controls
 
 ## Completion Rule
 When every item in `docs/ui-roadmap-tasklist.md` is checked or intentionally closed, mark this plan completed and stop/remove the background cron loop.
 
-## Remaining Decision
-- Optional U6B safe operator actions are the only roadmap items still intentionally open. Keep them read-only and explicitly gated if they are ever implemented.
+## Final Status
+- All roadmap items are now either implemented or intentionally closed.
+- U6B remains deferred by design so this workstream stays read-only.
+- This background cron loop should now be removed/stopped.
