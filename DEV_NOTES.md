@@ -161,4 +161,6 @@ For each autonomous run:
 - Verified the operator-facing submit slice with a production `npm run build` in `ui-front`
 - T8 warning explanation polish is now complete: `ui-front/src/app/manual-ticket/page.tsx` maps sizing and symbol-metadata warning codes into operator-readable Indonesian explanations so stop-geometry, broker-lot limits, and rounded-risk deviations are understandable before preview/submit
 - Verified the T8 warning-explanation slice with a production `npm run build` in `ui-front`
-- Next highest-value unchecked slice after this is T8 mobile / narrow layout support, focused on making the manual ticket form and preview stacks read cleanly on smaller operator screens without changing live-execution behavior
+- T8 mobile / narrow layout support is now complete: `ui-front/src/app/manual-ticket/page.tsx` adds a compact three-step workflow strip for draft/preview/submit state visibility, while `ui-front/src/app/globals.css` gives the manual ticket narrower-screen stage stacking, full-width action buttons, and cleaner chip/card behavior without changing manual_user execution semantics
+- Verified the T8 mobile / narrow layout slice with a production `npm run build` in `ui-front`
+- Next highest-value unchecked slice after this is T8 input ergonomics for fast operator use, focused on reducing repetitive field entry and speeding common manual ticket presets without loosening the manual_user confirmation gates

@@ -274,6 +274,9 @@ export default function ManualTicketPage() {
 
   const symbolLabel = form.symbolMode === "custom" ? form.customSymbol.trim().toUpperCase() || "Custom symbol" : form.presetSymbol;
   const entryLabel = form.orderType === "market" ? "Reference market price" : "Pending entry price";
+  const draftStepState = !payload ? "blocked" : status === "success" ? "ready" : status === "loading" ? "active" : status === "error" ? "warning" : "active";
+  const previewStepState = previewAuditStatus === "success" ? "ready" : previewAuditStatus === "loading" ? "active" : previewConfirmed ? "warning" : "blocked";
+  const submitStepState = submitStatus === "success" ? "ready" : submitStatus === "loading" ? "active" : previewAuditStatus === "success" ? "warning" : "blocked";
 
   async function handleRecordPreviewIntent() {
     if (!payload || !calc || !previewConfirmed) return;
@@ -326,6 +329,33 @@ export default function ManualTicketPage() {
         title="Manual-user segregation is locked in"
         description="This slice is calculator and preview only. Any payload shown here is pre-tagged with order_origin=manual_user, execution_origin=operator_ui, is_manual=true, and exclude_from_strategy_eval=true."
       />
+
+      <section className="manual-ticket-stage-grid" aria-label="Manual ticket workflow status">
+        <article className={`manual-ticket-stage-card is-${draftStepState}`}>
+          <div>
+            <p className="manual-ticket-stage-eyebrow">Step 1</p>
+            <h3>Draft and sizing</h3>
+          </div>
+          <p>Isi geometry order, risk, dan SL/TP sampai calculator memberi draft yang valid untuk <strong>{symbolLabel || "manual_user"}</strong>.</p>
+          <StatusBadge label={draftStepState === "ready" ? "Calculator ready" : draftStepState === "warning" ? "Check inputs" : draftStepState === "active" ? "Drafting" : "Waiting for required fields"} tone={draftStepState === "ready" ? "success" : draftStepState === "warning" ? "warning" : "info"} />
+        </article>
+        <article className={`manual-ticket-stage-card is-${previewStepState}`}>
+          <div>
+            <p className="manual-ticket-stage-eyebrow">Step 2</p>
+            <h3>Broker preview audit</h3>
+          </div>
+          <p>Konfirmasi manual_user lalu validasi ke broker agar snapshot preview tercatat ke audit sebelum submit live dibuka.</p>
+          <StatusBadge label={previewStepState === "ready" ? "Preview validated" : previewStepState === "warning" ? "Confirmation ready" : previewStepState === "active" ? "Validating preview" : "Preview still locked"} tone={previewStepState === "ready" ? "success" : previewStepState === "warning" ? "warning" : "info"} />
+        </article>
+        <article className={`manual-ticket-stage-card is-${submitStepState}`}>
+          <div>
+            <p className="manual-ticket-stage-eyebrow">Step 3</p>
+            <h3>Explicit live submit</h3>
+          </div>
+          <p>Submit tetap pakai gate kedua, client submission id idempoten, dan marker manual_user yang tetap terpisah dari statistik strategi.</p>
+          <StatusBadge label={submitStepState === "ready" ? "Submit completed" : submitStepState === "warning" ? "Submit can open" : submitStepState === "active" ? "Submitting live" : "Waiting for preview audit"} tone={submitStepState === "ready" ? "success" : submitStepState === "warning" ? "warning" : "info"} />
+        </article>
+      </section>
 
       <div className="detail-grid-2 manual-ticket-layout">
         <Card>
@@ -576,7 +606,7 @@ export default function ManualTicketPage() {
               </span>
             </label>
 
-            <div className="manual-ticket-inline-row">
+            <div className="manual-ticket-inline-row manual-ticket-action-row">
               <Button onClick={() => void handleRecordPreviewIntent()} disabled={!payload || !calc || status !== "success" || !previewConfirmed || previewAuditStatus === "loading"}>
                 {previewAuditStatus === "loading" ? "Validating broker + recording preview..." : "Validate with broker and record preview"}
               </Button>
@@ -641,7 +671,7 @@ export default function ManualTicketPage() {
               </span>
             </label>
 
-            <div className="manual-ticket-inline-row">
+            <div className="manual-ticket-inline-row manual-ticket-action-row">
               <Button onClick={() => void handleSubmitManualTrade()} disabled={!payload || !calc || !previewAudit || previewAuditStatus !== "success" || !previewConfirmed || !submitConfirmed || submitStatus === "loading" || !clientSubmissionId.trim()}>
                 {submitStatus === "loading" ? "Submitting live manual order..." : "Submit live manual order"}
               </Button>
