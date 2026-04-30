@@ -35,6 +35,7 @@
 - [x] Add shared page-level filter primitives across key operator pages
 - [x] Add URL state sync for filters and selected rows
 - [x] Add stronger responsive behavior for dense operator tables
+- [x] Add empty/loading/error state consistency pass across all pages
 
 ## Completion Rule
 When every item in `docs/ui-roadmap-tasklist.md` is checked or intentionally closed, mark this plan completed and stop/remove the background cron loop.

@@ -13,6 +13,7 @@ import {
   FreshnessBadge,
   KeyValueGrid,
   LoadingState,
+  QueryStateNotice,
   Section,
   StatCard,
   StatusBadge,
@@ -312,7 +313,7 @@ function DriftPageContent() {
   }), []);
   const { state: driftUrlState, setState: setDriftUrlState, resetState: resetDriftUrlState } = useUrlState(driftUrlDefaults);
   const driftQuery = useQuery("drift-summary", uiApi.driftSummary, { refetchIntervalMs: 60_000 });
-  const { data, error, loading, hasData, refreshing, refresh } = driftQuery;
+  const { data, error, loading, hasData, refreshing, refresh, lastSuccessAt } = driftQuery;
   const symbolFilter = driftUrlState.symbol;
   const familyFilter = driftUrlState.family;
   const statusFilter = driftUrlState.status;
@@ -389,6 +390,14 @@ function DriftPageContent() {
             <ToolbarButton label="Refresh now" onClick={() => void refresh()} busy={refreshing} tone="info" />
           </div>
         }
+      />
+
+      <QueryStateNotice
+        error={error}
+        refreshing={refreshing}
+        hasData={hasData}
+        resourceLabel="drift summary"
+        lastSuccessAt={lastSuccessAt}
       />
 
       <section className="stats-grid">

@@ -10,6 +10,7 @@ import {
   InlineNotice,
   KeyValueGrid,
   LoadingState,
+  QueryStateNotice,
   Section,
   StatCard,
   StatusBadge,
@@ -191,6 +192,14 @@ export default function ExecutionPage() {
             />
           </div>
         }
+      />
+
+      <QueryStateNotice
+        error={error}
+        refreshing={refreshing}
+        hasData={hasData}
+        resourceLabel="execution summary"
+        lastSuccessAt={executionQuery.lastSuccessAt}
       />
 
       {auditQuery.error && !auditQuery.data ? (

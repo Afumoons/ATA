@@ -12,6 +12,7 @@ import {
   FreshnessBadge,
   KeyValueGrid,
   LoadingState,
+  QueryStateNotice,
   Section,
   StatCard,
   ToolbarButton,
@@ -114,7 +115,7 @@ function ResearchPageContent() {
     refetchIntervalMs: 60_000,
   });
 
-  const { data, error, loading, hasData, refreshing, refresh } = researchQuery;
+  const { data, error, loading, hasData, refreshing, refresh, lastSuccessAt } = researchQuery;
   const timeframesBySymbol = data?.available_filters?.timeframes_by_symbol ?? {};
 
   const availableTimeframes = useMemo(() => {
@@ -224,6 +225,8 @@ function ResearchPageContent() {
           </div>
         }
       />
+
+      <QueryStateNotice error={error} refreshing={refreshing} hasData={hasData} resourceLabel="research summary" lastSuccessAt={lastSuccessAt} />
 
       <section className="stats-grid">
         <StatCard label="Generated" value={formatNumber(data.funnel_totals.generated)} hint="Total candidates generated" tone="info" />

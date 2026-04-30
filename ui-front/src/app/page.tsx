@@ -11,6 +11,7 @@ import {
   InsightCard,
   KeyValueGrid,
   LoadingState,
+  QueryStateNotice,
   Section,
   StatCard,
   StatusBadge,
@@ -73,6 +74,14 @@ export default function OverviewPage() {
             />
           </div>
         }
+      />
+
+      <QueryStateNotice
+        error={error}
+        refreshing={refreshing}
+        hasData={hasData}
+        resourceLabel="overview payload"
+        lastSuccessAt={overviewQuery.lastSuccessAt}
       />
 
       {freshness.isStale ? (

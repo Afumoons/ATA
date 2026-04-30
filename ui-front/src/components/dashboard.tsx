@@ -395,6 +395,47 @@ export function ErrorState({
   );
 }
 
+export function QueryStateNotice({
+  error,
+  refreshing,
+  hasData,
+  resourceLabel,
+  lastSuccessAt,
+}: {
+  error: unknown;
+  refreshing?: boolean;
+  hasData: boolean;
+  resourceLabel: string;
+  lastSuccessAt?: number | null;
+}) {
+  if (error && hasData) {
+    const state = describeQueryError(error, resourceLabel);
+    return (
+      <InlineNotice
+        tone={state.tone}
+        title={`${state.title}, showing the last usable snapshot`}
+        description={lastSuccessAt
+          ? `${state.description} The page is still rendering the last successful ${resourceLabel} payload from ${formatDateTime(lastSuccessAt)}.`
+          : `${state.description} The page is still rendering the last successful ${resourceLabel} payload.`}
+      />
+    );
+  }
+
+  if (refreshing && hasData) {
+    return (
+      <InlineNotice
+        tone="info"
+        title={`Refreshing ${resourceLabel}`}
+        description={lastSuccessAt
+          ? `Keeping the last successful snapshot from ${formatDateTime(lastSuccessAt)} on screen while a newer payload loads.`
+          : "Keeping the last successful snapshot on screen while a newer payload loads."}
+      />
+    );
+  }
+
+  return null;
+}
+
 export function EmptyState({
   title,
   description,

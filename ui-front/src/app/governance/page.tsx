@@ -8,6 +8,7 @@ import {
   FreshnessBadge,
   InlineNotice,
   LoadingState,
+  QueryStateNotice,
   Section,
   StatCard,
   StatusBadge,
@@ -58,7 +59,7 @@ function toneLabel(tone: StatusTone) {
 
 export default function GovernancePage() {
   const poolQuery = useQuery("governance-pool-summary", uiApi.poolSummary, { refetchIntervalMs: 60_000 });
-  const { data, error, loading, hasData, refreshing, refresh } = poolQuery;
+  const { data, error, loading, hasData, refreshing, refresh, lastSuccessAt } = poolQuery;
 
   if (loading && !hasData) {
     return <LoadingState title="Loading governance summary" description="Shaping pool concentration, diversity, and inventory-balance signals into a governance readout." />;
@@ -174,6 +175,8 @@ export default function GovernancePage() {
           </div>
         }
       />
+
+      <QueryStateNotice error={error} refreshing={refreshing} hasData={hasData} resourceLabel="governance summary" lastSuccessAt={lastSuccessAt} />
 
       {violations.length ? (
         <InlineNotice

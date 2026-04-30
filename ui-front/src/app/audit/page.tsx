@@ -2,7 +2,7 @@
 
 import { Suspense, useMemo } from "react";
 import { PageHeader } from "@/components/app-shell";
-import { ErrorState, FilterField, FilterSelect, FilterToolbar, FreshnessBadge, LoadingState, Section, StatCard, Timeline, ToolbarButton } from "@/components/dashboard";
+import { ErrorState, FilterField, FilterSelect, FilterToolbar, FreshnessBadge, LoadingState, QueryStateNotice, Section, StatCard, Timeline, ToolbarButton } from "@/components/dashboard";
 import { useQuery } from "@/hooks/use-query";
 import { useUrlState } from "@/hooks/use-url-state";
 import { uiApi } from "@/lib/api";
@@ -46,7 +46,7 @@ function AuditPageContent() {
   const expanded = auditUrlState.expanded === "1";
   const showRaw = auditUrlState.raw === "1";
 
-  const { data, error, loading, hasData, refreshing, refresh } = useQuery(
+  const { data, error, loading, hasData, refreshing, refresh, lastSuccessAt } = useQuery(
     "audit-timeline",
     () => uiApi.auditTimeline(120),
     { refetchIntervalMs: 60_000 },
@@ -107,6 +107,8 @@ function AuditPageContent() {
           </div>
         }
       />
+
+      <QueryStateNotice error={error} refreshing={refreshing} hasData={hasData} resourceLabel="audit timeline" lastSuccessAt={lastSuccessAt} />
 
       <section className="stats-grid">
         <StatCard label="Events" value={formatNumber(data.events.length)} hint="Timeline records returned" tone="info" />

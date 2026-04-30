@@ -110,3 +110,7 @@
 - Added a shared responsive dense-table treatment in `dashboard.tsx` and `globals.css`, so DataTable rows collapse into labeled operator cards on narrow screens instead of only relying on horizontal scroll.
 - Verified the responsive dense-table slice with a production `npm run build` in `ui-front`.
 - Marked the roadmap dense-table responsive item complete; next slice is the remaining consistency polish, especially shared loading/error-state treatment and restrained transitions.
+- Added a shared `QueryStateNotice` treatment so pages surface background refreshes and stale-on-error behavior consistently instead of silently keeping old data on screen.
+- Applied the new query-state notice across Overview, Audit, Drift, Execution, Governance, Manifest, Pool, Research, and Review, plus the nested Strategy detail and comparison queries on Pool.
+- Verified the loading/error consistency slice with a production `npm run build` in `ui-front`.
+- Marked the roadmap empty/loading/error consistency item complete; next slice is restrained transitions and the remaining shared design-system consistency work.

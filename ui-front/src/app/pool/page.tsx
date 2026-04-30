@@ -10,6 +10,7 @@ import {
   InsightCard,
   KeyValueGrid,
   LoadingState,
+  QueryStateNotice,
   Section,
   StatCard,
   StatusBadge,
@@ -151,7 +152,7 @@ function PoolPageContent() {
   const poolQuery = useQuery("pool-summary", uiApi.poolSummary, { refetchIntervalMs: 60_000 });
   const strategiesQuery = useQuery("strategies-summary", uiApi.strategies, { refetchIntervalMs: 90_000 });
 
-  const { data, error, loading, hasData, refreshing, refresh } = poolQuery;
+  const { data, error, loading, hasData, refreshing, refresh, lastSuccessAt } = poolQuery;
   const strategyRows = strategiesQuery.data ?? EMPTY_STRATEGY_ROWS;
 
   const filteredStrategies = useMemo(() => {
@@ -308,6 +309,8 @@ function PoolPageContent() {
           </div>
         }
       />
+
+      <QueryStateNotice error={error} refreshing={refreshing} hasData={hasData} resourceLabel="pool summary" lastSuccessAt={lastSuccessAt} />
 
       <section className="stats-grid">
         <StatCard label="Total strategies" value={formatNumber(data.total)} hint="Pool inventory count" tone="info" />
@@ -473,6 +476,14 @@ function PoolPageContent() {
         description="Cross-layer view showing whether the selected strategy exists in the manifest, index, pool record, and live stats at the same time."
         action={resolvedSelectedStrategy ? <StatusBadge label={resolvedSelectedStrategy} tone="info" /> : null}
       >
+        <QueryStateNotice
+          error={detailQuery.error}
+          refreshing={detailQuery.refreshing}
+          hasData={Boolean(selectedDetail)}
+          resourceLabel={`strategy detail for ${resolvedSelectedStrategy}`}
+          lastSuccessAt={detailQuery.lastSuccessAt}
+        />
+
         {!resolvedSelectedStrategy ? (
           <EmptyState
             title="No strategy selected"
@@ -1050,6 +1061,14 @@ function PoolPageContent() {
         description="Head-to-head view for DNA, live posture, research edge, and mismatch risk before deciding which strategy deserves operator attention."
         action={resolvedCompareStrategy ? <StatusBadge label={`${resolvedSelectedStrategy} vs ${resolvedCompareStrategy}`} tone="info" /> : null}
       >
+        <QueryStateNotice
+          error={compareDetailQuery.error}
+          refreshing={compareDetailQuery.refreshing}
+          hasData={Boolean(compareDetail)}
+          resourceLabel={`comparison detail for ${resolvedCompareStrategy}`}
+          lastSuccessAt={compareDetailQuery.lastSuccessAt}
+        />
+
         {!resolvedSelectedStrategy ? (
           <EmptyState title="No primary strategy selected" description="Choose the first strategy from the explorer before opening a head-to-head comparison." />
         ) : !comparisonCandidates.length ? (

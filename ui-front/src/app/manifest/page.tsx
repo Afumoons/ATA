@@ -9,6 +9,7 @@ import {
   InlineNotice,
   InsightCard,
   LoadingState,
+  QueryStateNotice,
   Section,
   StatCard,
   StatusBadge,
@@ -19,7 +20,7 @@ import { uiApi } from "@/lib/api";
 import { compactValue, formatDateTime, formatNumber, formatPercent } from "@/lib/format";
 
 export default function ManifestPage() {
-  const { data, error, loading, hasData, refreshing, refresh } = useQuery("manifest", uiApi.manifest, {
+  const { data, error, loading, hasData, refreshing, refresh, lastSuccessAt } = useQuery("manifest", uiApi.manifest, {
     refetchIntervalMs: 90_000,
   });
 
@@ -80,6 +81,8 @@ export default function ManifestPage() {
           </div>
         }
       />
+
+      <QueryStateNotice error={error} refreshing={refreshing} hasData={hasData} resourceLabel="manifest payload" lastSuccessAt={lastSuccessAt} />
 
       {manifestLooksThin ? (
         <InlineNotice

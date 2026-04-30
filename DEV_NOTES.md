@@ -105,9 +105,11 @@ For each autonomous run:
 - U7A/U7B Overview and Manifest hierarchy/scannability pass is now complete, adding operator briefing / deployment dossier cards and reducing generic table feel on the remaining passive pages
 - Verified the Overview/Manifest hierarchy-scannability slice with a production `npm run build` in `ui-front`
 - URL state sync for filters and selected rows is now complete across Research, Drift, Review, Audit, and Pool, including shareable query params plus Suspense-safe restore on App Router pages
-- Next highest-value slice is continuing the remaining unchecked polish foundations, especially consistent loading/error state treatment and restrained transitions
+- Next highest-value slice is continuing the remaining unchecked polish foundations, especially restrained transitions and the remaining cross-page design-system consistency work
 - U0 shared page-level filter primitives are now complete, including reusable filter toolbar/select primitives across Research, Drift, Review, and Audit plus an Audit date-range control
+- U0 empty/loading/error state consistency is now complete, including a shared stale-refresh/error notice treatment across Overview, Audit, Drift, Execution, Governance, Manifest, Pool, Research, and Review plus nested Strategy Detail/Compare queries on Pool
 - U0 stronger responsive behavior for dense operator tables is now complete, including a shared mobile card-stack treatment for DataTable so dense ledgers collapse into labeled operator cards on narrow screens instead of only relying on horizontal scroll
 - Verified the shared filter-primitives slice with a production `npm run build` in `ui-front`
 - Verified the responsive dense-table slice with a production `npm run build` in `ui-front`
+- Verified the loading/error consistency slice with a production `npm run build` in `ui-front`
 - User explicitly wants progress reports, not approval questions

@@ -12,6 +12,7 @@ import {
   FreshnessBadge,
   KeyValueGrid,
   LoadingState,
+  QueryStateNotice,
   Section,
   StatCard,
   StatusBadge,
@@ -122,7 +123,7 @@ function ReviewPageContent() {
   }), []);
   const { state: reviewUrlState, setState: setReviewUrlState, resetState: resetReviewUrlState } = useUrlState(reviewUrlDefaults);
   const reviewQuery = useQuery("review-queue", uiApi.reviewQueue, { refetchIntervalMs: 60_000 });
-  const { data, error, loading, hasData, refreshing, refresh } = reviewQuery;
+  const { data, error, loading, hasData, refreshing, refresh, lastSuccessAt } = reviewQuery;
   const bucketFilter = reviewUrlState.bucket;
   const categoryFilter = reviewUrlState.category;
   const statusFilter = reviewUrlState.status;
@@ -171,6 +172,8 @@ function ReviewPageContent() {
           </div>
         }
       />
+
+      <QueryStateNotice error={error} refreshing={refreshing} hasData={hasData} resourceLabel="review queue" lastSuccessAt={lastSuccessAt} />
 
       <section className="stats-grid">
         <StatCard label="Queued strategies" value={formatNumber(Number(data.summary?.queue_count ?? 0))} hint="All rows eligible for review" tone="info" />
