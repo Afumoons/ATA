@@ -308,15 +308,40 @@ def _resolve_symbol_spec(payload: ManualTradeRiskCalcRequest):
         raise _operator_validation_error(
             "symbol_metadata_unavailable",
             field="symbol",
-            meta={"symbol": payload.symbol},
+            meta={
+                "symbol": payload.symbol,
+                "resolver_message": str(exc) or exc.__class__.__name__,
+            },
         ) from exc
 
 
 def _resolve_account_equity_from_live_state() -> float:
-    live_state = load_live_state_snapshot()
+    try:
+        live_state = load_live_state_snapshot()
+    except Exception as exc:
+        raise _operator_validation_error(
+            "account_snapshot_unavailable",
+            field="account_equity",
+            meta={"resolver_message": str(exc) or exc.__class__.__name__},
+        ) from exc
+
+    if not isinstance(live_state, dict):
+        raise _operator_validation_error(
+            "account_snapshot_unavailable",
+            field="account_equity",
+            meta={"resolver_message": f"Unexpected live state type: {type(live_state).__name__}"},
+        )
+
     equity = float(live_state.get("equity_current") or 0.0)
     if equity <= 0:
-        raise _operator_validation_error("account_equity_unavailable", field="account_equity")
+        raise _operator_validation_error(
+            "account_equity_unavailable",
+            field="account_equity",
+            meta={
+                "snapshot_generated_at": live_state.get("generated_at"),
+                "snapshot_keys": sorted(str(key) for key in live_state.keys()),
+            },
+        )
     return equity
 
 
@@ -360,6 +385,7 @@ def _field_for_risk_error(code: str) -> str | None:
 def _operator_message_for(code: str) -> str:
     messages = {
         "symbol_metadata_unavailable": "Metadata simbol broker tidak tersedia, jadi kalkulator manual trade belum bisa dipakai untuk simbol ini.",
+        "account_snapshot_unavailable": "Snapshot akun/live state tidak bisa dibaca saat menghitung risiko % equity. Isi account_equity secara eksplisit atau pulihkan feed snapshot akun.",
         "account_equity_unavailable": "Equity akun terbaru tidak tersedia. Isi account_equity secara eksplisit atau pastikan snapshot live state terbarui.",
         "order_type_must_be_market_or_limit": "Jenis order harus market atau limit untuk tiket manual versi pertama.",
         "side_must_be_buy_or_sell": "Sisi order harus buy atau sell.",

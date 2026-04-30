@@ -120,6 +120,8 @@ export default function ManualTicketPage() {
   const payload = useMemo(() => buildPayload(form), [form]);
   const operatorError = getOperatorValidationDetail(calcError);
   const metadataUnavailable = operatorError?.code === "symbol_metadata_unavailable";
+  const accountSnapshotUnavailable = operatorError?.code === "account_snapshot_unavailable";
+  const accountEquityUnavailable = operatorError?.code === "account_equity_unavailable";
   const derived = calc?.derived ?? {};
   const previewPayload = calc?.preview_payload ?? {};
   const symbolSpec = calc?.symbol_spec ?? {};
@@ -318,9 +320,19 @@ export default function ManualTicketPage() {
 
             {operatorError ? (
               <InlineNotice
-                tone={metadataUnavailable ? "critical" : "warning"}
-                title={metadataUnavailable ? "Symbol metadata unavailable" : "Calculator validation blocked"}
+                tone={metadataUnavailable ? "critical" : accountSnapshotUnavailable || accountEquityUnavailable ? "warning" : "warning"}
+                title={metadataUnavailable ? "Symbol metadata unavailable" : accountSnapshotUnavailable ? "Snapshot akun tidak tersedia" : accountEquityUnavailable ? "Equity akun belum tersedia" : "Calculator validation blocked"}
                 description={operatorError.message ?? "The backend rejected this ticket draft."}
+              />
+            ) : null}
+
+            {(accountSnapshotUnavailable || accountEquityUnavailable) && form.riskMode === "equity_pct" ? (
+              <InlineNotice
+                tone="info"
+                title="Fallback untuk mode % equity"
+                description={accountSnapshotUnavailable
+                  ? "Isi Account equity override agar sizing tetap bisa dihitung saat snapshot akun/live state gagal dibaca. Setelah feed akun pulih, override bisa dikosongkan lagi."
+                  : "Isi Account equity override bila snapshot live state belum punya equity_current yang valid, lalu cek proses updater akun bila kondisi ini berulang."}
               />
             ) : null}
           </CardContent>
@@ -332,7 +344,17 @@ export default function ManualTicketPage() {
               <InlineNotice
                 tone="critical"
                 title="Calculator disabled for this symbol"
-                description="Broker symbol metadata could not be resolved, so the manual ticket stays disabled until a supported symbol is chosen or metadata becomes available."
+                description={`Broker symbol metadata could not be resolved, so the manual ticket stays disabled until a supported symbol is chosen or metadata becomes available.${operatorError?.meta?.resolver_message ? ` Resolver detail: ${compactValue(operatorError.meta.resolver_message)}.` : ""}`}
+              />
+            ) : null}
+
+            {accountSnapshotUnavailable || accountEquityUnavailable ? (
+              <InlineNotice
+                tone="warning"
+                title="Sizing menunggu data akun valid"
+                description={accountSnapshotUnavailable
+                  ? `Risk mode % equity but the live account snapshot could not be read.${operatorError?.meta?.resolver_message ? ` Detail: ${compactValue(operatorError.meta.resolver_message)}.` : ""}`
+                  : `Risk mode % equity but live_state belum memberi equity_current > 0.${Array.isArray(operatorError?.meta?.snapshot_keys) && operatorError?.meta?.snapshot_keys.length ? ` Snapshot keys: ${(operatorError.meta.snapshot_keys as Array<unknown>).map((value) => compactValue(value)).join(", ")}.` : ""}`}
               />
             ) : null}
 

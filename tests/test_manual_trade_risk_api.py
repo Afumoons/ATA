@@ -260,6 +260,84 @@ def test_manual_trade_risk_calc_api_reports_missing_symbol_metadata(monkeypatch)
     assert data["code"] == "symbol_metadata_unavailable"
     assert data["field"] == "symbol"
     assert data["meta"]["symbol"] == "UNKNOWN"
+    assert data["meta"]["resolver_message"] == "missing"
+
+
+def test_manual_trade_risk_calc_api_reports_account_snapshot_read_failure(monkeypatch):
+    symbol_spec = {
+        "symbol": "XAUUSDm",
+        "symbol_canonical": "XAUUSDm",
+        "execution_symbol": "XAUUSDm",
+        "instrument_class": "metals",
+        "digits": 2,
+        "point_size": 0.01,
+        "tick_size": 0.01,
+        "tick_value": 1.0,
+        "contract_size": 100.0,
+        "min_lot": 0.01,
+        "lot_step": 0.01,
+        "max_lot": 100.0,
+    }
+    monkeypatch.setattr(api_app, "fetch_symbol_spec", lambda symbol: _snapshot(symbol_spec))
+    monkeypatch.setattr(api_app, "load_live_state_snapshot", lambda: (_ for _ in ()).throw(RuntimeError("state file locked")))
+
+    response = client.post(
+        "/api/execution/risk-calc",
+        json={
+            "symbol": "XAUUSDm",
+            "side": "buy",
+            "entry_price": 2300.0,
+            "risk_mode": "equity_pct",
+            "risk_value": 1.0,
+            "stop_loss_mode": "price",
+            "stop_loss_input": 2295.0,
+        },
+    )
+
+    assert response.status_code == 422
+    data = response.json()["detail"]
+    assert data["code"] == "account_snapshot_unavailable"
+    assert data["field"] == "account_equity"
+    assert data["meta"]["resolver_message"] == "state file locked"
+
+
+def test_manual_trade_risk_calc_api_reports_missing_equity_with_snapshot_context(monkeypatch):
+    symbol_spec = {
+        "symbol": "XAUUSDm",
+        "symbol_canonical": "XAUUSDm",
+        "execution_symbol": "XAUUSDm",
+        "instrument_class": "metals",
+        "digits": 2,
+        "point_size": 0.01,
+        "tick_size": 0.01,
+        "tick_value": 1.0,
+        "contract_size": 100.0,
+        "min_lot": 0.01,
+        "lot_step": 0.01,
+        "max_lot": 100.0,
+    }
+    monkeypatch.setattr(api_app, "fetch_symbol_spec", lambda symbol: _snapshot(symbol_spec))
+    monkeypatch.setattr(api_app, "load_live_state_snapshot", lambda: {"generated_at": "2026-04-30T20:00:00Z", "balance": 15000.0})
+
+    response = client.post(
+        "/api/execution/risk-calc",
+        json={
+            "symbol": "XAUUSDm",
+            "side": "buy",
+            "entry_price": 2300.0,
+            "risk_mode": "equity_pct",
+            "risk_value": 1.0,
+            "stop_loss_mode": "price",
+            "stop_loss_input": 2295.0,
+        },
+    )
+
+    assert response.status_code == 422
+    data = response.json()["detail"]
+    assert data["code"] == "account_equity_unavailable"
+    assert data["field"] == "account_equity"
+    assert data["meta"]["snapshot_generated_at"] == "2026-04-30T20:00:00Z"
+    assert data["meta"]["snapshot_keys"] == ["balance", "generated_at"]
 
 
 def test_manual_trade_preview_intent_api_records_audit_event(tmp_path, monkeypatch):
