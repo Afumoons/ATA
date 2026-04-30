@@ -143,15 +143,7 @@ def api_execution_manual_ticket_preview_intent(payload: ManualTradeRiskCalcReque
     response = _build_manual_trade_risk_calc_response(payload)
     broker_validation = validate_manual_trade_preview(response.preview_payload)
     if not broker_validation.get("ok"):
-        raise _operator_validation_error(
-            "broker_validation_failed",
-            meta={
-                "retcode": broker_validation.get("retcode"),
-                "message": broker_validation.get("message"),
-                "request": broker_validation.get("request"),
-                "last_error": broker_validation.get("last_error"),
-            },
-        )
+        _raise_manual_trade_broker_error(broker_validation, stage="broker_validation")
     audit_event = record_manual_ticket_preview_intent(
         preview_payload=response.preview_payload,
         derived=response.derived,
@@ -180,15 +172,7 @@ def api_execution_manual_ticket_submit(payload: ManualTradeSubmitRequest) -> Man
     response = _build_manual_trade_risk_calc_response(payload)
     broker_validation = validate_manual_trade_preview(response.preview_payload)
     if not broker_validation.get("ok"):
-        raise _operator_validation_error(
-            "broker_validation_failed",
-            meta={
-                "retcode": broker_validation.get("retcode"),
-                "message": broker_validation.get("message"),
-                "request": broker_validation.get("request"),
-                "last_error": broker_validation.get("last_error"),
-            },
-        )
+        _raise_manual_trade_broker_error(broker_validation, stage="broker_validation")
 
     preview_fingerprint = manual_trade_preview_fingerprint(response.preview_payload)
     existing_result = _find_existing_manual_submit_result(payload.client_submission_id)
@@ -203,6 +187,9 @@ def api_execution_manual_ticket_submit(payload: ManualTradeSubmitRequest) -> Man
                     "preview_fingerprint": preview_fingerprint,
                 },
             )
+        existing_broker_response = dict(existing_result.get("broker_response") or {})
+        if str(existing_result.get("submit_status") or "") == "transport_error":
+            _raise_manual_trade_broker_error(existing_broker_response, stage="submit")
         return ManualTradeSubmitResponse(
             generated_at=datetime.now(timezone.utc).isoformat(),
             submit_status=str(existing_result.get("submit_status") or "submitted"),
@@ -210,7 +197,7 @@ def api_execution_manual_ticket_submit(payload: ManualTradeSubmitRequest) -> Man
             client_submission_id=payload.client_submission_id,
             preview_fingerprint=preview_fingerprint,
             broker_validation=broker_validation,
-            broker_response=dict(existing_result.get("broker_response") or {}),
+            broker_response=existing_broker_response,
             audit_event_before={},
             audit_event_after=existing_result,
         )
@@ -228,6 +215,8 @@ def api_execution_manual_ticket_submit(payload: ManualTradeSubmitRequest) -> Man
         error_message=None if broker_response.get("ok") else broker_response.get("message"),
         client_submission_id=payload.client_submission_id,
     )
+    if str(broker_response.get("submit_status") or "") == "transport_error":
+        _raise_manual_trade_broker_error(broker_response, stage="submit")
     return ManualTradeSubmitResponse(
         generated_at=datetime.now(timezone.utc).isoformat(),
         submit_status=str(broker_response.get("submit_status") or "unknown"),
@@ -352,6 +341,35 @@ def _normalize_order_type(value: str) -> str:
     return normalized
 
 
+def _raise_manual_trade_broker_error(payload: dict, *, stage: str) -> None:
+    failure_code = str(payload.get("failure_code") or "").strip().lower()
+    code_map = {
+        "mt5_terminal_unavailable": "manual_trade_mt5_unavailable",
+        "mt5_account_unavailable": "manual_trade_account_unavailable",
+        "mt5_account_trading_disabled": "manual_trade_account_trading_disabled",
+        "mt5_symbol_unavailable": "manual_trade_execution_symbol_unavailable",
+        "mt5_symbol_not_visible": "manual_trade_execution_symbol_not_visible",
+    }
+    error_code = code_map.get(failure_code)
+    if stage == "submit" and error_code is None and str(payload.get("submit_status") or "") == "transport_error":
+        error_code = "manual_trade_submit_transport_error"
+    if error_code is None:
+        error_code = "broker_validation_failed"
+    raise _operator_validation_error(
+        error_code,
+        meta={
+            "stage": stage,
+            "retcode": payload.get("retcode"),
+            "message": payload.get("message"),
+            "request": payload.get("request"),
+            "last_error": payload.get("last_error"),
+            "failure_code": payload.get("failure_code"),
+            "context": payload.get("context"),
+            "submit_status": payload.get("submit_status"),
+        },
+    )
+
+
 def _operator_validation_error(code: str, *, field: str | None = None, meta: dict | None = None) -> HTTPException:
     detail = {
         "code": code,
@@ -405,6 +423,12 @@ def _operator_message_for(code: str) -> str:
         "raw_lot_size_non_positive": "Ukuran lot hasil kalkulasi tidak valid untuk parameter risiko ini.",
         "stop_loss_money_per_lot_non_positive": "Nilai uang per lot untuk stop loss tidak valid dari metadata simbol broker.",
         "broker_validation_failed": "Broker menolak draft order manual ini pada tahap validasi. Cek geometri harga, volume, atau batas simbol broker sebelum lanjut.",
+        "manual_trade_mt5_unavailable": "Terminal MT5 tidak tersedia atau tidak terhubung. Pulihkan sesi terminal sebelum memvalidasi atau submit manual trade.",
+        "manual_trade_account_unavailable": "Akun MT5 belum tersedia atau belum login. Login ulang akun broker sebelum memvalidasi atau submit manual trade.",
+        "manual_trade_account_trading_disabled": "Akun MT5 terhubung tetapi trading tidak diizinkan. Cek izin trading akun atau pengaturan terminal broker sebelum lanjut.",
+        "manual_trade_execution_symbol_unavailable": "Simbol eksekusi manual trade tidak tersedia di terminal MT5 saat ini. Pastikan simbol broker tersebut tersedia sebelum lanjut.",
+        "manual_trade_execution_symbol_not_visible": "Simbol eksekusi manual trade belum aktif/visible di terminal MT5. Tampilkan atau select simbol itu dulu sebelum lanjut.",
+        "manual_trade_submit_transport_error": "Submit manual trade gagal di layer transport MT5 sebelum broker mengembalikan retcode. Cek koneksi terminal, login akun, dan retry setelah sesi MT5 sehat.",
         "manual_submit_confirmation_required": "Submit live manual trade harus melewati gate konfirmasi submit eksplisit.",
         "manual_submit_submission_id_reused_with_different_payload": "client_submission_id ini sudah pernah dipakai untuk draft manual trade yang berbeda. Gunakan id submit baru agar order tidak ganda.",
     }

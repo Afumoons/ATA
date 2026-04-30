@@ -14,6 +14,69 @@ _SUCCESS_RETCODES = {
 }
 
 
+def _as_dict(value: Any) -> Dict[str, Any]:
+    if value is None:
+        return {}
+    if hasattr(value, "_asdict"):
+        return value._asdict()
+    if isinstance(value, dict):
+        return dict(value)
+    return {
+        key: getattr(value, key)
+        for key in dir(value)
+        if not key.startswith("_") and not callable(getattr(value, key))
+    }
+
+
+def inspect_manual_trade_mt5_context(symbol: str) -> Dict[str, Any]:
+    terminal_info_fn = getattr(mt5, "terminal_info", None)
+    account_info_fn = getattr(mt5, "account_info", None)
+    symbol_info_fn = getattr(mt5, "symbol_info", None)
+
+    terminal_info = terminal_info_fn() if callable(terminal_info_fn) else None
+    account_info = account_info_fn() if callable(account_info_fn) else None
+    symbol_info = symbol_info_fn(symbol) if callable(symbol_info_fn) and symbol else None
+
+    terminal_payload = _as_dict(terminal_info)
+    account_payload = _as_dict(account_info)
+    symbol_payload = _as_dict(symbol_info)
+
+    return {
+        "symbol": symbol,
+        "terminal_available": terminal_info is not None,
+        "terminal_connected": terminal_payload.get("connected"),
+        "terminal_trade_allowed": terminal_payload.get("trade_allowed"),
+        "account_available": account_info is not None,
+        "account_login": account_payload.get("login"),
+        "account_trade_allowed": account_payload.get("trade_allowed"),
+        "symbol_available": symbol_info is not None,
+        "symbol_visible": symbol_payload.get("visible"),
+        "symbol_select": symbol_payload.get("select"),
+    }
+
+
+def classify_manual_trade_mt5_failure(symbol: str, *, last_error: Any = None) -> Dict[str, Any]:
+    context = inspect_manual_trade_mt5_context(symbol)
+    failure_code = "mt5_transport_error"
+    if not context.get("terminal_available") or context.get("terminal_connected") is False:
+        failure_code = "mt5_terminal_unavailable"
+    elif not context.get("account_available"):
+        failure_code = "mt5_account_unavailable"
+    elif context.get("account_trade_allowed") is False:
+        failure_code = "mt5_account_trading_disabled"
+    elif not context.get("symbol_available"):
+        failure_code = "mt5_symbol_unavailable"
+    elif context.get("symbol_visible") is False and context.get("symbol_select") is False:
+        failure_code = "mt5_symbol_not_visible"
+    return {
+        "failure_code": failure_code,
+        "context": {
+            **context,
+            "last_error": last_error,
+        },
+    }
+
+
 def _pick_filling_mode(symbol: str) -> int | None:
     info = mt5.symbol_info(symbol)
     if info is None:
@@ -70,6 +133,7 @@ def validate_manual_trade_preview(preview_payload: Mapping[str, Any] | None) -> 
     result = mt5.order_check(request)
     if result is None:
         last_error = mt5.last_error()
+        failure = classify_manual_trade_mt5_failure(str(request.get("symbol") or ""), last_error=last_error)
         return {
             "ok": False,
             "stage": "broker_validation",
@@ -77,6 +141,7 @@ def validate_manual_trade_preview(preview_payload: Mapping[str, Any] | None) -> 
             "message": f"mt5.order_check() returned None (last_error={last_error})",
             "last_error": last_error,
             "request": {**request, **manual_trade_marker_payload()},
+            **failure,
         }
 
     raw_result = result._asdict()

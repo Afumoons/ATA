@@ -150,7 +150,7 @@ Specification reference: `docs/manual-trade-ticket-spec.md`
 ---
 
 ## Phase T8 — Hardening and UX Polish
-- [ ] Add edge-case handling for missing MT5/account info
+- [x] Add edge-case handling for missing MT5/account info
 - [x] Add edge-case handling for symbol spec fetch failure
 - [ ] Add better explanation text for risk and sizing warnings
 - [ ] Add mobile / narrow layout support if needed

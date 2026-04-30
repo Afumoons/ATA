@@ -5,7 +5,7 @@ from typing import Any, Dict, Mapping
 import MetaTrader5 as mt5
 
 from ..config import execution_config
-from .manual_trade_broker_validation import build_manual_trade_mt5_request
+from .manual_trade_broker_validation import build_manual_trade_mt5_request, classify_manual_trade_mt5_failure
 
 _SUCCESS_RETCODES = {
     0,
@@ -67,6 +67,7 @@ def submit_manual_trade(preview_payload: Mapping[str, Any] | None) -> Dict[str, 
 
     if result is None:
         last_error = mt5.last_error()
+        failure = classify_manual_trade_mt5_failure(str(base_request.get("symbol") or ""), last_error=last_error)
         return {
             "ok": False,
             "submit_status": "transport_error",
@@ -76,6 +77,7 @@ def submit_manual_trade(preview_payload: Mapping[str, Any] | None) -> Dict[str, 
             "request": base_request,
             "used_filling": used_filling,
             "raw_result": {},
+            **failure,
         }
 
     raw_result = _raw_result_to_dict(result)
