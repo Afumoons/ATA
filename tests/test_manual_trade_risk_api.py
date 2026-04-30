@@ -423,6 +423,9 @@ def test_manual_trade_submit_api_records_pre_and_post_audit_for_market_order(tmp
     assert data["audit_event_after"]["event"] == "manual_ticket_execution_result"
     assert data["audit_event_after"]["client_submission_id"] == "manual-submit-001"
     assert data["audit_event_after"]["order_origin"] == "manual_user"
+    assert data["audit_event_after"]["order_ticket"] == 81234
+    assert data["audit_event_after"]["deal_ticket"] == 81235
+    assert data["audit_event_after"]["position_id"] == 81234
 
     timeline = adapters.load_audit_timeline(limit=10)
     submit_events = [event for event in timeline["events"] if event.get("event") in {"manual_ticket_submit_intent", "manual_ticket_execution_result"}]

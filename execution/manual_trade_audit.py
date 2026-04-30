@@ -158,6 +158,14 @@ def build_manual_ticket_execution_audit_event(
         "preview_fingerprint": manual_trade_preview_fingerprint(preview),
         "preview_payload": preview,
         "broker_response": _to_dict(broker_response),
+        "retcode": _to_dict(broker_response).get("retcode"),
+        "message": _to_dict(broker_response).get("message") or _to_dict(broker_response).get("comment"),
+        "order_ticket": _to_dict(broker_response).get("order_ticket")
+        or ((_to_dict(broker_response).get("raw_result") or {}).get("order") if isinstance(_to_dict(broker_response).get("raw_result"), Mapping) else None),
+        "deal_ticket": _to_dict(broker_response).get("deal_ticket")
+        or ((_to_dict(broker_response).get("raw_result") or {}).get("deal") if isinstance(_to_dict(broker_response).get("raw_result"), Mapping) else None),
+        "position_id": _to_dict(broker_response).get("position_id")
+        or ((_to_dict(broker_response).get("raw_result") or {}).get("position") if isinstance(_to_dict(broker_response).get("raw_result"), Mapping) else None),
         **manual_trade_marker_payload(),
     }
     if error_message:

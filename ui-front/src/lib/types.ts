@@ -116,6 +116,18 @@ export interface ExecutionSummaryResponse {
       detail?: string;
     }>;
   };
+  manual_trade_lifecycle?: {
+    summary?: {
+      tracked_ticket_count?: number;
+      preview_only_count?: number;
+      submitted_count?: number;
+      open_position_count?: number;
+      journal_linked_count?: number;
+      reconciliation_gap_count?: number;
+      broker_rejected_count?: number;
+    };
+    tickets?: Array<Record<string, unknown>>;
+  };
   recent_trade_log: Array<Record<string, unknown>>;
 }
 

@@ -2221,6 +2221,233 @@ def _build_unmatched_closed_deal_dashboard(unmatched_rows: List[Dict[str, Any]],
     }
 
 
+def _normalize_symbol_key(value: Any) -> str:
+    return str(value or "").strip().upper()
+
+
+def _append_alias_token(bucket: set[str], value: Any) -> None:
+    if value is None:
+        return
+    text = str(value).strip()
+    if not text or text.lower() in {"none", "null", "nan"}:
+        return
+    bucket.add(text)
+
+
+def _extract_manual_trade_aliases(*rows: Dict[str, Any]) -> set[str]:
+    aliases: set[str] = set()
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        for key in ("ticket", "order", "order_ticket", "deal", "deal_ticket", "position", "position_id", "client_submission_id", "preview_fingerprint"):
+            _append_alias_token(aliases, row.get(key))
+        broker_response = row.get("broker_response")
+        if isinstance(broker_response, dict):
+            for key in ("order_ticket", "deal_ticket", "position_id", "client_submission_id"):
+                _append_alias_token(aliases, broker_response.get(key))
+            raw_result = broker_response.get("raw_result")
+            if isinstance(raw_result, dict):
+                for key in ("order", "deal", "position", "position_id"):
+                    _append_alias_token(aliases, raw_result.get(key))
+        preview_payload = row.get("preview_payload")
+        if isinstance(preview_payload, dict):
+            for key in ("client_submission_id", "preview_fingerprint"):
+                _append_alias_token(aliases, preview_payload.get(key))
+    return aliases
+
+
+def _row_matches_manual_aliases(row: Dict[str, Any], aliases: set[str]) -> bool:
+    if not aliases or not isinstance(row, dict):
+        return False
+    row_aliases = _extract_manual_trade_aliases(row)
+    return bool(row_aliases & aliases)
+
+
+def _build_manual_trade_lifecycle_summary(
+    pool_rows: List[Dict[str, Any]],
+    open_trades: List[Dict[str, Any]],
+    trade_context_journal: Dict[str, Any],
+    unmatched_rows: List[Dict[str, Any]],
+    recent_trade_log: List[Dict[str, Any]],
+) -> Dict[str, Any]:
+    manual_rows = [
+        dict(row)
+        for row in pool_rows
+        if isinstance(row, dict)
+        and (
+            str(row.get("event_category") or "") == "manual_trade_ticket"
+            or is_manual_trade_payload(row)
+        )
+    ]
+    if not manual_rows:
+        return {
+            "summary": {
+                "tracked_ticket_count": 0,
+                "preview_only_count": 0,
+                "submitted_count": 0,
+                "open_position_count": 0,
+                "journal_linked_count": 0,
+                "reconciliation_gap_count": 0,
+                "broker_rejected_count": 0,
+            },
+            "tickets": [],
+        }
+
+    grouped: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+    for row in manual_rows:
+        key = str(row.get("preview_fingerprint") or row.get("client_submission_id") or row.get("recorded_at") or len(grouped))
+        grouped[key].append(row)
+
+    journal_trades = trade_context_journal.get("trades") if isinstance(trade_context_journal, dict) else {}
+    if not isinstance(journal_trades, dict):
+        journal_trades = {}
+
+    dossier_rows: List[Dict[str, Any]] = []
+    for key, rows in grouped.items():
+        rows.sort(key=lambda row: str(row.get("recorded_at") or ""))
+        preview_row = next((row for row in rows if str(row.get("audit_stage") or "") == "preview_intent"), None)
+        submit_row = next((row for row in rows if str(row.get("audit_stage") or "") == "submit_intent"), None)
+        execution_row = next((row for row in rows if str(row.get("audit_stage") or "") == "execution_result"), None)
+        latest_row = rows[-1]
+        preview_payload = ((execution_row or submit_row or preview_row or {}).get("preview_payload") if isinstance((execution_row or submit_row or preview_row or {}), dict) else {}) or {}
+        if not isinstance(preview_payload, dict):
+            preview_payload = {}
+
+        aliases = _extract_manual_trade_aliases(*(rows or []))
+        symbol_key = _normalize_symbol_key(
+            preview_payload.get("execution_symbol")
+            or preview_payload.get("symbol")
+            or latest_row.get("execution_symbol")
+            or latest_row.get("symbol")
+        )
+
+        matching_open = [
+            dict(row)
+            for row in open_trades
+            if isinstance(row, dict)
+            and is_manual_trade_payload(row)
+            and (_row_matches_manual_aliases(row, aliases) or (symbol_key and _normalize_symbol_key(row.get("symbol")) == symbol_key))
+        ]
+        matching_journal = [
+            {"ticket": str(ticket), **dict(row)}
+            for ticket, row in journal_trades.items()
+            if isinstance(row, dict)
+            and (
+                str(ticket) in aliases
+                or any(str(row.get(field) or "") in aliases for field in ("ticket", "position_id", "order_ticket", "deal_ticket"))
+                or (symbol_key and _normalize_symbol_key(row.get("symbol") or row.get("symbol_canonical")) == symbol_key)
+            )
+        ]
+        matching_unmatched = [
+            dict(row)
+            for row in unmatched_rows
+            if isinstance(row, dict)
+            and (
+                _row_matches_manual_aliases(row, aliases)
+                or (
+                    symbol_key
+                    and bool(row.get("manual_bucket"))
+                    and _normalize_symbol_key(row.get("symbol")) == symbol_key
+                )
+            )
+        ]
+        matching_trade_log = [
+            dict(row)
+            for row in recent_trade_log
+            if isinstance(row, dict)
+            and is_manual_trade_payload(row)
+            and (
+                _row_matches_manual_aliases(row, aliases)
+                or (symbol_key and _normalize_symbol_key(row.get("symbol")) == symbol_key)
+            )
+        ]
+
+        submit_status = str((execution_row or {}).get("submit_status") or "").strip().lower()
+        has_reconciliation_gap = bool(matching_unmatched)
+        has_open_position = bool(matching_open)
+        has_journal_link = bool(matching_journal)
+        broker_rejected = submit_status not in {"", "submitted", "placed", "filled", "done", "success", "ok"}
+
+        if has_reconciliation_gap:
+            lifecycle_status = "reconciliation_gap"
+            lifecycle_label = "Reconciliation gap"
+            lifecycle_tone = "critical"
+        elif has_open_position:
+            lifecycle_status = "open_position"
+            lifecycle_label = "Open manual position"
+            lifecycle_tone = "warning"
+        elif has_journal_link and any(row.get("exit_time") for row in matching_journal):
+            lifecycle_status = "journal_exit_linked"
+            lifecycle_label = "Journal-linked exit"
+            lifecycle_tone = "success"
+        elif has_journal_link:
+            lifecycle_status = "journal_linked"
+            lifecycle_label = "Journal-linked entry"
+            lifecycle_tone = "info"
+        elif execution_row and broker_rejected:
+            lifecycle_status = "broker_rejected"
+            lifecycle_label = "Broker rejected"
+            lifecycle_tone = "critical"
+        elif execution_row:
+            lifecycle_status = "submitted_no_runtime_link"
+            lifecycle_label = "Submitted, awaiting runtime link"
+            lifecycle_tone = "warning"
+        elif submit_row:
+            lifecycle_status = "submit_intent_only"
+            lifecycle_label = "Submit intent only"
+            lifecycle_tone = "warning"
+        else:
+            lifecycle_status = "preview_only"
+            lifecycle_label = "Preview only"
+            lifecycle_tone = "info"
+
+        dossier_rows.append({
+            "key": key,
+            "client_submission_id": latest_row.get("client_submission_id") or None,
+            "preview_fingerprint": latest_row.get("preview_fingerprint") or None,
+            "symbol": preview_payload.get("symbol") or latest_row.get("symbol") or None,
+            "execution_symbol": preview_payload.get("execution_symbol") or latest_row.get("execution_symbol") or None,
+            "side": preview_payload.get("side") or latest_row.get("side") or None,
+            "order_type": preview_payload.get("order_type") or latest_row.get("order_type") or None,
+            "lot_size": preview_payload.get("lot_size") or latest_row.get("lot_size") or None,
+            "recorded_at": latest_row.get("recorded_at") or None,
+            "submit_status": execution_row.get("submit_status") if execution_row else None,
+            "message": (execution_row or {}).get("message") or (execution_row or {}).get("error_message") or (submit_row or {}).get("message"),
+            "order_ticket": (execution_row or {}).get("order_ticket"),
+            "deal_ticket": (execution_row or {}).get("deal_ticket"),
+            "position_id": (execution_row or {}).get("position_id"),
+            "retcode": (execution_row or {}).get("retcode"),
+            "lifecycle_status": lifecycle_status,
+            "lifecycle_label": lifecycle_label,
+            "lifecycle_tone": lifecycle_tone,
+            "is_manual": True,
+            "order_origin": "manual_user",
+            "exclude_from_strategy_eval": True,
+            "open_position_count": len(matching_open),
+            "journal_link_count": len(matching_journal),
+            "trade_log_match_count": len(matching_trade_log),
+            "reconciliation_gap_count": len(matching_unmatched),
+            "open_positions": matching_open[:5],
+            "journal_links": matching_journal[:5],
+            "unmatched_rows": matching_unmatched[:5],
+            "trade_log_matches": matching_trade_log[:5],
+        })
+
+    dossier_rows.sort(key=lambda row: str(row.get("recorded_at") or ""), reverse=True)
+    return {
+        "summary": {
+            "tracked_ticket_count": len(dossier_rows),
+            "preview_only_count": sum(1 for row in dossier_rows if row.get("lifecycle_status") == "preview_only"),
+            "submitted_count": sum(1 for row in dossier_rows if row.get("submit_status") in {"submitted", "placed", "filled", "done", "success", "ok"}),
+            "open_position_count": sum(1 for row in dossier_rows if int(row.get("open_position_count") or 0) > 0),
+            "journal_linked_count": sum(1 for row in dossier_rows if int(row.get("journal_link_count") or 0) > 0),
+            "reconciliation_gap_count": sum(1 for row in dossier_rows if int(row.get("reconciliation_gap_count") or 0) > 0),
+            "broker_rejected_count": sum(1 for row in dossier_rows if row.get("lifecycle_status") == "broker_rejected"),
+        },
+        "tickets": dossier_rows[:12],
+    }
+
+
 def load_execution_summary() -> Dict[str, Any]:
     live_state = load_live_state_snapshot()
     live_stats = load_strategy_live_stats_snapshot()
@@ -2233,7 +2460,17 @@ def load_execution_summary() -> Dict[str, Any]:
     unmatched_rows = read_json_file(UNMATCHED_CLOSED_DEALS_PATH, default=[])
     if not isinstance(unmatched_rows, list):
         unmatched_rows = []
+    pool_rows = read_json_file(POOL_AUDIT_TRAIL_PATH, default=[])
+    if not isinstance(pool_rows, list):
+        pool_rows = []
     unmatched_dashboard = _build_unmatched_closed_deal_dashboard(unmatched_rows, trade_context_journal)
+    manual_trade_lifecycle = _build_manual_trade_lifecycle_summary(
+        pool_rows,
+        open_trades.get("trades") or [],
+        trade_context_journal,
+        unmatched_rows,
+        recent_trade_log,
+    )
     execution_artifact_warnings = _build_execution_artifact_warnings(
         live_state,
         live_stats,
@@ -2273,6 +2510,7 @@ def load_execution_summary() -> Dict[str, Any]:
         "trade_context_registration_failures": trade_context_registration_failures,
         "recent_activity": recent_activity,
         "no_trade_diagnosis": no_trade_diagnosis,
+        "manual_trade_lifecycle": manual_trade_lifecycle,
         "recent_trade_log": recent_trade_log,
     }
 

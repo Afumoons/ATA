@@ -42,6 +42,7 @@ class ExecutionSummaryResponse(BaseModel):
     trade_context_registration_failures: Dict[str, Any] = Field(default_factory=dict)
     recent_activity: Dict[str, Any] = Field(default_factory=dict)
     no_trade_diagnosis: Dict[str, Any] = Field(default_factory=dict)
+    manual_trade_lifecycle: Dict[str, Any] = Field(default_factory=dict)
     recent_trade_log: List[Dict[str, Any]] = Field(default_factory=list)
 
 

@@ -212,6 +212,8 @@ export default function ExecutionPage() {
   const manualOpenTradeCount = Number(openTradeSummary.manual_open_trade_count ?? 0);
   const autonomousOpenTradeCount = Number(openTradeSummary.autonomous_open_trade_count ?? Math.max(Number(data.open_trades.count ?? 0) - manualOpenTradeCount, 0));
   const manualNetFloatingPnl = Number(openTradeSummary.manual_net_floating_pnl ?? 0);
+  const manualLifecycleSummary = data.manual_trade_lifecycle?.summary ?? {};
+  const manualLifecycleTickets = data.manual_trade_lifecycle?.tickets ?? [];
 
   return (
     <div className="dashboard-stack">
@@ -621,6 +623,62 @@ export default function ExecutionPage() {
             ])}
             emptyTitle="No recent manual lifecycle rows"
             emptyDescription="The audit feed has not surfaced manual preview, submit, execution-result, or manual-bucket reconciliation rows in the current lookback window."
+          />
+        </div>
+      </Section>
+
+      <Section title="Manual trade lifecycle reconciliation" description="Per-ticket lifecycle read from preview and submit audit, then cross-checked against open positions, trade-context journal, and unmatched-close backlog.">
+        <div className="dashboard-stack">
+          <section className="stats-grid">
+            <StatCard
+              label="Tracked tickets"
+              value={formatNumber(Number(manualLifecycleSummary.tracked_ticket_count ?? 0))}
+              hint="Confirmed manual ticket fingerprints or submission ids"
+              tone={Number(manualLifecycleSummary.tracked_ticket_count ?? 0) > 0 ? "info" : "neutral"}
+            />
+            <StatCard
+              label="Journal linked"
+              value={formatNumber(Number(manualLifecycleSummary.journal_linked_count ?? 0))}
+              hint="Tickets that already have trade-context journal evidence"
+              tone={Number(manualLifecycleSummary.journal_linked_count ?? 0) > 0 ? "success" : "neutral"}
+            />
+            <StatCard
+              label="Recon gaps"
+              value={formatNumber(Number(manualLifecycleSummary.reconciliation_gap_count ?? 0))}
+              hint="Tickets currently touching unmatched manual reconciliation rows"
+              tone={Number(manualLifecycleSummary.reconciliation_gap_count ?? 0) > 0 ? "critical" : "success"}
+            />
+            <StatCard
+              label="Preview only"
+              value={formatNumber(Number(manualLifecycleSummary.preview_only_count ?? 0))}
+              hint="Drafts recorded to audit but not yet submitted live"
+              tone={Number(manualLifecycleSummary.preview_only_count ?? 0) > 0 ? "info" : "neutral"}
+            />
+          </section>
+
+          <DataTable
+            columns={["Ticket", "Lifecycle", "Runtime linkage", "Broker / latest detail"]}
+            rows={manualLifecycleTickets.map((ticket) => [
+              <div key={`${compactValue(ticket.client_submission_id ?? ticket.preview_fingerprint)}-ticket`} className="table-stack">
+                <strong>{compactValue(ticket.symbol ?? ticket.execution_symbol ?? "No symbol")}</strong>
+                <span>{compactValue(ticket.side)} {compactValue(ticket.order_type)} · {compactValue(ticket.lot_size)} lot</span>
+                <span>ID {compactValue(ticket.client_submission_id ?? ticket.preview_fingerprint ?? ticket.order_ticket ?? ticket.position_id)}</span>
+              </div>,
+              <div key={`${compactValue(ticket.lifecycle_status)}-${compactValue(ticket.recorded_at)}-lifecycle`} className="table-stack">
+                <StatusBadge label={compactValue(ticket.lifecycle_label ?? ticket.lifecycle_status)} tone={(ticket.lifecycle_tone as "neutral" | "info" | "success" | "warning" | "critical") ?? "neutral"} />
+                <span>{formatDateTime(ticket.recorded_at)}</span>
+              </div>,
+              <div key={`${compactValue(ticket.open_position_count)}-${compactValue(ticket.journal_link_count)}-links`} className="table-stack">
+                <span>Open {formatNumber(Number(ticket.open_position_count ?? 0))} · Journal {formatNumber(Number(ticket.journal_link_count ?? 0))}</span>
+                <span>Trade log {formatNumber(Number(ticket.trade_log_match_count ?? 0))} · Gap {formatNumber(Number(ticket.reconciliation_gap_count ?? 0))}</span>
+              </div>,
+              <div key={`${compactValue(ticket.order_ticket)}-${compactValue(ticket.retcode)}-detail`} className="table-stack">
+                <span>Order {compactValue(ticket.order_ticket ?? ticket.position_id ?? "—")} · Deal {compactValue(ticket.deal_ticket ?? "—")}</span>
+                <span>{compactValue(ticket.submit_status ?? ticket.retcode ?? ticket.message ?? "No broker detail")}</span>
+              </div>,
+            ])}
+            emptyTitle="No tracked manual tickets"
+            emptyDescription="No preview or submit audit rows are currently available to build a manual-ticket lifecycle dossier."
           />
         </div>
       </Section>

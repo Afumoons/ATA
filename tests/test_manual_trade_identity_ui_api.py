@@ -304,3 +304,116 @@ def test_open_trade_drilldown_marks_manual_positions_and_separates_counts():
     assert "manual_user" in manual_row["operator_flags"]
     assert auto_row["is_manual"] is False
     assert auto_row["order_origin"] == "autonomous_strategy"
+
+
+def test_load_execution_summary_builds_manual_trade_lifecycle_reconciliation(tmp_path, monkeypatch):
+    pool_audit_path = tmp_path / "pool_audit_trail.json"
+    pool_audit_path.write_text(
+        json.dumps(
+            [
+                {
+                    "recorded_at": "2026-04-30T16:10:00+00:00",
+                    "event": "manual_ticket_preview_intent",
+                    "audit_stage": "preview_intent",
+                    "preview_fingerprint": "fp-001",
+                    "preview_payload": {
+                        "symbol": "XAUUSDm",
+                        "execution_symbol": "XAUUSDm",
+                        "side": "buy",
+                        "order_type": "market",
+                        "lot_size": 0.2,
+                        **manual_trade_marker_payload(),
+                    },
+                    **manual_trade_marker_payload(),
+                },
+                {
+                    "recorded_at": "2026-04-30T16:11:00+00:00",
+                    "event": "manual_ticket_submit_intent",
+                    "audit_stage": "submit_intent",
+                    "preview_fingerprint": "fp-001",
+                    "client_submission_id": "manual-submit-001",
+                    "preview_payload": {
+                        "symbol": "XAUUSDm",
+                        "execution_symbol": "XAUUSDm",
+                        "side": "buy",
+                        "order_type": "market",
+                        "lot_size": 0.2,
+                        **manual_trade_marker_payload(),
+                    },
+                    **manual_trade_marker_payload(),
+                },
+                {
+                    "recorded_at": "2026-04-30T16:12:00+00:00",
+                    "event": "manual_ticket_execution_result",
+                    "audit_stage": "execution_result",
+                    "preview_fingerprint": "fp-001",
+                    "client_submission_id": "manual-submit-001",
+                    "submit_status": "submitted",
+                    "order_ticket": 81234,
+                    "deal_ticket": 81235,
+                    "position_id": 81234,
+                    "broker_response": {
+                        "order_ticket": 81234,
+                        "deal_ticket": 81235,
+                        "position_id": 81234,
+                        "retcode": 10009,
+                        "message": "done",
+                    },
+                    "preview_payload": {
+                        "symbol": "XAUUSDm",
+                        "execution_symbol": "XAUUSDm",
+                        "side": "buy",
+                        "order_type": "market",
+                        "lot_size": 0.2,
+                        **manual_trade_marker_payload(),
+                    },
+                    **manual_trade_marker_payload(),
+                },
+            ]
+        ),
+        encoding="utf-8",
+    )
+    unmatched_path = tmp_path / "unmatched_closed_deals.json"
+    unmatched_path.write_text(
+        json.dumps(
+            [
+                {
+                    "recorded_at": "2026-04-30T17:00:00+00:00",
+                    "symbol": "XAUUSDm",
+                    "ticket": 81234,
+                    "position_id": 81234,
+                    "manual_bucket": "manual_unmatched_XAUUSDM",
+                    "profit": -15.0,
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(adapters, "POOL_AUDIT_TRAIL_PATH", pool_audit_path)
+    monkeypatch.setattr(adapters, "UNMATCHED_CLOSED_DEALS_PATH", unmatched_path)
+    monkeypatch.setattr(adapters, "load_live_state_snapshot", lambda: {})
+    monkeypatch.setattr(adapters, "load_strategy_live_stats_snapshot", lambda: {"strategy_count": 0, "total_realized_pnl": 0.0, "total_trades": 0, "top_active": [], "strategies": {}, "manual_bucket_count": 0, "manual_total_realized_pnl": 0.0, "manual_total_trades": 0, "manual_buckets": {}})
+    monkeypatch.setattr(adapters, "load_open_trades_snapshot", lambda: {"count": 1, "trades": [{"ticket": 81234, "position_id": 81234, "symbol": "XAUUSDm", "profit": 10.0, **manual_trade_marker_payload()}]})
+    monkeypatch.setattr(adapters, "load_trade_context_journal", lambda: {"trades": {"81234": {"ticket": "81234", "symbol": "XAUUSDm", "strategy_name": "manual_user", "entry_time": "2026-04-30T16:12:10+00:00"}}})
+    monkeypatch.setattr(adapters, "load_recent_trade_log", lambda limit=30: [{"ticket": "81234", "symbol": "XAUUSDm", "comment": "clio-manual-user", **manual_trade_marker_payload()}])
+    monkeypatch.setattr(adapters, "load_recent_trade_context_registration_failures", lambda limit=12: {})
+
+    payload = adapters.load_execution_summary()
+
+    lifecycle = payload["manual_trade_lifecycle"]
+    summary = lifecycle["summary"]
+    assert summary["tracked_ticket_count"] == 1
+    assert summary["open_position_count"] == 1
+    assert summary["journal_linked_count"] == 1
+    assert summary["reconciliation_gap_count"] == 1
+
+    ticket = lifecycle["tickets"][0]
+    assert ticket["client_submission_id"] == "manual-submit-001"
+    assert ticket["order_origin"] == "manual_user"
+    assert ticket["exclude_from_strategy_eval"] is True
+    assert ticket["lifecycle_status"] == "reconciliation_gap"
+    assert ticket["open_position_count"] == 1
+    assert ticket["journal_link_count"] == 1
+    assert ticket["trade_log_match_count"] == 1
+    assert ticket["reconciliation_gap_count"] == 1
