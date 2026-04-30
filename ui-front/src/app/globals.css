@@ -1244,6 +1244,32 @@ table th,
   padding: 0 4px;
 }
 
+.manual-ticket-layout {
+  align-items: start;
+}
+
+.manual-ticket-form-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.manual-ticket-inline-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.manual-ticket-chip-row,
+.manual-ticket-warning-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.manual-ticket-warning-list {
+  flex-direction: column;
+}
+
 .table-panel,
 .kv-grid,
 .timeline-item,
@@ -1541,6 +1567,7 @@ table td:first-child,
   .review-dossier-metrics,
   .insight-card-metrics,
   .filter-toolbar,
+  .manual-ticket-form-grid,
   .timeline-grid,
   .kv-grid,
   .detail-grid-2,
@@ -1608,11 +1635,16 @@ table td:first-child,
   .review-dossier-metrics,
   .insight-card-metrics,
   .filter-toolbar,
+  .manual-ticket-form-grid,
   .timeline-grid,
   .kv-grid,
   .detail-grid-2,
   .diagnosis-grid,
   .rule-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .manual-ticket-inline-row {
     grid-template-columns: 1fr;
   }
 

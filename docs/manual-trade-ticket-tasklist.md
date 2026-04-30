@@ -64,26 +64,26 @@ Specification reference: `docs/manual-trade-ticket-spec.md`
 ---
 
 ## Phase T2 — UI Risk Calculator Form
-- [ ] Add manual trade ticket page or panel in UI
-- [ ] Add symbol selector
-- [ ] Add Buy / Sell selector
-- [ ] Add Market / Pending selector
-- [ ] Add entry input logic
-  - [ ] Market entry display
-  - [ ] Pending entry price input
-- [ ] Add risk mode selector
-  - [ ] money
-  - [ ] % equity
-- [ ] Add risk value input
-- [ ] Add stop loss mode selector
-  - [ ] pips
-  - [ ] price
-- [ ] Add take profit mode selector
-  - [ ] pips
-  - [ ] price
-- [ ] Add live derived calculation panel
-- [ ] Add validation and warning messaging
-- [ ] Add disabled state when symbol metadata unavailable
+- [x] Add manual trade ticket page or panel in UI
+- [x] Add symbol selector
+- [x] Add Buy / Sell selector
+- [x] Add Market / Pending selector
+- [x] Add entry input logic
+  - [x] Market entry display
+  - [x] Pending entry price input
+- [x] Add risk mode selector
+  - [x] money
+  - [x] % equity
+- [x] Add risk value input
+- [x] Add stop loss mode selector
+  - [x] pips
+  - [x] price
+- [x] Add take profit mode selector
+  - [x] pips
+  - [x] price
+- [x] Add live derived calculation panel
+- [x] Add validation and warning messaging
+- [x] Add disabled state when symbol metadata unavailable
 
 ---
 
@@ -161,7 +161,7 @@ Specification reference: `docs/manual-trade-ticket-spec.md`
 1. [ ] T0 specification and boundaries
 2. [ ] T1 symbol metadata and sizing engine
 3. [ ] T3 backend risk-calc API
-4. [ ] T2 UI calculator form
+4. [x] T2 UI calculator form
 5. [ ] T4 manual trade identity / segregation
 6. [ ] T5 preview and confirmation layer
 7. [ ] T6 live submit flow

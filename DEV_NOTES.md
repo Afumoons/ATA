@@ -134,4 +134,6 @@ For each autonomous run:
 - Verified the T1 sizing-engine slice with `pytest tests/test_manual_trade_risk.py`
 - T3 backend calculator API is now complete: `ui_api/app.py` exposes `POST /api/execution/risk-calc`, resolves broker symbol metadata (or injected spec overrides for tests), falls back to live-state equity for `equity_pct`, returns derived sizing plus a preview-ready manual payload, and surfaces operator-readable validation errors
 - Verified the T3 API slice with `python -m pytest autonomous_trading_ai/tests/test_manual_trade_risk.py autonomous_trading_ai/tests/test_manual_trade_risk_api.py` and `python -m compileall autonomous_trading_ai/ui_api`
-- Next highest-value slice after this is T2: add the first bounded manual trade ticket UI panel in `ui-front`, starting with the form shell and live calculator wiring against `/api/execution/risk-calc`
+- T2 UI calculator form is now complete in `ui-front/src/app/manual-ticket/page.tsx`, including the manual ticket page, symbol/side/order selectors, market-vs-limit entry handling, risk/SL/TP mode controls, live calculator wiring to `/api/execution/risk-calc`, operator validation/warning notices, and a disabled state when symbol metadata is unavailable
+- Verified the T2 UI slice with a production `npm run build` in `ui-front`
+- Next highest-value slice after this is T4: complete the manual identity / segregation layer in execution data so manual_user trades stay out of autonomous attribution, live stats, and research-linked views even after submit/monitoring work lands

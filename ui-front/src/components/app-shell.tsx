@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 const navItems = [
   ["/", "Overview", "Capital, health strip, freshness, runtime posture"],
   ["/execution", "Execution", "Live posture, no-trade diagnosis, attention events"],
+  ["/manual-ticket", "Manual Ticket", "Risk-only operator ticket with explicit manual-user tagging"],
   ["/pool", "Pool", "Inventory, relationship mapping, strategy drill-down"],
   ["/research", "Research", "Funnel stages, rejection reasons, family throughput"],
   ["/drift", "Drift", "Live vs research mismatch and decay warnings"],

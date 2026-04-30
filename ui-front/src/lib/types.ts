@@ -308,3 +308,33 @@ export interface AuditTimelineResponse {
   generated_at: string;
   events: Array<Record<string, unknown>>;
 }
+
+export interface ManualTradeRiskCalcRequest {
+  symbol: string;
+  side: "buy" | "sell";
+  entry_price: number;
+  risk_mode: "money" | "equity_pct";
+  risk_value: number;
+  stop_loss_mode: "pips" | "price";
+  stop_loss_input: number;
+  take_profit_mode?: "pips" | "price";
+  take_profit_input?: number;
+  account_equity?: number;
+  leverage?: number;
+  order_type?: "market" | "limit";
+}
+
+export interface ManualTradeRiskCalcResponse {
+  generated_at: string;
+  symbol_spec: Record<string, unknown>;
+  symbol_spec_warnings: string[];
+  derived: Record<string, unknown>;
+  preview_payload: Record<string, unknown>;
+}
+
+export interface OperatorValidationDetail {
+  code?: string;
+  message?: string;
+  field?: string;
+  meta?: Record<string, unknown>;
+}

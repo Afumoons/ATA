@@ -2,8 +2,11 @@ import type {
   AuditTimelineResponse,
   ExecutionSummaryResponse,
   ManifestResponse,
+  ManualTradeRiskCalcRequest,
+  ManualTradeRiskCalcResponse,
   OverviewResponse,
   DriftSummaryResponse,
+  OperatorValidationDetail,
   PoolSummaryResponse,
   ResearchSummaryResponse,
   ReviewQueueResponse,
@@ -21,6 +24,7 @@ export class UiApiError extends Error {
   status?: number;
   statusText?: string;
   detail?: string;
+  operatorDetail?: OperatorValidationDetail;
 
   constructor({
     kind,
@@ -28,14 +32,16 @@ export class UiApiError extends Error {
     message,
     status,
     statusText,
-    detail,
-  }: {
-    kind: UiApiErrorKind;
-    endpoint: string;
-    message: string;
-    status?: number;
-    statusText?: string;
-    detail?: string;
+      detail,
+      operatorDetail,
+    }: {
+      kind: UiApiErrorKind;
+      endpoint: string;
+      message: string;
+      status?: number;
+      statusText?: string;
+      detail?: string;
+      operatorDetail?: OperatorValidationDetail;
   }) {
     super(message);
     this.name = "UiApiError";
@@ -44,17 +50,19 @@ export class UiApiError extends Error {
     this.status = status;
     this.statusText = statusText;
     this.detail = detail;
+    this.operatorDetail = operatorDetail;
   }
 }
 
-async function request<T>(path: string): Promise<T> {
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const endpoint = `${API_BASE}${path}`;
 
   let response: Response;
   try {
     response = await fetch(endpoint, {
-      headers: { Accept: "application/json" },
+      headers: { Accept: "application/json", ...(init?.headers ?? {}) },
       cache: "no-store",
+      ...init,
     });
   } catch (error) {
     throw new UiApiError({
@@ -66,8 +74,20 @@ async function request<T>(path: string): Promise<T> {
   }
 
   const raw = await response.text();
+  let parsed: unknown;
+  if (raw) {
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      parsed = undefined;
+    }
+  }
 
   if (!response.ok) {
+    const operatorDetail = parsed && typeof parsed === "object" && "detail" in parsed
+      ? (parsed as { detail?: OperatorValidationDetail }).detail
+      : undefined;
+
     throw new UiApiError({
       kind: "http-failure",
       endpoint,
@@ -75,11 +95,12 @@ async function request<T>(path: string): Promise<T> {
       status: response.status,
       statusText: response.statusText,
       detail: raw.slice(0, 280) || undefined,
+      operatorDetail,
     });
   }
 
   try {
-    return raw ? (JSON.parse(raw) as T) : ({} as T);
+    return raw ? ((parsed ?? JSON.parse(raw)) as T) : ({} as T);
   } catch (error) {
     throw new UiApiError({
       kind: "malformed-payload",
@@ -103,4 +124,9 @@ export const uiApi = {
   strategies: () => request<StrategySummaryResponse[]>("/strategies"),
   strategyDetail: (name: string) => request<StrategyDetailResponse>(`/strategies/${encodeURIComponent(name)}`),
   auditTimeline: (limit = 100) => request<AuditTimelineResponse>(`/audit/timeline?limit=${limit}`),
+  manualTradeRiskCalc: (payload: ManualTradeRiskCalcRequest) => request<ManualTradeRiskCalcResponse>("/execution/risk-calc", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  }),
 };
