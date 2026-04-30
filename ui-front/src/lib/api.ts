@@ -5,6 +5,8 @@ import type {
   ManualTradePreviewAuditResponse,
   ManualTradeRiskCalcRequest,
   ManualTradeRiskCalcResponse,
+  ManualTradeSubmitRequest,
+  ManualTradeSubmitResponse,
   OverviewResponse,
   DriftSummaryResponse,
   OperatorValidationDetail,
@@ -131,6 +133,11 @@ export const uiApi = {
     body: JSON.stringify(payload),
   }),
   manualTradePreviewIntent: (payload: ManualTradeRiskCalcRequest) => request<ManualTradePreviewAuditResponse>("/execution/manual-ticket/preview-intent", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  }),
+  manualTradeSubmit: (payload: ManualTradeSubmitRequest) => request<ManualTradeSubmitResponse>("/execution/manual-ticket/submit", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),

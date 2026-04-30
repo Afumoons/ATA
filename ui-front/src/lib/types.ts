@@ -361,6 +361,23 @@ export interface ManualTradePreviewAuditResponse {
   audit_event: Record<string, unknown>;
 }
 
+export interface ManualTradeSubmitRequest extends ManualTradeRiskCalcRequest {
+  confirm_submit: boolean;
+  client_submission_id: string;
+}
+
+export interface ManualTradeSubmitResponse {
+  generated_at: string;
+  submit_status: string;
+  duplicate_submission: boolean;
+  client_submission_id: string;
+  preview_fingerprint: string;
+  broker_validation?: Record<string, unknown>;
+  broker_response?: Record<string, unknown>;
+  audit_event_before?: Record<string, unknown>;
+  audit_event_after?: Record<string, unknown>;
+}
+
 export interface OperatorValidationDetail {
   code?: string;
   message?: string;

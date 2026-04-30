@@ -16,7 +16,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { uiApi, UiApiError } from "@/lib/api";
 import { compactValue, formatCurrency, formatDateTime, formatNumber, formatPercent } from "@/lib/format";
-import type { ManualTradePreviewAuditResponse, ManualTradeRiskCalcResponse, OperatorValidationDetail } from "@/lib/types";
+import type {
+  ManualTradePreviewAuditResponse,
+  ManualTradeRiskCalcResponse,
+  ManualTradeSubmitResponse,
+  OperatorValidationDetail,
+} from "@/lib/types";
 
 const COMMON_SYMBOLS = ["XAUUSDm", "BTCUSDm", "XAGUSDm", "EURUSDm"] as const;
 
@@ -106,6 +111,13 @@ function formatPlainNumber(value: unknown, maximumFractionDigits = 2) {
   return formatNumber(value, { maximumFractionDigits });
 }
 
+function buildClientSubmissionId() {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return `manual-${crypto.randomUUID()}`;
+  }
+  return `manual-${Date.now()}`;
+}
+
 export default function ManualTicketPage() {
   const [form, setForm] = useState<ManualTicketFormState>(DEFAULT_FORM);
   const [calc, setCalc] = useState<ManualTradeRiskCalcResponse | null>(null);
@@ -115,6 +127,11 @@ export default function ManualTicketPage() {
   const [previewAuditStatus, setPreviewAuditStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [previewAuditError, setPreviewAuditError] = useState<unknown>(null);
   const [previewConfirmed, setPreviewConfirmed] = useState(false);
+  const [submitConfirmed, setSubmitConfirmed] = useState(false);
+  const [submitResponse, setSubmitResponse] = useState<ManualTradeSubmitResponse | null>(null);
+  const [submitStatus, setSubmitStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [submitError, setSubmitError] = useState<unknown>(null);
+  const [clientSubmissionId, setClientSubmissionId] = useState(() => buildClientSubmissionId());
   const requestSeq = useRef(0);
 
   const payload = useMemo(() => buildPayload(form), [form]);
@@ -132,6 +149,9 @@ export default function ManualTicketPage() {
   const previewAuditEvent = previewAudit?.audit_event ?? {};
   const brokerValidation = previewAudit?.broker_validation ?? {};
   const previewOperatorError = getOperatorValidationDetail(previewAuditError);
+  const submitOperatorError = getOperatorValidationDetail(submitError);
+  const submitBrokerResponse: Record<string, unknown> = submitResponse?.broker_response ?? {};
+  const submitAuditAfter: Record<string, unknown> = submitResponse?.audit_event_after ?? {};
 
   useEffect(() => {
     if (!payload) {
@@ -152,15 +172,27 @@ export default function ManualTicketPage() {
           setCalc(response);
           setCalcError(null);
           setStatus("success");
+          setPreviewAudit(null);
           setPreviewAuditStatus("idle");
           setPreviewAuditError(null);
+          setSubmitConfirmed(false);
+          setSubmitResponse(null);
+          setSubmitStatus("idle");
+          setSubmitError(null);
+          setClientSubmissionId(buildClientSubmissionId());
         })
         .catch((error) => {
           if (currentSeq !== requestSeq.current) return;
           setCalc(null);
           setCalcError(error);
           setStatus("error");
+          setPreviewAudit(null);
           setPreviewAuditStatus("idle");
+          setPreviewAuditError(null);
+          setSubmitConfirmed(false);
+          setSubmitResponse(null);
+          setSubmitStatus("idle");
+          setSubmitError(null);
         });
     }, 350);
 
@@ -176,6 +208,11 @@ export default function ManualTicketPage() {
     if (!payload || !calc || !previewConfirmed) return;
     setPreviewAuditStatus("loading");
     setPreviewAuditError(null);
+    setSubmitConfirmed(false);
+    setSubmitResponse(null);
+    setSubmitStatus("idle");
+    setSubmitError(null);
+    setClientSubmissionId(buildClientSubmissionId());
     try {
       const response = await uiApi.manualTradePreviewIntent(payload);
       setPreviewAudit(response);
@@ -183,6 +220,24 @@ export default function ManualTicketPage() {
     } catch (error) {
       setPreviewAuditError(error);
       setPreviewAuditStatus("error");
+    }
+  }
+
+  async function handleSubmitManualTrade() {
+    if (!payload || !calc || !previewAudit || !previewConfirmed || !submitConfirmed) return;
+    setSubmitStatus("loading");
+    setSubmitError(null);
+    try {
+      const response = await uiApi.manualTradeSubmit({
+        ...payload,
+        confirm_submit: true,
+        client_submission_id: clientSubmissionId,
+      });
+      setSubmitResponse(response);
+      setSubmitStatus("success");
+    } catch (error) {
+      setSubmitError(error);
+      setSubmitStatus("error");
     }
   }
 
@@ -297,7 +352,7 @@ export default function ManualTicketPage() {
               <StatusBadge label={`${form.side.toUpperCase()} ${symbolLabel || "SYMBOL"}`} tone={form.side === "buy" ? "success" : "warning"} />
               <StatusBadge label={form.orderType === "market" ? "Market reference pricing" : "Limit entry pricing"} tone="info" />
               <StatusBadge label={form.riskMode === "money" ? "Fixed cash risk" : "% equity risk"} tone="neutral" />
-              <StatusBadge label="Preview only, no submit path yet" tone="warning" />
+              <StatusBadge label="Live submit remains operator-gated" tone="warning" />
             </div>
 
             {form.orderType === "market" ? (
@@ -481,15 +536,91 @@ export default function ManualTicketPage() {
               />
             ) : null}
           </Section>
+
+          <Section title="Live submit gate" description="Submit live tetap terpisah dari preview, wajib pakai gate konfirmasi kedua, dan selalu membawa marker manual_user yang sama.">
+            <InlineNotice
+              tone={previewAuditStatus === "success" ? "info" : "warning"}
+              title={previewAuditStatus === "success" ? "Preview audit siap dipromosikan ke submit" : "Submit live menunggu preview tervalidasi"}
+              description={previewAuditStatus === "success"
+                ? "Gunakan client submission id ini untuk satu percobaan submit. Retry dengan id yang sama akan tetap idempoten selama payload preview tidak berubah."
+                : "Selesaikan broker validation + preview audit dulu. Submit tidak dibuka langsung dari hasil kalkulator agar jejak audit tetap eksplisit."}
+            />
+
+            <FilterToolbar className="manual-ticket-form-grid">
+              <FilterField label="Client submission id">
+                <input
+                  className="filter-input"
+                  value={clientSubmissionId}
+                  onChange={(event) => setClientSubmissionId(event.target.value)}
+                  disabled={previewAuditStatus !== "success" || submitStatus === "loading"}
+                  placeholder="manual-..."
+                />
+              </FilterField>
+            </FilterToolbar>
+
+            <label className="manual-ticket-confirmation">
+              <input
+                type="checkbox"
+                checked={submitConfirmed}
+                onChange={(event) => setSubmitConfirmed(event.target.checked)}
+                disabled={previewAuditStatus !== "success" || submitStatus === "loading"}
+              />
+              <span>
+                Saya konfirmasi submit live ini memang order manual operator, tetap dikecualikan dari statistik strategi/research, dan saya siap menerima order market/limit sesuai payload broker tervalidasi di atas.
+              </span>
+            </label>
+
+            <div className="manual-ticket-inline-row">
+              <Button onClick={() => void handleSubmitManualTrade()} disabled={!payload || !calc || !previewAudit || previewAuditStatus !== "success" || !previewConfirmed || !submitConfirmed || submitStatus === "loading" || !clientSubmissionId.trim()}>
+                {submitStatus === "loading" ? "Submitting live manual order..." : "Submit live manual order"}
+              </Button>
+              {submitStatus === "success" ? <StatusBadge label={submitResponse?.duplicate_submission ? "Duplicate retry resolved idempotently" : "Manual order submitted"} tone="success" /> : null}
+            </div>
+
+            {submitStatus === "success" ? (
+              <>
+                <section className="stats-grid">
+                  <StatCard label="Submit status" value={compactValue(submitResponse?.submit_status)} hint={submitResponse?.duplicate_submission ? "Existing execution result reused" : "Fresh broker send result"} tone="success" />
+                  <StatCard label="Order ticket" value={compactValue(submitBrokerResponse.order_ticket)} hint="Broker order identifier" tone="info" />
+                  <StatCard label="Deal ticket" value={compactValue(submitBrokerResponse.deal_ticket)} hint="Present when broker filled immediately" tone="info" />
+                  <StatCard label="Position id" value={compactValue(submitBrokerResponse.position_id)} hint="MT5 position/order linkage" tone="neutral" />
+                </section>
+                <KeyValueGrid
+                  data={{
+                    submit_recorded_at: submitResponse?.generated_at,
+                    client_submission_id: submitResponse?.client_submission_id,
+                    preview_fingerprint: submitResponse?.preview_fingerprint,
+                    broker_retcode: submitBrokerResponse.retcode,
+                    broker_message: compactValue(submitBrokerResponse.message),
+                    broker_comment: submitBrokerResponse.raw_result && typeof submitBrokerResponse.raw_result === "object" ? compactValue((submitBrokerResponse.raw_result as Record<string, unknown>).comment) : "—",
+                    audit_stage: submitAuditAfter.audit_stage,
+                    audit_event: submitAuditAfter.event,
+                    order_origin: submitAuditAfter.order_origin,
+                    execution_origin: submitAuditAfter.execution_origin,
+                  }}
+                  emptyTitle=""
+                  emptyDescription=""
+                />
+              </>
+            ) : null}
+
+            {submitStatus === "error" ? (
+              <InlineNotice
+                tone={submitOperatorError?.code?.includes("manual_trade") || submitOperatorError?.code === "broker_validation_failed" ? "critical" : "warning"}
+                title={submitOperatorError?.code === "manual_submit_confirmation_required" ? "Konfirmasi submit masih wajib" : "Submit live gagal"}
+                description={submitOperatorError?.message ?? (submitError instanceof Error ? submitError.message : "Submit request gagal.")}
+              />
+            ) : null}
+          </Section>
         </div>
       </div>
 
-      <Section title="What this slice completes" description="This UI pass closes the calculator form shell before preview confirmation or live submit are introduced.">
+      <Section title="What this slice completes" description="This UI pass closes the operator-facing preview-to-submit flow while preserving manual_user segregation and explicit confirmation gates.">
         <section className="stats-grid">
           <StatCard label="Symbol" value={symbolLabel || "—"} hint="Preset selector plus custom fallback" tone="info" />
           <StatCard label="Entry mode" value={form.orderType === "market" ? "Market reference" : "Pending limit"} hint={entryLabel} tone="neutral" />
           <StatCard label="Risk input" value={form.riskMode === "money" ? formatCurrency(parseOptionalNumber(form.riskValue) ?? null) : formatPercent(parseOptionalNumber(form.riskValue) ?? null)} hint="Money or % equity" tone="success" />
-          <StatCard label="Next phase" value="Preview + confirmation" hint="Live submit stays out of scope for this slice" tone="warning" />
+          <StatCard label="Submit gate" value="Preview audit + live confirm" hint="Live submit now stays explicit, idempotent, and audit-backed" tone="warning" />
         </section>
       </Section>
     </div>
