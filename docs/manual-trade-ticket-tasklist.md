@@ -88,16 +88,16 @@ Specification reference: `docs/manual-trade-ticket-spec.md`
 ---
 
 ## Phase T3 — Backend API for Calculator / Preview
-- [ ] Add `POST /api/execution/risk-calc`
-- [ ] Normalize request payload
-- [ ] Return derived risk-sizing response
-- [ ] Add request validation errors with operator-readable messages
-- [ ] Add preview-ready payload shape for execution layer
-- [ ] Add tests or verification script for representative symbols
-  - [ ] XAUUSDm
-  - [ ] BTCUSDm
-  - [ ] XAGUSDm
-  - [ ] one forex pair if supported
+- [x] Add `POST /api/execution/risk-calc`
+- [x] Normalize request payload
+- [x] Return derived risk-sizing response
+- [x] Add request validation errors with operator-readable messages
+- [x] Add preview-ready payload shape for execution layer
+- [x] Add tests or verification script for representative symbols
+  - [x] XAUUSDm
+  - [x] BTCUSDm
+  - [x] XAGUSDm
+  - [x] one forex pair if supported
 
 ---
 

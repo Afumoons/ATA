@@ -102,3 +102,47 @@ class ReviewQueueResponse(BaseModel):
 class AuditTimelineResponse(BaseModel):
     generated_at: str
     events: List[Dict[str, Any]] = Field(default_factory=list)
+
+
+class ManualTradeSymbolSpecModel(BaseModel):
+    symbol: str
+    symbol_canonical: str
+    execution_symbol: str
+    instrument_class: str
+    digits: int
+    point_size: float
+    tick_size: float
+    tick_value: float
+    contract_size: float
+    min_lot: float
+    lot_step: float
+    max_lot: float
+    source: str = "mt5.symbol_info"
+
+
+class ManualTradeRiskCalcRequest(BaseModel):
+    symbol: str
+    side: str
+    entry_price: float
+    risk_mode: str
+    risk_value: float
+    stop_loss_mode: str
+    stop_loss_input: float
+    take_profit_mode: Optional[str] = None
+    take_profit_input: Optional[float] = None
+    account_equity: Optional[float] = None
+    leverage: Optional[float] = None
+    order_type: str = "market"
+    symbol_spec: Optional[ManualTradeSymbolSpecModel] = None
+
+
+class ManualTradeRiskCalcResponse(BaseModel):
+    generated_at: str
+    symbol_spec: Dict[str, Any] = Field(default_factory=dict)
+    symbol_spec_warnings: List[str] = Field(default_factory=list)
+    derived: Dict[str, Any] = Field(default_factory=dict)
+    preview_payload: Dict[str, Any] = Field(default_factory=dict)
+
+
+class OperatorValidationErrorResponse(BaseModel):
+    detail: Dict[str, Any]

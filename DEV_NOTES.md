@@ -132,4 +132,6 @@ For each autonomous run:
 - T1 metadata audit/spec slice is now complete: existing MT5/config metadata sources are documented in `docs/manual-trade-ticket-symbol-metadata-audit.md`, and `execution/symbol_metadata.py` now defines the normalized symbol spec payload/resolution helpers for calculator/API work
 - T1 reusable sizing engine is now complete in `execution/manual_trade_risk.py`, covering money/%-equity risk sizing, SL/TP by pips or price, derived lot/notional/RR/margin values, and operator-facing warnings for too-small stops or impossible sizing
 - Verified the T1 sizing-engine slice with `pytest tests/test_manual_trade_risk.py`
-- Next highest-value slice after this is T3: add the `POST /api/execution/risk-calc` API around the reusable sizing engine with operator-readable validation responses
+- T3 backend calculator API is now complete: `ui_api/app.py` exposes `POST /api/execution/risk-calc`, resolves broker symbol metadata (or injected spec overrides for tests), falls back to live-state equity for `equity_pct`, returns derived sizing plus a preview-ready manual payload, and surfaces operator-readable validation errors
+- Verified the T3 API slice with `python -m pytest autonomous_trading_ai/tests/test_manual_trade_risk.py autonomous_trading_ai/tests/test_manual_trade_risk_api.py` and `python -m compileall autonomous_trading_ai/ui_api`
+- Next highest-value slice after this is T2: add the first bounded manual trade ticket UI panel in `ui-front`, starting with the form shell and live calculator wiring against `/api/execution/risk-calc`
