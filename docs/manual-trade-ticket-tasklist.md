@@ -130,13 +130,13 @@ Specification reference: `docs/manual-trade-ticket-spec.md`
 ---
 
 ## Phase T6 — Live Submit Flow
-- [ ] Add backend submit endpoint for manual orders
-- [ ] Support market order submit
-- [ ] Support pending / limit order submit
-- [ ] Persist audit record before / after submit
-- [ ] Return broker response cleanly to UI
-- [ ] Add retry-safe behavior for duplicate submission risk
-- [ ] Ensure all live submit paths remain explicit and operator-confirmed
+- [x] Add backend submit endpoint for manual orders
+- [x] Support market order submit
+- [x] Support pending / limit order submit
+- [x] Persist audit record before / after submit
+- [x] Return broker response cleanly to UI
+- [x] Add retry-safe behavior for duplicate submission risk
+- [x] Ensure all live submit paths remain explicit and operator-confirmed
 
 ---
 

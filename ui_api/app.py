@@ -28,6 +28,8 @@ from .models import (
     ManualTradePreviewAuditResponse,
     ManualTradeRiskCalcRequest,
     ManualTradeRiskCalcResponse,
+    ManualTradeSubmitRequest,
+    ManualTradeSubmitResponse,
     OverviewResponse,
     OperatorValidationErrorResponse,
     PoolSummaryResponse,
@@ -35,7 +37,13 @@ from .models import (
     ReviewQueueResponse,
     StrategyDetailResponse,
 )
-from ..execution.manual_trade_audit import record_manual_ticket_preview_intent
+from ..execution.audit_utils import POOL_AUDIT_TRAIL_PATH, _load_json_list
+from ..execution.manual_trade_audit import (
+    manual_trade_preview_fingerprint,
+    record_manual_ticket_execution_result,
+    record_manual_ticket_preview_intent,
+    record_manual_ticket_submit_intent,
+)
 from ..execution.manual_trade_broker_validation import validate_manual_trade_preview
 from ..execution.manual_trade_identity import manual_trade_marker_payload
 from ..execution.manual_trade_risk import (
@@ -43,6 +51,7 @@ from ..execution.manual_trade_risk import (
     ManualTradeRiskRequest,
     calculate_manual_trade_risk,
 )
+from ..execution.manual_trade_submit import submit_manual_trade
 from ..execution.symbol_metadata import NormalizedSymbolSpec, fetch_symbol_spec
 
 app = FastAPI(title="autonomous_trading_ai UI API", version="v1")
@@ -153,6 +162,82 @@ def api_execution_manual_ticket_preview_intent(payload: ManualTradeRiskCalcReque
         generated_at=datetime.now(timezone.utc).isoformat(),
         broker_validation=broker_validation,
         audit_event=audit_event,
+    )
+
+
+@app.post(
+    "/api/execution/manual-ticket/submit",
+    response_model=ManualTradeSubmitResponse,
+    responses={422: {"model": OperatorValidationErrorResponse}},
+)
+def api_execution_manual_ticket_submit(payload: ManualTradeSubmitRequest) -> ManualTradeSubmitResponse:
+    if not payload.confirm_submit:
+        raise _operator_validation_error(
+            "manual_submit_confirmation_required",
+            field="confirm_submit",
+        )
+
+    response = _build_manual_trade_risk_calc_response(payload)
+    broker_validation = validate_manual_trade_preview(response.preview_payload)
+    if not broker_validation.get("ok"):
+        raise _operator_validation_error(
+            "broker_validation_failed",
+            meta={
+                "retcode": broker_validation.get("retcode"),
+                "message": broker_validation.get("message"),
+                "request": broker_validation.get("request"),
+                "last_error": broker_validation.get("last_error"),
+            },
+        )
+
+    preview_fingerprint = manual_trade_preview_fingerprint(response.preview_payload)
+    existing_result = _find_existing_manual_submit_result(payload.client_submission_id)
+    if existing_result is not None:
+        if str(existing_result.get("preview_fingerprint") or "") != preview_fingerprint:
+            raise _operator_validation_error(
+                "manual_submit_submission_id_reused_with_different_payload",
+                field="client_submission_id",
+                meta={
+                    "client_submission_id": payload.client_submission_id,
+                    "existing_preview_fingerprint": existing_result.get("preview_fingerprint"),
+                    "preview_fingerprint": preview_fingerprint,
+                },
+            )
+        return ManualTradeSubmitResponse(
+            generated_at=datetime.now(timezone.utc).isoformat(),
+            submit_status=str(existing_result.get("submit_status") or "submitted"),
+            duplicate_submission=True,
+            client_submission_id=payload.client_submission_id,
+            preview_fingerprint=preview_fingerprint,
+            broker_validation=broker_validation,
+            broker_response=dict(existing_result.get("broker_response") or {}),
+            audit_event_before={},
+            audit_event_after=existing_result,
+        )
+
+    audit_event_before = record_manual_ticket_submit_intent(
+        preview_payload=response.preview_payload,
+        client_submission_id=payload.client_submission_id,
+        broker_validation=broker_validation,
+    )
+    broker_response = submit_manual_trade(response.preview_payload)
+    audit_event_after = record_manual_ticket_execution_result(
+        preview_payload=response.preview_payload,
+        submit_status=broker_response.get("submit_status") or "unknown",
+        broker_response=broker_response,
+        error_message=None if broker_response.get("ok") else broker_response.get("message"),
+        client_submission_id=payload.client_submission_id,
+    )
+    return ManualTradeSubmitResponse(
+        generated_at=datetime.now(timezone.utc).isoformat(),
+        submit_status=str(broker_response.get("submit_status") or "unknown"),
+        duplicate_submission=False,
+        client_submission_id=payload.client_submission_id,
+        preview_fingerprint=preview_fingerprint,
+        broker_validation=broker_validation,
+        broker_response=broker_response,
+        audit_event_before=audit_event_before,
+        audit_event_after=audit_event_after,
     )
 
 
@@ -294,5 +379,22 @@ def _operator_message_for(code: str) -> str:
         "raw_lot_size_non_positive": "Ukuran lot hasil kalkulasi tidak valid untuk parameter risiko ini.",
         "stop_loss_money_per_lot_non_positive": "Nilai uang per lot untuk stop loss tidak valid dari metadata simbol broker.",
         "broker_validation_failed": "Broker menolak draft order manual ini pada tahap validasi. Cek geometri harga, volume, atau batas simbol broker sebelum lanjut.",
+        "manual_submit_confirmation_required": "Submit live manual trade harus melewati gate konfirmasi submit eksplisit.",
+        "manual_submit_submission_id_reused_with_different_payload": "client_submission_id ini sudah pernah dipakai untuk draft manual trade yang berbeda. Gunakan id submit baru agar order tidak ganda.",
     }
     return messages.get(code, code.replace("_", " "))
+
+
+def _find_existing_manual_submit_result(client_submission_id: str) -> dict | None:
+    normalized = str(client_submission_id or "").strip()
+    if not normalized:
+        return None
+    rows = _load_json_list(POOL_AUDIT_TRAIL_PATH)
+    for row in reversed(rows):
+        if not isinstance(row, dict):
+            continue
+        if row.get("event") != "manual_ticket_execution_result":
+            continue
+        if str(row.get("client_submission_id") or "") == normalized:
+            return row
+    return None

@@ -360,6 +360,177 @@ def test_manual_trade_preview_intent_api_surfaces_broker_validation_failure(monk
     assert detail["meta"]["message"] == "Invalid stops"
 
 
+def test_manual_trade_submit_api_records_pre_and_post_audit_for_market_order(tmp_path, monkeypatch):
+    symbol_spec = {
+        "symbol": "XAUUSDm",
+        "symbol_canonical": "XAUUSDm",
+        "execution_symbol": "XAUUSDm",
+        "instrument_class": "metals",
+        "digits": 2,
+        "point_size": 0.01,
+        "tick_size": 0.01,
+        "tick_value": 1.0,
+        "contract_size": 100.0,
+        "min_lot": 0.01,
+        "lot_step": 0.01,
+        "max_lot": 100.0,
+    }
+    pool_audit_path = tmp_path / "pool_audit_trail.json"
+    pool_audit_path.write_text("[]", encoding="utf-8")
+
+    monkeypatch.setattr(api_app, "fetch_symbol_spec", lambda symbol: _snapshot(symbol_spec))
+    monkeypatch.setattr(api_app, "validate_manual_trade_preview", lambda preview_payload: {"ok": True, "retcode": 0, "message": "validated", "request": {"magic": preview_payload.get("magic_number")}})
+    monkeypatch.setattr(api_app, "submit_manual_trade", lambda preview_payload: {
+        "ok": True,
+        "submit_status": "submitted",
+        "retcode": 10009,
+        "message": "done",
+        "request": {"symbol": preview_payload.get("execution_symbol"), "comment": preview_payload.get("comment_tag")},
+        "raw_result": {"retcode": 10009, "comment": "done", "order": 81234},
+        "order_ticket": 81234,
+        "deal_ticket": 81235,
+        "position_id": 81234,
+    })
+    monkeypatch.setattr(importlib.import_module("autonomous_trading_ai.execution.audit_utils"), "POOL_AUDIT_TRAIL_PATH", pool_audit_path)
+    monkeypatch.setattr(api_app, "POOL_AUDIT_TRAIL_PATH", pool_audit_path)
+    monkeypatch.setattr(adapters, "POOL_AUDIT_TRAIL_PATH", pool_audit_path)
+    monkeypatch.setattr(adapters, "load_recent_trade_log", lambda limit=100: [])
+
+    response = client.post(
+        "/api/execution/manual-ticket/submit",
+        json={
+            "symbol": "XAUUSDm",
+            "side": "buy",
+            "entry_price": 2300.0,
+            "risk_mode": "money",
+            "risk_value": 100.0,
+            "stop_loss_mode": "price",
+            "stop_loss_input": 2295.0,
+            "take_profit_mode": "price",
+            "take_profit_input": 2310.0,
+            "order_type": "market",
+            "confirm_submit": True,
+            "client_submission_id": "manual-submit-001",
+        },
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["submit_status"] == "submitted"
+    assert data["duplicate_submission"] is False
+    assert data["broker_response"]["order_ticket"] == 81234
+    assert data["audit_event_before"]["event"] == "manual_ticket_submit_intent"
+    assert data["audit_event_after"]["event"] == "manual_ticket_execution_result"
+    assert data["audit_event_after"]["client_submission_id"] == "manual-submit-001"
+    assert data["audit_event_after"]["order_origin"] == "manual_user"
+
+    timeline = adapters.load_audit_timeline(limit=10)
+    submit_events = [event for event in timeline["events"] if event.get("event") in {"manual_ticket_submit_intent", "manual_ticket_execution_result"}]
+    assert len(submit_events) == 2
+    assert all(event["event_origin"] == "manual_user" for event in submit_events)
+
+
+def test_manual_trade_submit_api_is_retry_safe_for_duplicate_submission_id(tmp_path, monkeypatch):
+    symbol_spec = {
+        "symbol": "XAUUSDm",
+        "symbol_canonical": "XAUUSDm",
+        "execution_symbol": "XAUUSDm",
+        "instrument_class": "metals",
+        "digits": 2,
+        "point_size": 0.01,
+        "tick_size": 0.01,
+        "tick_value": 1.0,
+        "contract_size": 100.0,
+        "min_lot": 0.01,
+        "lot_step": 0.01,
+        "max_lot": 100.0,
+    }
+    pool_audit_path = tmp_path / "pool_audit_trail.json"
+    pool_audit_path.write_text("[]", encoding="utf-8")
+    submit_calls = []
+
+    monkeypatch.setattr(api_app, "fetch_symbol_spec", lambda symbol: _snapshot(symbol_spec))
+    monkeypatch.setattr(api_app, "validate_manual_trade_preview", lambda preview_payload: {"ok": True, "retcode": 0, "message": "validated", "request": {"magic": preview_payload.get("magic_number")}})
+    monkeypatch.setattr(api_app, "submit_manual_trade", lambda preview_payload: submit_calls.append(preview_payload) or {
+        "ok": True,
+        "submit_status": "submitted",
+        "retcode": 10008,
+        "message": "placed",
+        "request": {"symbol": preview_payload.get("execution_symbol"), "comment": preview_payload.get("comment_tag")},
+        "raw_result": {"retcode": 10008, "comment": "placed", "order": 91234},
+        "order_ticket": 91234,
+        "deal_ticket": None,
+        "position_id": 91234,
+    })
+    monkeypatch.setattr(importlib.import_module("autonomous_trading_ai.execution.audit_utils"), "POOL_AUDIT_TRAIL_PATH", pool_audit_path)
+    monkeypatch.setattr(api_app, "POOL_AUDIT_TRAIL_PATH", pool_audit_path)
+    monkeypatch.setattr(adapters, "POOL_AUDIT_TRAIL_PATH", pool_audit_path)
+    monkeypatch.setattr(adapters, "load_recent_trade_log", lambda limit=100: [])
+
+    payload = {
+        "symbol": "XAUUSDm",
+        "side": "buy",
+        "entry_price": 2298.0,
+        "risk_mode": "money",
+        "risk_value": 100.0,
+        "stop_loss_mode": "price",
+        "stop_loss_input": 2295.0,
+        "take_profit_mode": "price",
+        "take_profit_input": 2305.0,
+        "order_type": "limit",
+        "confirm_submit": True,
+        "client_submission_id": "manual-submit-dup-001",
+    }
+
+    first = client.post("/api/execution/manual-ticket/submit", json=payload)
+    second = client.post("/api/execution/manual-ticket/submit", json=payload)
+
+    assert first.status_code == 200
+    assert second.status_code == 200
+    assert len(submit_calls) == 1
+    assert first.json()["duplicate_submission"] is False
+    assert second.json()["duplicate_submission"] is True
+    assert second.json()["broker_response"]["order_ticket"] == 91234
+
+
+def test_manual_trade_submit_api_requires_explicit_confirmation(monkeypatch):
+    symbol_spec = {
+        "symbol": "EURUSDm",
+        "symbol_canonical": "EURUSDm",
+        "execution_symbol": "EURUSDm",
+        "instrument_class": "forex",
+        "digits": 5,
+        "point_size": 0.00001,
+        "tick_size": 0.00001,
+        "tick_value": 1.0,
+        "contract_size": 100000.0,
+        "min_lot": 0.01,
+        "lot_step": 0.01,
+        "max_lot": 100.0,
+    }
+    monkeypatch.setattr(api_app, "fetch_symbol_spec", lambda symbol: _snapshot(symbol_spec))
+
+    response = client.post(
+        "/api/execution/manual-ticket/submit",
+        json={
+            "symbol": "EURUSDm",
+            "side": "buy",
+            "entry_price": 1.1,
+            "risk_mode": "money",
+            "risk_value": 100.0,
+            "stop_loss_mode": "price",
+            "stop_loss_input": 1.095,
+            "confirm_submit": False,
+            "client_submission_id": "manual-submit-no-confirm",
+        },
+    )
+
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert detail["code"] == "manual_submit_confirmation_required"
+    assert detail["field"] == "confirm_submit"
+
+
 def _snapshot(spec: dict):
     class Snapshot:
         def __init__(self, payload: dict):

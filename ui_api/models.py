@@ -150,5 +150,22 @@ class ManualTradePreviewAuditResponse(BaseModel):
     audit_event: Dict[str, Any] = Field(default_factory=dict)
 
 
+class ManualTradeSubmitRequest(ManualTradeRiskCalcRequest):
+    confirm_submit: bool = False
+    client_submission_id: str
+
+
+class ManualTradeSubmitResponse(BaseModel):
+    generated_at: str
+    submit_status: str
+    duplicate_submission: bool = False
+    client_submission_id: str
+    preview_fingerprint: str
+    broker_validation: Dict[str, Any] = Field(default_factory=dict)
+    broker_response: Dict[str, Any] = Field(default_factory=dict)
+    audit_event_before: Dict[str, Any] = Field(default_factory=dict)
+    audit_event_after: Dict[str, Any] = Field(default_factory=dict)
+
+
 class OperatorValidationErrorResponse(BaseModel):
     detail: Dict[str, Any]

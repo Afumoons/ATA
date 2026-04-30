@@ -100,12 +100,50 @@ def record_manual_ticket_preview_intent(
     return event
 
 
+def build_manual_ticket_submit_intent_audit_event(
+    *,
+    preview_payload: Mapping[str, Any] | None,
+    client_submission_id: str,
+    broker_validation: Mapping[str, Any] | None = None,
+) -> Dict[str, Any]:
+    preview = {
+        **manual_trade_marker_payload(),
+        **_to_dict(preview_payload),
+    }
+    return {
+        "event": "manual_ticket_submit_intent",
+        "event_category": "manual_trade_ticket",
+        "audit_stage": "submit_intent",
+        "client_submission_id": str(client_submission_id or ""),
+        "preview_fingerprint": manual_trade_preview_fingerprint(preview),
+        "preview_payload": preview,
+        "broker_validation": _to_dict(broker_validation),
+        **manual_trade_marker_payload(),
+    }
+
+
+def record_manual_ticket_submit_intent(
+    *,
+    preview_payload: Mapping[str, Any] | None,
+    client_submission_id: str,
+    broker_validation: Mapping[str, Any] | None = None,
+) -> Dict[str, Any]:
+    event = build_manual_ticket_submit_intent_audit_event(
+        preview_payload=preview_payload,
+        client_submission_id=client_submission_id,
+        broker_validation=broker_validation,
+    )
+    append_pool_audit(event)
+    return event
+
+
 def build_manual_ticket_execution_audit_event(
     *,
     preview_payload: Mapping[str, Any] | None,
     submit_status: str,
     broker_response: Mapping[str, Any] | None = None,
     error_message: str | None = None,
+    client_submission_id: str | None = None,
 ) -> Dict[str, Any]:
     preview = {
         **manual_trade_marker_payload(),
@@ -116,6 +154,7 @@ def build_manual_ticket_execution_audit_event(
         "event_category": "manual_trade_ticket",
         "audit_stage": "execution_result",
         "submit_status": str(submit_status or "unknown"),
+        "client_submission_id": str(client_submission_id or ""),
         "preview_fingerprint": manual_trade_preview_fingerprint(preview),
         "preview_payload": preview,
         "broker_response": _to_dict(broker_response),
@@ -132,12 +171,14 @@ def record_manual_ticket_execution_result(
     submit_status: str,
     broker_response: Mapping[str, Any] | None = None,
     error_message: str | None = None,
+    client_submission_id: str | None = None,
 ) -> Dict[str, Any]:
     event = build_manual_ticket_execution_audit_event(
         preview_payload=preview_payload,
         submit_status=submit_status,
         broker_response=broker_response,
         error_message=error_message,
+        client_submission_id=client_submission_id,
     )
     append_pool_audit(event)
     return event
