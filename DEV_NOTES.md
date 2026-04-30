@@ -106,7 +106,7 @@ For each autonomous run:
 - U7A/U7B Overview and Manifest hierarchy/scannability pass is now complete, adding operator briefing / deployment dossier cards and reducing generic table feel on the remaining passive pages
 - Verified the Overview/Manifest hierarchy-scannability slice with a production `npm run build` in `ui-front`
 - URL state sync for filters and selected rows is now complete across Research, Drift, Review, Audit, and Pool, including shareable query params plus Suspense-safe restore on App Router pages
-- Next highest-value slice is continuing the remaining unchecked polish foundations, especially restrained transitions and the remaining cross-page design-system consistency work
+- Next highest-value slice was finishing the remaining unchecked polish foundations, especially restrained transitions and the remaining cross-page design-system consistency work
 - U0 shared page-level filter primitives are now complete, including reusable filter toolbar/select primitives across Research, Drift, Review, and Audit plus an Audit date-range control
 - U0 empty/loading/error state consistency is now complete, including a shared stale-refresh/error notice treatment across Overview, Audit, Drift, Execution, Governance, Manifest, Pool, Research, and Review plus nested Strategy Detail/Compare queries on Pool
 - U0 stronger responsive behavior for dense operator tables is now complete, including a shared mobile card-stack treatment for DataTable so dense ledgers collapse into labeled operator cards on narrow screens instead of only relying on horizontal scroll
@@ -115,5 +115,8 @@ For each autonomous run:
 - Verified the loading/error consistency slice with a production `npm run build` in `ui-front`
 - U7A/U7B Research hierarchy / scannability pass is now complete, adding an operator brief, attention lanes, richer funnel retention context, and restrained card-motion emphasis on the Research page
 - Verified the Research hierarchy/scannability slice with a production `npm run build` in `ui-front`
-- Next highest-value slice is continuing the remaining unchecked polish foundations on the last dense passive page, especially an Audit-page hierarchy/scannability pass plus any final design-system tightening needed to close U7
+- U7A/U7B Audit-page hierarchy and scannability pass is now complete, adding an operator brief, attention lanes, and hotspot summaries so the merged audit feed reads like a triage cockpit before the raw ledger
+- Verified the Audit-page hierarchy/scannability slice with a production `npm run build` in `ui-front`
+- U7 polish is now complete across the current roadmap pages; the only remaining unchecked roadmap area is optional U6B safe operator actions, which should stay read-only and explicitly gated if pursued later
 - User explicitly wants progress reports, not approval questions
+- Next highest-value slice is deciding whether to intentionally defer/close optional U6B safe operator actions or to build the first read-only simulation card without enabling any writes

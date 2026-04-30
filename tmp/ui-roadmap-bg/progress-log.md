@@ -118,3 +118,6 @@
 - Added restrained card-motion emphasis on shared stat/attention/insight/funnel cards so the cockpit feels more cohesive without becoming noisy.
 - Verified the Research hierarchy/scannability slice with a production `npm run build` in `ui-front`.
 - Updated notes to move the next polish slice toward the last dense passive page, especially an Audit-page hierarchy/scannability pass plus any final design-system tightening needed to close U7.
+- Added a U7A/U7B Audit-page hierarchy and scannability pass, turning `/audit` into a triage cockpit with an operator brief, attention lanes, hotspot summaries, and a clearer separation between briefing context and the raw merged-event ledger.
+- Verified the Audit-page hierarchy/scannability slice with a production `npm run build` in `ui-front`.
+- Marked U7 information-design and frontend-design polish complete in roadmap/task notes; only optional U6B safe operator actions remain open for later, explicitly gated work.

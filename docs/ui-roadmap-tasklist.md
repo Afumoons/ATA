@@ -154,17 +154,17 @@ Transform the current Operator UI from a read-only monitoring surface into a dec
 ## Phase U7 — Visual and UX Polish
 
 ### U7A — Information design
-- [ ] Improve hierarchy for dense data views
+- [x] Improve hierarchy for dense data views
 - [x] Add better visual grouping of operator attention items
-- [ ] Reduce generic table feel on key pages
-- [ ] Add more expressive badges / severity color language
-- Note: Review, Execution, Drift, Pool, Overview, Manifest, and Research now have dedicated hierarchy/dossier passes, but the roadmap item stays open until the same polish is consistent across the remaining dense pages and the shared responsive/filter foundations are tightened.
+- [x] Reduce generic table feel on key pages
+- [x] Add more expressive badges / severity color language
+- Note: Review, Execution, Drift, Pool, Overview, Manifest, Research, and Audit now have dedicated hierarchy/dossier passes, and the shared responsive/filter foundations are tightened enough to treat the information-design pass as complete.
 
 ### U7B — Frontend design pass
-- [ ] Apply cohesive design system direction across pages
+- [x] Apply cohesive design system direction across pages
 - [x] Improve empty states so they explain operator meaning, not just absence
-- [ ] Improve data-rich layout spacing and scannability
-- [ ] Add subtle transitions and emphasis where it helps understanding
+- [x] Improve data-rich layout spacing and scannability
+- [x] Add subtle transitions and emphasis where it helps understanding
 
 ---
 
@@ -179,7 +179,7 @@ Transform the current Operator UI from a read-only monitoring surface into a dec
 6. [x] Expand U4 Execution / Reconciliation cockpit
 7. [x] Add remaining U5B duplicate-risk visibility from semantic similarity / memory veto context
 8. [x] Build U6A governance visibility surfaces
-9. [ ] Finish U7 design polish pass
+9. [x] Finish U7 design polish pass
 
 ---
 
@@ -201,7 +201,7 @@ Transform the current Operator UI from a read-only monitoring surface into a dec
 ### Milestone M4 — Full decision cockpit
 - [x] U4 complete
 - [x] U5 complete
-- [ ] U7 polish complete
+- [x] U7 polish complete
 
 ---
 
