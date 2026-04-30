@@ -118,6 +118,69 @@ function buildClientSubmissionId() {
   return `manual-${Date.now()}`;
 }
 
+function formatWarningLabel(value: string) {
+  return value.replace(/_/g, " ");
+}
+
+function explainManualTicketWarning(
+  warning: string,
+  context: {
+    riskMode: ManualTicketFormState["riskMode"];
+    orderType: ManualTicketFormState["orderType"];
+    hasEquityOverride: boolean;
+  },
+) {
+  switch (warning) {
+    case "stop_loss_tighter_than_tick_size":
+      return {
+        title: "Stop loss lebih rapat dari tick broker",
+        description: "Jarak SL setelah normalisasi lebih kecil dari tick minimum broker. Broker bisa menolak draft ini atau membulatkan harga sehingga proteksi tidak sesuai niat awal.",
+      };
+    case "risk_sizing_below_min_lot":
+      return {
+        title: "Risk terlalu kecil untuk min lot",
+        description: `Ukuran lot hasil sizing jatuh di bawah min lot broker, jadi ticket ini tidak bisa mempertahankan risk ${context.riskMode === "money" ? "uang" : "% equity"} yang diminta. Kurangi jarak SL atau naikkan risk agar draft menjadi executable.`,
+      };
+    case "risk_sizing_exceeds_max_lot":
+      return {
+        title: "Risk butuh lot di atas batas broker",
+        description: "Perhitungan sizing melewati max lot broker. Draft akan dipotong ke batas maksimum, jadi eksposur riil bisa berbeda dari niat awal dan perlu dicek ulang sebelum preview/submit.",
+      };
+    case "rounded_lot_reduces_risk_below_requested":
+      return {
+        title: "Pembulatan lot menurunkan risk aktual",
+        description: "Backend membulatkan lot ke step broker terdekat ke bawah. Akibatnya risk aktual di SL menjadi lebih kecil dari target yang diminta. Ini aman, tetapi operator perlu sadar bahwa sizing tidak presisi 1:1.",
+      };
+    case "invalid_digits":
+      return {
+        title: "Metadata digit symbol tidak valid",
+        description: "Broker metadata untuk symbol ini tidak punya digit price yang masuk akal. Pilih symbol lain atau tunggu metadata resolver pulih sebelum lanjut.",
+      };
+    case "min_lot_exceeds_max_lot":
+      return {
+        title: "Metadata lot broker kontradiktif",
+        description: "min lot lebih besar dari max lot pada metadata symbol. Ticket ini sebaiknya tidak dipakai sampai spesifikasi symbol dari broker kembali normal.",
+      };
+    case "lot_step_exceeds_max_lot":
+      return {
+        title: "Lot step broker tidak masuk akal",
+        description: "Kenaikan lot minimum lebih besar dari max lot. Ini menandakan metadata symbol rusak atau tidak lengkap, jadi sizing tidak bisa dipercaya.",
+      };
+    default:
+      if (warning.startsWith("missing_or_non_positive_")) {
+        const field = warning.replace("missing_or_non_positive_", "");
+        return {
+          title: `Metadata ${formatWarningLabel(field)} belum valid`,
+          description: "Salah satu field spesifikasi broker yang dipakai untuk sizing masih kosong atau bernilai nol. Calculator boleh memberi sinyal, tetapi draft tidak layak lanjut sampai metadata symbol valid.",
+        };
+      }
+      return {
+        title: formatWarningLabel(warning),
+        description: `Periksa kembali geometry ${context.orderType === "limit" ? "pending-limit" : "market reference"}, batas broker, dan hasil pembulatan sizing sebelum masuk ke tahap preview dan submit.${context.riskMode === "equity_pct" && !context.hasEquityOverride ? " Jika mode % equity terasa janggal, pertimbangkan isi equity override untuk cross-check cepat." : ""}`,
+      };
+  }
+}
+
 export default function ManualTicketPage() {
   const [form, setForm] = useState<ManualTicketFormState>(DEFAULT_FORM);
   const [calc, setCalc] = useState<ManualTradeRiskCalcResponse | null>(null);
@@ -146,6 +209,14 @@ export default function ManualTicketPage() {
     ...(calc?.symbol_spec_warnings ?? []),
     ...((Array.isArray(derived.warnings) ? derived.warnings : []) as string[]),
   ];
+  const warningNotices = warnings.map((warning) => ({
+    warning,
+    ...explainManualTicketWarning(warning, {
+      riskMode: form.riskMode,
+      orderType: form.orderType,
+      hasEquityOverride: Boolean(form.accountEquity.trim()),
+    }),
+  }));
   const previewAuditEvent = previewAudit?.audit_event ?? {};
   const brokerValidation = previewAudit?.broker_validation ?? {};
   const previewOperatorError = getOperatorValidationDetail(previewAuditError);
@@ -424,10 +495,10 @@ export default function ManualTicketPage() {
               <StatCard label="Tick size" value={formatPlainNumber(Number(symbolSpec.tick_size), 5)} hint={`Class ${compactValue(symbolSpec.instrument_class)}`} tone="info" />
             </section>
 
-            {warnings.length ? (
+            {warningNotices.length ? (
               <div className="manual-ticket-warning-list">
-                {warnings.map((warning) => (
-                  <InlineNotice key={warning} tone="warning" title={warning.replace(/_/g, " ")} description="Review the broker rounding, lot constraints, or unusually tight stop geometry before moving to the preview-and-submit phase." />
+                {warningNotices.map((notice) => (
+                  <InlineNotice key={notice.warning} tone="warning" title={notice.title} description={notice.description} />
                 ))}
               </div>
             ) : null}

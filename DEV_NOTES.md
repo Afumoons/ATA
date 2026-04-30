@@ -159,4 +159,6 @@ For each autonomous run:
 - Verified the T8 symbol/account-read hardening slice with `python -m pytest autonomous_trading_ai/tests/test_manual_trade_risk_api.py` and `python -m compileall autonomous_trading_ai/ui_api autonomous_trading_ai/execution`
 - T4/T6 operator-facing submit flow is now complete in `ui-front/src/app/manual-ticket/page.tsx` and `ui-front/src/lib/{api,types}.ts`, adding a separate live-submit gate after broker-validated preview audit, explicit second confirmation, client submission id control for retry-safe idempotence, and broker/audit result surfacing while preserving manual_user segregation markers end to end
 - Verified the operator-facing submit slice with a production `npm run build` in `ui-front`
-- Next highest-value unchecked slice after this is T8 warning explanation polish, especially making sizing/broker warning copy more operator-readable without expanding scope into broader UI redesign
+- T8 warning explanation polish is now complete: `ui-front/src/app/manual-ticket/page.tsx` maps sizing and symbol-metadata warning codes into operator-readable Indonesian explanations so stop-geometry, broker-lot limits, and rounded-risk deviations are understandable before preview/submit
+- Verified the T8 warning-explanation slice with a production `npm run build` in `ui-front`
+- Next highest-value unchecked slice after this is T8 mobile / narrow layout support, focused on making the manual ticket form and preview stacks read cleanly on smaller operator screens without changing live-execution behavior
