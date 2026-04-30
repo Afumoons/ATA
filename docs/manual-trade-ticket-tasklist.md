@@ -34,17 +34,17 @@ Specification reference: `docs/manual-trade-ticket-spec.md`
 ---
 
 ## Phase T1 — Symbol Metadata and Risk Engine
-- [ ] Audit existing broker/instrument metadata already available in repo
-- [ ] Define normalized symbol spec payload
-  - [ ] symbol
-  - [ ] digits
-  - [ ] point size
-  - [ ] tick size
-  - [ ] tick value
-  - [ ] contract size
-  - [ ] min lot
-  - [ ] lot step
-  - [ ] max lot
+- [x] Audit existing broker/instrument metadata already available in repo
+- [x] Define normalized symbol spec payload
+  - [x] symbol
+  - [x] digits
+  - [x] point size
+  - [x] tick size
+  - [x] tick value
+  - [x] contract size
+  - [x] min lot
+  - [x] lot step
+  - [x] max lot
 - [ ] Build reusable sizing engine service
 - [ ] Support lot size calculation from risk amount
 - [ ] Support lot size calculation from risk % of equity

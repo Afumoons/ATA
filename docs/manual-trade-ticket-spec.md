@@ -114,6 +114,8 @@ Preview/submit flows should converge on a normalized payload containing:
 - derived normalized entry/sl/tp prices
 - manual identity fields listed above
 
+T1 metadata audit reference: `docs/manual-trade-ticket-symbol-metadata-audit.md`
+
 ## Release Sequence
 1. T0 specification and boundaries
 2. T1 symbol metadata audit and sizing engine

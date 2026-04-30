@@ -129,4 +129,5 @@ For each autonomous run:
 - T0 specification is now documented in `docs/manual-trade-ticket-spec.md`, covering first-release scope, supported order/risk/SL-TP modes, symbol-class validation, and execution safety rules
 - This track must support risk-based lot sizing, market/pending entries, SL/TP by pips or price, and explicit manual-user trade tagging
 - Manual trades must be excluded from autonomous strategy attribution and strategy live/research evaluation paths
-- Next highest-value slice after T0 is T1: audit existing symbol metadata sources and define the normalized symbol spec payload for the sizing engine/API path
+- T1 metadata audit/spec slice is now complete: existing MT5/config metadata sources are documented in `docs/manual-trade-ticket-symbol-metadata-audit.md`, and `execution/symbol_metadata.py` now defines the normalized symbol spec payload/resolution helpers for calculator/API work
+- Next highest-value slice after this is the reusable sizing engine on top of normalized broker symbol metadata
