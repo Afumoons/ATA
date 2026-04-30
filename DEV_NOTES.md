@@ -130,4 +130,6 @@ For each autonomous run:
 - This track must support risk-based lot sizing, market/pending entries, SL/TP by pips or price, and explicit manual-user trade tagging
 - Manual trades must be excluded from autonomous strategy attribution and strategy live/research evaluation paths
 - T1 metadata audit/spec slice is now complete: existing MT5/config metadata sources are documented in `docs/manual-trade-ticket-symbol-metadata-audit.md`, and `execution/symbol_metadata.py` now defines the normalized symbol spec payload/resolution helpers for calculator/API work
-- Next highest-value slice after this is the reusable sizing engine on top of normalized broker symbol metadata
+- T1 reusable sizing engine is now complete in `execution/manual_trade_risk.py`, covering money/%-equity risk sizing, SL/TP by pips or price, derived lot/notional/RR/margin values, and operator-facing warnings for too-small stops or impossible sizing
+- Verified the T1 sizing-engine slice with `pytest tests/test_manual_trade_risk.py`
+- Next highest-value slice after this is T3: add the `POST /api/execution/risk-calc` API around the reusable sizing engine with operator-readable validation responses

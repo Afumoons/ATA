@@ -45,21 +45,21 @@ Specification reference: `docs/manual-trade-ticket-spec.md`
   - [x] min lot
   - [x] lot step
   - [x] max lot
-- [ ] Build reusable sizing engine service
-- [ ] Support lot size calculation from risk amount
-- [ ] Support lot size calculation from risk % of equity
-- [ ] Support SL distance from pips
-- [ ] Support SL distance from asset price
-- [ ] Support TP distance from pips
-- [ ] Support TP distance from asset price
-- [ ] Return derived values
-  - [ ] lot size
-  - [ ] notional estimate
-  - [ ] estimated loss at SL
-  - [ ] estimated profit at TP
-  - [ ] RR ratio
-  - [ ] margin estimate if feasible
-- [ ] Add validation / warnings for invalid lot step, too-small stop, or impossible risk sizing
+- [x] Build reusable sizing engine service
+- [x] Support lot size calculation from risk amount
+- [x] Support lot size calculation from risk % of equity
+- [x] Support SL distance from pips
+- [x] Support SL distance from asset price
+- [x] Support TP distance from pips
+- [x] Support TP distance from asset price
+- [x] Return derived values
+  - [x] lot size
+  - [x] notional estimate
+  - [x] estimated loss at SL
+  - [x] estimated profit at TP
+  - [x] RR ratio
+  - [x] margin estimate if feasible
+- [x] Add validation / warnings for invalid lot step, too-small stop, or impossible risk sizing
 
 ---
 
