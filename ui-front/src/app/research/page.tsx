@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useMemo } from "react";
 import { PageHeader } from "@/components/app-shell";
 import {
+  AttentionCard,
   DataTable,
   EmptyState,
   ErrorState,
@@ -10,11 +11,13 @@ import {
   FilterSelect,
   FilterToolbar,
   FreshnessBadge,
+  InsightCard,
   KeyValueGrid,
   LoadingState,
   QueryStateNotice,
   Section,
   StatCard,
+  StatusBadge,
   ToolbarButton,
 } from "@/components/dashboard";
 import { useQuery } from "@/hooks/use-query";
@@ -41,6 +44,15 @@ const funnelStageLabels: Record<(typeof funnelStageOrder)[number], string> = {
   mc_pass: "MC pass",
   accepted: "Accepted",
 };
+
+const stageFallbackTone = {
+  generated: "info",
+  cheap_prescreen_pass: "warning",
+  backtest_pass: "warning",
+  wf_pass: "warning",
+  mc_pass: "warning",
+  accepted: "success",
+} as const;
 
 function normalizeFilterValue(value: string) {
   return value === "__all__" ? "" : value;
@@ -211,6 +223,31 @@ function ResearchPageContent() {
     .filter((row) => row.generated >= 3 && (row.accepted === 0 || row.conversionPct < 5 || row.rejectionCount >= row.generated))
     .sort((left, right) => left.conversionPct - right.conversionPct || right.generated - left.generated)
     .slice(0, 5);
+  const stageFlow = funnelStageOrder.map((stage, index) => {
+    const value = coerceNumber(data.funnel_totals?.[stage]);
+    const previousStage = index > 0 ? funnelStageOrder[index - 1] : null;
+    const previousValue = previousStage ? coerceNumber(data.funnel_totals?.[previousStage]) : value;
+    const retainedPct = previousValue > 0 ? (value / previousValue) * 100 : 0;
+    const dropCount = previousStage ? Math.max(previousValue - value, 0) : 0;
+    return {
+      stage,
+      value,
+      previousStage,
+      previousValue,
+      retainedPct,
+      dropCount,
+    };
+  });
+  const topStageDrop = [...stageFlow]
+    .filter((entry) => entry.previousStage)
+    .sort((left, right) => right.dropCount - left.dropCount || left.retainedPct - right.retainedPct)[0] ?? null;
+  const topRejectionEntry = Object.entries((data.rejection_totals as Record<string, unknown> | undefined) ?? {}).sort(
+    (left, right) => coerceNumber(right[1]) - coerceNumber(left[1]),
+  )[0];
+  const familyWithoutAcceptedCount = filteredRows.filter((row) => row.generated > 0 && row.accepted === 0).length;
+  const lowConversionCount = filteredRows.filter((row) => row.generated >= 3 && row.conversionPct < 5).length;
+  const acceptedPressureShare = visibleGenerated > 0 ? (visibleRejections / visibleGenerated) * 100 : 0;
+  const spotlightFamily = fragileFamilies[0] ?? sortedRows.find((row) => row.generated > 0) ?? null;
 
   return (
     <div className="dashboard-stack">
@@ -238,6 +275,71 @@ function ResearchPageContent() {
         <StatCard label="Visible rejections" value={formatNumber(visibleRejections)} hint="Skipped or rejected rows inside current family filter" tone="warning" />
         <StatCard label="Top visible family" value={compactValue(bestVisibleFamily)} hint="Leading family under current sort" tone="info" />
       </section>
+
+      <Section title="Operator brief" description="A fast read on whether this research stream is producing usable inventory, where it is bleeding out, and which family deserves the next drilldown.">
+        <div className="insight-grid">
+          <InsightCard
+            eyebrow="Yield"
+            title={`${formatNumber(totalAccepted)} accepted from ${formatNumber(totalGenerated)} generated`}
+            description="The current research batch is strongest when accepted throughput stays healthy without concentrating too much into a single family."
+            tone={toneFromMagnitude(totalConversionPct, 5, 20)}
+            badges={<StatusBadge label={`${formatPercent(totalConversionPct)} conversion`} tone={toneFromMagnitude(totalConversionPct, 5, 20)} />}
+            metrics={[
+              { label: "Visible families", value: formatNumber(filteredRows.length) },
+              { label: "Best visible family", value: compactValue(bestVisibleFamily) },
+              { label: "Visible rejections", value: formatNumber(visibleRejections) },
+              { label: "Filter scope", value: familyFilter ? compactValue(familyFilter) : "All families" },
+            ]}
+            footer={<p>Use the family table below when accepted volume looks healthy overall but is being carried by only one lineage.</p>}
+          />
+          <InsightCard
+            eyebrow="Pressure"
+            title={topRejectionEntry ? compactValue(topRejectionEntry[0]) : "No dominant rejection reason"}
+            description="This is the strongest visible rejection bucket across the current artifact, which usually tells you where the generator or selector is overreaching first."
+            tone={topRejectionEntry ? "warning" : "info"}
+            badges={topRejectionEntry ? <StatusBadge label={`${formatNumber(coerceNumber(topRejectionEntry[1]))} rejects`} tone="warning" /> : undefined}
+            metrics={[
+              { label: "Rejection share", value: formatPercent(acceptedPressureShare) },
+              { label: "Zero-accept families", value: formatNumber(familyWithoutAcceptedCount) },
+              { label: "Low-conversion families", value: formatNumber(lowConversionCount) },
+              { label: "Most exposed family", value: compactValue(spotlightFamily?.family ?? "—") },
+            ]}
+            footer={<p>Jump from this card to the skip-reason drilldown if you need examples tied to one family instead of only bucket totals.</p>}
+          />
+          <InsightCard
+            eyebrow="Continuity"
+            title={comparison.previous_generated_at ? compactValue(String(comparison.label ?? "Previous snapshot found")) : "No previous snapshot yet"}
+            description={comparison.previous_generated_at
+              ? "The current batch can be read against the latest older artifact for this same symbol and timeframe, so direction of travel is visible instead of only current volume."
+              : "The current batch has no older sibling artifact for delta tracking yet, so read it as a one-off snapshot rather than a trend."}
+            tone={comparison.previous_generated_at ? toneFromMagnitude(Math.abs(coerceNumber(comparisonSummary.accepted_delta)), 0, 2) : "info"}
+            badges={comparison.previous_generated_at ? <StatusBadge label={formatDateTime(comparison.previous_generated_at)} tone="info" /> : undefined}
+            metrics={[
+              { label: "Generated Δ", value: formatDelta(coerceNumber(comparisonSummary.generated_delta)) },
+              { label: "Accepted Δ", value: formatDelta(coerceNumber(comparisonSummary.accepted_delta)) },
+              { label: "Conversion Δ", value: formatDelta(coerceNumber(comparisonSummary.conversion_pct_delta), "%") },
+              { label: "Changed families", value: formatNumber(comparisonFamilyDeltas.filter((row) => row.generated_delta || row.accepted_delta || row.rejection_delta).length) },
+            ]}
+            footer={<p>When accepted delta is negative, check whether the drop is broad or isolated to one family before reacting to the pool-level throughput headline.</p>}
+          />
+          <InsightCard
+            eyebrow="Fragility spotlight"
+            title={spotlightFamily ? compactValue(spotlightFamily.family) : "No fragile family flagged"}
+            description={spotlightFamily
+              ? "This family currently deserves the first operator read because throughput is weak or rejection pressure is overwhelming its generated volume."
+              : "No visible family currently crosses the fragility threshold, which usually means throughput is distributed more evenly than usual."}
+            tone={spotlightFamily ? toneFromMagnitude(spotlightFamily.conversionPct, 5, 20) : "success"}
+            badges={spotlightFamily ? <StatusBadge label={formatPercent(spotlightFamily.conversionPct)} tone={toneFromMagnitude(spotlightFamily.conversionPct, 5, 20)} /> : undefined}
+            metrics={[
+              { label: "Generated", value: formatNumber(spotlightFamily?.generated ?? 0) },
+              { label: "Accepted", value: formatNumber(spotlightFamily?.accepted ?? 0) },
+              { label: "Rejections", value: formatNumber(spotlightFamily?.rejectionCount ?? 0) },
+              { label: "Primary issue", value: compactValue(spotlightFamily?.accepted === 0 ? "No accepted output" : spotlightFamily?.topRejection ?? "—") },
+            ]}
+            footer={<p>Use the family funnel and skip-reason tables together here, because weak conversion without the reason mix is often misleading.</p>}
+          />
+        </div>
+      </Section>
 
       <Section title="Research filters" description="Switch symbol/timeframe artifacts, narrow to one family, and reorder the funnel table by the most useful operator lens.">
         <FilterToolbar>
@@ -284,21 +386,61 @@ function ResearchPageContent() {
         <KeyValueGrid data={data.funnel_totals} emptyTitle="No funnel totals" emptyDescription="The research summary did not provide aggregate stage counts." />
       </Section>
 
-      <Section title="Funnel shape" description="Stage-by-stage stacked bars make the current research throughput easier to scan than raw counts alone.">
+      <Section title="Attention lanes" description="The fastest scan for where operator attention belongs before reading the deeper tables below.">
+        <div className="attention-grid">
+          <AttentionCard
+            label="Biggest funnel drop"
+            value={topStageDrop ? compactValue(funnelStageLabels[topStageDrop.stage]) : "No drop"}
+            detail={topStageDrop
+              ? `${formatNumber(topStageDrop.dropCount)} candidates fell between ${funnelStageLabels[topStageDrop.previousStage!]} and ${funnelStageLabels[topStageDrop.stage]}. ${formatPercent(topStageDrop.retainedPct)} survived that handoff.`
+              : "No stage-to-stage drop was derived from the current funnel totals."}
+            tone={topStageDrop ? toneFromMagnitude(topStageDrop.retainedPct, 25, 60) : "info"}
+          />
+          <AttentionCard
+            label="Family fragility"
+            value={formatNumber(lowConversionCount)}
+            detail={`${formatNumber(lowConversionCount)} visible families are converting under 5% after generating at least three candidates, which is usually where weak idea quality or over-filtering shows up first.`}
+            tone={toneFromMagnitude(lowConversionCount, 0, 3)}
+          />
+          <AttentionCard
+            label="Dead-end families"
+            value={formatNumber(familyWithoutAcceptedCount)}
+            detail={`${formatNumber(familyWithoutAcceptedCount)} visible families generated candidates but still produced zero accepted output in this snapshot.`}
+            tone={toneFromMagnitude(familyWithoutAcceptedCount, 0, 2)}
+          />
+          <AttentionCard
+            label="Primary rejection bucket"
+            value={topRejectionEntry ? compactValue(topRejectionEntry[0]) : "None"}
+            detail={topRejectionEntry
+              ? `${formatNumber(coerceNumber(topRejectionEntry[1]))} strategies exited through this bucket, making it the best first clue for why funnel yield is being capped.`
+              : "No rejection totals were returned, so the research artifact is missing bucket-level loss attribution."}
+            tone={topRejectionEntry ? "warning" : "info"}
+          />
+        </div>
+      </Section>
+
+      <Section title="Funnel shape" description="Stage-by-stage bars now show both scale and stage-to-stage retention, so drop-offs read like a flow instead of isolated counts.">
         <div className="research-funnel-grid">
-          {funnelStageOrder.map((stage) => {
-            const value = coerceNumber(data.funnel_totals?.[stage]);
-            const width = `${Math.max((value / maxVisibleStage) * 100, value > 0 ? 8 : 0)}%`;
+          {stageFlow.map((entry) => {
+            const width = `${Math.max((entry.value / maxVisibleStage) * 100, entry.value > 0 ? 8 : 0)}%`;
+            const stageTone = entry.previousStage ? toneFromMagnitude(entry.retainedPct, 25, 60) : stageFallbackTone[entry.stage];
             return (
-              <div key={stage} className="research-funnel-card">
+              <div key={entry.stage} className="research-funnel-card">
                 <div className="research-funnel-topline">
-                  <span>{funnelStageLabels[stage]}</span>
-                  <strong>{formatNumber(value)}</strong>
+                  <span>{funnelStageLabels[entry.stage]}</span>
+                  <strong>{formatNumber(entry.value)}</strong>
                 </div>
                 <div className="research-funnel-track">
                   <div className="research-funnel-fill" style={{ width }} />
                 </div>
-                <p>{stage === "accepted" ? formatPercent(totalConversionPct) : `${formatPercent(totalGenerated > 0 ? (value / totalGenerated) * 100 : 0)} of generated`}</p>
+                <div className="research-funnel-meta-row">
+                  <StatusBadge
+                    label={entry.previousStage ? `${formatPercent(entry.retainedPct)} retained` : "Baseline"}
+                    tone={stageTone}
+                  />
+                  <span>{entry.previousStage ? `${formatNumber(entry.dropCount)} dropped after ${funnelStageLabels[entry.previousStage]}` : `${formatPercent(totalConversionPct)} final conversion`}</span>
+                </div>
+                <p>{entry.stage === "accepted" ? formatPercent(totalConversionPct) : `${formatPercent(totalGenerated > 0 ? (entry.value / totalGenerated) * 100 : 0)} of generated`}</p>
               </div>
             );
           })}

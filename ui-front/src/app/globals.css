@@ -763,6 +763,13 @@ pre {
   border: 1px solid var(--line);
   border-radius: 18px;
   background: linear-gradient(180deg, rgba(76, 139, 245, 0.08), rgba(17, 22, 29, 0.1));
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.research-funnel-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--line-strong);
+  box-shadow: 0 18px 40px rgba(2, 6, 12, 0.2);
 }
 
 .research-funnel-topline {
@@ -796,6 +803,20 @@ pre {
   border-radius: inherit;
   background: linear-gradient(90deg, var(--accent), var(--success));
   box-shadow: 0 0 18px rgba(76, 139, 245, 0.35);
+}
+
+.research-funnel-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.research-funnel-meta-row span {
+  color: var(--text-soft);
+  font-size: 0.76rem;
+  line-height: 1.4;
+  text-align: right;
 }
 
 .research-funnel-card p {
@@ -872,6 +893,12 @@ pre {
   padding: 18px;
   border-radius: 18px;
   background: linear-gradient(180deg, var(--panel-strong), var(--panel-soft));
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--line-strong);
 }
 
 .attention-card,
@@ -882,6 +909,14 @@ pre {
   overflow: hidden;
   border: 1px solid var(--line-strong);
   box-shadow: var(--shadow);
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.attention-card:hover,
+.insight-card:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--accent) 26%, var(--line-strong));
+  box-shadow: 0 26px 54px rgba(2, 6, 12, 0.28);
 }
 
 .attention-card {

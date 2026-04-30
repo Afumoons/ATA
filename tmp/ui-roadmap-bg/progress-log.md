@@ -114,3 +114,7 @@
 - Applied the new query-state notice across Overview, Audit, Drift, Execution, Governance, Manifest, Pool, Research, and Review, plus the nested Strategy detail and comparison queries on Pool.
 - Verified the loading/error consistency slice with a production `npm run build` in `ui-front`.
 - Marked the roadmap empty/loading/error consistency item complete; next slice is restrained transitions and the remaining shared design-system consistency work.
+- Added a U7A/U7B Research-page hierarchy/scannability pass, introducing an operator brief, attention lanes, richer stage-retention readouts, and a less generic flow for the funnel/rejection diagnostics.
+- Added restrained card-motion emphasis on shared stat/attention/insight/funnel cards so the cockpit feels more cohesive without becoming noisy.
+- Verified the Research hierarchy/scannability slice with a production `npm run build` in `ui-front`.
+- Updated notes to move the next polish slice toward the last dense passive page, especially an Audit-page hierarchy/scannability pass plus any final design-system tightening needed to close U7.

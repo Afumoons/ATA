@@ -47,6 +47,7 @@ Implement and advance `docs/ui-roadmap-tasklist.md` until the tasklist is fully 
 - U7A drift dossier / severity-language pass added in current workstream
 - U7A/U7B Overview and Manifest hierarchy / scannability pass added in current workstream
 - U0 shared page-level filter primitives added in current workstream
+- U7A/U7B Research hierarchy / scannability pass added in current workstream
 
 ## Milestone Order
 1. Commit roadmap tasklist doc cleanly
@@ -112,4 +113,7 @@ For each autonomous run:
 - Verified the shared filter-primitives slice with a production `npm run build` in `ui-front`
 - Verified the responsive dense-table slice with a production `npm run build` in `ui-front`
 - Verified the loading/error consistency slice with a production `npm run build` in `ui-front`
+- U7A/U7B Research hierarchy / scannability pass is now complete, adding an operator brief, attention lanes, richer funnel retention context, and restrained card-motion emphasis on the Research page
+- Verified the Research hierarchy/scannability slice with a production `npm run build` in `ui-front`
+- Next highest-value slice is continuing the remaining unchecked polish foundations on the last dense passive page, especially an Audit-page hierarchy/scannability pass plus any final design-system tightening needed to close U7
 - User explicitly wants progress reports, not approval questions
