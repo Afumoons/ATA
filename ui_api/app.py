@@ -26,6 +26,7 @@ from .models import (
     HealthResponse,
     ManifestResponse,
     ManualTradePreviewAuditResponse,
+    ManualTradeQuoteResponse,
     ManualTradeRiskCalcRequest,
     ManualTradeRiskCalcResponse,
     ManualTradeSubmitRequest,
@@ -53,6 +54,11 @@ from ..execution.manual_trade_risk import (
 )
 from ..execution.manual_trade_submit import submit_manual_trade
 from ..execution.symbol_metadata import NormalizedSymbolSpec, fetch_symbol_spec
+
+try:
+    import MetaTrader5 as mt5
+except Exception:  # pragma: no cover
+    mt5 = None
 
 app = FastAPI(title="autonomous_trading_ai UI API", version="v1")
 
@@ -123,6 +129,45 @@ def api_review_queue() -> ReviewQueueResponse:
 def api_audit_timeline(limit: int = 100) -> AuditTimelineResponse:
     limit = max(1, min(limit, 500))
     return AuditTimelineResponse.model_validate(load_audit_timeline(limit=limit))
+
+
+@app.get(
+    "/api/execution/manual-ticket/quote",
+    response_model=ManualTradeQuoteResponse,
+    responses={422: {"model": OperatorValidationErrorResponse}},
+)
+def api_execution_manual_ticket_quote(symbol: str) -> ManualTradeQuoteResponse:
+    spec_snapshot = _resolve_symbol_spec(SimpleNamespace(symbol=symbol, symbol_spec=None))
+    if mt5 is None:
+        raise _operator_validation_error("manual_trade_mt5_unavailable", field="symbol")
+    tick = mt5.symbol_info_tick(spec_snapshot.spec.execution_symbol)
+    if tick is None:
+        raise _operator_validation_error(
+            "manual_trade_quote_unavailable",
+            field="symbol",
+            meta={"symbol": symbol, "execution_symbol": spec_snapshot.spec.execution_symbol},
+        )
+    account_info = mt5.account_info()
+    bid = float(getattr(tick, "bid", 0.0) or 0.0)
+    ask = float(getattr(tick, "ask", 0.0) or 0.0)
+    last = float(getattr(tick, "last", 0.0) or 0.0)
+    spread = ask - bid if bid > 0 and ask > 0 else None
+    return ManualTradeQuoteResponse(
+        generated_at=datetime.now(timezone.utc).isoformat(),
+        symbol=symbol,
+        symbol_canonical=spec_snapshot.spec.symbol_canonical,
+        execution_symbol=spec_snapshot.spec.execution_symbol,
+        bid=bid or None,
+        ask=ask or None,
+        last=last or None,
+        spread=spread,
+        point_size=spec_snapshot.spec.point_size,
+        tick_size=spec_snapshot.spec.tick_size,
+        digits=spec_snapshot.spec.digits,
+        account_equity=float(getattr(account_info, "equity", 0.0) or 0.0) or None,
+        account_balance=float(getattr(account_info, "balance", 0.0) or 0.0) or None,
+        account_margin_free=float(getattr(account_info, "margin_free", 0.0) or 0.0) or None,
+    )
 
 
 @app.post(
@@ -429,6 +474,7 @@ def _operator_message_for(code: str) -> str:
         "manual_trade_execution_symbol_unavailable": "Simbol eksekusi manual trade tidak tersedia di terminal MT5 saat ini. Pastikan simbol broker tersebut tersedia sebelum lanjut.",
         "manual_trade_execution_symbol_not_visible": "Simbol eksekusi manual trade belum aktif/visible di terminal MT5. Tampilkan atau select simbol itu dulu sebelum lanjut.",
         "manual_trade_submit_transport_error": "Submit manual trade gagal di layer transport MT5 sebelum broker mengembalikan retcode. Cek koneksi terminal, login akun, dan retry setelah sesi MT5 sehat.",
+        "manual_trade_quote_unavailable": "Quote real-time untuk simbol ini belum tersedia dari MT5. Cek koneksi broker atau visibilitas simbol lalu refresh lagi.",
         "manual_submit_confirmation_required": "Submit live manual trade harus melewati gate konfirmasi submit eksplisit.",
         "manual_submit_submission_id_reused_with_different_payload": "client_submission_id ini sudah pernah dipakai untuk draft manual trade yang berbeda. Gunakan id submit baru agar order tidak ganda.",
     }

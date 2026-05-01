@@ -151,6 +151,24 @@ class ManualTradePreviewAuditResponse(BaseModel):
     audit_event: Dict[str, Any] = Field(default_factory=dict)
 
 
+class ManualTradeQuoteResponse(BaseModel):
+    generated_at: str
+    symbol: str
+    symbol_canonical: str
+    execution_symbol: str
+    bid: Optional[float] = None
+    ask: Optional[float] = None
+    last: Optional[float] = None
+    spread: Optional[float] = None
+    point_size: Optional[float] = None
+    tick_size: Optional[float] = None
+    digits: Optional[int] = None
+    account_equity: Optional[float] = None
+    account_balance: Optional[float] = None
+    account_margin_free: Optional[float] = None
+    source: str = "mt5.symbol_info_tick"
+
+
 class ManualTradeSubmitRequest(ManualTradeRiskCalcRequest):
     confirm_submit: bool = False
     client_submission_id: str

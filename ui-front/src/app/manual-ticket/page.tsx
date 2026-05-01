@@ -18,6 +18,7 @@ import { uiApi, UiApiError } from "@/lib/api";
 import { compactValue, formatCurrency, formatDateTime, formatNumber, formatPercent } from "@/lib/format";
 import type {
   ManualTradePreviewAuditResponse,
+  ManualTradeQuoteResponse,
   ManualTradeRiskCalcResponse,
   ManualTradeSubmitResponse,
   OperatorValidationDetail,
@@ -263,6 +264,9 @@ export default function ManualTicketPage() {
   const [calc, setCalc] = useState<ManualTradeRiskCalcResponse | null>(null);
   const [calcError, setCalcError] = useState<unknown>(null);
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [quote, setQuote] = useState<ManualTradeQuoteResponse | null>(null);
+  const [quoteError, setQuoteError] = useState<unknown>(null);
+  const [quoteStatus, setQuoteStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [previewAudit, setPreviewAudit] = useState<ManualTradePreviewAuditResponse | null>(null);
   const [previewAuditStatus, setPreviewAuditStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [previewAuditError, setPreviewAuditError] = useState<unknown>(null);
@@ -372,6 +376,58 @@ export default function ManualTicketPage() {
   }, [payload]);
 
   const symbolLabel = form.symbolMode === "custom" ? form.customSymbol.trim().toUpperCase() || "Custom symbol" : form.presetSymbol;
+  const activeSymbol = symbolLabel && symbolLabel !== "Custom symbol" ? symbolLabel : "";
+
+  useEffect(() => {
+    if (!activeSymbol) {
+      setQuote(null);
+      setQuoteError(null);
+      setQuoteStatus("idle");
+      return;
+    }
+
+    let cancelled = false;
+    let timer: number | undefined;
+
+    const refreshQuote = async () => {
+      setQuoteStatus((current) => (current === "success" ? current : "loading"));
+      try {
+        const response = await uiApi.manualTradeQuote(activeSymbol);
+        if (cancelled) return;
+        setQuote(response);
+        setQuoteError(null);
+        setQuoteStatus("success");
+        if (form.orderType === "market") {
+          const livePrice = form.side === "buy" ? response.ask : response.bid;
+          if (typeof livePrice === "number" && Number.isFinite(livePrice)) {
+            setForm((current) => {
+              if (current.orderType !== "market") return current;
+              const nextPrice = String(livePrice);
+              return current.entryPrice === nextPrice ? current : { ...current, entryPrice: nextPrice };
+            });
+          }
+        }
+        if (form.riskMode === "equity_pct" && !form.accountEquity.trim() && typeof response.account_equity === "number" && Number.isFinite(response.account_equity)) {
+          setForm((current) => current.accountEquity.trim() ? current : { ...current, accountEquity: String(response.account_equity) });
+        }
+      } catch (error) {
+        if (cancelled) return;
+        setQuote(null);
+        setQuoteError(error);
+        setQuoteStatus("error");
+      }
+    };
+
+    void refreshQuote();
+    timer = window.setInterval(() => {
+      void refreshQuote();
+    }, 3000);
+
+    return () => {
+      cancelled = true;
+      if (timer) window.clearInterval(timer);
+    };
+  }, [activeSymbol, form.orderType, form.side, form.riskMode, form.accountEquity]);
   const entryLabel = form.orderType === "market" ? "Reference market price" : "Pending entry price";
   const draftStepState = !payload ? "blocked" : status === "success" ? "ready" : status === "loading" ? "active" : status === "error" ? "warning" : "active";
   const previewStepState = previewAuditStatus === "success" ? "ready" : previewAuditStatus === "loading" ? "active" : previewConfirmed ? "warning" : "blocked";
@@ -440,15 +496,15 @@ export default function ManualTicketPage() {
     <div className="dashboard-stack">
       <PageHeader
         title="Manual trade ticket"
-        subtitle="Calculator-only operator ticket for risk-based manual trades. Every preview stays explicitly tagged as manual_user and separate from autonomous strategy attribution."
-        meta={calc?.generated_at ? `Last calc ${formatDateTime(calc.generated_at)}` : "Awaiting complete inputs"}
-        action={<StatusBadge label={status === "loading" ? "Calculating" : status === "success" ? "Calculator ready" : "Drafting"} tone={status === "error" ? "warning" : status === "success" ? "success" : "info"} />}
+        subtitle="Live operator ticket for risk-based manual trades, with real-time quote refresh and explicit manual_user segregation from autonomous strategy attribution."
+        meta={quote?.generated_at ? `Live quote ${formatDateTime(quote.generated_at)}` : calc?.generated_at ? `Last calc ${formatDateTime(calc.generated_at)}` : "Awaiting complete inputs"}
+        action={<StatusBadge label={submitStatus === "success" ? "Manual order submitted" : status === "loading" ? "Calculating" : status === "success" ? "Calculator ready" : "Drafting"} tone={status === "error" ? "warning" : status === "success" ? "success" : "info"} />}
       />
 
       <InlineNotice
         tone="info"
         title="Manual-user segregation is locked in"
-        description="This slice is calculator and preview only. Any payload shown here is pre-tagged with order_origin=manual_user, execution_origin=operator_ui, is_manual=true, and exclude_from_strategy_eval=true."
+        description="Manual submit di page ini tetap dipaksa bertag order_origin=manual_user, execution_origin=operator_ui, is_manual=true, dan exclude_from_strategy_eval=true, jadi tidak tercampur dengan statistik strategi otomatis."
       />
 
       <section className="manual-ticket-stage-grid" aria-label="Manual ticket workflow status">
@@ -485,6 +541,25 @@ export default function ManualTicketPage() {
             <CardDescription>Choose the manual order geometry, risk mode, and SL/TP definition. The calculator refreshes automatically once required fields are valid.</CardDescription>
           </CardHeader>
           <CardContent className="dashboard-stack">
+            <Section
+              title="Live quote feed"
+              description="Quote MT5 real-time untuk symbol aktif. Market order otomatis memakai ask untuk buy dan bid untuk sell sebagai reference entry."
+              action={<StatusBadge label={quoteStatus === "success" ? "Live quote" : quoteStatus === "loading" ? "Refreshing quote" : "Quote unavailable"} tone={quoteStatus === "success" ? "success" : quoteStatus === "error" ? "warning" : "info"} />}
+            >
+              <section className="stats-grid">
+                <StatCard label="Bid" value={formatPlainNumber(quote?.bid, Number(quote?.digits ?? 5))} hint="Sell reference" tone="info" />
+                <StatCard label="Ask" value={formatPlainNumber(quote?.ask, Number(quote?.digits ?? 5))} hint="Buy reference" tone="success" />
+                <StatCard label="Spread" value={formatPlainNumber(quote?.spread, Number(quote?.digits ?? 5))} hint={quote?.point_size ? `~ ${formatPlainNumber((quote?.spread ?? 0) / quote.point_size, 1)} points` : "Bid-ask distance"} tone="warning" />
+                <StatCard label="Equity" value={formatCurrency(quote?.account_equity ?? null)} hint="Live account equity snapshot" tone="neutral" />
+              </section>
+              {quoteError ? (
+                <InlineNotice tone="warning" title="Live quote belum tersedia" description={getOperatorValidationDetail(quoteError)?.message ?? (quoteError instanceof Error ? quoteError.message : "Quote feed request gagal.")} />
+              ) : null}
+              {form.orderType === "market" ? (
+                <InlineNotice tone="info" title="Market entry auto-sync" description={`Entry price market otomatis mengikuti ${form.side === "buy" ? "ask" : "bid"} terbaru dari broker untuk symbol ${symbolLabel || "aktif"}.`} />
+              ) : null}
+            </Section>
+
             <Section title="Operator quick actions" description="Shortcut untuk draft berulang. Draft terakhir disimpan lokal di browser ini, tanpa mengubah marker manual_user atau gate konfirmasi.">
               <div className="manual-ticket-quick-grid">
                 <div className="manual-ticket-quick-group">
@@ -564,7 +639,7 @@ export default function ManualTicketPage() {
               </FilterField>
 
               <FilterField label={entryLabel}>
-                <input className="filter-input" inputMode="decimal" value={form.entryPrice} onChange={(event) => setForm((current) => ({ ...current, entryPrice: event.target.value }))} placeholder={form.orderType === "market" ? "Current quoted price" : "Limit entry price"} />
+                <input className="filter-input" inputMode="decimal" value={form.entryPrice} onChange={(event) => setForm((current) => ({ ...current, entryPrice: event.target.value }))} placeholder={form.orderType === "market" ? "Auto-filled from live quote" : "Limit entry price"} disabled={form.orderType === "market"} />
               </FilterField>
 
               <FilterField label="Risk mode">
@@ -616,7 +691,7 @@ export default function ManualTicketPage() {
 
             <div className="manual-ticket-chip-row">
               <StatusBadge label={`${form.side.toUpperCase()} ${symbolLabel || "SYMBOL"}`} tone={form.side === "buy" ? "success" : "warning"} />
-              <StatusBadge label={form.orderType === "market" ? "Market reference pricing" : "Limit entry pricing"} tone="info" />
+              <StatusBadge label={form.orderType === "market" ? "Market entry locked to live quote" : "Limit entry pricing"} tone="info" />
               <StatusBadge label={form.riskMode === "money" ? "Fixed cash risk" : "% equity risk"} tone="neutral" />
               <StatusBadge label="Live submit remains operator-gated" tone="warning" />
               <StatusBadge label={draftHydrated ? "Local draft restore active" : "Loading local draft"} tone="info" />
@@ -625,8 +700,8 @@ export default function ManualTicketPage() {
             {form.orderType === "market" ? (
               <InlineNotice
                 tone="info"
-                title="Market mode uses a reference price"
-                description="This calculator treats entry_price as the latest operator-observed quote. The live-submit phase will still need a confirmation gate and a fresh broker-side fill." 
+                title="Market mode uses a live broker quote"
+                description="This calculator treats entry_price as the latest broker quote pulled live into the form. The live-submit phase still needs confirmation and the broker-side fill can differ slightly from the visible quote." 
               />
             ) : (
               <InlineNotice
@@ -756,7 +831,7 @@ export default function ManualTicketPage() {
               tone={previewConfirmed ? "success" : "warning"}
               title={previewConfirmed ? "Preview confirmed" : "Explicit confirmation required"}
               description={previewConfirmed
-                ? "This draft is now confirmed as an operator-initiated manual_user trade preview and can be recorded into audit before a later live-submit slice is built."
+                ? "This draft is now confirmed as an operator-initiated manual_user trade preview and can proceed into the live submit gate."
                 : "Confirm that this ticket is a manual_user trade, excluded from autonomous strategy attribution, and still requires a separate live-submit confirmation step."}
             />
 
@@ -882,7 +957,7 @@ export default function ManualTicketPage() {
         </div>
       </div>
 
-      <Section title="What this slice completes" description="This UI pass closes the operator-facing preview-to-submit flow while preserving manual_user segregation and explicit confirmation gates.">
+      <Section title="What this slice completes" description="This UI pass closes the operator-facing preview-to-submit flow, adds real-time broker quote visibility, and preserves manual_user segregation plus explicit confirmation gates.">
         <section className="stats-grid">
           <StatCard label="Symbol" value={symbolLabel || "—"} hint="Preset selector plus custom fallback" tone="info" />
           <StatCard label="Entry mode" value={form.orderType === "market" ? "Market reference" : "Pending limit"} hint={entryLabel} tone="neutral" />

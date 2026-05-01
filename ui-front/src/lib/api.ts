@@ -3,6 +3,7 @@ import type {
   ExecutionSummaryResponse,
   ManifestResponse,
   ManualTradePreviewAuditResponse,
+  ManualTradeQuoteResponse,
   ManualTradeRiskCalcRequest,
   ManualTradeRiskCalcResponse,
   ManualTradeSubmitRequest,
@@ -127,6 +128,7 @@ export const uiApi = {
   strategies: () => request<StrategySummaryResponse[]>("/strategies"),
   strategyDetail: (name: string) => request<StrategyDetailResponse>(`/strategies/${encodeURIComponent(name)}`),
   auditTimeline: (limit = 100) => request<AuditTimelineResponse>(`/audit/timeline?limit=${limit}`),
+  manualTradeQuote: (symbol: string) => request<ManualTradeQuoteResponse>(`/execution/manual-ticket/quote?symbol=${encodeURIComponent(symbol)}`),
   manualTradeRiskCalc: (payload: ManualTradeRiskCalcRequest) => request<ManualTradeRiskCalcResponse>("/execution/risk-calc", {
     method: "POST",
     headers: { "Content-Type": "application/json" },

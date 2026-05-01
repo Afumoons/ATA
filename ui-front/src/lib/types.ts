@@ -361,6 +361,24 @@ export interface ManualTradePreviewAuditResponse {
   audit_event: Record<string, unknown>;
 }
 
+export interface ManualTradeQuoteResponse {
+  generated_at: string;
+  symbol: string;
+  symbol_canonical: string;
+  execution_symbol: string;
+  bid?: number | null;
+  ask?: number | null;
+  last?: number | null;
+  spread?: number | null;
+  point_size?: number | null;
+  tick_size?: number | null;
+  digits?: number | null;
+  account_equity?: number | null;
+  account_balance?: number | null;
+  account_margin_free?: number | null;
+  source: string;
+}
+
 export interface ManualTradeSubmitRequest extends ManualTradeRiskCalcRequest {
   confirm_submit: boolean;
   client_submission_id: string;
