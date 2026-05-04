@@ -124,17 +124,45 @@ def fetch_symbol_spec(symbol: str, *, ensure_visible: bool = True) -> SymbolSpec
     if mt5 is None:
         raise RuntimeError("MetaTrader5 module is unavailable")
 
+    initialize_fn = getattr(mt5, "initialize", None)
+    if callable(initialize_fn):
+        try:
+            initialize_fn()
+        except Exception:
+            pass
+
     attempted: list[str] = []
+    last_seen_info = None
+    last_seen_candidate = None
     for candidate in execution_variants_for(symbol) or [symbol]:
         attempted.append(candidate)
         info = mt5.symbol_info(candidate)
+        if info is None and ensure_visible:
+            try:
+                mt5.symbol_select(candidate, True)
+            except Exception:
+                pass
+            info = mt5.symbol_info(candidate)
         if info is None:
             continue
+        last_seen_info = info
+        last_seen_candidate = candidate
         if ensure_visible and not bool(getattr(info, "visible", False)):
-            mt5.symbol_select(candidate, True)
-            info = mt5.symbol_info(candidate)
-        if info is not None:
+            try:
+                mt5.symbol_select(candidate, True)
+            except Exception:
+                pass
+            info = mt5.symbol_info(candidate) or info
+        tick = None
+        try:
+            tick = mt5.symbol_info_tick(candidate)
+        except Exception:
+            tick = None
+        if info is not None and (tick is not None or bool(getattr(info, "visible", False))):
             return normalize_symbol_spec(symbol, info, execution_symbol=candidate)
+
+    if last_seen_info is not None and last_seen_candidate is not None:
+        return normalize_symbol_spec(symbol, last_seen_info, execution_symbol=last_seen_candidate)
 
     raise RuntimeError(
         f"Could not resolve broker symbol metadata for {symbol}; attempted={attempted}"
