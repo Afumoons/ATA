@@ -4,8 +4,12 @@ from typing import Any, Dict, Mapping
 
 import MetaTrader5 as mt5
 
-from ..config import execution_config
-from .manual_trade_identity import MANUAL_COMMENT_TAG, MANUAL_ORDER_MAGIC, manual_trade_marker_payload
+try:
+    from ..config import execution_config
+    from .manual_trade_identity import MANUAL_COMMENT_TAG, MANUAL_ORDER_MAGIC, manual_trade_marker_payload
+except ImportError:
+    from config import execution_config
+    from execution.manual_trade_identity import MANUAL_COMMENT_TAG, MANUAL_ORDER_MAGIC, manual_trade_marker_payload
 
 _SUCCESS_RETCODES = {
     0,

@@ -4,8 +4,12 @@ from typing import Any, Dict, Mapping
 
 import MetaTrader5 as mt5
 
-from ..config import execution_config
-from .manual_trade_broker_validation import build_manual_trade_mt5_request, classify_manual_trade_mt5_failure
+try:
+    from ..config import execution_config
+    from .manual_trade_broker_validation import build_manual_trade_mt5_request, classify_manual_trade_mt5_failure
+except ImportError:
+    from config import execution_config
+    from execution.manual_trade_broker_validation import build_manual_trade_mt5_request, classify_manual_trade_mt5_failure
 
 _SUCCESS_RETCODES = {
     0,

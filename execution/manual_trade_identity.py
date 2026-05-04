@@ -2,7 +2,10 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
-from ..config import execution_config
+try:
+    from ..config import execution_config
+except ImportError:
+    from config import execution_config
 
 MANUAL_ORDER_ORIGIN = "manual_user"
 MANUAL_EXECUTION_ORIGIN = "operator_ui"

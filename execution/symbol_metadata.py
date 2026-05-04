@@ -3,7 +3,10 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 from typing import Any, Mapping, Optional
 
-from ..config import canonical_symbol, execution_variants_for
+try:
+    from ..config import canonical_symbol, execution_variants_for
+except ImportError:
+    from config import canonical_symbol, execution_variants_for
 
 try:
     import MetaTrader5 as mt5  # type: ignore

@@ -38,22 +38,40 @@ from .models import (
     ReviewQueueResponse,
     StrategyDetailResponse,
 )
-from ..execution.audit_utils import POOL_AUDIT_TRAIL_PATH, _load_json_list
-from ..execution.manual_trade_audit import (
-    manual_trade_preview_fingerprint,
-    record_manual_ticket_execution_result,
-    record_manual_ticket_preview_intent,
-    record_manual_ticket_submit_intent,
-)
-from ..execution.manual_trade_broker_validation import validate_manual_trade_preview
-from ..execution.manual_trade_identity import manual_trade_marker_payload
-from ..execution.manual_trade_risk import (
-    ManualTradeRiskError,
-    ManualTradeRiskRequest,
-    calculate_manual_trade_risk,
-)
-from ..execution.manual_trade_submit import submit_manual_trade
-from ..execution.symbol_metadata import NormalizedSymbolSpec, fetch_symbol_spec
+try:
+    from ..execution.audit_utils import POOL_AUDIT_TRAIL_PATH, _load_json_list
+    from ..execution.manual_trade_audit import (
+        manual_trade_preview_fingerprint,
+        record_manual_ticket_execution_result,
+        record_manual_ticket_preview_intent,
+        record_manual_ticket_submit_intent,
+    )
+    from ..execution.manual_trade_broker_validation import validate_manual_trade_preview
+    from ..execution.manual_trade_identity import manual_trade_marker_payload
+    from ..execution.manual_trade_risk import (
+        ManualTradeRiskError,
+        ManualTradeRiskRequest,
+        calculate_manual_trade_risk,
+    )
+    from ..execution.manual_trade_submit import submit_manual_trade
+    from ..execution.symbol_metadata import NormalizedSymbolSpec, fetch_symbol_spec
+except ImportError:
+    from execution.audit_utils import POOL_AUDIT_TRAIL_PATH, _load_json_list
+    from execution.manual_trade_audit import (
+        manual_trade_preview_fingerprint,
+        record_manual_ticket_execution_result,
+        record_manual_ticket_preview_intent,
+        record_manual_ticket_submit_intent,
+    )
+    from execution.manual_trade_broker_validation import validate_manual_trade_preview
+    from execution.manual_trade_identity import manual_trade_marker_payload
+    from execution.manual_trade_risk import (
+        ManualTradeRiskError,
+        ManualTradeRiskRequest,
+        calculate_manual_trade_risk,
+    )
+    from execution.manual_trade_submit import submit_manual_trade
+    from execution.symbol_metadata import NormalizedSymbolSpec, fetch_symbol_spec
 
 try:
     import MetaTrader5 as mt5
