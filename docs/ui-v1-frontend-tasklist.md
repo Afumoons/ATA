@@ -9,7 +9,7 @@ Status legend:
 
 ## Goal
 Rebuild the read-only operator dashboard frontend for v1 (`autonomous_trading_ai`) in the existing Next.js app at:
-`C:\Users\afusi\.openclaw\workspace\autonomous_trading_ai\ui-front`
+`C:\laragon\www\autonomous_trading_ai\ui-front`
 
 Treat the older React UI in `ui/` as a reference / legacy implementation, not as the active target.
 

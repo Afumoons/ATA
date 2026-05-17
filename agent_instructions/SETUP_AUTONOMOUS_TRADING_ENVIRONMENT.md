@@ -10,7 +10,7 @@ trusting the system.
 
 - Host OS: Windows
 - Workspace root: `C:\Users\afusi\.openclaw\workspace`
-- Project path: `C:\Users\afusi\.openclaw\workspace\autonomous_trading_ai`
+- Project path: `C:\laragon\www\autonomous_trading_ai`
 - MT5 is the live data/execution backend
 
 ## 1. System Prerequisites
@@ -67,7 +67,7 @@ Ensure the project exists under the workspace and includes at least:
 From workspace root:
 
 ```powershell
-cd C:\Users\afusi\.openclaw\workspace\autonomous_trading_ai
+cd C:\laragon\www\autonomous_trading_ai
 python -m venv .venv
 ```
 
@@ -108,7 +108,7 @@ If using Docker, start/maintain a Chroma container as needed, but remember:
 If you want best-effort outbound alert logging / webhook handoff:
 
 ```powershell
-cd C:\Users\afusi\.openclaw\workspace\autonomous_trading_ai
+cd C:\laragon\www\autonomous_trading_ai
 uvicorn webhook_server:app --host 0.0.0.0 --port 8001
 ```
 

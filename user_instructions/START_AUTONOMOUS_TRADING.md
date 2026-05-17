@@ -32,7 +32,7 @@ it for basic routing/execution from existing pool state.
 If you want best-effort outbound alert logging:
 
 ```powershell
-cd C:\Users\afusi\.openclaw\workspace\autonomous_trading_ai
+cd C:\laragon\www\autonomous_trading_ai
 uvicorn webhook_server:app --host 0.0.0.0 --port 8001
 ```
 
@@ -182,7 +182,7 @@ The frontend expects `/api/*` to resolve to the backend UI API.
 From the `autonomous_trading_ai` repo root:
 
 ```powershell
-cd C:\Users\afusi\.openclaw\workspace\autonomous_trading_ai
+cd C:\laragon\www\autonomous_trading_ai
 .\.venv\Scripts\activate
 uvicorn ui_api.app:app --host 127.0.0.1 --port 8000
 ```
@@ -202,7 +202,7 @@ Invoke-WebRequest http://127.0.0.1:8000/api/health
 In a second terminal:
 
 ```powershell
-cd C:\Users\afusi\.openclaw\workspace\autonomous_trading_ai\ui-front
+cd C:\laragon\www\autonomous_trading_ai\ui-front
 npm run dev
 ```
 
