@@ -51,7 +51,7 @@ This alert path is useful, but not required for the core trading loop.
 From workspace root:
 
 ```powershell
-cd C:\Users\afusi\.openclaw\workspace
+cd C:\laragon\www
 .\autonomous_trading_ai\.venv\Scripts\activate
 ```
 
