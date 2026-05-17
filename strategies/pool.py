@@ -168,6 +168,8 @@ def strategy_motif(strategy: StrategyDefinition) -> str:
         return "trend_pullback"
     if family in {"ma_trend", "xau_session_continuation"}:
         return "trend_continuation"
+    if family in {"vwap_profile"}:
+        return "vwap_volume_profile"
     if "fib_zone" in all_tokens or "tenkan_sen" in all_tokens or "kijun_sen" in all_tokens:
         return "structure_confluence"
     if "rsi" in all_tokens and "trend_strength" in all_tokens:

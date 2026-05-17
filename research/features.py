@@ -82,6 +82,96 @@ def compute_trend_strength(
     return slope / (atr + 1e-9)
 
 
+def compute_session_vwap(df: pd.DataFrame) -> pd.Series:
+    """Session VWAP using tick volume as the available volume proxy.
+
+    MT5 forex/CFD feeds usually expose tick volume rather than centralized
+    exchange volume. That is still useful as a participation proxy, but should
+    be treated as broker/feed-local context rather than true venue-wide volume.
+    The calculation resets by UTC date, matching the rest of the feature clock.
+    """
+    times = pd.to_datetime(df["time"], utc=True)
+    session_key = times.dt.floor("D")
+    volume = df.get("tick_volume", pd.Series(1.0, index=df.index)).astype(float).clip(lower=0.0)
+    typical_price = (df["high"].astype(float) + df["low"].astype(float) + df["close"].astype(float)) / 3.0
+    pv = typical_price * volume
+    cum_pv = pv.groupby(session_key).cumsum()
+    cum_volume = volume.groupby(session_key).cumsum().replace(0.0, np.nan)
+    return cum_pv / cum_volume
+
+
+def compute_rolling_volume_profile(
+    df: pd.DataFrame,
+    window: int = 192,
+    bins: int = 32,
+    value_area_pct: float = 0.70,
+    min_periods: int = 64,
+) -> pd.DataFrame:
+    """Approximate rolling Volume Profile from OHLC close + tick volume.
+
+    This is intentionally conservative and leak-free for closed-bar usage: each
+    row uses only data up to and including that row. The profile is approximate
+    because candle data does not reveal exact trade distribution inside the bar;
+    close price is used as the representative print location and tick_volume as
+    the participation proxy.
+    """
+    close = df["close"].astype(float).to_numpy()
+    volume = df.get("tick_volume", pd.Series(1.0, index=df.index)).astype(float).clip(lower=0.0).to_numpy()
+
+    poc = np.full(len(df), np.nan, dtype=float)
+    vah = np.full(len(df), np.nan, dtype=float)
+    val = np.full(len(df), np.nan, dtype=float)
+
+    for i in range(len(df)):
+        start = max(0, i - window + 1)
+        prices = close[start : i + 1]
+        vols = volume[start : i + 1]
+        mask = np.isfinite(prices) & np.isfinite(vols) & (vols > 0)
+        if int(mask.sum()) < min_periods:
+            continue
+
+        prices = prices[mask]
+        vols = vols[mask]
+        price_min = float(np.min(prices))
+        price_max = float(np.max(prices))
+        if not np.isfinite(price_min + price_max) or price_max <= price_min:
+            continue
+
+        hist, edges = np.histogram(prices, bins=bins, range=(price_min, price_max), weights=vols)
+        if hist.size == 0 or float(hist.sum()) <= 0.0:
+            continue
+
+        centers = (edges[:-1] + edges[1:]) / 2.0
+        poc_idx = int(np.argmax(hist))
+        poc[i] = float(centers[poc_idx])
+
+        target = float(hist.sum()) * float(value_area_pct)
+        included = {poc_idx}
+        total = float(hist[poc_idx])
+        lo = hi = poc_idx
+        while total < target and (lo > 0 or hi < len(hist) - 1):
+            lower_idx = lo - 1 if lo > 0 else None
+            upper_idx = hi + 1 if hi < len(hist) - 1 else None
+            lower_vol = float(hist[lower_idx]) if lower_idx is not None else -1.0
+            upper_vol = float(hist[upper_idx]) if upper_idx is not None else -1.0
+
+            if upper_vol >= lower_vol and upper_idx is not None:
+                included.add(upper_idx)
+                hi = upper_idx
+                total += upper_vol
+            elif lower_idx is not None:
+                included.add(lower_idx)
+                lo = lower_idx
+                total += lower_vol
+            else:
+                break
+
+        val[i] = float(edges[min(included)])
+        vah[i] = float(edges[max(included) + 1])
+
+    return pd.DataFrame({"vp_poc": poc, "vp_vah": vah, "vp_val": val}, index=df.index)
+
+
 def compute_ichimoku(df: pd.DataFrame) -> pd.DataFrame:
     """Add Ichimoku Kinko Hyo lines to the DataFrame.
 
@@ -352,6 +442,30 @@ def compute_features(
     df["trend_strength"] = compute_trend_strength(
         df["close"], df["atr"], window=trend_window
     )
+
+    # Orderflow-lite context: VWAP + rolling Volume Profile from closed bars.
+    # These are deliberately computed from OHLC/tick-volume so they are available
+    # to both backtests and MT5 live signal generation.
+    df["session_vwap"] = compute_session_vwap(df)
+    df["session_vwap_dist_atr"] = (df["close"] - df["session_vwap"]) / (df["atr"] + 1e-9)
+    df["session_vwap_slope"] = df["session_vwap"].diff() / (df["atr"] + 1e-9)
+    df["above_vwap"] = (df["close"] > df["session_vwap"]).astype(int)
+    df["below_vwap"] = (df["close"] < df["session_vwap"]).astype(int)
+    df["vwap_reclaim_long"] = ((df["close"] > df["session_vwap"]) & (df["close"].shift(1) <= df["session_vwap"].shift(1))).astype(int)
+    df["vwap_reclaim_short"] = ((df["close"] < df["session_vwap"]) & (df["close"].shift(1) >= df["session_vwap"].shift(1))).astype(int)
+
+    profile = compute_rolling_volume_profile(df)
+    df = pd.concat([df, profile], axis=1)
+    df["vp_width_atr"] = (df["vp_vah"] - df["vp_val"]) / (df["atr"] + 1e-9)
+    df["vp_close_pos"] = (df["close"] - df["vp_val"]) / ((df["vp_vah"] - df["vp_val"]) + 1e-9)
+    df["in_value_area"] = ((df["close"] >= df["vp_val"]) & (df["close"] <= df["vp_vah"])).astype(int)
+    df["above_value_area"] = (df["close"] > df["vp_vah"]).astype(int)
+    df["below_value_area"] = (df["close"] < df["vp_val"]).astype(int)
+    df["near_vp_poc"] = ((df["close"] - df["vp_poc"]).abs() <= 0.50 * df["atr"]).astype(int)
+    df["near_vp_vah"] = ((df["close"] - df["vp_vah"]).abs() <= 0.50 * df["atr"]).astype(int)
+    df["near_vp_val"] = ((df["close"] - df["vp_val"]).abs() <= 0.50 * df["atr"]).astype(int)
+    df["vp_accept_above"] = ((df["close"] > df["vp_vah"]) & (df["close"].shift(1) > df["vp_vah"].shift(1))).astype(int)
+    df["vp_accept_below"] = ((df["close"] < df["vp_val"]) & (df["close"].shift(1) < df["vp_val"].shift(1))).astype(int)
 
     # Ichimoku (chikou excluded — forward-looking; senkou unshifted — instantaneous)
     df = compute_ichimoku(df)

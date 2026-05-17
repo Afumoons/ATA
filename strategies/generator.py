@@ -227,6 +227,22 @@ EMA_RSI_REVERSAL_EXIT_TEMPLATES = [
     "bars_since_entry >= {time_stop_bars} or close > ma_short",
 ]
 
+VWAP_PROFILE_LONG_TEMPLATES = [
+    "vwap_reclaim_long == 1 and near_vp_val == 1 and trend_strength > -{trend_buffer} and session_vwap_dist_atr > -{vwap_pullback_atr}",
+    "above_vwap == 1 and session_vwap_slope > {vwap_slope_min} and close > vp_poc and in_value_area == 1",
+    "vp_accept_above == 1 and above_vwap == 1 and session_vwap_slope > -{vwap_slope_min} and vp_close_pos > {vp_upper_pos}",
+]
+VWAP_PROFILE_SHORT_TEMPLATES = [
+    "vwap_reclaim_short == 1 and near_vp_vah == 1 and trend_strength < {trend_buffer} and session_vwap_dist_atr < {vwap_pullback_atr}",
+    "below_vwap == 1 and session_vwap_slope < -{vwap_slope_min} and close < vp_poc and in_value_area == 1",
+    "vp_accept_below == 1 and below_vwap == 1 and session_vwap_slope < {vwap_slope_min} and vp_close_pos < {vp_lower_pos}",
+]
+VWAP_PROFILE_EXIT_TEMPLATES = [
+    "bars_since_entry >= {time_stop_bars} or close < session_vwap or vp_accept_below == 1",
+    "bars_since_entry >= {time_stop_bars} or close > session_vwap or vp_accept_above == 1",
+    "bars_since_entry >= {time_stop_bars} or near_vp_poc == 1",
+]
+
 FAMILY_LIBRARY: Dict[str, Dict[str, Any]] = {
     "ma_trend": {
         "long": _LIGHT_LONG_TEMPLATES[1:],
@@ -329,6 +345,14 @@ FAMILY_LIBRARY: Dict[str, Dict[str, Any]] = {
         "preferred_sessions": ["london", "new_york"],
         "exit_templates": EMA_RSI_REVERSAL_EXIT_TEMPLATES,
     },
+    "vwap_profile": {
+        "long": VWAP_PROFILE_LONG_TEMPLATES,
+        "short": VWAP_PROFILE_SHORT_TEMPLATES,
+        "regime_type": "orderflow_context",
+        "playbook_type": "vwap_volume_profile",
+        "preferred_sessions": ["london", "new_york"],
+        "exit_templates": VWAP_PROFILE_EXIT_TEMPLATES,
+    },
 }
 
 CORE_M15_FAMILY_WEIGHTS: Dict[str, float] = {
@@ -343,6 +367,7 @@ CORE_M15_FAMILY_WEIGHTS: Dict[str, float] = {
     "xau_trending_up_specialist": 0.24,
     "xau_ranging_specialist": 0.18,
     "ema_rsi_reversal": 0.10,
+    "vwap_profile": 0.12,
 }
 
 XAG_M15_FAMILY_WEIGHTS: Dict[str, float] = {
@@ -376,6 +401,8 @@ def _normalize_family_for_market(family: str, symbol: str) -> str:
 # ---------------------------------------------------------------------------
 
 def _classify_template(tpl: str) -> Tuple[str, str]:
+    if "session_vwap" in tpl or "vp_" in tpl or "above_vwap" in tpl or "below_vwap" in tpl:
+        return "vwap_profile", "orderflow_context"
     if "session_london" in tpl or "session_new_york" in tpl:
         return "session_breakout", "breakout"
     if "tenkan_sen" in tpl or "fib_zone" in tpl:
@@ -449,6 +476,19 @@ def _sample_family_params(family: str, symbol: str, timeframe: str) -> Dict[str,
         params["trend_min"] = round(random.uniform(0.10, 0.26), 2)
         params["trend_exit"] = round(random.uniform(-0.08, 0.05), 2)
         params["time_stop_bars"] = random.choice([4, 6, 8, 12])
+    elif family == "vwap_profile":
+        params["trend_min"] = round(random.uniform(0.04, 0.16), 2)
+        params["trend_exit"] = round(random.uniform(-0.04, 0.04), 2)
+        params["trend_buffer"] = round(random.uniform(0.04, 0.12), 2)
+        params["vwap_slope_min"] = round(random.uniform(0.005, 0.035), 3)
+        params["vwap_pullback_atr"] = round(random.uniform(0.4, 1.2), 2)
+        params["vp_upper_pos"] = round(random.uniform(0.62, 0.82), 2)
+        params["vp_lower_pos"] = round(random.uniform(0.18, 0.38), 2)
+        params["time_stop_bars"] = random.choice([4, 6, 8, 10])
+        params["stop_loss_pips"] = random.choice([75, 100, 125, 150])
+        params["take_profit_pips"] = random.choice([150, 200, 250, 300])
+        params["preferred_sessions"] = ["london", "new_york"]
+        params["entry_intent"] = "vwap_volume_profile_context"
     elif family == "ema_rsi_reversal":
         params["trend_min"] = round(random.uniform(0.02, 0.10), 2)
         params["trend_exit"] = round(random.uniform(-0.03, 0.03), 2)
@@ -471,6 +511,9 @@ def _sample_family_params(family: str, symbol: str, timeframe: str) -> Dict[str,
         elif family == "rsi_range":
             params["sl_atr_mult"] = random.choice([1.2, 1.5, 1.8])
             params["tp_atr_mult"] = random.choice([1.5, 2.0, 2.5])
+        elif family == "vwap_profile":
+            params["sl_atr_mult"] = random.choice([1.2, 1.5, 1.8, 2.0])
+            params["tp_atr_mult"] = random.choice([2.0, 2.5, 3.0, 3.5])
         else:
             params["sl_atr_mult"] = random.choice([1.5, 1.8, 2.0, 2.2])
             params["tp_atr_mult"] = random.choice([2.0, 2.5, 3.0, 3.5])
@@ -699,6 +742,14 @@ _EXIT_COMPATIBILITY_WEIGHTS: Dict[str, Dict[str, float]] = {
         "trend_strength": 0.9,
         "rsi >": -0.30,
         "rsi <": -0.30,
+    },
+    "vwap_profile": {
+        "bars_since_entry": 1.0,
+        "session_vwap": 1.1,
+        "near_vp_poc": 0.9,
+        "vp_accept": 0.8,
+        "rsi >": -0.5,
+        "rsi <": -0.5,
     },
 }
 
