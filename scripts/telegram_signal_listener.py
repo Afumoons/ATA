@@ -77,7 +77,7 @@ async def _main_async(args: argparse.Namespace) -> None:
 
     client = TelegramClient(session_name, int(api_id), api_hash)
     mt5_initialized = False
-    if args.mode == "auto_live":
+    if args.mode == "auto_live" and not getattr(args, "mt5_already_initialized", False):
         initialize_mt5()
         mt5_initialized = True
 

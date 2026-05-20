@@ -26,6 +26,7 @@ from ..execution.live_monitor import update_live_stats
 from ..execution.live_decay import evaluate_live_decay, apply_live_decay_actions
 from ..execution.signals import execute_signals_for_symbol, get_strategy_for_ticket, _latest_closed_row
 from ..execution.strategy_live_stats import load_all_strategy_stats, MAX_RECENT_TRADES, should_ignore_for_engine_governance
+from ..execution.telegram_signal_service import start_telegram_signal_service
 from ..vector_memory.research_memory import ResearchMemory
 
 logger = get_logger(__name__)
@@ -1846,6 +1847,7 @@ def start_scheduler() -> BackgroundScheduler:
     sched.add_job(job_news_alert, "interval", minutes=scheduler_config.news_alert_interval_minutes, id="news_alert")
 
     sched.start()
+    start_telegram_signal_service()
     logger.info("Scheduler started with %d jobs", len(sched.get_jobs()))
     return sched
 

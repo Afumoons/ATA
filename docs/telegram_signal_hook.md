@@ -61,7 +61,7 @@ Create Telegram API credentials:
 3. Create an app.
 4. Copy `api_id` and `api_hash`.
 
-Set env vars in the PowerShell session that will run the listener:
+Set env vars in the PowerShell session that will run the listener, or put them in `C:\\laragon\\www\\autonomous_trading_ai\\.env`:
 
 ```powershell
 $env:TELEGRAM_API_ID="YOUR_API_ID"
@@ -69,9 +69,42 @@ $env:TELEGRAM_API_HASH="YOUR_API_HASH"
 $env:TELEGRAM_SIGNAL_SESSION="ata_telegram_signals"
 ```
 
+Optional `.env` knobs for scheduler autostart:
+
+```text
+ATA_TELEGRAM_SIGNAL_AUTOSTART=true
+ATA_TELEGRAM_SIGNAL_CHANNEL=japsku
+ATA_TELEGRAM_SIGNAL_MODE=shadow
+ATA_TELEGRAM_SIGNAL_HISTORY=0
+# Only for live orders:
+# ATA_TELEGRAM_SIGNAL_LIVE=true
+```
+
 First run will ask for Telegram login code / 2FA password if needed. Telethon stores a local session file so later runs can reconnect.
 
-## Start Shadow Mode
+## Start with scheduler.main
+
+Because `scheduler.main` now autostarts the Telegram listener when Telegram credentials exist, this is enough:
+
+```powershell
+cd C:\\laragon\\www
+python -m autonomous_trading_ai.scheduler.main
+```
+
+Defaults:
+
+- autostart enabled if `TELEGRAM_API_ID` and `TELEGRAM_API_HASH` are present
+- channel `japsku`
+- mode `shadow`
+- no history replay unless `ATA_TELEGRAM_SIGNAL_HISTORY` is set
+
+To disable autostart:
+
+```text
+ATA_TELEGRAM_SIGNAL_AUTOSTART=false
+```
+
+## Start Standalone Shadow Mode
 
 From package parent directory:
 
