@@ -165,6 +165,16 @@ Check these files first:
 - `autonomous_trading_ai/strategies/pool_state.json`
 - logs under `autonomous_trading_ai/logs/`
 
+### Telegram signal hook audit add-on
+
+During each ATA audit/cron review, also inspect recent Telegram signal behavior:
+
+- Compare recent channel messages with `execution/external_signal_audit.jsonl` and `execution/external_signal_execution.jsonl`.
+- Flag actionable-looking Gold/XAU messages that were ignored, rejected, defaulted SL/TP unexpectedly, or never reached audit output.
+- If a missed wording/pattern is found, add parser support plus a regression test in `tests/test_external_signal.py` before trusting it live.
+- Keep the comment format compact: `TLGXAUUSD[channel]`, e.g. `TLGXAUUSDJAPSKU`.
+- Do not cap valid Telegram signal count just because positions are already open; multiple valid channel signals may map to multiple open positions.
+
 If in doubt, stop the scheduler first and inspect before restarting.
 
 ## 7.1 How To Run The Active Operator UI So It Actually Works

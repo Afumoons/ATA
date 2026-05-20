@@ -18,6 +18,7 @@ Purpose: read external Telegram mentor signals from `https://t.me/japsku`, parse
   - If TP is missing, plan `trailing_stop` with `500 pips` distance.
 - Do not skip solely on parser confidence.
 - No max-exposure gate at this parser layer.
+- Telegram signal count is not capped by the hook: if the channel sends 10 valid unique signals, the hook may plan/execute 10 orders subject only to duplicate/live/risk/broker gates.
 - No spread/slippage skip at this parser layer.
 
 ## Implemented Components
@@ -45,7 +46,7 @@ Live mode requires both:
 1. CLI/env mode: `auto_live`
 2. Environment flag: `$env:ATA_TELEGRAM_SIGNAL_LIVE="true"`
 
-If either is missing, orders are blocked. Live external-signal orders use MT5 comments beginning with `TELEGRAM` so they are visually distinct from native ATA strategy orders.
+If either is missing, orders are blocked. Live external-signal orders use compact MT5 comments beginning with `TLGXAUUSD[channel]`, for example `TLGXAUUSDJAPSKU`, so they are visually distinct from native ATA strategy orders.
 
 ## One-time Telegram Setup
 
@@ -147,6 +148,16 @@ To disarm immediately, stop the process or unset the flag in the next shell:
 ```powershell
 Remove-Item Env:\ATA_TELEGRAM_SIGNAL_LIVE
 ```
+
+## Audit Requirement: Missed Telegram Signal Patterns
+
+Every ATA audit/cron review must include a Telegram signal hook pattern check:
+
+1. Review recent channel messages against `execution/external_signal_audit.jsonl` and `execution/external_signal_execution.jsonl`.
+2. Look for messages that look like actionable XAUUSD/Gold signals but were `ignored`, `rejected`, parsed with fallback SL/TP, or never appeared in audit output.
+3. If the issue is a new wording/pattern, add the parser pattern and a regression test before relying on it live.
+4. Re-run the focused tests: `python -m pytest autonomous_trading_ai\\tests\\test_external_signal.py autonomous_trading_ai\\tests\\test_external_signal_executor.py`.
+5. Record examples and outcomes in the audit notes so missed-pattern fixes compound over time.
 
 ## Known Remaining Gap
 

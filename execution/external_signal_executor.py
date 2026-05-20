@@ -35,9 +35,8 @@ DEFAULT_DUPLICATE_STORE = BASE_DIR / "execution" / "external_signal_seen.json"
 DEFAULT_EXECUTION_AUDIT = BASE_DIR / "execution" / "external_signal_execution.jsonl"
 EXTERNAL_SIGNAL_STRATEGY = "telegram_signal_xau"
 EXTERNAL_SIGNAL_TIMEFRAME = "EXT"
-EXTERNAL_SIGNAL_COMMENT_PREFIX = "TELEGRAM"
+EXTERNAL_SIGNAL_COMMENT_PREFIX = "TLG"
 LIVE_ENV_FLAG = "ATA_TELEGRAM_SIGNAL_LIVE"
-MAX_OPEN_ENV = "ATA_TELEGRAM_SIGNAL_MAX_OPEN_POSITIONS"
 
 
 @dataclass(frozen=True)
@@ -106,28 +105,6 @@ def _account_state() -> AccountState:
     )
 
 
-def _max_open_external_positions() -> int:
-    raw = os.getenv(MAX_OPEN_ENV, "2").strip()
-    try:
-        return int(raw)
-    except ValueError:
-        logger.warning("Invalid %s=%r; using default 2", MAX_OPEN_ENV, raw)
-        return 2
-
-
-def _external_open_position_count(symbol: str) -> int:
-    positions = mt5.positions_get(symbol=symbol) or mt5.positions_get() or []
-    count = 0
-    for pos in positions:
-        comment = str(getattr(pos, "comment", "") or "").upper()
-        magic = int(getattr(pos, "magic", 0) or 0)
-        pos_symbol = str(getattr(pos, "symbol", "") or "")
-        if pos_symbol != symbol:
-            continue
-        if magic == execution_config.order_magic and comment.startswith(f"{EXTERNAL_SIGNAL_COMMENT_PREFIX}XAUUSD"):
-            count += 1
-    return count
-
 
 def _pick_filling_modes(symbol: str) -> list[int]:
     sym_info = mt5.symbol_info(symbol)
@@ -162,9 +139,9 @@ def _source_channel_name(source: str) -> str:
 def _build_external_signal_comment(symbol: str, source: str) -> str:
     """Build an MT5 comment that marks Telegram XAUUSD channel origin.
 
-    Afu requested the format TELEGRAMXAUUSD[channel].  Broker-side comments may
-    still be truncated after submission, so the high-signal prefix comes first.
-    Example request comment: TELEGRAMXAUUSDJAPSKU
+    Afu requested the short format TLGXAUUSD[channel].  Broker-side comments
+    may still be truncated after submission, so the high-signal prefix comes first.
+    Example request comment: TLGXAUUSDJAPSKU
     """
 
     sym_clean = "".join(c for c in symbol.upper() if c.isalnum())
@@ -308,19 +285,6 @@ def execute_external_trade_plan(
         return decision
 
     try:
-        resolved_symbol = _resolve_execution_symbol(plan.symbol)
-        max_open = _max_open_external_positions()
-        open_external = _external_open_position_count(resolved_symbol)
-        if max_open >= 0 and open_external >= max_open:
-            decision = ExternalExecutionDecision(
-                plan.signal_id,
-                mode,
-                "blocked",
-                f"max_open_external_positions_reached: {open_external}/{max_open}",
-            )
-            _append_execution_audit(decision, audit_path)
-            return decision
-
         request = build_external_order_request(plan, cfg=cfg)
         mt5_request = {k: v for k, v in request.items() if k != "external_signal"}
         result = None
