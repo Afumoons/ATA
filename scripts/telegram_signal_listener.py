@@ -3,8 +3,7 @@ from __future__ import annotations
 """Telegram channel listener for external XAUUSD mentor signals.
 
 Default mode is shadow: parse messages, write audit JSONL, and do not trade.
-Live execution is intentionally not wired here yet; this script is the safe data
-collection layer used to validate parser behavior against real channel messages.
+An auto_live mode exists, but it is guarded by ATA_TELEGRAM_SIGNAL_LIVE=true.
 
 Required env for Telegram user-session mode:
 - TELEGRAM_API_ID
@@ -18,22 +17,24 @@ import os
 from pathlib import Path
 from typing import Any
 
+from autonomous_trading_ai.data.collector_mt5 import initialize_mt5, shutdown_mt5
 from autonomous_trading_ai.execution.external_signal import (
     ExternalSignalConfig,
     append_trade_plan_audit,
     build_trade_plan,
     parse_external_signal,
 )
+from autonomous_trading_ai.execution.external_signal_executor import execute_external_trade_plan
 
 DEFAULT_CHANNEL = "japsku"
 DEFAULT_AUDIT_PATH = Path(__file__).resolve().parents[1] / "execution" / "external_signal_audit.jsonl"
 
 
 def _parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Shadow-listen to Telegram trade signals")
+    parser = argparse.ArgumentParser(description="Listen to Telegram trade signals")
     parser.add_argument("--channel", default=DEFAULT_CHANNEL, help="Telegram public channel username or link")
-    parser.add_argument("--audit-path", default=str(DEFAULT_AUDIT_PATH), help="JSONL audit output path")
-    parser.add_argument("--mode", choices=["shadow"], default="shadow", help="Only shadow mode is enabled in this listener")
+    parser.add_argument("--audit-path", default=str(DEFAULT_AUDIT_PATH), help="JSONL parser audit output path")
+    parser.add_argument("--mode", choices=["shadow", "auto_live"], default="shadow", help="shadow logs only; auto_live also requires ATA_TELEGRAM_SIGNAL_LIVE=true")
     parser.add_argument("--history", type=int, default=0, help="Parse the last N existing messages before realtime listen")
     return parser.parse_args()
 
@@ -75,27 +76,42 @@ async def _main_async(args: argparse.Namespace) -> None:
     cfg = ExternalSignalConfig(source=f"telegram:{channel}")
 
     client = TelegramClient(session_name, int(api_id), api_hash)
-    await client.start()
-    entity = await client.get_entity(channel)
+    mt5_initialized = False
+    if args.mode == "auto_live":
+        initialize_mt5()
+        mt5_initialized = True
 
-    if args.history > 0:
-        async for message in client.iter_messages(entity, limit=args.history):
-            plan = _plan_from_message(message, cfg)
+    try:
+        await client.start()
+        entity = await client.get_entity(channel)
+
+        if args.history > 0:
+            async for message in client.iter_messages(entity, limit=args.history):
+                plan = _plan_from_message(message, cfg)
+                append_trade_plan_audit(plan, audit_path)
+                decision = execute_external_trade_plan(plan, mode=args.mode, cfg=cfg)
+                print(
+                    f"history id={plan.message_id} parse={plan.decision} exec={decision.action} "
+                    f"reason={decision.reason}"
+                )
+
+        @client.on(events.NewMessage(chats=entity))
+        async def _handler(event):  # type: ignore[no-untyped-def]
+            plan = _plan_from_message(event.message, cfg)
             append_trade_plan_audit(plan, audit_path)
-            print(f"history id={plan.message_id} decision={plan.decision} reason={plan.reason}")
+            decision = execute_external_trade_plan(plan, mode=args.mode, cfg=cfg)
+            print(
+                "new_signal "
+                f"id={plan.message_id} parse={plan.decision} exec={decision.action} "
+                f"direction={plan.direction} sl={plan.stop_loss_price} "
+                f"tp={plan.take_profit_price} exit={plan.exit_mode} reason={decision.reason}"
+            )
 
-    @client.on(events.NewMessage(chats=entity))
-    async def _handler(event):  # type: ignore[no-untyped-def]
-        plan = _plan_from_message(event.message, cfg)
-        append_trade_plan_audit(plan, audit_path)
-        print(
-            "new_signal "
-            f"id={plan.message_id} decision={plan.decision} direction={plan.direction} "
-            f"sl={plan.stop_loss_price} tp={plan.take_profit_price} exit={plan.exit_mode}"
-        )
-
-    print(f"Listening to Telegram channel @{channel} in shadow mode. Audit: {audit_path}")
-    await client.run_until_disconnected()
+        print(f"Listening to Telegram channel @{channel} in {args.mode} mode. Audit: {audit_path}")
+        await client.run_until_disconnected()
+    finally:
+        if mt5_initialized:
+            shutdown_mt5()
 
 
 def main() -> None:

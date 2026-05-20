@@ -1,10 +1,10 @@
-# Telegram Signal Hook — Shadow Mode
+# Telegram Signal Hook
 
-Purpose: read external Telegram mentor signals from `https://t.me/japsku`, parse changing XAUUSD buy/sell formats, and produce an auditable trade plan before any live execution is enabled.
+Purpose: read external Telegram mentor signals from `https://t.me/japsku`, parse changing XAUUSD buy/sell formats, and produce an auditable trade plan. The default startup path is shadow mode; live mode exists but requires an explicit environment kill-switch to be enabled.
 
 ## Current Afu Rules
 
-- Symbol: canonical `XAUUSD` only; broker suffix resolution should happen inside ATA execution.
+- Symbol: canonical `XAUUSD` only; broker suffix resolution happens inside ATA execution (`XAUUSDm`, etc.).
 - Direction: detect `buy/long` or `sell/short`.
 - Risk: `1%` per trade.
 - SL:
@@ -12,6 +12,7 @@ Purpose: read external Telegram mentor signals from `https://t.me/japsku`, parse
   - If missing, default to `500 pips` = `5.00` XAU price units (`pip_size=0.01`).
   - If a signal says `BUY 4500` and no SL, planned SL is `4495`.
   - If execution fills worse, the invalidation SL remains based on the signal/default reference, not widened just because spread/slippage is bad.
+  - Position size is reduced/increased from the actual fill-to-SL distance to keep risk near 1%.
 - TP:
   - If TP exists, full-close at TP1.
   - If TP is missing, plan `trailing_stop` with `500 pips` distance.
@@ -19,50 +20,99 @@ Purpose: read external Telegram mentor signals from `https://t.me/japsku`, parse
 - No max-exposure gate at this parser layer.
 - No spread/slippage skip at this parser layer.
 
+## Implemented Components
+
+- `execution/external_signal.py` — side-effect-free parser and trade planner.
+- `execution/external_signal_executor.py` — duplicate store, live guard, and MT5 absolute-SL order bridge.
+- `scripts/telegram_signal_listener.py` — Telethon listener for Telegram public channel/user-session mode.
+- `tests/test_external_signal.py` — parser tests.
+- `tests/test_external_signal_executor.py` — duplicate/live-guard/absolute-SL sizing tests.
+
 ## Safety State
 
-`telegram_signal_listener.py` is currently **shadow only**:
+Default mode is **shadow**:
 
 - reads Telegram messages
 - parses into `ExternalTradePlan`
-- appends JSONL audit rows
-- does **not** call MT5/order execution
+- appends JSONL parser audit rows
+- appends JSONL execution-decision audit rows
+- does not send broker orders
 
-Live execution still needs a separate bridge that supports absolute SL/TP and trailing-stop management. This is deliberate because ATA's existing `execute_trade()` is pips-from-current-price based, while Afu's rule requires preserving the signal invalidation price even if fill price is worse.
+Live mode requires both:
 
-## Run
+1. CLI mode: `--mode auto_live`
+2. Environment flag: `$env:ATA_TELEGRAM_SIGNAL_LIVE="true"`
+
+If either is missing, orders are blocked.
+
+## One-time Telegram Setup
 
 Install Telethon if needed:
 
 ```powershell
+cd C:\laragon\www
 python -m pip install telethon
 ```
 
-Set Telegram API credentials from <https://my.telegram.org/apps>:
+Create Telegram API credentials:
+
+1. Open <https://my.telegram.org/apps>
+2. Login with Afu's Telegram number.
+3. Create an app.
+4. Copy `api_id` and `api_hash`.
+
+Set env vars in the PowerShell session that will run the listener:
 
 ```powershell
-$env:TELEGRAM_API_ID="..."
-$env:TELEGRAM_API_HASH="..."
+$env:TELEGRAM_API_ID="YOUR_API_ID"
+$env:TELEGRAM_API_HASH="YOUR_API_HASH"
+$env:TELEGRAM_SIGNAL_SESSION="ata_telegram_signals"
 ```
 
-Start shadow listener:
+First run will ask for Telegram login code / 2FA password if needed. Telethon stores a local session file so later runs can reconnect.
+
+## Start Shadow Mode
+
+From package parent directory:
 
 ```powershell
-python -m autonomous_trading_ai.scripts.telegram_signal_listener --channel japsku --history 20
+cd C:\laragon\www
+python -m autonomous_trading_ai.scripts.telegram_signal_listener --channel japsku --history 20 --mode shadow
 ```
 
-Audit file:
+What this does:
+
+- Parses the last 20 messages first.
+- Then keeps listening realtime.
+- No live orders are sent.
+
+Audit files:
 
 ```text
-autonomous_trading_ai/execution/external_signal_audit.jsonl
+C:\laragon\www\autonomous_trading_ai\execution\external_signal_audit.jsonl
+C:\laragon\www\autonomous_trading_ai\execution\external_signal_execution.jsonl
+C:\laragon\www\autonomous_trading_ai\execution\external_signal_seen.json
 ```
 
-## Next Build Step
+## Arm Auto-live Mode
 
-Before live mode, implement and test:
+Only after shadow output looks correct:
 
-1. MT5 market order function with absolute `stop_loss_price` and optional absolute `take_profit_price`.
-2. Trailing-stop manager for no-TP signals.
-3. Duplicate signal store keyed by `signal_id` / Telegram message id.
-4. Live kill-switch env/file flag.
-5. Shadow review on at least 10-20 real messages from the mentor channel.
+```powershell
+cd C:\laragon\www
+$env:TELEGRAM_API_ID="YOUR_API_ID"
+$env:TELEGRAM_API_HASH="YOUR_API_HASH"
+$env:TELEGRAM_SIGNAL_SESSION="ata_telegram_signals"
+$env:ATA_TELEGRAM_SIGNAL_LIVE="true"
+python -m autonomous_trading_ai.scripts.telegram_signal_listener --channel japsku --mode auto_live
+```
+
+To disarm immediately, stop the process or unset the flag in the next shell:
+
+```powershell
+Remove-Item Env:\ATA_TELEGRAM_SIGNAL_LIVE
+```
+
+## Known Remaining Gap
+
+Trailing-stop management for no-TP signals is planned in the trade plan and recorded in order metadata, but a background SL modification loop is not implemented yet. Until that loop exists, auto-live no-TP signals can open with SL but will not automatically trail unless the broker/terminal manages it separately.
