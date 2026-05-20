@@ -183,11 +183,10 @@ TELEGRAM_API_HASH=...
 TELEGRAM_SIGNAL_SESSION=ata_telegram_signals
 ATA_TELEGRAM_SIGNAL_AUTOSTART=true
 ATA_TELEGRAM_SIGNAL_CHANNEL=japsku
-ATA_TELEGRAM_SIGNAL_MODE=shadow
+ATA_TELEGRAM_SIGNAL_MODE=auto_live
 ATA_TELEGRAM_SIGNAL_HISTORY=0
-# live orders require both:
-# ATA_TELEGRAM_SIGNAL_MODE=auto_live
-# ATA_TELEGRAM_SIGNAL_LIVE=true
+# Demo auto-live currently uses both mode=auto_live and:
+ATA_TELEGRAM_SIGNAL_LIVE=true
 ```
 
 Set `ATA_TELEGRAM_SIGNAL_AUTOSTART=false` to run scheduler without the Telegram listener.
@@ -230,3 +229,4 @@ usually the first file to inspect.
   specialist-routing orchestration, and policy/state coordination.
 
 - 2026-05-20: Documented Telegram signal listener autostart from `scheduler.main`, `.env` knobs, and live-mode guard flags.
+- 2026-05-20: Updated env example for demo auto-live arming.

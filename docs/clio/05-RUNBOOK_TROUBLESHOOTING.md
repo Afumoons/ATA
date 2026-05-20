@@ -130,11 +130,11 @@ Fast checks:
 3. Check mode flags:
 
    ```text
-   ATA_TELEGRAM_SIGNAL_MODE=shadow
-   # live requires both:
-   # ATA_TELEGRAM_SIGNAL_MODE=auto_live
-   # ATA_TELEGRAM_SIGNAL_LIVE=true
+   ATA_TELEGRAM_SIGNAL_MODE=auto_live
+   ATA_TELEGRAM_SIGNAL_LIVE=true
    ```
+
+   Live orders require both flags; remove either one to return to non-live behavior.
 
 4. Check audit files:
 
@@ -237,6 +237,7 @@ Safety rule:
 ## Changelog (Docs)
 
 - 2026-05-20: Added Telegram signal listener troubleshooting, autostart/env checks, audit files, and live-mode emergency stop note.
+- 2026-05-20: Updated troubleshooting examples for demo auto-live mode.
 - 2026-04-04: Updated troubleshooting guidance for live decay review signals and concentration-aware routing behavior.
 - 2026-04-03: Added new Track B audit files to the troubleshooting checklist.
 

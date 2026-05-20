@@ -33,7 +33,8 @@ def test_shadow_execution_marks_duplicate(tmp_path: Path) -> None:
     assert audit.read_text(encoding="utf-8").count("\n") == 2
 
 
-def test_auto_live_blocked_without_env(tmp_path: Path) -> None:
+def test_auto_live_blocked_without_env(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.delenv("ATA_TELEGRAM_SIGNAL_LIVE", raising=False)
     plan = _plan("BUY XAUUSD 4500 SL 4495 TP 4510")
     decision = execute_external_trade_plan(
         plan,
@@ -78,3 +79,5 @@ def test_build_external_order_request_keeps_absolute_sl_on_worse_fill(monkeypatc
     assert request["tp"] == 0.0
     assert request["external_signal"]["sizing_stop_pips"] == 1200.0
     assert request["volume"] == 0.01
+    assert request["comment"].startswith("TELEGRAM")
+    assert "telegram_signal_xau" not in request["comment"]

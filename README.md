@@ -68,7 +68,7 @@ The project is organized into a few core loops:
    - `execution/external_signal_executor.py` provides duplicate protection, audit logging, absolute-SL sizing, and a guarded MT5 execution bridge.
    - `execution/telegram_signal_service.py` lets `scheduler.main` autostart the listener when Telegram credentials exist in `.env`.
    - `scripts/telegram_signal_listener.py` can also run standalone for shadow validation.
-   - Live orders require both `ATA_TELEGRAM_SIGNAL_MODE=auto_live` and `ATA_TELEGRAM_SIGNAL_LIVE=true`; default is shadow.
+   - Live orders require both `ATA_TELEGRAM_SIGNAL_MODE=auto_live` and `ATA_TELEGRAM_SIGNAL_LIVE=true`; demo `.env` can be armed this way. External orders use `TELEGRAM...` MT5 comments to distinguish them from ATA strategy orders.
 
 9. **Expose operator-facing UI surfaces**
    - `ui_api/` provides the read-only backend API for diagnostics/overview data.
@@ -220,7 +220,7 @@ The older React UI in `ui/` is legacy/reference unless explicitly reactivated.
    - missing TP = 500-pip trailing plan,
    - TP present = full close at TP1.
 4. Default mode is shadow, so no external-signal orders are sent.
-5. Auto-live requires `ATA_TELEGRAM_SIGNAL_MODE=auto_live` plus `ATA_TELEGRAM_SIGNAL_LIVE=true`.
+5. Auto-live requires `ATA_TELEGRAM_SIGNAL_MODE=auto_live` plus `ATA_TELEGRAM_SIGNAL_LIVE=true`; channel-sourced trades are tagged with `TELEGRAM...` MT5 comments.
 6. Known limitation: no-TP trailing-stop intent is recorded, but the background SL-modification loop is not implemented yet.
 
 ### E. Live monitoring cycle
@@ -417,3 +417,4 @@ npm run build
 - 2026-04-03: Refreshed the top-level map for Track A / B / C work, including
   research hardening, live attribution/audit artifacts, and XAU exit hardening.
 - 2026-05-20: Documented Telegram mentor-signal ingestion, scheduler autostart, guarded live flags, and current trailing-stop limitation.
+- 2026-05-20: Documented demo auto-live arming and `TELEGRAM...` MT5 comments for external signal trades.

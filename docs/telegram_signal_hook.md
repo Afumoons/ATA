@@ -30,7 +30,9 @@ Purpose: read external Telegram mentor signals from `https://t.me/japsku`, parse
 
 ## Safety State
 
-Default mode is **shadow**:
+Code default is **shadow**; current demo deployment is intentionally armed via `.env` with `ATA_TELEGRAM_SIGNAL_MODE=auto_live` and `ATA_TELEGRAM_SIGNAL_LIVE=true`.
+
+Shadow mode:
 
 - reads Telegram messages
 - parses into `ExternalTradePlan`
@@ -40,10 +42,10 @@ Default mode is **shadow**:
 
 Live mode requires both:
 
-1. CLI mode: `--mode auto_live`
+1. CLI/env mode: `auto_live`
 2. Environment flag: `$env:ATA_TELEGRAM_SIGNAL_LIVE="true"`
 
-If either is missing, orders are blocked.
+If either is missing, orders are blocked. Live external-signal orders use MT5 comments beginning with `TELEGRAM` so they are visually distinct from native ATA strategy orders.
 
 ## One-time Telegram Setup
 
@@ -74,10 +76,10 @@ Optional `.env` knobs for scheduler autostart:
 ```text
 ATA_TELEGRAM_SIGNAL_AUTOSTART=true
 ATA_TELEGRAM_SIGNAL_CHANNEL=japsku
-ATA_TELEGRAM_SIGNAL_MODE=shadow
+ATA_TELEGRAM_SIGNAL_MODE=auto_live
 ATA_TELEGRAM_SIGNAL_HISTORY=0
 # Only for live orders:
-# ATA_TELEGRAM_SIGNAL_LIVE=true
+ATA_TELEGRAM_SIGNAL_LIVE=true
 ```
 
 First run will ask for Telegram login code / 2FA password if needed. Telethon stores a local session file so later runs can reconnect.
@@ -95,7 +97,7 @@ Defaults:
 
 - autostart enabled if `TELEGRAM_API_ID` and `TELEGRAM_API_HASH` are present
 - channel `japsku`
-- mode `shadow`
+- mode follows `.env`; current demo setup uses `auto_live`
 - no history replay unless `ATA_TELEGRAM_SIGNAL_HISTORY` is set
 
 To disable autostart:

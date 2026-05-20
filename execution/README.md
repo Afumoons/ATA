@@ -170,6 +170,7 @@ Important behavior:
 - shadow mode writes an execution decision audit and does not send MT5 orders
 - auto-live requires `ATA_TELEGRAM_SIGNAL_LIVE=true`
 - live order sizing uses actual market fill reference to the absolute invalidation SL, so a worse fill reduces lot size rather than widening SL
+- MT5 order comments start with `TELEGRAM` so these positions are visually distinct from native ATA strategy orders
 - no-TP trailing intent is recorded, but the SL-modification loop is still a known gap
 
 ### `telegram_signal_service.py`
@@ -553,3 +554,4 @@ If you want to experiment more aggressively:
   flows), and stronger emphasis on the specialist-dispatch model.
 
 - 2026-05-20: Added external Telegram signal parser/executor/service docs, audit artifacts, absolute-SL sizing behavior, and live guard limitations.
+- 2026-05-20: Documented `TELEGRAM...` MT5 comment tagging for channel-sourced orders.

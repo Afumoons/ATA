@@ -22,7 +22,7 @@ import MetaTrader5 as mt5
 from ..config import execution_config
 from ..logging_utils import get_logger
 from ..risk.manager import AccountState, RiskDecision, TradeRequest, validate_trade
-from .engine import ExecutionResult, _build_comment, _clamp_volume, _resolve_execution_symbol
+from .engine import _clamp_volume, _resolve_execution_symbol
 from .external_signal import ExternalSignalConfig, ExternalTradePlan, resolve_default_pip_value
 from .trade_context_journal import register_trade_entry_context
 
@@ -35,6 +35,7 @@ DEFAULT_DUPLICATE_STORE = BASE_DIR / "execution" / "external_signal_seen.json"
 DEFAULT_EXECUTION_AUDIT = BASE_DIR / "execution" / "external_signal_execution.jsonl"
 EXTERNAL_SIGNAL_STRATEGY = "telegram_signal_xau"
 EXTERNAL_SIGNAL_TIMEFRAME = "EXT"
+EXTERNAL_SIGNAL_COMMENT_PREFIX = "TELEGRAM"
 LIVE_ENV_FLAG = "ATA_TELEGRAM_SIGNAL_LIVE"
 
 
@@ -128,6 +129,20 @@ def _pick_filling_modes(symbol: str) -> list[int]:
     return [initial] + [m for m in configured if m != initial]
 
 
+def _build_external_signal_comment(symbol: str, signal_id: str) -> str:
+    """Build an MT5 comment that clearly marks Telegram-sourced trades.
+
+    MT5 comments are broker-limited (31 chars in this project) and Exness is
+    happiest with alphanumeric comments, so keep this compact and clean.
+    Example: TELEGRAMXAUUSDmA1B2C3
+    """
+
+    sym_clean = "".join(c for c in symbol if c.isalnum())
+    sig_clean = "".join(c for c in signal_id.upper() if c.isalnum())[:6]
+    base = f"{EXTERNAL_SIGNAL_COMMENT_PREFIX}{sym_clean}{sig_clean}"
+    return base[: execution_config.order_comment_max_length]
+
+
 def _derive_prices_from_plan(
     plan: ExternalTradePlan,
     *,
@@ -211,7 +226,7 @@ def build_external_order_request(
         "tp": round(tp_price, 5) if tp_price is not None else 0.0,
         "deviation": execution_config.order_deviation,
         "magic": execution_config.order_magic,
-        "comment": _build_comment(EXTERNAL_SIGNAL_STRATEGY, resolved_symbol, EXTERNAL_SIGNAL_TIMEFRAME),
+        "comment": _build_external_signal_comment(resolved_symbol, plan.signal_id),
     }
     request["external_signal"] = {
         "signal_id": plan.signal_id,
