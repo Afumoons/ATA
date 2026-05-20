@@ -37,6 +37,7 @@ EXTERNAL_SIGNAL_STRATEGY = "telegram_signal_xau"
 EXTERNAL_SIGNAL_TIMEFRAME = "EXT"
 EXTERNAL_SIGNAL_COMMENT_PREFIX = "TELEGRAM"
 LIVE_ENV_FLAG = "ATA_TELEGRAM_SIGNAL_LIVE"
+MAX_OPEN_ENV = "ATA_TELEGRAM_SIGNAL_MAX_OPEN_POSITIONS"
 
 
 @dataclass(frozen=True)
@@ -105,6 +106,29 @@ def _account_state() -> AccountState:
     )
 
 
+def _max_open_external_positions() -> int:
+    raw = os.getenv(MAX_OPEN_ENV, "2").strip()
+    try:
+        return int(raw)
+    except ValueError:
+        logger.warning("Invalid %s=%r; using default 2", MAX_OPEN_ENV, raw)
+        return 2
+
+
+def _external_open_position_count(symbol: str) -> int:
+    positions = mt5.positions_get(symbol=symbol) or mt5.positions_get() or []
+    count = 0
+    for pos in positions:
+        comment = str(getattr(pos, "comment", "") or "").upper()
+        magic = int(getattr(pos, "magic", 0) or 0)
+        pos_symbol = str(getattr(pos, "symbol", "") or "")
+        if pos_symbol != symbol:
+            continue
+        if magic == execution_config.order_magic and comment.startswith(f"{EXTERNAL_SIGNAL_COMMENT_PREFIX}XAUUSD"):
+            count += 1
+    return count
+
+
 def _pick_filling_modes(symbol: str) -> list[int]:
     sym_info = mt5.symbol_info(symbol)
     if sym_info is not None:
@@ -129,17 +153,23 @@ def _pick_filling_modes(symbol: str) -> list[int]:
     return [initial] + [m for m in configured if m != initial]
 
 
-def _build_external_signal_comment(symbol: str, signal_id: str) -> str:
-    """Build an MT5 comment that clearly marks Telegram-sourced trades.
+def _source_channel_name(source: str) -> str:
+    if ":" in source:
+        source = source.split(":", 1)[1]
+    return "".join(c for c in source.upper() if c.isalnum())
 
-    MT5 comments are broker-limited (31 chars in this project) and Exness is
-    happiest with alphanumeric comments, so keep this compact and clean.
-    Example: TELEGRAMXAUUSDmA1B2C3
+
+def _build_external_signal_comment(symbol: str, source: str) -> str:
+    """Build an MT5 comment that marks Telegram XAUUSD channel origin.
+
+    Afu requested the format TELEGRAMXAUUSD[channel].  Broker-side comments may
+    still be truncated after submission, so the high-signal prefix comes first.
+    Example request comment: TELEGRAMXAUUSDJAPSKU
     """
 
-    sym_clean = "".join(c for c in symbol if c.isalnum())
-    sig_clean = "".join(c for c in signal_id.upper() if c.isalnum())[:6]
-    base = f"{EXTERNAL_SIGNAL_COMMENT_PREFIX}{sym_clean}{sig_clean}"
+    sym_clean = "".join(c for c in symbol.upper() if c.isalnum())
+    channel_clean = _source_channel_name(source)
+    base = f"{EXTERNAL_SIGNAL_COMMENT_PREFIX}{sym_clean}{channel_clean}"
     return base[: execution_config.order_comment_max_length]
 
 
@@ -226,7 +256,7 @@ def build_external_order_request(
         "tp": round(tp_price, 5) if tp_price is not None else 0.0,
         "deviation": execution_config.order_deviation,
         "magic": execution_config.order_magic,
-        "comment": _build_external_signal_comment(resolved_symbol, plan.signal_id),
+        "comment": _build_external_signal_comment(resolved_symbol, plan.source),
     }
     request["external_signal"] = {
         "signal_id": plan.signal_id,
@@ -278,6 +308,19 @@ def execute_external_trade_plan(
         return decision
 
     try:
+        resolved_symbol = _resolve_execution_symbol(plan.symbol)
+        max_open = _max_open_external_positions()
+        open_external = _external_open_position_count(resolved_symbol)
+        if max_open >= 0 and open_external >= max_open:
+            decision = ExternalExecutionDecision(
+                plan.signal_id,
+                mode,
+                "blocked",
+                f"max_open_external_positions_reached: {open_external}/{max_open}",
+            )
+            _append_execution_audit(decision, audit_path)
+            return decision
+
         request = build_external_order_request(plan, cfg=cfg)
         mt5_request = {k: v for k, v in request.items() if k != "external_signal"}
         result = None

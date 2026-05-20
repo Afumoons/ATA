@@ -8,6 +8,7 @@ from autonomous_trading_ai.execution.external_signal import (
 )
 from autonomous_trading_ai.execution.external_signal_executor import (
     SignalDuplicateStore,
+    _external_open_position_count,
     build_external_order_request,
     execute_external_trade_plan,
 )
@@ -79,5 +80,20 @@ def test_build_external_order_request_keeps_absolute_sl_on_worse_fill(monkeypatc
     assert request["tp"] == 0.0
     assert request["external_signal"]["sizing_stop_pips"] == 1200.0
     assert request["volume"] == 0.01
-    assert request["comment"].startswith("TELEGRAM")
+    assert request["comment"] == "TELEGRAMXAUUSDMJAPSKU"
     assert "telegram_signal_xau" not in request["comment"]
+
+
+def test_external_open_position_count_filters_telegram_xau(monkeypatch) -> None:
+    positions = [
+        SimpleNamespace(symbol="XAUUSDm", magic=987654, comment="TELEGRAMXAUUSDMJA"),
+        SimpleNamespace(symbol="XAUUSDm", magic=987654, comment="OTHER"),
+        SimpleNamespace(symbol="BTCUSDm", magic=987654, comment="TELEGRAMXAUUSDMJA"),
+        SimpleNamespace(symbol="XAUUSDm", magic=123, comment="TELEGRAMXAUUSDMJA"),
+    ]
+    monkeypatch.setattr(
+        "autonomous_trading_ai.execution.external_signal_executor.mt5.positions_get",
+        lambda symbol=None: positions if symbol is not None else positions,
+    )
+
+    assert _external_open_position_count("XAUUSDm") == 1

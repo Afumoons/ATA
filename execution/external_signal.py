@@ -86,19 +86,19 @@ class ExternalTradePlan:
 _NUMBER_RE = re.compile(r"(?<!\d)(\d{3,5}(?:\.\d+)?)(?!\d)")
 _DIRECTION_RE = re.compile(r"\b(buy|long|sell|short)\b", re.IGNORECASE)
 _SL_RE = re.compile(
-    r"(?:\bsl\b|stop\s*loss|stoploss|invalid(?:ation)?|cut\s*loss|cl)\D{0,24}"
+    r"(?:\bsl\b|stop\s*loss|stoploss|stop\s*lose|stoplose|invalid(?:ation)?|cut\s*loss|cl)\D{0,24}"
     r"(\d{3,5}(?:\.\d+)?)",
     re.IGNORECASE,
 )
 _TP_RE = re.compile(
-    r"(?:\btp\s*\d*\b|take\s*profit|target)\D{0,24}(\d{3,5}(?:\.\d+)?)",
+    r"(?:\btp\s*\d*\b|take\s*profit|takeprofit|take\s*prof|takeprof|target)\D{0,24}(\d{3,5}(?:\.\d+)?)",
     re.IGNORECASE,
 )
 _ENTRY_RE = re.compile(
-    r"(?:entry|open|price|area|zone|@)\D{0,24}(\d{3,5}(?:\.\d+)?)",
+    r"(?:entry|open|price|area|zone|now|@)\D{0,24}(\d{3,5}(?:\.\d+)?)",
     re.IGNORECASE,
 )
-_SYMBOL_RE = re.compile(r"\b(xauusd|xau|gold)\b", re.IGNORECASE)
+_SYMBOL_RE = re.compile(r"\b(xauusd[a-z]*|xau|gold)\b", re.IGNORECASE)
 
 
 def _utc_now() -> str:

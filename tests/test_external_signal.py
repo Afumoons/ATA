@@ -47,6 +47,24 @@ def test_explicit_sl_and_tp1_full_close() -> None:
     assert p.stop_loss_pips_for_sizing == 800.0
 
 
+def test_stoplose_takeprof_channel_format_is_recognized() -> None:
+    p = plan(
+        "🚀 XAUUSDr | SELL NOW 4532.55\n"
+        "STOPLOSE : 4538.55 (60.0 Pips)\n"
+        "TAKEPROF : 4526.55 (60.0 Pips)"
+    )
+
+    assert p.decision == "planned"
+    assert p.direction == "short"
+    assert p.entry_reference == 4532.55
+    assert p.stop_loss_price == 4538.55
+    assert p.stop_loss_mode == "explicit"
+    assert p.take_profit_price == 4526.55
+    assert p.exit_mode == "tp1_full_close"
+    assert p.trailing_stop_pips is None
+    assert "symbol_not_explicit_using_config_canonical_xauusd" not in p.notes
+
+
 def test_reject_wrong_side_stop() -> None:
     p = plan("BUY XAUUSD 4500 SL 4505 TP 4510")
 
