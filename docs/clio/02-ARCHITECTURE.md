@@ -31,9 +31,9 @@ as the source of truth.
 [vector_memory/ research memory guidance]
               ↓
 [scheduler/ orchestration]
-       ↙                    ↘
-[execution/ live routing]   [notifications/ alerts]
-       ↓
+       ↙              ↓              ↘
+[execution/ live routing] [Telegram signal service] [notifications/ alerts]
+       ↓              ↓
  [MT5 order execution + monitoring]
 ```
 
@@ -171,6 +171,10 @@ Typical jobs:
 - `job_update_news`
 - `job_news_alert`
 
+Startup side service:
+
+- `execution.telegram_signal_service.start_telegram_signal_service()` starts the Telegram listener in a daemon thread when Telegram credentials exist in `.env`. This is not an APScheduler job; it is a long-running listener attached to scheduler lifecycle.
+
 ### 7. Live execution layer – `execution/`
 
 Responsibilities:
@@ -190,6 +194,17 @@ Important files:
 - `execution/live_observer.py`
 - `execution/strategy_live_stats.py`
 - `execution/live_decay.py`
+- `execution/external_signal.py`
+- `execution/external_signal_executor.py`
+- `execution/telegram_signal_service.py`
+
+External signal behavior:
+
+- parses Telegram mentor messages into XAUUSD-only `ExternalTradePlan` records
+- defaults to shadow mode and writes audits without trading
+- sizes live external orders from actual fill-to-absolute-SL distance
+- blocks live external orders unless both `ATA_TELEGRAM_SIGNAL_MODE=auto_live` and `ATA_TELEGRAM_SIGNAL_LIVE=true` are set
+- currently records no-TP trailing intent but does not yet run an SL-modification loop
 
 Important state artifacts:
 
@@ -314,3 +329,5 @@ If you need one sentence to remember the architecture:
 - 2026-04-03: Added Track B audit artifacts to the execution-state architecture summary.
 
 - 2026-03-27: Rewrote the architecture doc to match the implemented pass 3 module graph, state artifacts, and specialist-routing execution model.
+
+- 2026-05-20: Added Telegram external-signal service architecture, scheduler autostart behavior, audit artifacts, and guarded live-mode constraints.

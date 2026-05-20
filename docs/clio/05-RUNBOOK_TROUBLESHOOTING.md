@@ -105,17 +105,70 @@ If it was degraded, check per-strategy live PnL, recent performance windows, and
 - **Chroma/research memory issue**
   - research may degrade, but live execution should still mostly work from existing pool state
 
-## 4. Emergency stop
+## 4. Telegram signal listener issues
+
+`scheduler.main` autostarts the Telegram mentor-signal listener when `TELEGRAM_API_ID` and `TELEGRAM_API_HASH` are available in `.env` / environment.
+
+Fast checks:
+
+1. Confirm `.env` contains:
+
+   ```text
+   TELEGRAM_API_ID=...
+   TELEGRAM_API_HASH=...
+   TELEGRAM_SIGNAL_SESSION=ata_telegram_signals
+   ```
+
+2. Confirm autostart is not disabled:
+
+   ```text
+   ATA_TELEGRAM_SIGNAL_AUTOSTART=false
+   ```
+
+   If this exists, the listener intentionally will not start.
+
+3. Check mode flags:
+
+   ```text
+   ATA_TELEGRAM_SIGNAL_MODE=shadow
+   # live requires both:
+   # ATA_TELEGRAM_SIGNAL_MODE=auto_live
+   # ATA_TELEGRAM_SIGNAL_LIVE=true
+   ```
+
+4. Check audit files:
+
+   ```text
+   execution/external_signal_audit.jsonl
+   execution/external_signal_execution.jsonl
+   execution/external_signal_seen.json
+   ```
+
+5. For first-time Telegram login, run standalone once so Telethon can ask for login code / 2FA:
+
+   ```powershell
+   cd C:\laragon\www
+   python -m autonomous_trading_ai.scripts.telegram_signal_listener --channel japsku --history 5 --mode shadow
+   ```
+
+Known limitation: no-TP signals are recorded as trailing-stop plans, but the background SL-modification loop is not implemented yet.
+
+## 5. Emergency stop
 
 If you want to stop new trades immediately:
 
 1. stop the scheduler process
    - `Ctrl + C` in the scheduler terminal
 2. disable MT5 AutoTrading or close MT5
+3. for Telegram external-signal live mode, also remove/unset:
+
+   ```text
+   ATA_TELEGRAM_SIGNAL_LIVE=true
+   ```
 
 Without the scheduler and MT5 connection, no new automated orders will be sent.
 
-## 5. Quick status snapshot
+## 6. Quick status snapshot
 
 Use:
 
@@ -131,7 +184,7 @@ This is the fastest operator-facing snapshot for:
 - live PnL summaries
 - open-trade state when available
 
-## 6. If routing feels too strict
+## 7. If routing feels too strict
 
 Pass 3 intentionally makes the system more selective.
 
@@ -151,7 +204,7 @@ to distinguish:
 - broken pipeline
 - healthy but flat behavior
 
-## 7. If state files look inconsistent
+## 8. If state files look inconsistent
 
 Important live-state artifacts to inspect:
 
@@ -167,7 +220,7 @@ Important live-state artifacts to inspect:
 If something looks corrupted or clearly stale, stop the scheduler before doing
 manual repair.
 
-## 8. When everything feels wrong
+## 9. When everything feels wrong
 
 Minimum safe sequence:
 
@@ -183,6 +236,7 @@ Safety rule:
 
 ## Changelog (Docs)
 
+- 2026-05-20: Added Telegram signal listener troubleshooting, autostart/env checks, audit files, and live-mode emergency stop note.
 - 2026-04-04: Updated troubleshooting guidance for live decay review signals and concentration-aware routing behavior.
 - 2026-04-03: Added new Track B audit files to the troubleshooting checklist.
 

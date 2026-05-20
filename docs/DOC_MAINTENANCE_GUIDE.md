@@ -12,6 +12,7 @@ The project now has a clearer **pass 3 shape**:
 - stronger live gating and monitoring
 - best-effort alerting / webhook plumbing
 - richer operator and setup docs
+- guarded external Telegram signal ingestion docs
 
 Documentation should reflect what is actually implemented, not what sounds nice.
 
@@ -42,6 +43,7 @@ Operational / architectural docs:
 - `docs/clio/05-RUNBOOK_TROUBLESHOOTING.md`
 - `docs/clio/06-M15_IMPROVEMENT_ROADMAP.md`
 - `docs/clio/07-ROUTING_LAYER_AUDIT_AND_TASKLIST.md`
+- `docs/telegram_signal_hook.md`
 
 Instructions / runbooks:
 
@@ -84,6 +86,7 @@ When checking a module, prefer verifying:
 - actual scheduler jobs in `scheduler/main.py`
 - actual state/status names in strategy pool records
 - actual alert paths and limitations
+- Telegram signal listener env flags, audit artifacts, and live-mode guard behavior
 
 For pass 3 and later hardening work, double-check whether docs reflect:
 
@@ -148,3 +151,4 @@ Before finalizing doc work:
 
 - 2026-04-04: Expanded verification checklist for post-audit hardening docs (ambiguity diagnostics, live decay, concentration control).
 - 2026-03-27: Refreshed the maintenance guide for pass 3 and expanded scope to include architecture, runbooks, and instruction files.
+- 2026-05-20: Added Telegram signal hook documentation coverage expectations and `docs/telegram_signal_hook.md` to maintenance scope.

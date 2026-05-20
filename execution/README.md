@@ -11,6 +11,7 @@ It is responsible for:
 - tracking daily account state and drawdown
 - wiring closed MT5 deals back into account and strategy state
 - maintaining open-trade and per-strategy live snapshots
+- parsing and guarding externally sourced Telegram XAUUSD signal plans
 
 Recent Track B / Track C work plus the latest post-audit hardening significantly
 strengthen this module by making it more explicitly **routing-aware**,
@@ -147,6 +148,36 @@ These manual buckets are bookkeeping-only. Engine governance / live decay /
 strategy-quality logic must ignore them so they do not contaminate automated
 strategy health decisions.
 
+### `external_signal.py`
+
+Side-effect-free parser/planner for externally sourced mentor signals.
+
+Current rules:
+
+- XAUUSD only
+- risk 1% per signal
+- missing SL defaults to 500 pips
+- missing TP becomes a 500-pip trailing-stop plan
+- explicit TP means full close at TP1
+
+### `external_signal_executor.py`
+
+Guarded execution bridge for external signal plans.
+
+Important behavior:
+
+- duplicate signal store prevents repeat execution
+- shadow mode writes an execution decision audit and does not send MT5 orders
+- auto-live requires `ATA_TELEGRAM_SIGNAL_LIVE=true`
+- live order sizing uses actual market fill reference to the absolute invalidation SL, so a worse fill reduces lot size rather than widening SL
+- no-TP trailing intent is recorded, but the SL-modification loop is still a known gap
+
+### `telegram_signal_service.py`
+
+Background service wrapper used by `scheduler.main`.
+
+It loads `.env`, checks Telegram credentials, and starts the Telethon listener in a daemon thread when autostart is enabled.
+
 ### `live_decay.py`
 
 Provides a lightweight proactive decay-assessment layer on top of realized live
@@ -213,6 +244,18 @@ Useful for diagnosing broker-id lineage mismatches.
 Each unmatched row may also include a `manual_bucket` field showing the
 explicit bucket name used in `strategy_live_stats.json` (for example
 `manual_unmatched_XAUUSDC`).
+
+### `execution/external_signal_audit.jsonl`
+
+Append-only parser audit for Telegram/external messages. Stores raw message context and normalized trade plan decisions.
+
+### `execution/external_signal_execution.jsonl`
+
+Append-only execution decision audit for external signal plans. In shadow mode this records what would happen without sending orders.
+
+### `execution/external_signal_seen.json`
+
+Duplicate-protection store keyed by external `signal_id`.
 
 ### `execution/pool_audit_trail.json`
 
@@ -508,3 +551,5 @@ If you want to experiment more aggressively:
 - 2026-03-27: Updated for pass 3 with explicit routing behavior, expanded live
   state artifacts (`open_trades.json`, `ticket_strategy_map.json`, observer
   flows), and stronger emphasis on the specialist-dispatch model.
+
+- 2026-05-20: Added external Telegram signal parser/executor/service docs, audit artifacts, absolute-SL sizing behavior, and live guard limitations.

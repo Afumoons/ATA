@@ -12,6 +12,7 @@ system built around:
 - **vector-backed research memory**
 - **optional macro-news awareness and WhatsApp alerts**
 - **operator UI surfaces via read-only backend API + frontend dashboard**
+- **guarded Telegram mentor-signal ingestion for XAUUSD shadow/live workflows**
 
 This README is the **top-level map** for the current system state after the
 recent Track A / Track B / Track C hardening work plus the 2026-04-08
@@ -62,7 +63,14 @@ The project is organized into a few core loops:
    - `notifications/whatsapp_notifier.py` sends best-effort alerts via webhook.
    - `webhook_server.py` provides a small FastAPI receiver for outbound alerts.
 
-8. **Expose operator-facing UI surfaces**
+8. **Ingest external Telegram mentor signals**
+   - `execution/external_signal.py` parses changing XAUUSD signal formats into a normalized trade plan.
+   - `execution/external_signal_executor.py` provides duplicate protection, audit logging, absolute-SL sizing, and a guarded MT5 execution bridge.
+   - `execution/telegram_signal_service.py` lets `scheduler.main` autostart the listener when Telegram credentials exist in `.env`.
+   - `scripts/telegram_signal_listener.py` can also run standalone for shadow validation.
+   - Live orders require both `ATA_TELEGRAM_SIGNAL_MODE=auto_live` and `ATA_TELEGRAM_SIGNAL_LIVE=true`; default is shadow.
+
+9. **Expose operator-facing UI surfaces**
    - `ui_api/` provides the read-only backend API for diagnostics/overview data.
    - `ui-front/` is the active Next.js frontend for the operator dashboard.
    - legacy `ui/` should be treated as reference-only unless explicitly revived.
@@ -202,7 +210,20 @@ The older React UI in `ui/` is legacy/reference unless explicitly reactivated.
 6. `risk/manager.py` validates each trade before order submission.
 7. Successful trades are logged and tracked for later monitoring.
 
-### D. Live monitoring cycle
+### D. External Telegram signal cycle
+
+1. If `TELEGRAM_API_ID` and `TELEGRAM_API_HASH` are present, `scheduler.main` autostarts the Telegram listener in a daemon background thread.
+2. The listener reads `japsku` by default and writes parser/execution audits.
+3. Messages are parsed as XAUUSD-only external signals with Afu's current rules:
+   - risk 1% per signal,
+   - missing SL = 500 pips from entry/fill reference,
+   - missing TP = 500-pip trailing plan,
+   - TP present = full close at TP1.
+4. Default mode is shadow, so no external-signal orders are sent.
+5. Auto-live requires `ATA_TELEGRAM_SIGNAL_MODE=auto_live` plus `ATA_TELEGRAM_SIGNAL_LIVE=true`.
+6. Known limitation: no-TP trailing-stop intent is recorded, but the background SL-modification loop is not implemented yet.
+
+### E. Live monitoring cycle
 
 1. `live_monitor.py` polls account equity and closed MT5 deals.
 2. Daily PnL/trade counts are pushed into `live_state.json`.
@@ -213,7 +234,7 @@ The older React UI in `ui/` is legacy/reference unless explicitly reactivated.
 6. If portfolio drawdown breaches the configured threshold, the circuit breaker
    disables all `active` strategies.
 
-### E. Alerting / webhook path
+### F. Alerting / webhook path
 
 - News alerts and degradation alerts can be sent through
   `notifications/whatsapp_notifier.py`.
@@ -395,3 +416,4 @@ npm run build
 - 2026-04-04: Refreshed for post-audit hardening work: negative-edge exploratory fallback guard, same-bar ambiguity instrumentation, proactive live decay detection v1, and concentration control v1/v2.
 - 2026-04-03: Refreshed the top-level map for Track A / B / C work, including
   research hardening, live attribution/audit artifacts, and XAU exit hardening.
+- 2026-05-20: Documented Telegram mentor-signal ingestion, scheduler autostart, guarded live flags, and current trailing-stop limitation.

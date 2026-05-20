@@ -16,13 +16,13 @@ for:
 
 ## General Usage
 
-Run scripts from the **workspace root** so the package imports correctly.
+Run scripts from the **package parent directory** so the package imports correctly.
 
 Typical pattern:
 
 ```powershell
-cd C:\Users\afusi\.openclaw\workspace
-.\autonomous_trading_ai\.venv\Scripts\python.exe -m autonomous_trading_ai.scripts.<script_name>
+cd C:\laragon\www
+python -m autonomous_trading_ai.scripts.<script_name>
 ```
 
 ## What This Folder Contains
@@ -47,6 +47,7 @@ Current scripts in this folder include:
 - `reset_strategy_memory.py`
 - `scrape_news.py`
 - `reconcile_strategy_live_stats.py`
+- `telegram_signal_listener.py`
 
 ## Script Categories
 
@@ -82,6 +83,10 @@ Current scripts in this folder include:
 
 - `scrape_news.py`
 - `reset_strategy_memory.py`
+
+### External signal ingestion
+
+- `telegram_signal_listener.py`
 
 ## Pass 3 Relevance
 
@@ -136,6 +141,19 @@ trades.
 Useful maintenance helper for reconstructing/reconciling strategy statuses when
 pool state needs repair or normalization.
 
+### `telegram_signal_listener.py`
+
+Telethon-based Telegram public-channel/user-session listener for mentor signals.
+
+Typical shadow run:
+
+```powershell
+cd C:\laragon\www
+python -m autonomous_trading_ai.scripts.telegram_signal_listener --channel japsku --history 20 --mode shadow
+```
+
+It is also autostarted by `scheduler.main` when Telegram credentials are configured in `.env`.
+
 ### `scrape_news.py`
 
 Standalone Forex Factory scraper useful for manual inspection, cache refresh,
@@ -172,10 +190,11 @@ Treat as production-sensitive:
 
 - `debug_signals_for_latest_bar.py`
 - `manual_execute_trade.py`
+- `telegram_signal_listener.py --mode auto_live`
 
 ## Gotchas / Notes
 
-- Scripts assume the package is importable from workspace root.
+- Scripts assume the package is importable from the package parent directory (`C:\laragon\www`).
 - Some scripts rely on the project venv having optional dependencies installed.
 - Any script touching MT5 should be assumed capable of interacting with real
   account state unless proven otherwise.
@@ -191,3 +210,5 @@ Treat as production-sensitive:
 - 2026-03-27: Updated for pass 3, refreshed the inventory, added newer scripts
   such as `rebuild_pool_status.py`, and reframed the folder around operator
   visibility/debugging for a more selective live-routing system.
+
+- 2026-05-20: Added `telegram_signal_listener.py`, corrected package-parent run path, and documented shadow/autostart/live sensitivity.

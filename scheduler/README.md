@@ -12,6 +12,7 @@ It wires together:
 - live signal execution
 - live monitoring and safety actions
 - outbound news / degradation alerts
+- optional Telegram mentor-signal listener autostart
 
 If the rest of the project is a collection of subsystems, `scheduler/` is what
 turns them into a continuously running machine.
@@ -143,6 +144,7 @@ Typical startup behavior:
 - create the APScheduler instance
 - register recurring jobs
 - start the background scheduler
+- autostart the Telegram signal listener in a daemon thread when `TELEGRAM_API_ID` and `TELEGRAM_API_HASH` are available from environment/`.env`
 
 ### `shutdown_scheduler(sched)`
 
@@ -156,10 +158,11 @@ Typical shutdown behavior:
 Run:
 
 ```powershell
+cd C:\laragon\www
 python -m autonomous_trading_ai.scheduler.main
 ```
 
-This starts the loop and keeps it alive until interrupted.
+This starts the loop and keeps it alive until interrupted. If Telegram credentials exist in `C:\laragon\www\autonomous_trading_ai\.env`, the `japsku` signal listener also starts automatically in shadow mode unless disabled.
 
 ## Configuration Notes
 
@@ -171,6 +174,23 @@ The scheduler owns practical runtime choices such as:
 - effective live risk cap passed into execution
 
 These are typically defined in `main.py` plus shared config from `config.py`.
+
+Telegram signal listener env knobs live in `.env` / process environment:
+
+```text
+TELEGRAM_API_ID=...
+TELEGRAM_API_HASH=...
+TELEGRAM_SIGNAL_SESSION=ata_telegram_signals
+ATA_TELEGRAM_SIGNAL_AUTOSTART=true
+ATA_TELEGRAM_SIGNAL_CHANNEL=japsku
+ATA_TELEGRAM_SIGNAL_MODE=shadow
+ATA_TELEGRAM_SIGNAL_HISTORY=0
+# live orders require both:
+# ATA_TELEGRAM_SIGNAL_MODE=auto_live
+# ATA_TELEGRAM_SIGNAL_LIVE=true
+```
+
+Set `ATA_TELEGRAM_SIGNAL_AUTOSTART=false` to run scheduler without the Telegram listener.
 
 ## How It Connects the Project
 
@@ -208,3 +228,5 @@ usually the first file to inspect.
   degradation integration.
 - 2026-03-27: Updated for pass 3 to emphasize scheduler sequencing,
   specialist-routing orchestration, and policy/state coordination.
+
+- 2026-05-20: Documented Telegram signal listener autostart from `scheduler.main`, `.env` knobs, and live-mode guard flags.
