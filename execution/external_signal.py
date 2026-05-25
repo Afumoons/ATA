@@ -84,7 +84,7 @@ class ExternalTradePlan:
 
 
 _NUMBER_RE = re.compile(r"(?<!\d)(\d{3,5}(?:\.\d+)?)(?!\d)")
-_DIRECTION_RE = re.compile(r"\b(buy|long|sell|short)\b", re.IGNORECASE)
+_DIRECTION_RE = re.compile(r"\b(bu+y+|long|se+l+|short)\b", re.IGNORECASE)
 _SL_RE = re.compile(
     r"(?:\bsl\b|stop\s*loss|stoploss|stop\s*lose|stoplose|invalid(?:ation)?|cut\s*loss|cl)\D{0,24}"
     r"(\d{3,5}(?:\.\d+)?)",
@@ -150,7 +150,7 @@ def parse_external_signal(
     direction: Optional[Direction] = None
     if direction_match:
         word = direction_match.group(1).lower()
-        direction = "long" if word in {"buy", "long"} else "short"
+        direction = "long" if word.startswith("b") or word == "long" else "short"
     else:
         notes.append("no_direction_detected")
 

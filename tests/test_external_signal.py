@@ -65,6 +65,16 @@ def test_stoplose_takeprof_channel_format_is_recognized() -> None:
     assert "symbol_not_explicit_using_config_canonical_xauusd" not in p.notes
 
 
+def test_stretched_sell_word_is_recognized() -> None:
+    p = plan("GOLD SELLLLLL NOW")
+
+    assert p.decision == "planned"
+    assert p.direction == "short"
+    assert p.entry_reference is None
+    assert p.stop_loss_mode == "default_from_fill"
+    assert p.exit_mode == "trailing_stop"
+
+
 def test_reject_wrong_side_stop() -> None:
     p = plan("BUY XAUUSD 4500 SL 4505 TP 4510")
 
