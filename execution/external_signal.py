@@ -54,6 +54,7 @@ class ParsedExternalSignal:
     symbol: str
     entry: Optional[float]
     sl: Optional[float]
+    sl_pips: Optional[float]
     tp: list[float] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
 
@@ -88,6 +89,11 @@ _DIRECTION_RE = re.compile(r"\b(bu+y+|long|se+l+|short)\b", re.IGNORECASE)
 _SL_RE = re.compile(
     r"(?:\bsl\b|stop\s*loss|stoploss|stop\s*lose|stoplose|invalid(?:ation)?|cut\s*loss|cl)\D{0,24}"
     r"(\d{3,5}(?:\.\d+)?)",
+    re.IGNORECASE,
+)
+_SL_PIPS_RE = re.compile(
+    r"(?:\bsl\b|stop\s*loss|stoploss|stop\s*lose|stoplose|invalid(?:ation)?|cut\s*loss|cl)\D{0,24}"
+    r"(\d{1,3}(?:\.\d+)?)\s*(?:pip|pips)\b",
     re.IGNORECASE,
 )
 _TP_RE = re.compile(
@@ -129,6 +135,17 @@ def _numbers(raw_message: str) -> list[float]:
     return out
 
 
+def _display_xau_pips_to_internal_pips(display_pips: float, cfg: ExternalSignalConfig) -> float:
+    """Convert mentor/channel XAU pip wording to internal pip-size units.
+
+    The source channel labels a 6.00 XAUUSD move as "60.0 Pips" while the
+    execution config uses a 0.01 pip size. Therefore a displayed 60-pip stop is
+    600 internal sizing pips, matching explicit STOPLOSE/TAKEPROF examples.
+    """
+
+    return (display_pips * 0.1) / cfg.pip_size
+
+
 def parse_external_signal(
     raw_message: str,
     *,
@@ -159,6 +176,7 @@ def parse_external_signal(
 
     entry = _first_float(_ENTRY_RE.search(text))
     sl = _first_float(_SL_RE.search(text))
+    sl_pips = _first_float(_SL_PIPS_RE.search(text)) if sl is None else None
     tp = [float(x) for x in _TP_RE.findall(text)]
 
     if entry is None and direction_match:
@@ -177,6 +195,7 @@ def parse_external_signal(
         symbol=cfg.canonical_symbol,
         entry=entry,
         sl=sl,
+        sl_pips=sl_pips,
         tp=tp,
         notes=notes,
     )
@@ -216,11 +235,19 @@ def build_trade_plan(
     sl = parsed.sl
     sl_mode = "explicit"
     if sl is None:
-        sl_mode = "default_from_entry" if parsed.entry is not None else "default_from_fill"
+        explicit_sl_pips = None
+        if parsed.sl_pips is not None:
+            explicit_sl_pips = _display_xau_pips_to_internal_pips(parsed.sl_pips, cfg)
+            sl_mode = "explicit_pips_from_entry" if parsed.entry is not None else "explicit_pips_from_fill"
+        else:
+            sl_mode = "default_from_entry" if parsed.entry is not None else "default_from_fill"
+
         if parsed.entry is not None:
-            distance = cfg.default_sl_pips * cfg.pip_size
+            sizing_pips = explicit_sl_pips if explicit_sl_pips is not None else cfg.default_sl_pips
+            distance = sizing_pips * cfg.pip_size
             sl = parsed.entry - distance if parsed.direction == "long" else parsed.entry + distance
-        notes.append("sl_missing_default_500_pips")
+        if explicit_sl_pips is None:
+            notes.append("sl_missing_default_500_pips")
 
     tp1 = parsed.tp[0] if parsed.tp else None
     exit_mode: ExitMode = "tp1_full_close" if tp1 is not None else "trailing_stop"
@@ -231,6 +258,8 @@ def build_trade_plan(
     stop_pips = None
     if parsed.entry is not None and sl is not None:
         stop_pips = abs(parsed.entry - sl) / cfg.pip_size
+    elif parsed.sl_pips is not None:
+        stop_pips = _display_xau_pips_to_internal_pips(parsed.sl_pips, cfg)
     elif sl_mode == "default_from_fill":
         stop_pips = cfg.default_sl_pips
 

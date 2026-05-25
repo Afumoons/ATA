@@ -81,3 +81,34 @@ def test_build_external_order_request_keeps_absolute_sl_on_worse_fill(monkeypatc
     assert request["volume"] == 0.01
     assert request["comment"] == "TLGXAUUSDMJAPSKU"
     assert "telegram_signal_xau" not in request["comment"]
+
+
+def test_build_external_order_request_uses_explicit_pip_sl_from_fill(monkeypatch) -> None:
+    plan = _plan("GOLD SELL NOW SL 60 PIP")
+
+    monkeypatch.setattr(
+        "autonomous_trading_ai.execution.external_signal_executor._resolve_execution_symbol",
+        lambda symbol: "XAUUSDm",
+    )
+    monkeypatch.setattr(
+        "autonomous_trading_ai.execution.external_signal_executor._clamp_volume",
+        lambda volume, symbol: round(volume, 2),
+    )
+    monkeypatch.setattr(
+        "autonomous_trading_ai.execution.external_signal_executor.validate_trade",
+        lambda account, req, equity_peak: SimpleNamespace(allowed=True, reason="ok"),
+    )
+    monkeypatch.setattr(
+        "autonomous_trading_ai.execution.external_signal_executor._account_state",
+        lambda: SimpleNamespace(equity=1000.0, balance=1000.0, open_positions=0),
+    )
+    monkeypatch.setattr(
+        "autonomous_trading_ai.execution.external_signal_executor.mt5.symbol_info_tick",
+        lambda symbol: SimpleNamespace(ask=4507.0, bid=4506.5),
+    )
+
+    request = build_external_order_request(plan)
+
+    assert request["price"] == 4506.5
+    assert request["sl"] == 4512.5
+    assert request["external_signal"]["sizing_stop_pips"] == 600.0

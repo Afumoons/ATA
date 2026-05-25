@@ -161,7 +161,8 @@ def _derive_prices_from_plan(
 
     sl = plan.stop_loss_price
     if sl is None:
-        distance = cfg.default_sl_pips * cfg.pip_size
+        sizing_pips = plan.stop_loss_pips_for_sizing or cfg.default_sl_pips
+        distance = sizing_pips * cfg.pip_size
         sl = fill_reference - distance if plan.direction == "long" else fill_reference + distance
 
     tp = plan.take_profit_price

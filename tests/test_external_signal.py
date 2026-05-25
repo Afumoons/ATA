@@ -75,6 +75,29 @@ def test_stretched_sell_word_is_recognized() -> None:
     assert p.exit_mode == "trailing_stop"
 
 
+def test_display_sl_pips_from_entry_uses_channel_xau_pip_convention() -> None:
+    p = plan("GOLD BUY 4502 SL 60 PIP")
+
+    assert p.decision == "planned"
+    assert p.direction == "long"
+    assert p.entry_reference == 4502.0
+    assert p.stop_loss_price == 4496.0
+    assert p.stop_loss_mode == "explicit_pips_from_entry"
+    assert p.stop_loss_pips_for_sizing == 600.0
+    assert "sl_missing_default_500_pips" not in p.notes
+
+
+def test_display_sl_pips_without_entry_is_kept_for_fill_based_execution() -> None:
+    p = plan("GOLD SELL NOW SL 60 PIP")
+
+    assert p.decision == "planned"
+    assert p.direction == "short"
+    assert p.entry_reference is None
+    assert p.stop_loss_price is None
+    assert p.stop_loss_mode == "explicit_pips_from_fill"
+    assert p.stop_loss_pips_for_sizing == 600.0
+
+
 def test_reject_wrong_side_stop() -> None:
     p = plan("BUY XAUUSD 4500 SL 4505 TP 4510")
 
