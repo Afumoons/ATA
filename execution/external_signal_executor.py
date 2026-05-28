@@ -24,6 +24,7 @@ from ..logging_utils import get_logger
 from ..risk.manager import AccountState, RiskDecision, TradeRequest, validate_trade
 from .engine import _clamp_volume, _resolve_execution_symbol
 from .external_signal import ExternalSignalConfig, ExternalTradePlan, resolve_default_pip_value
+from .external_signal_trailing import register_external_trailing_state
 from .trade_context_journal import register_trade_entry_context
 
 logger = get_logger(__name__)
@@ -321,6 +322,22 @@ def execute_external_trade_plan(
             )
         except Exception:
             logger.exception("Failed to register external signal trade context")
+        if plan.exit_mode == "trailing_stop" and plan.trailing_stop_pips:
+            try:
+                register_external_trailing_state(
+                    ticket=int(result.order),
+                    signal_id=plan.signal_id,
+                    source=plan.source,
+                    symbol=str(mt5_request["symbol"]),
+                    direction=plan.direction,
+                    entry_price=float(mt5_request["price"]),
+                    initial_sl=float(mt5_request["sl"]),
+                    trailing_stop_pips=float(plan.trailing_stop_pips),
+                    pip_size=float(plan.pip_size),
+                    tp=float(mt5_request.get("tp") or 0.0),
+                )
+            except Exception:
+                logger.exception("Failed to register external signal trailing state")
         decision = ExternalExecutionDecision(plan.signal_id, mode, "executed", "ok", request=request, result=raw_result)
         _append_execution_audit(decision, audit_path)
         return decision

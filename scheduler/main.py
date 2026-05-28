@@ -1802,6 +1802,15 @@ def job_live_monitor() -> None:
         logger.exception("job_live_monitor exit_rule_eval error: %s", e)
 
     try:
+        from ..execution.external_signal_trailing import update_external_signal_trailing_stops
+
+        trailing_summary = update_external_signal_trailing_stops()
+        if any(trailing_summary.get(k, 0) for k in ("updated", "errors", "removed_closed")):
+            logger.info("job_live_monitor external signal trailing summary: %s", trailing_summary)
+    except Exception as e:
+        logger.exception("job_live_monitor external signal trailing error: %s", e)
+
+    try:
         update_live_stats()
     except Exception as e:
         logger.exception("job_live_monitor error: %s", e)

@@ -220,8 +220,8 @@ The older React UI in `ui/` is legacy/reference unless explicitly reactivated.
    - missing TP = 500-pip trailing plan,
    - TP present = full close at TP1.
 4. Default mode is shadow, so no external-signal orders are sent.
-5. Auto-live requires `ATA_TELEGRAM_SIGNAL_MODE=auto_live` plus `ATA_TELEGRAM_SIGNAL_LIVE=true`; channel-sourced trades are tagged with `TELEGRAM...` MT5 comments.
-6. Known limitation: no-TP trailing-stop intent is recorded, but the background SL-modification loop is not implemented yet.
+5. Auto-live requires `ATA_TELEGRAM_SIGNAL_MODE=auto_live` plus `ATA_TELEGRAM_SIGNAL_LIVE=true`; channel-sourced trades are tagged with `TLG...` MT5 comments.
+6. No-TP trailing-stop signals register per-ticket state in `execution/external_signal_trailing_state.json`; `job_live_monitor` moves SL with MT5 `TRADE_ACTION_SLTP` when price improves and audits changes to `execution/external_signal_trailing_audit.jsonl`.
 
 ### E. Live monitoring cycle
 
