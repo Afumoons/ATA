@@ -16,7 +16,10 @@ import tempfile
 from pathlib import Path
 from typing import Any, Literal, Optional
 
-import MetaTrader5 as mt5
+try:
+    import MetaTrader5 as mt5  # type: ignore
+except Exception:  # pragma: no cover - optional at import time for tests/non-MT5 hosts
+    mt5 = None
 
 from ..logging_utils import get_logger
 
@@ -135,10 +138,18 @@ def register_external_trailing_state(
 
 
 def _position_map() -> dict[str, Any]:
+    if mt5 is None:
+        return {}
     positions = mt5.positions_get()
     if not positions:
         return {}
     return {str(getattr(pos, "ticket", "")): pos for pos in positions if getattr(pos, "ticket", None) is not None}
+
+
+def _trade_constant(name: str) -> Any:
+    if mt5 is None:
+        raise RuntimeError("MetaTrader5 module is unavailable")
+    return getattr(mt5, name)
 
 
 def _round_price(value: float) -> float:
@@ -160,6 +171,14 @@ def _current_position_tp(pos: Any, fallback: float) -> float:
         return float(fallback or 0.0)
 
 
+def _valid_price(value: Any) -> Optional[float]:
+    try:
+        price = float(value)
+    except (TypeError, ValueError):
+        return None
+    return price if price > 0 else None
+
+
 def _build_trailing_update(rec: dict[str, Any], pos: Any) -> tuple[Optional[dict[str, Any]], dict[str, Any]]:
     ticket = str(rec.get("ticket") or getattr(pos, "ticket", ""))
     symbol = str(getattr(pos, "symbol", None) or rec.get("symbol") or "")
@@ -170,7 +189,7 @@ def _build_trailing_update(rec: dict[str, Any], pos: Any) -> tuple[Optional[dict
     if not symbol or direction not in {"long", "short"} or distance <= 0:
         return None, {"reason": "invalid_state", "ticket": ticket, "symbol": symbol, "direction": direction}
 
-    tick = mt5.symbol_info_tick(symbol)
+    tick = mt5.symbol_info_tick(symbol) if mt5 is not None else None
     if tick is None:
         return None, {"reason": "no_tick", "ticket": ticket, "symbol": symbol}
 
@@ -180,12 +199,16 @@ def _build_trailing_update(rec: dict[str, Any], pos: Any) -> tuple[Optional[dict
     lowest = float(rec.get("lowest_price") or rec.get("entry_price") or 0.0)
 
     if direction == "long":
-        favorable = float(tick.bid)
+        favorable = _valid_price(getattr(tick, "bid", None))
+        if favorable is None:
+            return None, {"reason": "invalid_tick", "ticket": ticket, "symbol": symbol, "side": "bid"}
         highest = max(highest, favorable)
         candidate_sl = _round_price(highest - distance)
         should_update = candidate_sl > old_sl
     else:
-        favorable = float(tick.ask)
+        favorable = _valid_price(getattr(tick, "ask", None))
+        if favorable is None:
+            return None, {"reason": "invalid_tick", "ticket": ticket, "symbol": symbol, "side": "ask"}
         lowest = min(lowest, favorable)
         candidate_sl = _round_price(lowest + distance)
         should_update = old_sl <= 0 or candidate_sl < old_sl
@@ -204,7 +227,7 @@ def _build_trailing_update(rec: dict[str, Any], pos: Any) -> tuple[Optional[dict
         }
 
     request = {
-        "action": mt5.TRADE_ACTION_SLTP,
+        "action": _trade_constant("TRADE_ACTION_SLTP"),
         "position": int(ticket),
         "symbol": symbol,
         "sl": candidate_sl,
@@ -238,8 +261,21 @@ def update_external_signal_trailing_stops(
     trail_audit = audit_path or DEFAULT_TRAILING_AUDIT
     data = _load_state(state_path)
     positions_state: dict[str, dict[str, Any]] = data.setdefault("positions", {})
-    open_positions = _position_map()
     summary = {"tracked": len(positions_state), "updated": 0, "skipped": 0, "errors": 0, "removed_closed": 0}
+    if mt5 is None:
+        if positions_state:
+            summary["skipped"] = len(positions_state)
+            _append_audit(
+                {
+                    "event": "external_trailing_skipped",
+                    "reason": "mt5_unavailable",
+                    "tracked": len(positions_state),
+                },
+                trail_audit,
+            )
+        return summary
+
+    open_positions = _position_map()
 
     changed = False
     for ticket in list(positions_state.keys()):
@@ -257,6 +293,7 @@ def update_external_signal_trailing_stops(
             if request is None:
                 summary["skipped"] += 1
                 changed = True
+                _append_audit({"event": "external_trailing_skipped", **meta}, trail_audit)
                 continue
             result = mt5.order_send(request)
             if result is None:
@@ -264,7 +301,7 @@ def update_external_signal_trailing_stops(
                 _append_audit({"event": "external_trailing_sl_error", **meta, "request": request, "reason": f"order_send_none:{mt5.last_error()}"}, trail_audit)
                 continue
             raw_result = result._asdict() if hasattr(result, "_asdict") else {"retcode": getattr(result, "retcode", None)}
-            if getattr(result, "retcode", None) != mt5.TRADE_RETCODE_DONE:
+            if getattr(result, "retcode", None) != _trade_constant("TRADE_RETCODE_DONE"):
                 summary["errors"] += 1
                 _append_audit({"event": "external_trailing_sl_error", **meta, "request": request, "result": raw_result, "reason": f"retcode:{getattr(result, 'retcode', None)}"}, trail_audit)
                 continue

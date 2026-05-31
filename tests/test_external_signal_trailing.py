@@ -9,7 +9,7 @@ from autonomous_trading_ai.execution.external_signal_trailing import (
 )
 
 
-def _mt5_stub(*, bid: float, ask: float, positions: list, sent: list):
+def _mt5_stub(*, bid: float | None, ask: float | None, positions: list, sent: list):
     return SimpleNamespace(
         POSITION_TYPE_BUY=0,
         POSITION_TYPE_SELL=1,
@@ -163,3 +163,60 @@ def test_update_trailing_stop_removes_closed_positions(tmp_path: Path, monkeypat
     assert sent == []
     data = json.loads(path.read_text(encoding="utf-8"))
     assert data["positions"] == {}
+
+
+def test_update_trailing_stop_skips_when_mt5_dependency_unavailable(tmp_path: Path, monkeypatch) -> None:
+    path = tmp_path / "trailing.json"
+    audit = tmp_path / "audit.jsonl"
+    register_external_trailing_state(
+        ticket=123,
+        signal_id="sig-1",
+        source="telegram:japsku",
+        symbol="XAUUSD",
+        direction="long",
+        entry_price=4500.0,
+        initial_sl=4495.0,
+        trailing_stop_pips=500.0,
+        pip_size=0.01,
+        path=path,
+    )
+    monkeypatch.setattr("autonomous_trading_ai.execution.external_signal_trailing.mt5", None)
+
+    summary = update_external_signal_trailing_stops(path=path, audit_path=audit)
+
+    assert summary == {"tracked": 1, "updated": 0, "skipped": 1, "errors": 0, "removed_closed": 0}
+    row = json.loads(audit.read_text(encoding="utf-8").strip())
+    assert row["event"] == "external_trailing_skipped"
+    assert row["reason"] == "mt5_unavailable"
+
+
+def test_update_trailing_stop_skips_invalid_tick_without_order_send(tmp_path: Path, monkeypatch) -> None:
+    path = tmp_path / "trailing.json"
+    audit = tmp_path / "audit.jsonl"
+    register_external_trailing_state(
+        ticket=123,
+        signal_id="sig-1",
+        source="telegram:japsku",
+        symbol="XAUUSD",
+        direction="long",
+        entry_price=4500.0,
+        initial_sl=4495.0,
+        trailing_stop_pips=500.0,
+        pip_size=0.01,
+        path=path,
+    )
+    pos = SimpleNamespace(ticket=123, symbol="XAUUSD", type=0, sl=4495.0, tp=0.0)
+    sent = []
+    monkeypatch.setattr(
+        "autonomous_trading_ai.execution.external_signal_trailing.mt5",
+        _mt5_stub(bid=None, ask=4510.3, positions=[pos], sent=sent),
+    )
+
+    summary = update_external_signal_trailing_stops(path=path, audit_path=audit)
+
+    assert summary["skipped"] == 1
+    assert summary["errors"] == 0
+    assert sent == []
+    row = json.loads(audit.read_text(encoding="utf-8").strip())
+    assert row["event"] == "external_trailing_skipped"
+    assert row["reason"] == "invalid_tick"
