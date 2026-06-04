@@ -281,6 +281,79 @@ class RoutingConfig:
     keep_best_exploratory_on_empty_edge_filter: bool = True
 
 
+SUPPORTED_ML_STAGES: tuple[str, ...] = (
+    "shadow",
+    "advisory",
+    "gated_autonomous",
+    "adaptive_routing",
+)
+
+
+def validate_ml_stage(stage: str) -> str:
+    """Return a known ML stage or fail closed for unsafe unknown values."""
+    if stage not in SUPPORTED_ML_STAGES:
+        raise ValueError(f"unsupported ML stage: {stage!r}")
+    return stage
+
+
+@dataclass
+class MLConfig:
+    """Adaptive ML signal-generator defaults.
+
+    Defaults are deliberately safe: Stage 1 shadow mode is configured, but the
+    subsystem is disabled until a human enables it. ML never changes live order
+    behavior while ``stage == 'shadow'``.
+    """
+
+    enabled: bool = False
+    stage: str = "shadow"
+    managed_symbols: list[str] = field(default_factory=lambda: ["XAUUSDm", "BTCUSDm", "XAGUSDm"])
+    timeframe: str = "M15"
+
+    max_feature_age_minutes: int = 30
+    min_training_rows: int = 1000
+    min_validation_rows: int = 300
+    min_shadow_predictions_for_promotion: int = 300
+    min_live_outcomes_for_live_calibration: int = 30
+
+    prediction_horizons_bars: tuple[int, ...] = (4, 8, 16)
+    primary_horizon_bars: int = 8
+    neutral_return_threshold_atr: float = 0.10
+    tp_atr_mult: float = 1.0
+    sl_atr_mult: float = 0.8
+    max_label_lookahead_bars: int = 16
+
+    min_shadow_confidence: float = 0.50
+    min_advisory_confidence: float = 0.56
+    min_gated_autonomous_confidence: float = 0.62
+    min_adaptive_confidence: float = 0.65
+    max_confidence_without_calibration: float = 0.70
+
+    min_validation_accuracy: float = 0.42
+    min_validation_macro_f1: float = 0.35
+    min_validation_profit_factor_proxy: float = 1.05
+    min_validation_expectancy_atr: float = 0.02
+    max_validation_drawdown_proxy_atr: float = 12.0
+    min_challenger_improvement_pct: float = 5.0
+
+    decay_window_predictions: int = 200
+    decay_min_samples: int = 50
+    decay_max_brier_score: float = 0.26
+    decay_min_directional_accuracy: float = 0.38
+    decay_max_consecutive_bad_windows: int = 2
+
+    shadow_predict_interval_minutes: int = 5
+    outcome_label_interval_minutes: int = 15
+    retrain_interval_hours: int = 24
+    governance_interval_minutes: int = 60
+
+    ml_max_open_positions_total: int = 2
+    ml_max_open_positions_per_symbol: int = 1
+    ml_risk_multiplier: float = 0.50
+    ml_disable_on_news_lockout: bool = True
+    ml_disable_on_wide_spread: bool = True
+
+
 # Module-level singletons used across the codebase.
 #
 # Import these directly from `config` rather than instantiating dataclasses in
@@ -293,6 +366,8 @@ execution_config = ExecutionConfig()
 live_decay_config = LiveDecayConfig()
 notification_config = NotificationConfig()
 routing_config = RoutingConfig()
+ml_config = MLConfig()
+validate_ml_stage(ml_config.stage)
 
 # Symbol alias — all keys normalize to the canonical research symbol.
 # Execution layer should still use the actual broker symbol known by MT5.
