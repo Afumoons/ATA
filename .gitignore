@@ -108,3 +108,16 @@ npm-debug.log*
 yarn.lock
 pnpm-lock.yaml
 execution/trade_context_journal.json
+ata_telegram_signals.session
+execution/external_signal_audit.jsonl
+execution/external_signal_execution.jsonl
+execution/external_signal_seen.json
+execution/external_signal_trailing_audit.jsonl
+execution/external_signal_trailing_state.json
+
+# --- Adaptive ML runtime artifacts (regenerated, local/live-state specific) ---
+ml/artifacts/**
+!ml/artifacts/.gitkeep
+ml/*.jsonl
+ml/registry.json
+ml/reports/

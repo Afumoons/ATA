@@ -77,6 +77,13 @@ def label_pending_predictions(
         record = {
             "prediction_id": prediction_id,
             "resolved_at": datetime.now(timezone.utc).isoformat(),
+            "symbol": symbol,
+            "timeframe": timeframe,
+            "model_id": prediction.get("model_id"),
+            "bar_time": prediction.get("bar_time"),
+            "horizon_bars": horizon_bars,
+            "predicted_action": predicted_action,
+            "confidence": prediction.get("confidence"),
             "actual_direction": actual_direction,
             "actual_return_atr": actual_return_atr,
             "would_tp_before_sl": None,
