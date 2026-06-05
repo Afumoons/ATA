@@ -153,6 +153,35 @@ Review at least:
 
 `trade_taken_count` must stay `0`. Any non-zero value is a Stage 1 safety violation and should block scheduler integration.
 
+
+## 8. Enable scheduler integration only after evidence is stable
+
+Scheduler integration is available for Stage 1 shadow predict/label/evaluate cycles, but it is fail-closed by default because `MLConfig.enabled` defaults to `False`.
+
+When ML is explicitly enabled and `MLConfig.stage == "shadow"`, `scheduler.main.start_scheduler()` registers these audit-only jobs:
+
+- `ml_shadow_predict` every `MLConfig.shadow_predict_interval_minutes`
+- `ml_shadow_label_outcomes` every `MLConfig.outcome_label_interval_minutes`
+- `ml_shadow_evaluate` every `MLConfig.governance_interval_minutes`
+
+The scheduler does not register ML jobs when ML is disabled or when the stage is anything other than `shadow`.
+
+The scheduled Stage 1 jobs are limited to:
+
+- append-only prediction journaling
+- append-only outcome labeling
+- aggregate JSON evaluation reporting
+
+They must not train automatically, promote champions, call broker execution, alter active orders, change position sizing, or route ML-only trades.
+
+Before enabling these jobs in a live runtime, complete the manual dry-run/write/evaluate cycle above and confirm:
+
+- `trade_taken_count = 0`
+- no `safety_warnings`
+- enough resolved outcomes exist to interpret the report
+- feature data is fresh for every configured symbol/timeframe
+
+
 ## Operator stop conditions
 
 Stop before scheduler integration if any of these are true:
@@ -176,5 +205,6 @@ PYTHONPATH=/c/laragon/www .venv/Scripts/python.exe -m pytest \
   tests/test_ml_outcomes.py \
   tests/test_ml_shadow_evaluation.py \
   tests/test_stage1_ml_runbook_docs.py \
+  tests/test_ml_scheduler.py \
   -q
 ```

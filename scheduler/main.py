@@ -11,6 +11,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from ..logging_utils import get_logger
 from ..config import scheduler_config, risk_config, execution_config, canonical_symbol, same_canonical_symbol
 from ..data.collector_mt5 import initialize_mt5, shutdown_mt5, fetch_ohlc, save_ohlc
+from ..ml.scheduler import register_ml_shadow_jobs
 from ..research.features import compute_features, save_features
 from ..research.regime import add_regime_column
 from ..research.features import load_features
@@ -1854,6 +1855,7 @@ def start_scheduler() -> BackgroundScheduler:
     sched.add_job(job_live_monitor, "interval", minutes=scheduler_config.live_monitor_interval_minutes, id="live_monitor")
     sched.add_job(job_update_news, "cron", hour=scheduler_config.update_news_hour_utc, minute=scheduler_config.update_news_minute_utc, id="update_news")
     sched.add_job(job_news_alert, "interval", minutes=scheduler_config.news_alert_interval_minutes, id="news_alert")
+    register_ml_shadow_jobs(sched)
 
     sched.start()
     start_telegram_signal_service()

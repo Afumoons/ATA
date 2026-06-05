@@ -178,7 +178,7 @@ Stage 1 remains **shadow-only**: it may train models, journal predictions, and l
 - [x] Small batch 2026-06-05: outcome-label records now retain prediction lineage (`symbol`, `timeframe`, `model_id`, `bar_time`, `horizon_bars`, `predicted_action`, `confidence`) so later evaluation can audit every shadow label back to the original prediction.
 - [x] Small batch 2026-06-05: aggregate shadow evaluation report from prediction + outcome journals, including overall/model/symbol-timeframe accuracy, pending coverage, quality score, and safety warning if any journal record shows `trade_taken = true`.
 - [x] Small batch 2026-06-05: operator-facing runbook commands for safe dry-run/train/predict/label/evaluate cycles, with explicit Stage 1 shadow-only invariants and stop conditions. See `08-STAGE1_ADAPTIVE_ML_RUNBOOK.md`.
-- [ ] Add scheduler integration for shadow predict/label only after dry-run evidence is stable.
+- [x] Small batch 2026-06-05: scheduler integration for shadow predict/label/evaluate only, registered only when ML is explicitly enabled and `stage = shadow`, with fail-closed skip summaries.
 
 ## Dev Workflow Requirements
 
@@ -203,6 +203,7 @@ Do not:
 
 ## Changelog (Docs)
 
+- 2026-06-05: Added Stage 1 scheduler integration for explicitly enabled shadow predict/label/evaluate jobs.
 - 2026-06-05: Added Stage 1 operator runbook commands for safe dry-run/train/predict/label/evaluate cycles.
 - 2026-06-05: Added Stage 1 aggregate shadow evaluation report and CLI output path for prediction/outcome journal review.
 - 2026-06-05: Added Stage 1 adaptive ML shadow tasklist and checked off the outcome-label lineage batch.
