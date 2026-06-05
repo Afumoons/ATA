@@ -176,8 +176,8 @@ Stage 1 remains **shadow-only**: it may train models, journal predictions, and l
 - [x] Shadow model registry foundation: atomic registry, shadow status bucket, no champion promotion path in Stage 1 training.
 - [x] Shadow prediction journal foundation: prediction records include no-trade gate fields and dedupe by symbol/timeframe/model/bar.
 - [x] Small batch 2026-06-05: outcome-label records now retain prediction lineage (`symbol`, `timeframe`, `model_id`, `bar_time`, `horizon_bars`, `predicted_action`, `confidence`) so later evaluation can audit every shadow label back to the original prediction.
-- [ ] Add aggregate shadow evaluation reports from prediction + outcome journals.
-- [ ] Add operator-facing runbook commands for safe dry-run/train/predict/label cycles.
+- [x] Small batch 2026-06-05: aggregate shadow evaluation report from prediction + outcome journals, including overall/model/symbol-timeframe accuracy, pending coverage, quality score, and safety warning if any journal record shows `trade_taken = true`.
+- [ ] Add operator-facing runbook commands for safe dry-run/train/predict/label/evaluate cycles.
 - [ ] Add scheduler integration for shadow predict/label only after dry-run evidence is stable.
 
 ## Dev Workflow Requirements
@@ -203,6 +203,7 @@ Do not:
 
 ## Changelog (Docs)
 
+- 2026-06-05: Added Stage 1 aggregate shadow evaluation report and CLI output path for prediction/outcome journal review.
 - 2026-06-05: Added Stage 1 adaptive ML shadow tasklist and checked off the outcome-label lineage batch.
 - 2026-04-04: Updated the broad plan to acknowledge post-audit hardening already completed (live decay detection, concentration control) and narrow remaining priorities more honestly.
 - 2026-03-27: Reframed the development plan around implemented phase status, pass 3 outcomes, and next-priority work after specialist-routing hardening.
