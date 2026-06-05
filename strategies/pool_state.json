@@ -9827,7 +9827,7 @@
       "live_decay": {
         "signal_level": "warning",
         "reason": "recent_avg_negative",
-        "updated_at": "2026-04-24T07:19:07.765005+00:00",
+        "updated_at": "2026-06-05T07:55:02.115046+00:00",
         "recent_count": 13,
         "recent_sum_pnl": -114.95999999999995,
         "recent_avg_pnl": -8.84307692307692,
@@ -11659,7 +11659,7 @@
       "live_decay": {
         "signal_level": "warning",
         "reason": "negative_ratio_high_and_recent_avg_negative",
-        "updated_at": "2026-04-24T07:19:07.765005+00:00",
+        "updated_at": "2026-06-05T07:55:02.115046+00:00",
         "recent_count": 11,
         "recent_sum_pnl": -300.59,
         "recent_avg_pnl": -27.326363636363634,
@@ -13731,7 +13731,7 @@
     "name": "core15_BTCUSDm_M15_1a34",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "active",
+    "status": "candidate",
     "score": 3.784246270390499,
     "stats": {
       "initial_equity": 10000.0,
@@ -13955,14 +13955,15 @@
       "live_decay": {
         "signal_level": "warning",
         "reason": "recent_avg_negative",
-        "updated_at": "2026-04-24T07:19:07.765005+00:00",
-        "recent_count": 26,
-        "recent_sum_pnl": -251.21999999999997,
-        "recent_avg_pnl": -9.66230769230769,
-        "loss_streak": 0,
-        "negative_ratio": 0.5384615384615384,
-        "total_trades": 26
-      }
+        "updated_at": "2026-04-27T03:59:05.244969+00:00",
+        "recent_count": 30,
+        "recent_sum_pnl": -375.33,
+        "recent_avg_pnl": -12.511,
+        "loss_streak": 1,
+        "negative_ratio": 0.5666666666666667,
+        "total_trades": 30
+      },
+      "family_governance_protected": true
     }
   },
   "core15_BTCUSDm_M15_82f7": {
@@ -15253,7 +15254,7 @@
     "name": "core15_XAUUSDm_M15_627c",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "active",
+    "status": "disabled",
     "score": 3.6393664220074786,
     "stats": {
       "initial_equity": 10000.0,
@@ -15496,15 +15497,15 @@
       "playbook_type": "ma_trend",
       "motif": "trend_continuation",
       "live_decay": {
-        "signal_level": "warning",
-        "reason": "negative_ratio_high_and_recent_avg_negative",
-        "updated_at": "2026-04-24T07:19:07.765005+00:00",
-        "recent_count": 10,
-        "recent_sum_pnl": -443.68,
-        "recent_avg_pnl": -44.368,
-        "loss_streak": 1,
-        "negative_ratio": 0.8,
-        "total_trades": 10
+        "signal_level": "degrade",
+        "reason": "recent_avg_negative_and_loss_streak>=5",
+        "updated_at": "2026-04-28T00:19:05.388277+00:00",
+        "recent_count": 26,
+        "recent_sum_pnl": -918.8199999999999,
+        "recent_avg_pnl": -35.33923076923077,
+        "loss_streak": 5,
+        "negative_ratio": 0.7307692307692307,
+        "total_trades": 26
       }
     }
   },
@@ -16251,7 +16252,18 @@
       },
       "family": "ma_trend",
       "playbook_type": "ma_trend",
-      "motif": "trend_continuation"
+      "motif": "trend_continuation",
+      "live_decay": {
+        "signal_level": "warning",
+        "reason": "recent_avg_negative",
+        "updated_at": "2026-06-05T07:55:02.115046+00:00",
+        "recent_count": 25,
+        "recent_sum_pnl": -236.92999999999998,
+        "recent_avg_pnl": -9.4772,
+        "loss_streak": 0,
+        "negative_ratio": 0.6,
+        "total_trades": 25
+      }
     }
   },
   "core15_BTCUSDm_M15_c020": {
@@ -18611,7 +18623,7 @@
     "name": "core15_XAUUSDm_M15_6af4",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "active",
+    "status": "candidate",
     "score": 3.3955944995566414,
     "stats": {
       "initial_equity": 10000.0,
@@ -18808,7 +18820,19 @@
       },
       "family": "ma_trend",
       "playbook_type": "ma_trend",
-      "motif": "trend_continuation"
+      "motif": "trend_continuation",
+      "live_decay": {
+        "signal_level": "warning",
+        "reason": "recent_avg_negative",
+        "updated_at": "2026-04-29T05:14:05.232158+00:00",
+        "recent_count": 21,
+        "recent_sum_pnl": -29.390000000000004,
+        "recent_avg_pnl": -1.3995238095238096,
+        "loss_streak": 0,
+        "negative_ratio": 0.5714285714285714,
+        "total_trades": 21
+      },
+      "family_governance_protected": true
     }
   },
   "core15_XAUUSDm_M15_1298": {
@@ -19104,7 +19128,7 @@
     "name": "core15_XAUUSDm_M15_8fd0",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "active",
+    "status": "candidate",
     "score": 3.377802872057716,
     "stats": {
       "initial_equity": 10000.0,
@@ -19366,14 +19390,15 @@
       "live_decay": {
         "signal_level": "warning",
         "reason": "recent_avg_negative",
-        "updated_at": "2026-04-24T04:59:07.771324+00:00",
-        "recent_count": 20,
-        "recent_sum_pnl": -44.87999999999998,
-        "recent_avg_pnl": -2.243999999999999,
-        "loss_streak": 0,
-        "negative_ratio": 0.55,
-        "total_trades": 20
-      }
+        "updated_at": "2026-04-28T01:29:05.329831+00:00",
+        "recent_count": 30,
+        "recent_sum_pnl": -15.889999999999988,
+        "recent_avg_pnl": -0.5296666666666663,
+        "loss_streak": 1,
+        "negative_ratio": 0.6,
+        "total_trades": 34
+      },
+      "family_governance_protected": true
     }
   },
   "core15_BTCUSDm_M15_89bb": {
@@ -20298,6 +20323,17 @@
           "has_session_exit_guard": false,
           "exit_archetype": "time_stop"
         }
+      },
+      "live_decay": {
+        "signal_level": "warning",
+        "reason": "recent_avg_negative",
+        "updated_at": "2026-06-05T07:55:02.115046+00:00",
+        "recent_count": 8,
+        "recent_sum_pnl": -40.730000000000004,
+        "recent_avg_pnl": -5.0912500000000005,
+        "loss_streak": 0,
+        "negative_ratio": 0.5,
+        "total_trades": 8
       }
     }
   },

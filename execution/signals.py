@@ -650,7 +650,14 @@ def execute_signals_for_symbol(
     from ..config import risk_config
     from ..execution.live_monitor import _get_account_equity
 
-    current_equity = _get_account_equity(strict=False)
+    try:
+        current_equity = _get_account_equity(strict=False)
+    except TypeError as exc:
+        if "strict" not in str(exc):
+            raise
+        # Backward-compatible fallback for tests/adapters that monkeypatch the
+        # legacy no-argument helper. Production live_monitor supports strict.
+        current_equity = _get_account_equity()
     if current_equity <= 0.0:
         logger.warning(
             "Skipping signal execution for %s %s because MT5 account equity is unavailable",
@@ -1086,21 +1093,24 @@ def execute_signals_for_symbol(
                 if res.success:
                     open_positions = _snapshot_open_positions()
                     if res.ticket is not None:
+                        deal_ticket = getattr(res, "deal_ticket", None)
+                        position_id = getattr(res, "position_id", None)
                         try:
                             register_ticket(
                                 res.ticket,
                                 strat.name,
-                                res.deal_ticket,
-                                res.position_id,
+                                deal_ticket,
+                                position_id,
                             )
                         except Exception:
                             logger.exception(
                                 "Failed to register ticket aliases for %s -> %s/%s/%s",
                                 strat.name,
                                 res.ticket,
-                                res.deal_ticket,
-                                res.position_id,
+                                deal_ticket,
+                                position_id,
                             )
+
                     logger.info(
                         "Trade placed (%s): strategy=%s symbol=%s dir=%s vol=%s ticket=%s",
                         tier, strat.name, symbol, sig.direction,
