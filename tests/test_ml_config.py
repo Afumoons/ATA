@@ -1,8 +1,8 @@
 from autonomous_trading_ai.config import ml_config, validate_ml_stage
 
 
-def test_ml_config_defaults_are_safe():
-    assert ml_config.enabled is False
+def test_ml_config_stage1_operator_enabled_is_shadow_only():
+    assert ml_config.enabled is True
     assert ml_config.stage == "shadow"
     assert ml_config.min_gated_autonomous_confidence > ml_config.min_advisory_confidence
     assert ml_config.min_adaptive_confidence > ml_config.min_gated_autonomous_confidence

@@ -300,15 +300,16 @@ def validate_ml_stage(stage: str) -> str:
 class MLConfig:
     """Adaptive ML signal-generator defaults.
 
-    Defaults are deliberately safe: Stage 1 shadow mode is configured, but the
-    subsystem is disabled until a human enables it. ML never changes live order
-    behavior while ``stage == 'shadow'``.
+    Afu has explicitly enabled Stage 1 shadow learning. The subsystem may
+    journal predictions and labels, but ML never changes live order behavior
+    while ``stage == 'shadow'``.
     """
 
-    enabled: bool = False
+    enabled: bool = True
     stage: str = "shadow"
     managed_symbols: list[str] = field(default_factory=lambda: ["XAUUSDm", "BTCUSDm", "XAGUSDm"])
     timeframe: str = "M15"
+
 
     max_feature_age_minutes: int = 30
     min_training_rows: int = 1000

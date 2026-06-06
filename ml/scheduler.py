@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -202,23 +203,30 @@ def register_ml_shadow_jobs(scheduler: Any, config: MLConfig | None = None) -> b
         logger.info("ML shadow scheduler jobs not registered: ml_disabled")
         return False
 
+    first_run = datetime.now(timezone.utc)
+    label_first_run = first_run + timedelta(seconds=2)
+    evaluate_first_run = first_run + timedelta(seconds=4)
+
     scheduler.add_job(
         job_ml_shadow_predict,
         "interval",
         minutes=cfg.shadow_predict_interval_minutes,
         id="ml_shadow_predict",
+        next_run_time=first_run,
     )
     scheduler.add_job(
         job_ml_shadow_label_outcomes,
         "interval",
         minutes=cfg.outcome_label_interval_minutes,
         id="ml_shadow_label_outcomes",
+        next_run_time=label_first_run,
     )
     scheduler.add_job(
         job_ml_shadow_evaluate,
         "interval",
         minutes=cfg.governance_interval_minutes,
         id="ml_shadow_evaluate",
+        next_run_time=evaluate_first_run,
     )
     return True
 

@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from pathlib import Path
 
 from autonomous_trading_ai.config import MLConfig
@@ -53,6 +54,12 @@ def test_register_ml_shadow_jobs_adds_only_shadow_audit_jobs():
     ]
     assert [job["trigger"] for job in fake.jobs] == ["interval", "interval", "interval"]
     assert [job["minutes"] for job in fake.jobs] == [7, 17, 67]
+    next_runs = [job["next_run_time"] for job in fake.jobs]
+    assert all(run.tzinfo == timezone.utc for run in next_runs)
+    assert all(isinstance(run, datetime) for run in next_runs)
+    assert next_runs[0] < next_runs[1] < next_runs[2]
+    assert (next_runs[1] - next_runs[0]).total_seconds() == 2
+    assert (next_runs[2] - next_runs[1]).total_seconds() == 2
     assert [job["func"] for job in fake.jobs] == [
         ml_scheduler.job_ml_shadow_predict,
         ml_scheduler.job_ml_shadow_label_outcomes,

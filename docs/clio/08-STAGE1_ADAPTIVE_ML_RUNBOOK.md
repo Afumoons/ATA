@@ -104,7 +104,7 @@ This resolves eligible pending predictions into a temporary outcome journal firs
 
 ```bash
 $PY scripts/ml_label_outcomes.py \
-  --prediction-journal ml/journals/shadow_predictions.jsonl \
+  --prediction-journal ml/prediction_journal.jsonl \
   --symbol XAUUSDm \
   --timeframe M15 \
   --dry-run
@@ -122,8 +122,8 @@ Run this after dry-run outcome labeling confirms the available candles can resol
 
 ```bash
 $PY scripts/ml_label_outcomes.py \
-  --prediction-journal ml/journals/shadow_predictions.jsonl \
-  --outcome-journal ml/journals/shadow_outcomes.jsonl \
+  --prediction-journal ml/prediction_journal.jsonl \
+  --outcome-journal ml/outcome_journal.jsonl \
   --symbol XAUUSDm \
   --timeframe M15
 ```
@@ -136,8 +136,8 @@ Evaluation aggregates prediction and outcome journals into an operator-readable 
 
 ```bash
 $PY scripts/ml_evaluate_shadow.py \
-  --prediction-journal ml/journals/shadow_predictions.jsonl \
-  --outcome-journal ml/journals/shadow_outcomes.jsonl \
+  --prediction-journal ml/prediction_journal.jsonl \
+  --outcome-journal ml/outcome_journal.jsonl \
   --output ml/reports/shadow_evaluation_latest.json
 ```
 
@@ -156,13 +156,13 @@ Review at least:
 
 ## 8. Enable scheduler integration only after evidence is stable
 
-Scheduler integration is available for Stage 1 shadow predict/label/evaluate cycles, but it is fail-closed by default because `MLConfig.enabled` defaults to `False`.
+Scheduler integration is enabled for Stage 1 shadow predict/label/evaluate cycles after Afu's explicit approval on 2026-06-05. It remains shadow-only because `MLConfig.stage` stays `"shadow"`.
 
-When ML is explicitly enabled and `MLConfig.stage == "shadow"`, `scheduler.main.start_scheduler()` registers these audit-only jobs:
+When `MLConfig.enabled` is true and `MLConfig.stage == "shadow"`, `scheduler.main.start_scheduler()` registers these audit-only jobs:
 
-- `ml_shadow_predict` every `MLConfig.shadow_predict_interval_minutes`
-- `ml_shadow_label_outcomes` every `MLConfig.outcome_label_interval_minutes`
-- `ml_shadow_evaluate` every `MLConfig.governance_interval_minutes`
+- `ml_shadow_predict` every `MLConfig.shadow_predict_interval_minutes`; first prediction run is scheduled immediately at scheduler startup so `ml/prediction_journal.jsonl` is produced as soon as a shadow model exists
+- `ml_shadow_label_outcomes` every `MLConfig.outcome_label_interval_minutes`; first run is scheduled shortly after prediction startup
+- `ml_shadow_evaluate` every `MLConfig.governance_interval_minutes`; first run is scheduled shortly after labeling startup
 
 The scheduler does not register ML jobs when ML is disabled or when the stage is anything other than `shadow`.
 
