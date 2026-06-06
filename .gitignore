@@ -71,6 +71,13 @@ execution/ticket_strategy_map.json
 execution/unmatched_closed_deals.json
 execution/strategy_trade_journal.json
 
+# --- Live state files (external signal) ---
+execution/external_signal_audit.jsonl
+execution/external_signal_execution.jsonl
+execution/external_signal_seen.json
+execution/external_signal_trailing_audit.jsonl
+execution/external_signal_trailing_state.json
+
 # --- ChromaDB vector store (large, rebuilt from research cycles) ---
 chroma_data/
 
@@ -109,11 +116,6 @@ yarn.lock
 pnpm-lock.yaml
 execution/trade_context_journal.json
 ata_telegram_signals.session
-execution/external_signal_audit.jsonl
-execution/external_signal_execution.jsonl
-execution/external_signal_seen.json
-execution/external_signal_trailing_audit.jsonl
-execution/external_signal_trailing_state.json
 
 # --- Adaptive ML runtime artifacts (regenerated, local/live-state specific) ---
 ml/artifacts/**
