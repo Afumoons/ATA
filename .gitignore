@@ -60,6 +60,7 @@ strategies/live_manifest.json
 strategies/strategy_index.json
 
 # --- Live state files (machine-specific, changes every 5 min) ---
+execution/circuit_breaker_events.json
 execution/closed_trades_state.json
 execution/equity_history.json
 execution/live_state.json
