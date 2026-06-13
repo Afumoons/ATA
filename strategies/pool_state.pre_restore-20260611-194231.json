@@ -243,7 +243,7 @@
     "name": "core15_BTCUSDm_M15_f813",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 2.2807583112055205,
     "stats": {
       "initial_equity": 10000.0,
@@ -478,16 +478,14 @@
       "circuit_breaker_disabled_at": "2026-06-11T18:20:30.791904+00:00",
       "circuit_breaker_previous_status": "exploratory",
       "circuit_breaker_dd_pct": 39.97875735270942,
-      "circuit_breaker_threshold": 30.0,
-      "recovered_after_circuit_breaker_at": "2026-06-11T19:42:31.566124Z",
-      "recovery_path": "restore_to_exploratory"
+      "circuit_breaker_threshold": 30.0
     }
   },
   "core15_BTCUSDm_M15_7818": {
     "name": "core15_BTCUSDm_M15_7818",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 2.716674987265767,
     "stats": {
       "initial_equity": 10000.0,
@@ -774,16 +772,14 @@
       "circuit_breaker_disabled_at": "2026-06-11T18:20:30.791904+00:00",
       "circuit_breaker_previous_status": "exploratory",
       "circuit_breaker_dd_pct": 39.97875735270942,
-      "circuit_breaker_threshold": 30.0,
-      "recovered_after_circuit_breaker_at": "2026-06-11T19:42:31.566173Z",
-      "recovery_path": "restore_to_exploratory"
+      "circuit_breaker_threshold": 30.0
     }
   },
   "core15_BTCUSDm_M15_870b": {
     "name": "core15_BTCUSDm_M15_870b",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 2.930535048223658,
     "stats": {
       "initial_equity": 10000.0,
@@ -1019,16 +1015,14 @@
       "circuit_breaker_disabled_at": "2026-06-11T18:20:30.791904+00:00",
       "circuit_breaker_previous_status": "exploratory",
       "circuit_breaker_dd_pct": 39.97875735270942,
-      "circuit_breaker_threshold": 30.0,
-      "recovered_after_circuit_breaker_at": "2026-06-11T19:42:31.566180Z",
-      "recovery_path": "restore_to_exploratory"
+      "circuit_breaker_threshold": 30.0
     }
   },
   "core15_BTCUSDm_M15_5e63": {
     "name": "core15_BTCUSDm_M15_5e63",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.1320488576202097,
     "stats": {
       "initial_equity": 10000.0,
@@ -1261,9 +1255,7 @@
       "circuit_breaker_disabled_at": "2026-06-11T18:20:30.791904+00:00",
       "circuit_breaker_previous_status": "exploratory",
       "circuit_breaker_dd_pct": 39.97875735270942,
-      "circuit_breaker_threshold": 30.0,
-      "recovered_after_circuit_breaker_at": "2026-06-11T19:42:31.566185Z",
-      "recovery_path": "restore_to_exploratory"
+      "circuit_breaker_threshold": 30.0
     }
   },
   "core15_BTCUSDm_M15_f4dd": {
@@ -1756,7 +1748,7 @@
     "name": "core15_BTCUSDm_M15_8cb7",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 2.528847778553223,
     "stats": {
       "initial_equity": 10000.0,
@@ -1993,16 +1985,14 @@
       "circuit_breaker_disabled_at": "2026-06-11T18:20:30.791904+00:00",
       "circuit_breaker_previous_status": "exploratory",
       "circuit_breaker_dd_pct": 39.97875735270942,
-      "circuit_breaker_threshold": 30.0,
-      "recovered_after_circuit_breaker_at": "2026-06-11T19:42:31.566190Z",
-      "recovery_path": "restore_to_exploratory"
+      "circuit_breaker_threshold": 30.0
     }
   },
   "core15_BTCUSDm_M15_810b": {
     "name": "core15_BTCUSDm_M15_810b",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 2.562362419056889,
     "stats": {
       "initial_equity": 10000.0,
@@ -2240,9 +2230,7 @@
       "circuit_breaker_disabled_at": "2026-06-11T18:20:30.791904+00:00",
       "circuit_breaker_previous_status": "exploratory",
       "circuit_breaker_dd_pct": 39.97875735270942,
-      "circuit_breaker_threshold": 30.0,
-      "recovered_after_circuit_breaker_at": "2026-06-11T19:42:31.566194Z",
-      "recovery_path": "restore_to_exploratory"
+      "circuit_breaker_threshold": 30.0
     }
   },
   "core15_BTCUSDm_M15_07da": {
@@ -5956,7 +5944,7 @@
     "name": "core15_BTCUSDm_M15_e511",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 5.298573785539994,
     "stats": {
       "initial_equity": 10000.0,
@@ -6100,16 +6088,14 @@
       "circuit_breaker_disabled_at": "2026-06-11T18:20:30.791904+00:00",
       "circuit_breaker_previous_status": "active",
       "circuit_breaker_dd_pct": 39.97875735270942,
-      "circuit_breaker_threshold": 30.0,
-      "recovered_after_circuit_breaker_at": "2026-06-11T19:42:31.566204Z",
-      "recovery_path": "restore_to_exploratory"
+      "circuit_breaker_threshold": 30.0
     }
   },
   "core15_BTCUSDm_M15_e765": {
     "name": "core15_BTCUSDm_M15_e765",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 5.071183831034098,
     "stats": {
       "initial_equity": 10000.0,
@@ -6253,9 +6239,7 @@
       "circuit_breaker_disabled_at": "2026-06-11T18:20:30.791904+00:00",
       "circuit_breaker_previous_status": "active",
       "circuit_breaker_dd_pct": 39.97875735270942,
-      "circuit_breaker_threshold": 30.0,
-      "recovered_after_circuit_breaker_at": "2026-06-11T19:42:31.566207Z",
-      "recovery_path": "restore_to_exploratory"
+      "circuit_breaker_threshold": 30.0
     }
   },
   "core15_BTCUSDm_M15_a113": {
@@ -8184,7 +8168,7 @@
     "name": "core15_BTCUSDm_M15_563b",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 4.6057686322450655,
     "stats": {
       "initial_equity": 10000.0,
@@ -8321,9 +8305,7 @@
       "circuit_breaker_disabled_at": "2026-06-11T18:20:30.791904+00:00",
       "circuit_breaker_previous_status": "active",
       "circuit_breaker_dd_pct": 39.97875735270942,
-      "circuit_breaker_threshold": 30.0,
-      "recovered_after_circuit_breaker_at": "2026-06-11T19:42:31.566215Z",
-      "recovery_path": "restore_to_exploratory"
+      "circuit_breaker_threshold": 30.0
     }
   },
   "core15_BTCUSDm_M15_1a09": {
@@ -8624,7 +8606,7 @@
     "name": "core15_BTCUSDm_M15_8c9c",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 4.573667896142184,
     "stats": {
       "initial_equity": 10000.0,
@@ -8768,16 +8750,14 @@
       "circuit_breaker_disabled_at": "2026-06-11T18:20:30.791904+00:00",
       "circuit_breaker_previous_status": "active",
       "circuit_breaker_dd_pct": 39.97875735270942,
-      "circuit_breaker_threshold": 30.0,
-      "recovered_after_circuit_breaker_at": "2026-06-11T19:42:31.566219Z",
-      "recovery_path": "restore_to_exploratory"
+      "circuit_breaker_threshold": 30.0
     }
   },
   "core15_BTCUSDm_M15_76d1": {
     "name": "core15_BTCUSDm_M15_76d1",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 4.573667896142184,
     "stats": {
       "initial_equity": 10000.0,
@@ -8921,9 +8901,7 @@
       "circuit_breaker_disabled_at": "2026-06-11T18:20:30.791904+00:00",
       "circuit_breaker_previous_status": "active",
       "circuit_breaker_dd_pct": 39.97875735270942,
-      "circuit_breaker_threshold": 30.0,
-      "recovered_after_circuit_breaker_at": "2026-06-11T19:42:31.566223Z",
-      "recovery_path": "restore_to_exploratory"
+      "circuit_breaker_threshold": 30.0
     }
   },
   "core15_BTCUSDm_M15_a1b1": {
@@ -9665,7 +9643,7 @@
     "name": "core15_BTCUSDm_M15_df0a",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 4.4997190568359375,
     "stats": {
       "initial_equity": 10000.0,
@@ -9915,9 +9893,7 @@
       "circuit_breaker_disabled_at": "2026-06-11T18:20:30.791904+00:00",
       "circuit_breaker_previous_status": "active",
       "circuit_breaker_dd_pct": 39.97875735270942,
-      "circuit_breaker_threshold": 30.0,
-      "recovered_after_circuit_breaker_at": "2026-06-11T19:42:31.566228Z",
-      "recovery_path": "restore_to_exploratory"
+      "circuit_breaker_threshold": 30.0
     }
   },
   "core15_BTCUSDm_M15_025b": {
@@ -10512,7 +10488,7 @@
     "name": "core15_BTCUSDm_M15_4c29",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 4.493750647387616,
     "stats": {
       "initial_equity": 10000.0,
@@ -10656,9 +10632,7 @@
       "circuit_breaker_disabled_at": "2026-06-11T18:20:30.791904+00:00",
       "circuit_breaker_previous_status": "active",
       "circuit_breaker_dd_pct": 39.97875735270942,
-      "circuit_breaker_threshold": 30.0,
-      "recovered_after_circuit_breaker_at": "2026-06-11T19:42:31.566233Z",
-      "recovery_path": "restore_to_exploratory"
+      "circuit_breaker_threshold": 30.0
     }
   },
   "core15_BTCUSDm_M15_6fac": {
@@ -11547,7 +11521,7 @@
     "name": "core15_BTCUSDm_M15_f4f5",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 4.403492899796225,
     "stats": {
       "initial_equity": 10000.0,
@@ -11748,7 +11722,7 @@
       "live_decay": {
         "signal_level": "warning",
         "reason": "recent_avg_negative",
-        "updated_at": "2026-06-12T22:28:58.201669+00:00",
+        "updated_at": "2026-06-11T18:05:30.876174+00:00",
         "recent_count": 13,
         "recent_sum_pnl": -38.85000000000001,
         "recent_avg_pnl": -2.988461538461539,
@@ -11759,16 +11733,14 @@
       "circuit_breaker_disabled_at": "2026-06-11T18:20:30.791904+00:00",
       "circuit_breaker_previous_status": "active",
       "circuit_breaker_dd_pct": 39.97875735270942,
-      "circuit_breaker_threshold": 30.0,
-      "recovered_after_circuit_breaker_at": "2026-06-11T19:42:31.566238Z",
-      "recovery_path": "restore_to_exploratory"
+      "circuit_breaker_threshold": 30.0
     }
   },
   "core15_BTCUSDm_M15_f4bb": {
     "name": "core15_BTCUSDm_M15_f4bb",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 4.39969457572842,
     "stats": {
       "initial_equity": 10000.0,
@@ -11912,16 +11884,14 @@
       "circuit_breaker_disabled_at": "2026-06-11T18:20:30.791904+00:00",
       "circuit_breaker_previous_status": "active",
       "circuit_breaker_dd_pct": 39.97875735270942,
-      "circuit_breaker_threshold": 30.0,
-      "recovered_after_circuit_breaker_at": "2026-06-11T19:42:31.566242Z",
-      "recovery_path": "restore_to_exploratory"
+      "circuit_breaker_threshold": 30.0
     }
   },
   "core15_BTCUSDm_M15_81e5": {
     "name": "core15_BTCUSDm_M15_81e5",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 4.385052631620051,
     "stats": {
       "initial_equity": 10000.0,
@@ -12065,9 +12035,7 @@
       "circuit_breaker_disabled_at": "2026-06-11T18:20:30.791904+00:00",
       "circuit_breaker_previous_status": "active",
       "circuit_breaker_dd_pct": 39.97875735270942,
-      "circuit_breaker_threshold": 30.0,
-      "recovered_after_circuit_breaker_at": "2026-06-11T19:42:31.566245Z",
-      "recovery_path": "restore_to_exploratory"
+      "circuit_breaker_threshold": 30.0
     }
   },
   "core15_BTCUSDm_M15_e052": {
@@ -12221,7 +12189,7 @@
     "name": "core15_BTCUSDm_M15_36ce",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 4.282796035855694,
     "stats": {
       "initial_equity": 10000.0,
@@ -12365,9 +12333,7 @@
       "circuit_breaker_disabled_at": "2026-06-11T18:20:30.791904+00:00",
       "circuit_breaker_previous_status": "active",
       "circuit_breaker_dd_pct": 39.97875735270942,
-      "circuit_breaker_threshold": 30.0,
-      "recovered_after_circuit_breaker_at": "2026-06-11T19:42:31.566249Z",
-      "recovery_path": "restore_to_exploratory"
+      "circuit_breaker_threshold": 30.0
     }
   },
   "core15_BTCUSDm_M15_0306": {
@@ -12521,7 +12487,7 @@
     "name": "core15_BTCUSDm_M15_0025",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 4.186520389052206,
     "stats": {
       "initial_equity": 10000.0,
@@ -12665,9 +12631,7 @@
       "circuit_breaker_disabled_at": "2026-06-11T18:20:30.791904+00:00",
       "circuit_breaker_previous_status": "active",
       "circuit_breaker_dd_pct": 39.97875735270942,
-      "circuit_breaker_threshold": 30.0,
-      "recovered_after_circuit_breaker_at": "2026-06-11T19:42:31.566252Z",
-      "recovery_path": "restore_to_exploratory"
+      "circuit_breaker_threshold": 30.0
     }
   },
   "core15_BTCUSDm_M15_8166": {
@@ -12968,7 +12932,7 @@
     "name": "core15_BTCUSDm_M15_3053",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 4.130671282732546,
     "stats": {
       "initial_equity": 10000.0,
@@ -13112,16 +13076,14 @@
       "circuit_breaker_disabled_at": "2026-06-11T18:20:30.791904+00:00",
       "circuit_breaker_previous_status": "active",
       "circuit_breaker_dd_pct": 39.97875735270942,
-      "circuit_breaker_threshold": 30.0,
-      "recovered_after_circuit_breaker_at": "2026-06-11T19:42:31.566276Z",
-      "recovery_path": "restore_to_exploratory"
+      "circuit_breaker_threshold": 30.0
     }
   },
   "core15_BTCUSDm_M15_bddd": {
     "name": "core15_BTCUSDm_M15_bddd",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 4.125273217992184,
     "stats": {
       "initial_equity": 10000.0,
@@ -13265,9 +13227,7 @@
       "circuit_breaker_disabled_at": "2026-06-11T18:20:30.791904+00:00",
       "circuit_breaker_previous_status": "active",
       "circuit_breaker_dd_pct": 39.97875735270942,
-      "circuit_breaker_threshold": 30.0,
-      "recovered_after_circuit_breaker_at": "2026-06-11T19:42:31.566279Z",
-      "recovery_path": "restore_to_exploratory"
+      "circuit_breaker_threshold": 30.0
     }
   },
   "core15_BTCUSDm_M15_d6ab": {
@@ -14086,13 +14046,13 @@
       "live_decay": {
         "signal_level": "warning",
         "reason": "recent_avg_negative",
-        "updated_at": "2026-06-11T20:07:40.180251+00:00",
+        "updated_at": "2026-04-27T03:59:05.244969+00:00",
         "recent_count": 30,
-        "recent_sum_pnl": -626.8199999999999,
-        "recent_avg_pnl": -20.894,
-        "loss_streak": 2,
-        "negative_ratio": 0.6,
-        "total_trades": 31
+        "recent_sum_pnl": -375.33,
+        "recent_avg_pnl": -12.511,
+        "loss_streak": 1,
+        "negative_ratio": 0.5666666666666667,
+        "total_trades": 30
       },
       "family_governance_protected": true,
       "family_governance_promoted": true,
@@ -14100,9 +14060,7 @@
       "circuit_breaker_disabled_at": "2026-06-11T18:45:30.833909+00:00",
       "circuit_breaker_previous_status": "exploratory",
       "circuit_breaker_dd_pct": 54.546265498598586,
-      "circuit_breaker_threshold": 30.0,
-      "recovered_after_circuit_breaker_at": "2026-06-11T19:42:31.566285Z",
-      "recovery_path": "restore_to_exploratory"
+      "circuit_breaker_threshold": 30.0
     }
   },
   "core15_BTCUSDm_M15_82f7": {
@@ -14256,7 +14214,7 @@
     "name": "core15_XAUUSDm_M15_48db",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.7074436675708426,
     "stats": {
       "initial_equity": 10000.0,
@@ -14414,16 +14372,14 @@
       "circuit_breaker_disabled_at": "2026-06-11T18:20:30.791904+00:00",
       "circuit_breaker_previous_status": "active",
       "circuit_breaker_dd_pct": 39.97875735270942,
-      "circuit_breaker_threshold": 30.0,
-      "recovered_after_circuit_breaker_at": "2026-06-11T19:42:31.566289Z",
-      "recovery_path": "restore_to_exploratory"
+      "circuit_breaker_threshold": 30.0
     }
   },
   "core15_XAUUSDm_M15_49e8": {
     "name": "core15_XAUUSDm_M15_49e8",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.70533531339737,
     "stats": {
       "initial_equity": 10000.0,
@@ -14559,9 +14515,7 @@
       "circuit_breaker_disabled_at": "2026-06-11T18:20:30.791904+00:00",
       "circuit_breaker_previous_status": "active",
       "circuit_breaker_dd_pct": 39.97875735270942,
-      "circuit_breaker_threshold": 30.0,
-      "recovered_after_circuit_breaker_at": "2026-06-11T19:42:31.566293Z",
-      "recovery_path": "restore_to_exploratory"
+      "circuit_breaker_threshold": 30.0
     }
   },
   "core15_BTCUSDm_M15_f3aa": {
@@ -15811,7 +15765,7 @@
     "name": "core15_XAUUSDm_M15_81bf",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.618680743463691,
     "stats": {
       "initial_equity": 10000.0,
@@ -15949,9 +15903,7 @@
       "circuit_breaker_disabled_at": "2026-06-11T18:20:30.791904+00:00",
       "circuit_breaker_previous_status": "active",
       "circuit_breaker_dd_pct": 39.97875735270942,
-      "circuit_breaker_threshold": 30.0,
-      "recovered_after_circuit_breaker_at": "2026-06-11T19:42:31.566299Z",
-      "recovery_path": "restore_to_exploratory"
+      "circuit_breaker_threshold": 30.0
     }
   },
   "core15_BTCUSDm_M15_1f27": {
@@ -16112,7 +16064,7 @@
     "name": "core15_XAUUSDm_M15_575d",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.569890280407262,
     "stats": {
       "initial_equity": 10000.0,
@@ -16274,16 +16226,14 @@
       "circuit_breaker_disabled_at": "2026-06-11T18:20:30.791904+00:00",
       "circuit_breaker_previous_status": "active",
       "circuit_breaker_dd_pct": 39.97875735270942,
-      "circuit_breaker_threshold": 30.0,
-      "recovered_after_circuit_breaker_at": "2026-06-11T19:42:31.566303Z",
-      "recovery_path": "restore_to_exploratory"
+      "circuit_breaker_threshold": 30.0
     }
   },
   "core15_XAUUSDm_M15_20d0": {
     "name": "core15_XAUUSDm_M15_20d0",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.558595681449752,
     "stats": {
       "initial_equity": 10000.0,
@@ -16430,9 +16380,7 @@
       "circuit_breaker_disabled_at": "2026-06-11T18:20:30.791904+00:00",
       "circuit_breaker_previous_status": "active",
       "circuit_breaker_dd_pct": 39.97875735270942,
-      "circuit_breaker_threshold": 30.0,
-      "recovered_after_circuit_breaker_at": "2026-06-11T19:42:31.566306Z",
-      "recovery_path": "restore_to_exploratory"
+      "circuit_breaker_threshold": 30.0
     }
   },
   "core15_BTCUSDm_M15_c020": {
@@ -16733,7 +16681,7 @@
     "name": "core15_XAUUSDm_M15_ee2e",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.4590041357815347,
     "stats": {
       "initial_equity": 10000.0,
@@ -16869,16 +16817,14 @@
       "circuit_breaker_disabled_at": "2026-06-11T18:20:30.791904+00:00",
       "circuit_breaker_previous_status": "active",
       "circuit_breaker_dd_pct": 39.97875735270942,
-      "circuit_breaker_threshold": 30.0,
-      "recovered_after_circuit_breaker_at": "2026-06-11T19:42:31.566324Z",
-      "recovery_path": "restore_to_exploratory"
+      "circuit_breaker_threshold": 30.0
     }
   },
   "core15_XAUUSDm_M15_250c": {
     "name": "core15_XAUUSDm_M15_250c",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.4550802310244872,
     "stats": {
       "initial_equity": 10000.0,
@@ -17039,16 +16985,14 @@
       "circuit_breaker_disabled_at": "2026-06-11T18:20:30.791904+00:00",
       "circuit_breaker_previous_status": "active",
       "circuit_breaker_dd_pct": 39.97875735270942,
-      "circuit_breaker_threshold": 30.0,
-      "recovered_after_circuit_breaker_at": "2026-06-11T19:42:31.566327Z",
-      "recovery_path": "restore_to_exploratory"
+      "circuit_breaker_threshold": 30.0
     }
   },
   "core15_BTCUSDm_M15_2875": {
     "name": "core15_BTCUSDm_M15_2875",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.4518580742636313,
     "stats": {
       "initial_equity": 10000.0,
@@ -17199,9 +17143,7 @@
       "circuit_breaker_disabled_at": "2026-06-11T18:20:30.791904+00:00",
       "circuit_breaker_previous_status": "active",
       "circuit_breaker_dd_pct": 39.97875735270942,
-      "circuit_breaker_threshold": 30.0,
-      "recovered_after_circuit_breaker_at": "2026-06-11T19:42:31.566330Z",
-      "recovery_path": "restore_to_exploratory"
+      "circuit_breaker_threshold": 30.0
     }
   },
   "core15_BTCUSDm_M15_316c": {
@@ -17355,7 +17297,7 @@
     "name": "core15_XAUUSDm_M15_94a8",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.4398428666269654,
     "stats": {
       "initial_equity": 10000.0,
@@ -17491,16 +17433,14 @@
       "circuit_breaker_disabled_at": "2026-06-11T18:20:30.791904+00:00",
       "circuit_breaker_previous_status": "active",
       "circuit_breaker_dd_pct": 39.97875735270942,
-      "circuit_breaker_threshold": 30.0,
-      "recovered_after_circuit_breaker_at": "2026-06-11T19:42:31.566334Z",
-      "recovery_path": "restore_to_exploratory"
+      "circuit_breaker_threshold": 30.0
     }
   },
   "core15_XAUUSDm_M15_7567": {
     "name": "core15_XAUUSDm_M15_7567",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.439467492329606,
     "stats": {
       "initial_equity": 10000.0,
@@ -17638,16 +17578,14 @@
       "circuit_breaker_disabled_at": "2026-06-11T18:20:30.791904+00:00",
       "circuit_breaker_previous_status": "active",
       "circuit_breaker_dd_pct": 39.97875735270942,
-      "circuit_breaker_threshold": 30.0,
-      "recovered_after_circuit_breaker_at": "2026-06-11T19:42:31.566337Z",
-      "recovery_path": "restore_to_exploratory"
+      "circuit_breaker_threshold": 30.0
     }
   },
   "core15_XAUUSDm_M15_d81e": {
     "name": "core15_XAUUSDm_M15_d81e",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.4336903223970925,
     "stats": {
       "initial_equity": 10000.0,
@@ -17805,16 +17743,14 @@
       "circuit_breaker_disabled_at": "2026-06-11T18:20:30.791904+00:00",
       "circuit_breaker_previous_status": "active",
       "circuit_breaker_dd_pct": 39.97875735270942,
-      "circuit_breaker_threshold": 30.0,
-      "recovered_after_circuit_breaker_at": "2026-06-11T19:42:31.566341Z",
-      "recovery_path": "restore_to_exploratory"
+      "circuit_breaker_threshold": 30.0
     }
   },
   "core15_XAUUSDm_M15_98d2": {
     "name": "core15_XAUUSDm_M15_98d2",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.432627149806587,
     "stats": {
       "initial_equity": 10000.0,
@@ -17950,16 +17886,14 @@
       "circuit_breaker_disabled_at": "2026-06-11T18:20:30.791904+00:00",
       "circuit_breaker_previous_status": "active",
       "circuit_breaker_dd_pct": 39.97875735270942,
-      "circuit_breaker_threshold": 30.0,
-      "recovered_after_circuit_breaker_at": "2026-06-11T19:42:31.566344Z",
-      "recovery_path": "restore_to_exploratory"
+      "circuit_breaker_threshold": 30.0
     }
   },
   "core15_XAUUSDm_M15_1f6e": {
     "name": "core15_XAUUSDm_M15_1f6e",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.4237511547699064,
     "stats": {
       "initial_equity": 10000.0,
@@ -18096,9 +18030,7 @@
       "circuit_breaker_disabled_at": "2026-06-11T18:20:30.791904+00:00",
       "circuit_breaker_previous_status": "active",
       "circuit_breaker_dd_pct": 39.97875735270942,
-      "circuit_breaker_threshold": 30.0,
-      "recovered_after_circuit_breaker_at": "2026-06-11T19:42:31.566350Z",
-      "recovery_path": "restore_to_exploratory"
+      "circuit_breaker_threshold": 30.0
     }
   },
   "core15_BTCUSDm_M15_8431": {
@@ -19040,14 +18972,14 @@
       "motif": "trend_continuation",
       "live_decay": {
         "signal_level": "warning",
-        "reason": "loss_streak>=4",
-        "updated_at": "2026-06-11T20:07:40.180251+00:00",
-        "recent_count": 30,
-        "recent_sum_pnl": -360.51,
-        "recent_avg_pnl": -12.017,
-        "loss_streak": 4,
-        "negative_ratio": 0.6,
-        "total_trades": 34
+        "reason": "recent_avg_negative",
+        "updated_at": "2026-04-29T05:14:05.232158+00:00",
+        "recent_count": 21,
+        "recent_sum_pnl": -29.390000000000004,
+        "recent_avg_pnl": -1.3995238095238096,
+        "loss_streak": 0,
+        "negative_ratio": 0.5714285714285714,
+        "total_trades": 21
       },
       "family_governance_protected": true,
       "family_governance_promoted": true,
@@ -19055,16 +18987,14 @@
       "circuit_breaker_disabled_at": "2026-06-11T18:45:30.833909+00:00",
       "circuit_breaker_previous_status": "exploratory",
       "circuit_breaker_dd_pct": 54.546265498598586,
-      "circuit_breaker_threshold": 30.0,
-      "recovered_after_circuit_breaker_at": "2026-06-11T19:42:31.566356Z",
-      "recovery_path": "restore_to_exploratory"
+      "circuit_breaker_threshold": 30.0
     }
   },
   "core15_XAUUSDm_M15_1298": {
     "name": "core15_XAUUSDm_M15_1298",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.3917390535691103,
     "stats": {
       "initial_equity": 10000.0,
@@ -19200,9 +19130,7 @@
       "circuit_breaker_disabled_at": "2026-06-11T18:20:30.791904+00:00",
       "circuit_breaker_previous_status": "active",
       "circuit_breaker_dd_pct": 39.97875735270942,
-      "circuit_breaker_threshold": 30.0,
-      "recovered_after_circuit_breaker_at": "2026-06-11T19:42:31.566359Z",
-      "recovery_path": "restore_to_exploratory"
+      "circuit_breaker_threshold": 30.0
     }
   },
   "core15_XAUUSDm_M15_ee11": {
@@ -19621,7 +19549,7 @@
       "live_decay": {
         "signal_level": "warning",
         "reason": "recent_avg_negative",
-        "updated_at": "2026-06-11T20:07:40.180251+00:00",
+        "updated_at": "2026-04-28T01:29:05.329831+00:00",
         "recent_count": 30,
         "recent_sum_pnl": -15.889999999999988,
         "recent_avg_pnl": -0.5296666666666663,
@@ -19635,9 +19563,7 @@
       "circuit_breaker_disabled_at": "2026-06-11T19:15:32.571266+00:00",
       "circuit_breaker_previous_status": "exploratory",
       "circuit_breaker_dd_pct": 38.89170710124096,
-      "circuit_breaker_threshold": 30.0,
-      "recovered_after_circuit_breaker_at": "2026-06-11T19:42:31.566363Z",
-      "recovery_path": "restore_to_exploratory"
+      "circuit_breaker_threshold": 30.0
     }
   },
   "core15_BTCUSDm_M15_89bb": {
@@ -20111,7 +20037,7 @@
     "name": "core15_BTCUSDm_M15_e5c0",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "candidate",
+    "status": "disabled",
     "score": 1.9076614949601125,
     "stats": {
       "initial_equity": 10000.0,
@@ -20331,16 +20257,14 @@
       "circuit_breaker_disabled_at": "2026-06-11T19:15:32.571266+00:00",
       "circuit_breaker_previous_status": "exploratory",
       "circuit_breaker_dd_pct": 38.89170710124096,
-      "circuit_breaker_threshold": 30.0,
-      "recovered_after_circuit_breaker_at": "2026-06-11T19:42:31.566457Z",
-      "recovery_path": "restore_to_candidate"
+      "circuit_breaker_threshold": 30.0
     }
   },
   "core15_BTCUSDm_M15_3aa9": {
     "name": "core15_BTCUSDm_M15_3aa9",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 2.2999824784666907,
     "stats": {
       "initial_equity": 10000.0,
@@ -20574,7 +20498,7 @@
       "live_decay": {
         "signal_level": "warning",
         "reason": "recent_avg_negative",
-        "updated_at": "2026-06-12T22:28:58.201669+00:00",
+        "updated_at": "2026-06-11T18:05:30.876174+00:00",
         "recent_count": 9,
         "recent_sum_pnl": -223.58,
         "recent_avg_pnl": -24.842222222222222,
@@ -20585,16 +20509,14 @@
       "circuit_breaker_disabled_at": "2026-06-11T18:20:30.791904+00:00",
       "circuit_breaker_previous_status": "active",
       "circuit_breaker_dd_pct": 39.97875735270942,
-      "circuit_breaker_threshold": 30.0,
-      "recovered_after_circuit_breaker_at": "2026-06-11T19:42:31.566472Z",
-      "recovery_path": "restore_to_exploratory"
+      "circuit_breaker_threshold": 30.0
     }
   },
   "core15_BTCUSDm_M15_f968": {
     "name": "core15_BTCUSDm_M15_f968",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "disabled",
     "score": 3.1886887912078854,
     "stats": {
       "initial_equity": 10000.0,
@@ -20828,9 +20750,7 @@
       "circuit_breaker_disabled_at": "2026-06-11T18:20:30.791904+00:00",
       "circuit_breaker_previous_status": "exploratory",
       "circuit_breaker_dd_pct": 39.97875735270942,
-      "circuit_breaker_threshold": 30.0,
-      "recovered_after_circuit_breaker_at": "2026-06-11T19:42:31.566491Z",
-      "recovery_path": "restore_to_exploratory"
+      "circuit_breaker_threshold": 30.0
     }
   }
 }
