@@ -108,6 +108,33 @@ def _get_account_state() -> AccountState:
     )
 
 
+def _resolve_equity_peak(equity_peak: Optional[float], fallback_equity: float) -> float:
+    """Resolve the drawdown baseline without silently resetting it to current equity.
+
+    When no peak is supplied, prefer the all-time peak recorded by the live
+    monitor. Falling back to current equity would turn the circuit breaker into
+    a no-op for slow drawdowns because each new trade would reset the baseline.
+    """
+    if equity_peak is not None:
+        return float(equity_peak)
+
+    try:
+        from .live_monitor import get_equity_peak
+
+        live_peak = float(get_equity_peak() or 0.0)
+        if live_peak > 0:
+            logger.debug("execute_trade: using live equity peak %.2f", live_peak)
+            return live_peak
+    except Exception:
+        logger.exception("execute_trade: failed to load live equity peak")
+
+    logger.debug(
+        "execute_trade: live equity peak unavailable; falling back to current equity %.2f",
+        fallback_equity,
+    )
+    return float(fallback_equity)
+
+
 def _log_trade(
     strategy_name: str,
     symbol: str,
@@ -126,7 +153,6 @@ def _log_trade(
     with TRADES_LOG_PATH.open("a", encoding="utf-8") as f:
         f.write(line)
     logger.info("Trade executed: %s", line.strip())
-
 
 def execute_trade(
     strategy_name: str,
@@ -193,12 +219,7 @@ def execute_trade(
     except RuntimeError as e:
         return ExecutionResult(success=False, reason=str(e))
 
-    if equity_peak is None:
-        equity_peak = account.equity
-        logger.debug(
-            "execute_trade: equity_peak not provided for %s — drawdown guard inactive",
-            strategy_name,
-        )
+    equity_peak = _resolve_equity_peak(equity_peak, account.equity)
 
     pv = pip_value_per_lot if pip_value_per_lot is not None else _pip_value_for_symbol(resolved_symbol)
     if pv <= 0:

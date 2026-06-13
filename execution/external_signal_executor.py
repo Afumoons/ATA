@@ -22,7 +22,7 @@ import MetaTrader5 as mt5
 from ..config import execution_config
 from ..logging_utils import get_logger
 from ..risk.manager import AccountState, RiskDecision, TradeRequest, validate_trade
-from .engine import _clamp_volume, _resolve_execution_symbol
+from .engine import _clamp_volume, _resolve_equity_peak, _resolve_execution_symbol
 from .external_signal import ExternalSignalConfig, ExternalTradePlan, resolve_default_pip_value
 from .external_signal_trailing import register_external_trailing_state
 from .trade_context_journal import register_trade_entry_context
@@ -208,8 +208,7 @@ def build_external_order_request(
         raise ValueError(f"invalid stop distance: {stop_pips}")
 
     account = _account_state()
-    if equity_peak is None:
-        equity_peak = account.equity
+    equity_peak = _resolve_equity_peak(equity_peak, account.equity)
     pip_value = resolve_default_pip_value(resolved_symbol)
     raw_volume = (account.equity * (plan.risk_perc / 100.0)) / (stop_pips * pip_value)
     volume = _clamp_volume(raw_volume, resolved_symbol)
