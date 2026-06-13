@@ -70,8 +70,8 @@
     "semantic_hash": ""
   },
   "execution/engine.py": {
-    "mtime": 1777007061.155651,
-    "ast_hash": "3ffff4c1e9b17a2252b408a19adc051b",
+    "mtime": 1781144372.064006,
+    "ast_hash": "2d70d991201eabfed208bdbbc510877d",
     "semantic_hash": ""
   },
   "execution/external_signal.py": {
@@ -80,8 +80,8 @@
     "semantic_hash": ""
   },
   "execution/external_signal_executor.py": {
-    "mtime": 1779968580.4803061,
-    "ast_hash": "4d10fe2e257b46b9880c1b4574842429",
+    "mtime": 1781144387.9321907,
+    "ast_hash": "86ed6a541a429886b9e2253634eb134f",
     "semantic_hash": ""
   },
   "execution/external_signal_trailing.py": {
@@ -460,13 +460,13 @@
     "semantic_hash": ""
   },
   "strategies/pool_state.json": {
-    "mtime": 1781128773.1145551,
-    "ast_hash": "4c0310f34aad37717c5d635f216cd746",
+    "mtime": 1781303338.6641886,
+    "ast_hash": "751c2521f3879e0ed7e4025790d31a4c",
     "semantic_hash": ""
   },
   "tests/test_bugfix_batch_20260406.py": {
-    "mtime": 1780654868.4608853,
-    "ast_hash": "09f4712891baa3cee67bdbb3a5bada1c",
+    "mtime": 1781144179.3676074,
+    "ast_hash": "7f4f4581c0e7da3d742bfe5b60a62ebf",
     "semantic_hash": ""
   },
   "tests/test_execution_pool_selection.py": {
@@ -1322,6 +1322,11 @@
   "ui-front/public/window.svg": {
     "mtime": 1775680593.7068481,
     "ast_hash": "a2760511c65806022ad20adf74370ff3",
+    "semantic_hash": ""
+  },
+  "strategies/pool_state.pre_restore-20260611-194231.json": {
+    "mtime": 1781205332.6429732,
+    "ast_hash": "3852ba840f9c97ec3924fbc5762bd0c1",
     "semantic_hash": ""
   }
 }
