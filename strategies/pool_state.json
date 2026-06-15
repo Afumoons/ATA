@@ -5956,7 +5956,7 @@
     "name": "core15_BTCUSDm_M15_e511",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "active",
     "score": 5.298573785539994,
     "stats": {
       "initial_equity": 10000.0,
@@ -6109,7 +6109,7 @@
     "name": "core15_BTCUSDm_M15_e765",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "active",
     "score": 5.071183831034098,
     "stats": {
       "initial_equity": 10000.0,
@@ -8184,7 +8184,7 @@
     "name": "core15_BTCUSDm_M15_563b",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "active",
     "score": 4.6057686322450655,
     "stats": {
       "initial_equity": 10000.0,
@@ -8624,7 +8624,7 @@
     "name": "core15_BTCUSDm_M15_8c9c",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "active",
     "score": 4.573667896142184,
     "stats": {
       "initial_equity": 10000.0,
@@ -8777,7 +8777,7 @@
     "name": "core15_BTCUSDm_M15_76d1",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "active",
     "score": 4.573667896142184,
     "stats": {
       "initial_equity": 10000.0,
@@ -9665,7 +9665,7 @@
     "name": "core15_BTCUSDm_M15_df0a",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "active",
     "score": 4.4997190568359375,
     "stats": {
       "initial_equity": 10000.0,
@@ -10512,7 +10512,7 @@
     "name": "core15_BTCUSDm_M15_4c29",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "active",
     "score": 4.493750647387616,
     "stats": {
       "initial_equity": 10000.0,
@@ -11547,7 +11547,7 @@
     "name": "core15_BTCUSDm_M15_f4f5",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "active",
     "score": 4.403492899796225,
     "stats": {
       "initial_equity": 10000.0,
@@ -11748,7 +11748,7 @@
       "live_decay": {
         "signal_level": "warning",
         "reason": "recent_avg_negative",
-        "updated_at": "2026-06-12T22:28:58.201669+00:00",
+        "updated_at": "2026-06-15T01:29:26.992356+00:00",
         "recent_count": 13,
         "recent_sum_pnl": -38.85000000000001,
         "recent_avg_pnl": -2.988461538461539,
@@ -11768,7 +11768,7 @@
     "name": "core15_BTCUSDm_M15_f4bb",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "active",
     "score": 4.39969457572842,
     "stats": {
       "initial_equity": 10000.0,
@@ -11921,7 +11921,7 @@
     "name": "core15_BTCUSDm_M15_81e5",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "active",
     "score": 4.385052631620051,
     "stats": {
       "initial_equity": 10000.0,
@@ -12221,7 +12221,7 @@
     "name": "core15_BTCUSDm_M15_36ce",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "active",
     "score": 4.282796035855694,
     "stats": {
       "initial_equity": 10000.0,
@@ -12521,7 +12521,7 @@
     "name": "core15_BTCUSDm_M15_0025",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "active",
     "score": 4.186520389052206,
     "stats": {
       "initial_equity": 10000.0,
@@ -12968,7 +12968,7 @@
     "name": "core15_BTCUSDm_M15_3053",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "active",
     "score": 4.130671282732546,
     "stats": {
       "initial_equity": 10000.0,
@@ -13114,14 +13114,25 @@
       "circuit_breaker_dd_pct": 39.97875735270942,
       "circuit_breaker_threshold": 30.0,
       "recovered_after_circuit_breaker_at": "2026-06-11T19:42:31.566276Z",
-      "recovery_path": "restore_to_exploratory"
+      "recovery_path": "restore_to_exploratory",
+      "live_decay": {
+        "signal_level": "warning",
+        "reason": "recent_avg_negative",
+        "updated_at": "2026-06-15T01:29:26.992356+00:00",
+        "recent_count": 9,
+        "recent_sum_pnl": -7.89,
+        "recent_avg_pnl": -0.8766666666666666,
+        "loss_streak": 3,
+        "negative_ratio": 0.5555555555555556,
+        "total_trades": 9
+      }
     }
   },
   "core15_BTCUSDm_M15_bddd": {
     "name": "core15_BTCUSDm_M15_bddd",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "active",
     "score": 4.125273217992184,
     "stats": {
       "initial_equity": 10000.0,
@@ -14256,7 +14267,7 @@
     "name": "core15_XAUUSDm_M15_48db",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "active",
     "score": 3.7074436675708426,
     "stats": {
       "initial_equity": 10000.0,
@@ -14423,7 +14434,7 @@
     "name": "core15_XAUUSDm_M15_49e8",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "active",
     "score": 3.70533531339737,
     "stats": {
       "initial_equity": 10000.0,
@@ -15811,7 +15822,7 @@
     "name": "core15_XAUUSDm_M15_81bf",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "active",
     "score": 3.618680743463691,
     "stats": {
       "initial_equity": 10000.0,
@@ -16112,7 +16123,7 @@
     "name": "core15_XAUUSDm_M15_575d",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "active",
     "score": 3.569890280407262,
     "stats": {
       "initial_equity": 10000.0,
@@ -16283,7 +16294,7 @@
     "name": "core15_XAUUSDm_M15_20d0",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "active",
     "score": 3.558595681449752,
     "stats": {
       "initial_equity": 10000.0,
@@ -16733,7 +16744,7 @@
     "name": "core15_XAUUSDm_M15_ee2e",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "active",
     "score": 3.4590041357815347,
     "stats": {
       "initial_equity": 10000.0,
@@ -16878,7 +16889,7 @@
     "name": "core15_XAUUSDm_M15_250c",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "active",
     "score": 3.4550802310244872,
     "stats": {
       "initial_equity": 10000.0,
@@ -17048,7 +17059,7 @@
     "name": "core15_BTCUSDm_M15_2875",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "active",
     "score": 3.4518580742636313,
     "stats": {
       "initial_equity": 10000.0,
@@ -17355,7 +17366,7 @@
     "name": "core15_XAUUSDm_M15_94a8",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "active",
     "score": 3.4398428666269654,
     "stats": {
       "initial_equity": 10000.0,
@@ -17500,7 +17511,7 @@
     "name": "core15_XAUUSDm_M15_7567",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "active",
     "score": 3.439467492329606,
     "stats": {
       "initial_equity": 10000.0,
@@ -17647,7 +17658,7 @@
     "name": "core15_XAUUSDm_M15_d81e",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "active",
     "score": 3.4336903223970925,
     "stats": {
       "initial_equity": 10000.0,
@@ -17814,7 +17825,7 @@
     "name": "core15_XAUUSDm_M15_98d2",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "active",
     "score": 3.432627149806587,
     "stats": {
       "initial_equity": 10000.0,
@@ -17959,7 +17970,7 @@
     "name": "core15_XAUUSDm_M15_1f6e",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "active",
     "score": 3.4237511547699064,
     "stats": {
       "initial_equity": 10000.0,
@@ -19064,7 +19075,7 @@
     "name": "core15_XAUUSDm_M15_1298",
     "symbol": "XAUUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "active",
     "score": 3.3917390535691103,
     "stats": {
       "initial_equity": 10000.0,
@@ -20340,7 +20351,7 @@
     "name": "core15_BTCUSDm_M15_3aa9",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "exploratory",
+    "status": "active",
     "score": 2.2999824784666907,
     "stats": {
       "initial_equity": 10000.0,
@@ -20574,7 +20585,7 @@
       "live_decay": {
         "signal_level": "warning",
         "reason": "recent_avg_negative",
-        "updated_at": "2026-06-12T22:28:58.201669+00:00",
+        "updated_at": "2026-06-15T01:29:26.992356+00:00",
         "recent_count": 9,
         "recent_sum_pnl": -223.58,
         "recent_avg_pnl": -24.842222222222222,
