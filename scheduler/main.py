@@ -1639,6 +1639,95 @@ def _timeframe_to_seconds(timeframe: str) -> int:
         "D1": 86400,
     }
     return mapping.get(tf, 900)
+    
+def _count_bars_since_entry(
+    symbol: str,
+    timeframe: str,
+    open_time_unix: float,
+) -> int:
+    """Hitung jumlah CLOSED bars sejak posisi dibuka menggunakan data MT5.
+ 
+    P0 FIX: Ganti wall-clock calculation yang salah:
+        bars = (now - open_time) // tf_seconds  ← SALAH: overcounts saat gap
+ 
+    Bar count yang benar harus dari data MT5 aktual karena:
+    - XAU punya weekend gap (Jumat close → Minggu open)
+    - BTC bisa ada gap saat downtime broker
+    - Jika MT5 putus beberapa jam, wall-clock count phantom bars
+    - Exit rule `bars_since_entry >= N` trigger terlalu cepat
+ 
+    Returns:
+        int: Jumlah closed bars sejak entry. 0 jika posisi baru dibuka
+             atau data tidak tersedia (fail-safe: tidak exit prematur).
+    """
+    import MetaTrader5 as mt5
+    from datetime import datetime, timezone
+ 
+    tf_map = {
+        "M1":  mt5.TIMEFRAME_M1,
+        "M5":  mt5.TIMEFRAME_M5,
+        "M15": mt5.TIMEFRAME_M15,
+        "M30": mt5.TIMEFRAME_M30,
+        "H1":  mt5.TIMEFRAME_H1,
+        "H4":  mt5.TIMEFRAME_H4,
+        "D1":  mt5.TIMEFRAME_D1,
+    }
+    mt5_tf = tf_map.get(timeframe.upper())
+    if mt5_tf is None:
+        # Fallback ke wall-clock jika timeframe tidak dikenal
+        tf_sec = _timeframe_to_seconds(timeframe)
+        if tf_sec <= 0:
+            return 0
+        return max(0, int((time.time() - open_time_unix) // tf_sec))
+ 
+    try:
+        # open_time_unix adalah Unix timestamp UTC dari MT5 (pos.time)
+        open_dt = datetime.fromtimestamp(open_time_unix, tz=timezone.utc)
+        now_dt = datetime.now(timezone.utc)
+ 
+        # Ambil bars dari open_time sampai sekarang
+        # count=5000 adalah upper bound — jauh lebih dari cukup
+        # MT5 akan return bar yang tersedia dalam range tersebut
+        rates = mt5.copy_rates_range(symbol, mt5_tf, open_dt, now_dt)
+ 
+        if rates is None or len(rates) == 0:
+            logger.debug(
+                "_count_bars_since_entry: no rates returned for %s %s since %s",
+                symbol, timeframe, open_dt,
+            )
+            # Fail-safe: return 0 agar tidak exit prematur
+            return 0
+ 
+        # Bar pertama adalah bar entry, bars sesudahnya adalah closed bars
+        # Kita tidak count bar terakhir jika masih "current" (belum closed)
+        n_bars = len(rates)
+ 
+        # Bar dengan timestamp >= open_time adalah bars yang kita count.
+        # Bar pertama (index 0) = bar entry itu sendiri, tidak dihitung.
+        # Bar terakhir mungkin masih open, tidak dihitung.
+        # Jadi: closed bars since entry = n_bars - 2 (minimal)
+        # tapi kita floor ke 0 jika hasilnya negatif.
+        bars_since_entry = max(0, n_bars - 1)
+ 
+        logger.debug(
+            "_count_bars_since_entry: symbol=%s tf=%s open=%s n_rates=%d bars_since=%d",
+            symbol, timeframe, open_dt, n_bars, bars_since_entry,
+        )
+        return bars_since_entry
+ 
+    except Exception as e:
+        logger.warning(
+            "_count_bars_since_entry: MT5 query failed for %s %s (open=%s): %s — "
+            "falling back to wall-clock (may be inaccurate near gaps)",
+            symbol, timeframe, open_time_unix, e,
+        )
+        # Fallback ke wall-clock dengan margin of safety:
+        # kurangi 1 bar untuk hindari premature exit
+        tf_sec = _timeframe_to_seconds(timeframe)
+        if tf_sec <= 0:
+            return 0
+        wall_clock_bars = max(0, int((time.time() - open_time_unix) // tf_sec))
+        return max(0, wall_clock_bars - 1)
 
 
 def _close_live_position(*, position, strategy_name: str, timeframe: str) -> tuple[bool, str]:
@@ -1683,11 +1772,18 @@ def _close_live_position(*, position, strategy_name: str, timeframe: str) -> tup
 
 
 def job_evaluate_open_positions_exit() -> None:
+    """Evaluate exit rules untuk semua open positions.
+ 
+    P0 FIX #2: bars_since_entry sekarang dihitung dari actual MT5 bar data,
+    bukan wall-clock time. Ini mencegah premature exit saat ada market gap
+    (weekend XAU, broker downtime, dll).
+    """
     logger.info("Scheduler: job_evaluate_open_positions_exit start")
     import MetaTrader5 as mt5
     from ..backtests.engine import _eval_rule
     from ..execution.audit_utils import append_pool_audit
-
+    from ..config import canonical_symbol as _canon_sym
+ 
     try:
         positions = mt5.positions_get()
     except Exception:
@@ -1700,8 +1796,6 @@ def job_evaluate_open_positions_exit() -> None:
 
     pool = load_pool()
     feature_cache = {}
-    tf_seconds = _timeframe_to_seconds(TIMEFRAME)
-    now_ts = datetime.now(UTC).timestamp()
     evaluated = 0
     closed = 0
 
@@ -1720,21 +1814,46 @@ def job_evaluate_open_positions_exit() -> None:
             exit_rule = strategy_payload.get("exit_rule") or ""
             if not str(exit_rule).strip():
                 continue
-
-            symbol = canonical_symbol(str(getattr(pos, "symbol", rec.symbol) or rec.symbol))
+ 
+            # Resolve symbol ke canonical form untuk feature lookup
+            raw_symbol = str(getattr(pos, "symbol", rec.symbol) or rec.symbol)
+            symbol = _canon_sym(raw_symbol)
+ 
             cache_key = (symbol, TIMEFRAME)
             feat = feature_cache.get(cache_key)
             if feat is None:
                 try:
                     feat = load_features(symbol, TIMEFRAME)
                 except FileNotFoundError:
-                    feat = load_features(str(getattr(pos, "symbol", rec.symbol) or rec.symbol), TIMEFRAME)
+                    try:
+                        feat = load_features(raw_symbol, TIMEFRAME)
+                    except FileNotFoundError:
+                        logger.debug(
+                            "job_evaluate_open_positions_exit: no features for %s/%s",
+                            symbol, raw_symbol,
+                        )
+                        continue
                 feature_cache[cache_key] = feat
 
             if feat is None or len(feat) < 2:
                 continue
 
             latest = _latest_closed_row(feat, TIMEFRAME)
+ 
+            # ----------------------------------------------------------
+            # P0 FIX #2: Gunakan actual bar count dari MT5, bukan wall-clock
+            #
+            # BEFORE (bug):
+            #   now_ts = datetime.now(UTC).timestamp()
+            #   bars_since_entry = max(0, int((now_ts - float(open_time_raw)) // tf_seconds))
+            #   # Problem: overcounts bars saat ada gap (weekend, downtime)
+            #   # XAU gap Jumat-Minggu = ~48 jam = 192 "phantom" M15 bars
+            #   # Exit rule bars_since_entry >= 8 trigger di bar ke-4 aktual
+            #
+            # AFTER (fixed):
+            #   Gunakan _count_bars_since_entry() yang query MT5 copy_rates_range
+            #   sehingga hanya count bars yang benar-benar ada di market data
+            # ----------------------------------------------------------
             open_time_raw = getattr(pos, "time", None)
             if open_time_raw is None:
                 logger.debug(
@@ -1743,11 +1862,16 @@ def job_evaluate_open_positions_exit() -> None:
                     ticket,
                 )
                 continue
-
-            bars_since_entry = max(0, int((now_ts - float(open_time_raw)) // tf_seconds))
+ 
+            bars_since_entry = _count_bars_since_entry(
+                symbol=raw_symbol,       # gunakan broker symbol (bukan canonical) untuk MT5 query
+                timeframe=TIMEFRAME,
+                open_time_unix=float(open_time_raw),
+            )
+ 
             if bars_since_entry < 1:
                 logger.debug(
-                    "Skip exit eval for %s ticket=%s: position too new (%d bars)",
+                    "Skip exit eval for %s ticket=%s: position too new (%d actual bars)",
                     strategy_name,
                     ticket,
                     bars_since_entry,
@@ -1756,44 +1880,61 @@ def job_evaluate_open_positions_exit() -> None:
 
             should_exit = _eval_rule(latest, exit_rule, bars_since_entry=bars_since_entry)
             evaluated += 1
+ 
+            logger.debug(
+                "Exit eval: strategy=%s ticket=%s bars_since_entry=%d "
+                "exit_rule=%r should_exit=%s",
+                strategy_name, ticket, bars_since_entry, exit_rule, should_exit,
+            )
+ 
             if not should_exit:
                 continue
-
-            ok, reason = _close_live_position(position=pos, strategy_name=strategy_name, timeframe=TIMEFRAME)
+ 
+            ok, reason = _close_live_position(
+                position=pos,
+                strategy_name=strategy_name,
+                timeframe=TIMEFRAME,
+            )
             if ok:
                 closed += 1
                 append_pool_audit({
                     "event": "live_exit_rule_close",
                     "strategy": strategy_name,
                     "ticket": ticket,
-                    "symbol": str(getattr(pos, "symbol", "") or ""),
+                    "symbol": raw_symbol,
+                    "symbol_canonical": symbol,
                     "timeframe": TIMEFRAME,
                     "bars_since_entry": bars_since_entry,
                     "exit_rule": exit_rule,
+                    "bars_count_method": "mt5_copy_rates_range",  # audit trail
                 })
                 logger.info(
                     "Live exit-rule close: strategy=%s ticket=%s symbol=%s bars_since_entry=%d",
                     strategy_name,
                     ticket,
-                    getattr(pos, "symbol", ""),
+                    raw_symbol,
                     bars_since_entry,
                 )
             else:
                 logger.warning(
-                    "Live exit-rule close failed: strategy=%s ticket=%s reason=%s",
+                    "Live exit-rule close FAILED: strategy=%s ticket=%s reason=%s",
                     strategy_name,
                     ticket,
                     reason,
                 )
+ 
         except Exception:
-            logger.exception("job_evaluate_open_positions_exit: failed for one position")
-
+            logger.exception(
+                "job_evaluate_open_positions_exit: unhandled error for ticket=%s",
+                getattr(pos, "ticket", "unknown"),
+            )
+ 
     logger.info(
-        "Scheduler: job_evaluate_open_positions_exit done evaluated=%d closed=%d",
+        "Scheduler: job_evaluate_open_positions_exit done | evaluated=%d closed=%d open_positions=%d",
         evaluated,
         closed,
+        len(positions),
     )
-
 
 def job_live_monitor() -> None:
     logger.info("Scheduler: job_live_monitor start")
