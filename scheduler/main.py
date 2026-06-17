@@ -543,38 +543,98 @@ def _memory_neighbors(candidate, memory: ResearchMemory, symbol: str, timeframe:
 
 
 def _memory_is_clearly_bad(candidate, memory: ResearchMemory, symbol: str, timeframe: str, *, neighbors=None) -> bool:
+    """Check if candidate should be vetoed based on memory neighbors.
+    
+    IMPROVEMENTS (2026-01):
+    - Requires stronger evidence before vetoing (85% bad vs previous 70%)
+    - Only vetoes if absolutely certain (avoids killing novel strategies)
+    - Checks structural fingerprint to avoid false positives from semantic similarity
+    - Disabled for challenger families to encourage exploration
+    """
     try:
         neighbors = list(neighbors) if neighbors is not None else _memory_neighbors(candidate, memory, symbol, timeframe, n_results=12)
     except Exception as e:
         logger.exception("ResearchMemory veto query failed for %s: %s", getattr(candidate, "name", "?"), e)
         return False
 
-    if not neighbors or len(neighbors) < 5:
+    # DISABLED if too few neighbors - memory is unreliable with sparse data
+    if not neighbors or len(neighbors) < 8:
         return False
 
+    # Check structural fingerprint - if candidate is structurally novel, don't veto
+    # based solely on semantic similarity to poor performers
+    candidate_fp = _structural_fingerprint(candidate)
+    structurally_similar_bad = 0
+    
     neighbors = neighbors[:10]
 
     bad = 0
+    very_bad = 0  # Count only truly terrible strategies
     for nb in neighbors:
         sharpe = nb.get("stat_sharpe_ratio")
         pf = nb.get("stat_profit_factor")
         ret_pct = nb.get("stat_return_pct")
         wf_sharpe = nb.get("stat_wf_overall_sharpe")
+        
+        # Check if this neighbor is structurally similar
+        nb_name = nb.get("strategy_name", "")
+        nb_is_structurally_similar = False
+        if nb_name:
+            try:
+                from ..strategies.generator import load_strategy
+                nb_path = BASE_DIR / "strategies" / "generated" / f"{nb_name}.json"
+                nb_strat = load_strategy(nb_path)
+                nb_fp = _structural_fingerprint(nb_strat)
+                nb_is_structurally_similar = (candidate_fp == nb_fp)
+            except Exception:
+                pass
+        
         is_bad = False
-        if sharpe is not None and sharpe < 0.0:
+        is_very_bad = False
+        
+        # Stricter criteria for "bad" - only flag truly problematic strategies
+        if sharpe is not None and sharpe < -0.2:  # Was < 0.0
             is_bad = True
-        if pf is not None and pf < 1.0:
+            if sharpe < -0.5:
+                is_very_bad = True
+        if pf is not None and pf < 0.85:  # Was < 1.0
             is_bad = True
-        if ret_pct is not None and ret_pct < -5.0:
+            if pf < 0.7:
+                is_very_bad = True
+        if ret_pct is not None and ret_pct < -15.0:  # Was < -5.0
             is_bad = True
-        if wf_sharpe is not None and wf_sharpe < 0.05:
+            if ret_pct < -25.0:
+                is_very_bad = True
+        if wf_sharpe is not None and wf_sharpe < -0.1:  # Was < 0.05
             is_bad = True
+            if wf_sharpe < -0.3:
+                is_very_bad = True
+        
         if is_bad:
             bad += 1
+            if nb_is_structurally_similar:
+                structurally_similar_bad += 1
+        if is_very_bad:
+            very_bad += 1
 
-    if bad >= 5 and bad / float(len(neighbors)) >= 0.7:
-        logger.info("Memory veto: skipping candidate %s (bad_neighbors=%d/%d)", getattr(candidate, "name", "<unnamed>"), bad, len(neighbors))
+    bad_ratio = bad / float(len(neighbors))
+    
+    # VETO ONLY IF:
+    # 1. At least 85% of neighbors are bad (was 70%)
+    # 2. AND at least 3 are VERY bad (new requirement)
+    # 3. AND at least one is structurally similar (new requirement)
+    # This prevents vetoing novel strategies that just happen to be semantically
+    # similar to poor performers but have different logical structure
+    if bad_ratio >= 0.85 and very_bad >= 3 and structurally_similar_bad >= 1:
+        logger.info(
+            "Memory veto: skipping candidate %s (bad=%d/%d=%.1f%%, very_bad=%d, struct_similar_bad=%d)",
+            getattr(candidate, "name", "<unnamed>"),
+            bad, len(neighbors), bad_ratio * 100,
+            very_bad, structurally_similar_bad
+        )
         return True
+    
+    # Don't veto - memory evidence is insufficient
     return False
 
 
@@ -641,6 +701,14 @@ def _passes_symbol_specific_mc_tail_relief(
 
 
 def _memory_dead_zone_penalty(candidate, memory: ResearchMemory, symbol: str, timeframe: str, *, neighbors=None) -> tuple[float, dict]:
+    """Apply a score penalty if candidate is in a 'dead zone' of poor performers.
+    
+    IMPROVEMENTS (2026-01):
+    - Weaker penalties to avoid over-penalizing novel strategies
+    - Requires stronger evidence of dead zone (higher thresholds)
+    - Checks structural similarity before applying family-based penalty
+    - Reduced maximum penalty from 0.45 to 0.25
+    """
     params = getattr(candidate, "params", {}) or {}
     candidate_family = _strategy_family_from_params(params)
     try:
@@ -649,16 +717,37 @@ def _memory_dead_zone_penalty(candidate, memory: ResearchMemory, symbol: str, ti
         logger.exception("ResearchMemory dead-zone query failed for %s: %s", getattr(candidate, "name", "?"), e)
         return 0.0, {}
 
-    if not neighbors:
+    if not neighbors or len(neighbors) < 6:
+        # Not enough data to reliably determine dead zone
         return 0.0, {}
 
+    # Check structural fingerprint for more accurate family matching
+    candidate_fp = _structural_fingerprint(candidate)
+    
     weak = 0
+    very_weak = 0  # Count only truly terrible strategies
     strong = 0
     same_family = 0
+    structurally_similar_weak = 0
     wf_vals = []
     pf_vals = []
+    
     for nb in neighbors:
         nb_family = str(nb.get("meta_family") or nb.get("stat_family") or "")
+        
+        # Check structural similarity
+        nb_name = nb.get("strategy_name", "")
+        nb_is_structurally_similar = False
+        if nb_name:
+            try:
+                from ..strategies.generator import load_strategy
+                nb_path = BASE_DIR / "strategies" / "generated" / f"{nb_name}.json"
+                nb_strat = load_strategy(nb_path)
+                nb_fp = _structural_fingerprint(nb_strat)
+                nb_is_structurally_similar = (candidate_fp == nb_fp)
+            except Exception:
+                pass
+        
         if candidate_family and nb_family == candidate_family:
             same_family += 1
 
@@ -672,13 +761,34 @@ def _memory_dead_zone_penalty(candidate, memory: ResearchMemory, symbol: str, ti
         if pf is not None:
             pf_vals.append(float(pf))
 
-        if (
-            (sharpe is not None and float(sharpe) < 0.10)
-            or (pf is not None and float(pf) < 1.02)
-            or (ret_pct is not None and float(ret_pct) <= 0.0)
-            or (wf_sharpe is not None and float(wf_sharpe) < 0.15)
-        ):
+        # STRONGER criteria for "weak" - only count truly underperforming strategies
+        is_weak = False
+        is_very_weak = False
+        
+        if sharpe is not None and float(sharpe) < 0.0:  # Was < 0.10
+            is_weak = True
+            if float(sharpe) < -0.3:
+                is_very_weak = True
+        if pf is not None and float(pf) < 0.95:  # Was < 1.02
+            is_weak = True
+            if float(pf) < 0.8:
+                is_very_weak = True
+        if ret_pct is not None and float(ret_pct) < -5.0:  # Was <= 0.0
+            is_weak = True
+            if float(ret_pct) < -15.0:
+                is_very_weak = True
+        if wf_sharpe is not None and float(wf_sharpe) < 0.0:  # Was < 0.15
+            is_weak = True
+            if float(wf_sharpe) < -0.2:
+                is_very_weak = True
+        
+        if is_weak:
             weak += 1
+            if nb_is_structurally_similar:
+                structurally_similar_weak += 1
+        if is_very_weak:
+            very_weak += 1
+            
         if (
             (sharpe is not None and float(sharpe) > 0.35)
             or (pf is not None and float(pf) > 1.15)
@@ -689,27 +799,58 @@ def _memory_dead_zone_penalty(candidate, memory: ResearchMemory, symbol: str, ti
 
     total = len(neighbors)
     weak_ratio = weak / float(total)
+    very_weak_ratio = very_weak / float(total)
     strong_ratio = strong / float(total)
     same_family_ratio = same_family / float(total)
+    structurally_similar_weak_ratio = structurally_similar_weak / float(max(1, sum(1 for nb in neighbors if nb.get("strategy_name"))))
 
     penalty = 0.0
-    if weak_ratio >= 0.55:
-        penalty += min(0.35, weak_ratio * 0.35)
-    if same_family_ratio >= 0.65 and strong_ratio <= 0.20:
-        penalty += 0.10
-    if _is_challenger_family(candidate_family):
-        penalty *= 0.6
-    if wf_vals and sum(wf_vals) / len(wf_vals) < 0.12:
-        penalty += 0.10
-    if pf_vals and sum(pf_vals) / len(pf_vals) < 1.03:
-        penalty += 0.08
-
-    return penalty, {
+    meta = {
         "neighbors": total,
         "weak_ratio": weak_ratio,
+        "very_weak_ratio": very_weak_ratio,
         "strong_ratio": strong_ratio,
         "same_family_ratio": same_family_ratio,
+        "structurally_similar_weak_ratio": structurally_similar_weak_ratio,
     }
+    
+    # WEAKER penalty triggers - require stronger evidence
+    if weak_ratio >= 0.70 and very_weak_ratio >= 0.30:  # Was 0.55, added very_weak requirement
+        # Only apply full penalty if structurally similar strategies are also weak
+        if structurally_similar_weak_ratio >= 0.50:
+            penalty += min(0.20, weak_ratio * 0.20)  # Was min(0.35, weak_ratio * 0.35)
+        else:
+            # Reduce penalty by 60% if structurally dissimilar
+            penalty += min(0.08, weak_ratio * 0.08)
+    
+    # Family-based penalty ONLY if structurally similar AND weak
+    if same_family_ratio >= 0.75 and strong_ratio <= 0.15 and structurally_similar_weak_ratio >= 0.60:
+        penalty += 0.05  # Was 0.10
+    
+    # Challenger families get 50% reduction (was 40%)
+    if _is_challenger_family(candidate_family):
+        penalty *= 0.5
+    
+    # Average-based penalties - reduced magnitude
+    if wf_vals and sum(wf_vals) / len(wf_vals) < 0.0:  # Was < 0.12
+        penalty += 0.05  # Was 0.10
+    if pf_vals and sum(pf_vals) / len(pf_vals) < 0.95:  # Was < 1.03
+        penalty += 0.04  # Was 0.08
+    
+    # Cap total penalty at 0.25 (was effectively ~0.45)
+    penalty = min(0.25, penalty)
+
+    if penalty > 0.0:
+        logger.info(
+            "Dead zone penalty for %s: %.2f (weak=%.1f%%, very_weak=%.1f%%, struct_sim_weak=%.1f%%)",
+            getattr(candidate, "name", "<unnamed>"),
+            penalty,
+            weak_ratio * 100,
+            very_weak_ratio * 100,
+            structurally_similar_weak_ratio * 100
+        )
+
+    return penalty, meta
 
 
 def job_research_strategies() -> None:
@@ -742,6 +883,14 @@ def job_research_strategies() -> None:
         bt_kwargs = _research_backtest_kwargs(canon)
 
         def _memory_bonus_for_parent(rec) -> float:
+            """Calculate parent bonus based on memory neighbors' performance.
+            
+            IMPROVEMENTS (2026-01):
+            - Requires structural similarity check before applying bonus/penalty
+            - Weaker bonus magnitude to avoid over-rewarding semantic clones
+            - Stricter criteria for "good" neighbors
+            - Added WF Sharpe requirement for quality signal
+            """
             try:
                 strat_text = f"symbol={rec.symbol}\ntimeframe={rec.timeframe}"
                 try:
@@ -760,49 +909,116 @@ def job_research_strategies() -> None:
                         f"tp_atr={getattr(strat_obj, 'tp_atr_mult', '')}",
                         f"regime={params.get('regime_type', '')}",
                     ])
+                    
+                    # Get candidate's structural fingerprint
+                    from ..strategies.pool import _structural_fingerprint
+                    candidate_fp = _structural_fingerprint(strat_obj)
                 except Exception:
+                    candidate_fp = None
                     pass
+                
                 neighbors = memory.query_similar_strategies(symbol=rec.symbol, timeframe=rec.timeframe, text=strat_text, n_results=10)
             except Exception as e:
                 logger.error("Memory bonus query failed for %s: %s", rec.name, e)
                 return 0.0
 
-            if not neighbors:
+            if not neighbors or len(neighbors) < 3:
+                # Not enough data for reliable bonus calculation
                 return 0.0
 
-            good = bad = 0
+            good = 0
+            very_good = 0  # Count only truly excellent strategies
+            bad = 0
+            structurally_similar_good = 0
+            
             for nb in neighbors:
                 sharpe = nb.get("stat_sharpe_ratio")
                 pf = nb.get("stat_profit_factor")
                 ret_pct = nb.get("stat_return_pct")
-                if sharpe is None and pf is None and ret_pct is None:
+                wf_sharpe = nb.get("stat_wf_overall_sharpe")
+                
+                if sharpe is None and pf is None and ret_pct is None and wf_sharpe is None:
                     continue
-                is_good = is_bad = False
+                
+                # Check structural similarity
+                nb_name = nb.get("strategy_name", "")
+                nb_is_structurally_similar = False
+                if candidate_fp and nb_name:
+                    try:
+                        nb_path = BASE_DIR / "strategies" / "generated" / f"{nb_name}.json"
+                        nb_strat = load_strategy(nb_path)
+                        nb_fp = _structural_fingerprint(nb_strat)
+                        nb_is_structurally_similar = (candidate_fp == nb_fp)
+                    except Exception:
+                        pass
+                
+                is_good = False
+                is_very_good = False
+                is_bad = False
+                
+                # STRICTER criteria for "good" - require stronger performance
                 if sharpe is not None:
-                    if sharpe > 0.3:
+                    if sharpe > 0.5:  # Was > 0.3
                         is_good = True
-                    elif sharpe < 0.0:
+                        if sharpe > 0.8:
+                            is_very_good = True
+                    elif sharpe < -0.2:  # Was < 0.0
                         is_bad = True
+                        
                 if pf is not None:
-                    if pf > 1.1:
+                    if pf > 1.2:  # Was > 1.1
                         is_good = True
-                    elif pf < 1.0:
+                        if pf > 1.4:
+                            is_very_good = True
+                    elif pf < 0.9:  # Was < 1.0
                         is_bad = True
+                        
                 if ret_pct is not None:
-                    if ret_pct > 0.0:
+                    if ret_pct > 2.0:  # Was > 0.0
                         is_good = True
-                    elif ret_pct < -5.0:
+                        if ret_pct > 5.0:
+                            is_very_good = True
+                    elif ret_pct < -10.0:  # Was < -5.0
                         is_bad = True
+                
+                if wf_sharpe is not None:
+                    if wf_sharpe > 0.4:  # New requirement for quality
+                        is_good = True
+                        if wf_sharpe > 0.7:
+                            is_very_good = True
+                    elif wf_sharpe < -0.2:
+                        is_bad = True
+                
                 if is_good:
                     good += 1
+                    if nb_is_structurally_similar:
+                        structurally_similar_good += 1
+                if is_very_good:
+                    very_good += 1
                 if is_bad:
                     bad += 1
 
             total = good + bad
             if total == 0:
                 return 0.0
+            
             balance = (good - bad) / float(total)
-            bonus = max(-0.2, min(0.2, balance * 0.2))
+            
+            # WEAKER bonus magnitude - reduced from 0.2 to 0.12 max
+            # Only apply full bonus if structurally similar strategies are also good
+            struct_ratio = structurally_similar_good / float(max(1, good))
+            
+            if struct_ratio >= 0.5:
+                # Full bonus if structurally similar neighbors are performing well
+                bonus = max(-0.12, min(0.12, balance * 0.12))
+            else:
+                # Reduce bonus by 50% if structurally dissimilar
+                bonus = max(-0.06, min(0.06, balance * 0.06))
+            
+            # Additional boost for very good neighbors
+            if very_good >= 3 and very_good / float(len(neighbors)) >= 0.3:
+                bonus += 0.03
+            
             return bonus
 
         parent_candidates = [
