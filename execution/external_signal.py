@@ -34,6 +34,11 @@ class ExternalSignalConfig:
     - if TP is missing, use a trailing stop with the same 500 pip distance
     - if TP exists, full-close at TP1
     - do not skip on parser confidence, max exposure, or spread/slippage here
+    
+    ATR-based dynamic SL:
+    - if sl_atr_mult is set, SL will be calculated as atr_mult * ATR instead of fixed pips
+    - ATR is fetched from recent market data at execution time
+    - fallback to default_sl_pips if ATR is unavailable
     """
 
     canonical_symbol: str = "XAUUSD"
@@ -42,6 +47,13 @@ class ExternalSignalConfig:
     default_sl_pips: float = 500.0
     default_trailing_pips: float = 500.0
     source: str = "telegram:japsku"
+    # ATR multiplier for dynamic SL (e.g., 2.0 = 2x ATR)
+    # If None, uses fixed default_sl_pips
+    sl_atr_mult: Optional[float] = None
+    # ATR period for calculation (default 14 bars)
+    atr_period: int = 14
+    # Timeframe for ATR calculation (e.g., "M15", "H1", "D1")
+    atr_timeframe: str = "H1"
 
 
 @dataclass(frozen=True)
@@ -205,7 +217,19 @@ def build_trade_plan(
     parsed: ParsedExternalSignal,
     *,
     config: ExternalSignalConfig | None = None,
+    atr_value: Optional[float] = None,
 ) -> ExternalTradePlan:
+    """Build trade plan from parsed signal.
+    
+    Args:
+        parsed: Parsed external signal
+        config: Signal configuration
+        atr_value: Pre-fetched ATR value for dynamic SL calculation.
+                   If None and sl_atr_mult is configured, will attempt to fetch.
+    
+    Returns:
+        ExternalTradePlan with calculated SL/TP levels
+    """
     cfg = config or ExternalSignalConfig()
     signal_id = _signal_id(parsed.source, parsed.message_id, parsed.raw_message)
     notes = list(parsed.notes)
@@ -234,19 +258,48 @@ def build_trade_plan(
 
     sl = parsed.sl
     sl_mode = "explicit"
+    
+    # Check if using ATR-based SL
+    use_atr = cfg.sl_atr_mult is not None and cfg.sl_atr_mult > 0
+    
     if sl is None:
         explicit_sl_pips = None
+        
+        # First check for explicit pips from message
         if parsed.sl_pips is not None:
             explicit_sl_pips = _display_xau_pips_to_internal_pips(parsed.sl_pips, cfg)
             sl_mode = "explicit_pips_from_entry" if parsed.entry is not None else "explicit_pips_from_fill"
+        # Then check for ATR-based SL
+        elif use_atr:
+            # Use provided ATR value or try to fetch
+            current_atr = atr_value
+            if current_atr is None:
+                current_atr = fetch_atr_for_symbol(
+                    cfg.canonical_symbol,
+                    timeframe=cfg.atr_timeframe,
+                    period=cfg.atr_period,
+                )
+            
+            if current_atr is not None:
+                # Convert ATR (in price units) to pips
+                atr_pips = current_atr / cfg.pip_size
+                explicit_sl_pips = cfg.sl_atr_mult * atr_pips
+                sl_mode = "atr_based"
+                notes.append(f"atr_sl_mult={cfg.sl_atr_mult} atr={current_atr:.4f}")
+            else:
+                # Fallback to default if ATR unavailable
+                sl_mode = "default_from_entry" if parsed.entry is not None else "default_from_fill"
+                notes.append("atr_unavailable_fallback_to_default")
         else:
+            # Use fixed default
             sl_mode = "default_from_entry" if parsed.entry is not None else "default_from_fill"
 
         if parsed.entry is not None:
             sizing_pips = explicit_sl_pips if explicit_sl_pips is not None else cfg.default_sl_pips
             distance = sizing_pips * cfg.pip_size
             sl = parsed.entry - distance if parsed.direction == "long" else parsed.entry + distance
-        if explicit_sl_pips is None:
+        
+        if explicit_sl_pips is None and sl_mode != "atr_based":
             notes.append("sl_missing_default_500_pips")
 
     tp1 = parsed.tp[0] if parsed.tp else None
@@ -330,3 +383,94 @@ def resolve_default_pip_value(symbol: str) -> float:
         if symbol.startswith(prefix):
             return 1.0
     return 10.0
+
+
+def fetch_atr_for_symbol(
+    symbol: str,
+    timeframe: str = "H1",
+    period: int = 14,
+) -> Optional[float]:
+    """Fetch current ATR value for a symbol using MT5.
+    
+    Args:
+        symbol: Canonical symbol name (e.g., "XAUUSD")
+        timeframe: Timeframe for ATR calculation (e.g., "M15", "H1", "D1")
+        period: ATR period (default 14)
+    
+    Returns:
+        Current ATR value in price units, or None if unavailable
+    
+    Note:
+        This function requires MT5 to be initialized and connected.
+        Falls back to None if MT5 is unavailable or data cannot be fetched.
+    """
+    try:
+        import MetaTrader5 as mt5
+    except ImportError:
+        return None
+    
+    # Resolve broker-specific symbol
+    from ..config import execution_variants_for
+    variants = execution_variants_for(symbol) or [symbol]
+    resolved_symbol = None
+    for variant in variants:
+        info = mt5.symbol_info(variant)
+        if info is not None and bool(getattr(info, "visible", False)):
+            resolved_symbol = variant
+            break
+    
+    if resolved_symbol is None:
+        # Try to select symbol
+        for variant in variants:
+            try:
+                mt5.symbol_select(variant, True)
+                info = mt5.symbol_info(variant)
+                if info is not None:
+                    resolved_symbol = variant
+                    break
+            except Exception:
+                continue
+    
+    if resolved_symbol is None:
+        return None
+    
+    # Map timeframe string to MT5 constant
+    TIMEFRAME_MAP = {
+        "M1": mt5.TIMEFRAME_M1,
+        "M5": mt5.TIMEFRAME_M5,
+        "M15": mt5.TIMEFRAME_M15,
+        "M30": mt5.TIMEFRAME_M30,
+        "H1": mt5.TIMEFRAME_H1,
+        "H4": mt5.TIMEFRAME_H4,
+        "D1": mt5.TIMEFRAME_D1,
+    }
+    
+    mt5_tf = TIMEFRAME_MAP.get(timeframe.upper(), mt5.TIMEFRAME_H1)
+    
+    # Fetch recent bars for ATR calculation
+    rates = mt5.copy_rates_from_pos(resolved_symbol, mt5_tf, 0, period + 10)
+    if rates is None or len(rates) < period + 1:
+        return None
+    
+    import pandas as pd
+    df = pd.DataFrame(rates)
+    
+    # Calculate True Range
+    high = df["high"]
+    low = df["low"]
+    close = df["close"]
+    prev_close = close.shift(1)
+    
+    tr = pd.concat(
+        [high - low, (high - prev_close).abs(), (low - prev_close).abs()],
+        axis=1,
+    ).max(axis=1)
+    
+    # Calculate ATR using Wilder's smoothing (EMA with alpha = 1/period)
+    atr = tr.ewm(alpha=1.0 / period, adjust=False, min_periods=period).mean()
+    
+    # Return the latest ATR value
+    if len(atr) > 0 and not pd.isna(atr.iloc[-1]):
+        return float(atr.iloc[-1])
+    
+    return None
