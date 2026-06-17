@@ -299,4 +299,7 @@ class MT5Watchdog:
             )
         except Exception as e:
             logger.exception("MT5Watchdog: failed to send recovery alert: %s", e)
- 
+
+# ── Singleton ────────────────────────────────────────────────────────────────
+# Import ini dari mana saja — satu instance untuk seluruh process
+mt5_watchdog = MT5Watchdog()
