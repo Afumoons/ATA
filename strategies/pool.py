@@ -154,7 +154,11 @@ def _semantic_fingerprint(strategy: StrategyDefinition) -> str:
 def strategy_motif(strategy: StrategyDefinition) -> str:
     params = getattr(strategy, "params", {}) or {}
     family = str(params.get("family") or params.get("playbook_type") or "unknown")
-    all_tokens = _rule_token_set(getattr(strategy, "long_entry_rule", "")) | _rule_token_set(getattr(strategy, "short_entry_rule", "")) | _rule_token_set(getattr(strategy, "exit_rule", ""))
+    all_tokens = (
+        _rule_token_set(getattr(strategy, "long_entry_rule", ""))
+        | _rule_token_set(getattr(strategy, "short_entry_rule", ""))
+        | _rule_token_set(getattr(strategy, "exit_rule", ""))
+    )
 
     if family in {"rsi_range"}:
         return "range_fade"
@@ -200,7 +204,11 @@ def semantic_similarity(a: StrategyDefinition, b: StrategyDefinition) -> float:
     exit_jaccard = _jaccard(a_exit, b_exit)
     token_jaccard = 0.4 * long_jaccard + 0.4 * short_jaccard + 0.2 * exit_jaccard
 
-    numeric_keys = ["trend_min", "trend_exit", "rsi_exit", "vol_min", "vol_max", "time_stop_bars", "stop_loss_pips", "take_profit_pips", "sl_atr_mult", "tp_atr_mult"]
+    numeric_keys = [
+        "trend_min", "trend_exit", "rsi_exit", "vol_min", "vol_max",
+        "time_stop_bars", "stop_loss_pips", "take_profit_pips",
+        "sl_atr_mult", "tp_atr_mult",
+    ]
     compared = 0
     close = 0
     for key in numeric_keys:
@@ -224,8 +232,13 @@ def semantic_similarity(a: StrategyDefinition, b: StrategyDefinition) -> float:
 
     family_bonus = 1.0 if a_family == b_family else 0.0
     motif_bonus = 1.0 if strategy_motif(a) == strategy_motif(b) else 0.0
-    session_guard_bonus = 1.0 if bool(a_params.get("has_session_exit_guard", False)) == bool(b_params.get("has_session_exit_guard", False)) else 0.0
-    exit_archetype_bonus = 1.0 if str(a_params.get("exit_archetype", "")) == str(b_params.get("exit_archetype", "")) else 0.0
+    session_guard_bonus = 1.0 if (
+        bool(a_params.get("has_session_exit_guard", False))
+        == bool(b_params.get("has_session_exit_guard", False))
+    ) else 0.0
+    exit_archetype_bonus = 1.0 if (
+        str(a_params.get("exit_archetype", "")) == str(b_params.get("exit_archetype", ""))
+    ) else 0.0
 
     numeric_similarity = (close / compared) if compared else 0.0
     score = (
@@ -247,7 +260,7 @@ class StrategyRecord:
     name: str
     symbol: str
     timeframe: str
-    status: str  # "candidate", "active", "exploratory", "disabled", "retired"
+    status: str
     score: float
     stats: Dict[str, Any] = field(default_factory=dict)
 
@@ -316,21 +329,32 @@ class StrategyPool:
         pool._rebuild_fp_map()
         return pool
 
+    # -------------------------------------------------------------------------
+    # P0 FIX #4: upsert_strategy() sekarang return bool
+    #
+    # BEFORE (bug):
+    #   def upsert_strategy(...) -> None:   ← always None, caller tidak tahu
+    #                                          apakah pool benar-benar berubah
+    #
+    # AFTER (fixed):
+    #   def upsert_strategy(...) -> bool:  ← True = pool berubah
+    #                                         False = skip (duplicate/no improvement)
+    #
+    # Ini memungkinkan scheduler/main.py melacak pool_modified secara akurat:
+    #   pool_modified |= pool.upsert_strategy(...)
+    # -------------------------------------------------------------------------
     def upsert_strategy(
         self,
         strategy: StrategyDefinition,
         stats: Dict[str, Any],
         score: float,
         status: str = "candidate",
-    ) -> None:
-        """Insert or update a strategy, with structural deduplication.
+    ) -> bool:
+        """Insert atau update strategy dengan structural deduplication.
 
-        Tier 2 behaviour:
-        - If an existing strategy with identical rules exists in the pool,
-          only replace it if the new entry has a better status rank OR a
-          higher score at the same rank. Otherwise skip silently.
-        - This prevents 42%+ clone rate observed in production (217 active
-          → 126 unique after dedup filter in signals.py).
+        Returns:
+            True  → pool benar-benar berubah (insert baru atau replace)
+            False → skip karena duplicate tanpa improvement (pool tidak berubah)
         """
         fp = _structural_fingerprint(strategy)
         existing_name = self._fp_map.get(fp)
@@ -342,30 +366,32 @@ class StrategyPool:
                 existing_rank = _STATUS_RANK.get(existing_rec.status, 0)
 
                 if new_rank < existing_rank:
-                    # Existing has better status — update score/stats if improved, else skip
+                    # Existing punya status lebih baik
                     if score > existing_rec.score:
+                        # Update score/stats saja — ini perubahan kecil, catat sebagai modified
                         existing_rec.score = score
                         existing_rec.stats = stats
                         logger.debug(
-                            "Pool dedup: score update %s (clone=%s) %.3f → %.3f",
-                            existing_name, strategy.name, existing_rec.score, score,
+                            "Pool dedup: score update %s (clone=%s) → %.3f",
+                            existing_name, strategy.name, score,
                         )
+                        return True  # score berubah = pool modified
                     else:
                         logger.debug(
-                            "Pool dedup: skip clone %s (rules==%s, status=%s, score=%.3f)",
-                            strategy.name, existing_name, existing_rec.status, existing_rec.score,
+                            "Pool dedup: skip clone %s (rules==%s, no improvement)",
+                            strategy.name, existing_name,
                         )
-                    return
+                        return False  # tidak ada perubahan
 
                 elif new_rank == existing_rank and score <= existing_rec.score:
                     logger.debug(
                         "Pool dedup: skip clone %s (same tier as %s, no improvement)",
                         strategy.name, existing_name,
                     )
-                    return
+                    return False  # tidak ada perubahan
 
                 else:
-                    # New entry is strictly better — replace
+                    # New entry strictly better — replace
                     logger.info(
                         "Pool dedup: replacing %s with %s (status %s→%s, score %.3f→%.3f)",
                         existing_name, strategy.name,
@@ -383,6 +409,7 @@ class StrategyPool:
                     })
                     del self.strategies[existing_name]
                     del self._fp_map[fp]
+                    # Fall through ke insert bawah
 
         rec = StrategyRecord(
             name=strategy.name,
@@ -395,14 +422,25 @@ class StrategyPool:
         self.strategies[strategy.name] = rec
         self._fp_map[fp] = strategy.name
         logger.info("Pool upsert: %s status=%s score=%.3f", strategy.name, status, score)
+        return True  # insert/replace = pool modified
 
-    def set_status(self, name: str, status: str) -> None:
+    def set_status(self, name: str, status: str) -> bool:
+        """Set status strategy.
+
+        Returns:
+            True  → status berubah (pool modified)
+            False → strategy tidak ditemukan atau status sama
+        """
         rec = self.strategies.get(name)
         if not rec:
             logger.warning("Pool set_status: strategy %s not found", name)
-            return
-        rec.status = normalize_status(status, default=rec.status or "candidate")
+            return False
+        new_status = normalize_status(status, default=rec.status or "candidate")
+        if rec.status == new_status:
+            return False  # tidak ada perubahan
+        rec.status = new_status
         logger.info("Pool set_status: %s -> %s", name, rec.status)
+        return True  # status berubah = pool modified
 
     def top_strategies(
         self,
@@ -468,7 +506,8 @@ class StrategyPool:
                 "inactive_family_mix": kept_family_mix,
             })
         logger.info(
-            "Pool pruned %d inactive strategies (kept %d inactive + %d live = %d total) | inactive_family_mix=%s",
+            "Pool pruned %d inactive strategies (kept %d inactive + %d live = %d total) "
+            "| inactive_family_mix=%s",
             len(pruned_names), len(keep), len(live), len(self.strategies), kept_family_mix,
         )
         return len(pruned_names)
@@ -495,7 +534,10 @@ def load_pool() -> StrategyPool:
 def _safe_write_pool_json(path: Path, payload: Dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     data = json.dumps(payload, indent=2, ensure_ascii=False)
-    with NamedTemporaryFile("w", encoding="utf-8", delete=False, dir=path.parent, prefix=f".{path.stem}_", suffix=".tmp") as tmp:
+    with NamedTemporaryFile(
+        "w", encoding="utf-8", delete=False,
+        dir=path.parent, prefix=f".{path.stem}_", suffix=".tmp"
+    ) as tmp:
         tmp.write(data)
         tmp_path = Path(tmp.name)
     tmp_path.replace(path)

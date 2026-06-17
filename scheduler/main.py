@@ -373,18 +373,26 @@ def job_news_alert() -> None:
         logger.exception("job_news_alert failed")
 
 
-def _apply_live_degradation(pool) -> None:
+def _apply_live_degradation(pool) -> int:
+    """Apply live degradation ke pool. Return jumlah strategies yang diubah.
+ 
+    P0 FIX #4: Return int (bukan None) agar caller tahu apakah pool berubah.
+    Sebelumnya selalu return None sehingga pool_modified tidak bisa
+    diset secara akurat — pool di-save setiap cycle meski tidak ada perubahan.
+    """
     live_stats = load_all_strategy_stats()
     if not live_stats:
-        return
-
+        return 0
+ 
+    changes = 0  # track jumlah actual changes
+ 
     for name, rec in live_stats.items():
         if should_ignore_for_engine_governance(name):
             continue
         pool_rec = pool.strategies.get(name)
-        if not pool_rec or pool_rec.status not in {"active", "exploratory"}:  # ← tambah exploratory
+        if not pool_rec or pool_rec.status not in {"active", "exploratory"}:
             continue
-
+ 
         stats = pool_rec.stats or {}
         bt_ret = float(stats.get("return_pct", 0.0) or 0.0)
         bt_sharpe = float(stats.get("sharpe_ratio", 0.0) or 0.0)
@@ -392,12 +400,15 @@ def _apply_live_degradation(pool) -> None:
             continue
         if rec.num_trades < max(15, MAX_RECENT_TRADES):
             continue
-
+ 
         initial_eq = float(stats.get("initial_equity", 1.0) or 1.0)
         live_ret_total_pct = rec.total_pnl / max(initial_eq, 1.0) * 100.0
-        live_ret_recent_pct = sum(rec.recent_pnls) / max(initial_eq, 1.0) * 100.0 if rec.recent_pnls else 0.0
+        live_ret_recent_pct = (
+            sum(rec.recent_pnls) / max(initial_eq, 1.0) * 100.0
+            if rec.recent_pnls else 0.0
+        )
         recent_avg_pnl = float(rec.recent_avg_pnl or 0.0)
-
+ 
         severe_recent_break = live_ret_recent_pct < -3.0
         sustained_underperformance = (
             live_ret_recent_pct < 0.0
@@ -405,20 +416,31 @@ def _apply_live_degradation(pool) -> None:
             and live_ret_recent_pct < 0.25 * bt_ret
             and recent_avg_pnl <= 0.0
         )
-
+ 
         if severe_recent_break or sustained_underperformance:
-            # Active → candidate, exploratory → disabled (lebih agresif untuk exploratory)
-            new_status = "candidate" if pool_rec.status == "active" else "disabled"
+            old_status = pool_rec.status
+            new_status = "candidate" if old_status == "active" else "disabled"
             pool_rec.status = new_status
+            changes += 1  # catat perubahan
             logger.warning(
-                "Degradation: demoting %s (%s→%s) ...",
-                name, pool_rec.status, new_status,
+                "Degradation: demoting %s (%s→%s) | "
+                "live_recent=%.2f%% live_total=%.2f%% bt_ret=%.2f%%",
+                name, old_status, new_status,
+                live_ret_recent_pct, live_ret_total_pct, bt_ret,
             )
             try:
                 from ..notifications.whatsapp_notifier import send_strategy_degradation_alert
-                send_strategy_degradation_alert(strategy_name=name, recent_avg_pnl=rec.recent_avg_pnl, total_pnl=rec.total_pnl, new_status="candidate")
+                send_strategy_degradation_alert(
+                    strategy_name=name,
+                    recent_avg_pnl=rec.recent_avg_pnl,
+                    total_pnl=rec.total_pnl,
+                    new_status=new_status,
+                )
             except Exception:
                 logger.exception("Failed to send strategy degradation WhatsApp alert")
+ 
+    return changes  # 0 jika tidak ada perubahan
+
 
 
 def _log_research_skip_summary(symbol: str, timeframe: str, skip_counts: dict[str, int], skip_samples: dict[str, list[str]]) -> None:
@@ -1491,10 +1513,16 @@ def job_research_strategies() -> None:
 
                 family_stage_counts[family]["accepted"] += int(bool(eval_result.get("accepted")))
                 family_stage_counts[family][status] += 1
-                prev_count = len(pool.strategies)
-                pool.upsert_strategy(strategy=strat, stats=eval_result, score=eval_result.get("score", 0.0), status=status)
-                if len(pool.strategies) != prev_count or True:  # upsert selalu modifikasi
-                    pool_modified = True
+                # P0 FIX #4: upsert_strategy() sekarang return bool.
+                # Hapus "or True" yang menyebabkan pool_modified selalu True.
+                # Pool hanya di-save jika ada perubahan nyata.
+                pool_modified |= pool.upsert_strategy(
+                    strategy=strat,
+                    stats=eval_result,
+                    score=eval_result.get("score", 0.0),
+                    status=status,
+                )
+
                 memory.store_strategy_result(strategy_name=strat.name, symbol=strat.symbol, timeframe=strat.timeframe, stats=eval_result)
             except Exception as e:
                 logger.exception("Research error for %s: %s", strat.name, e)
@@ -1502,12 +1530,22 @@ def job_research_strategies() -> None:
         _log_research_skip_summary(canon, TIMEFRAME, research_skip_counts, research_skip_samples)
         _emit_family_stage_summary(canon, TIMEFRAME, family_stage_counts, family_skip_counts, family_skip_samples)
 
-    _apply_live_degradation(pool)
+    # P0 FIX #4: _apply_live_degradation() sekarang return int.
+    # pool_modified hanya True jika ada degradation aktual.
+    degradation_changes = _apply_live_degradation(pool)
+    pool_modified |= (degradation_changes > 0)
+ 
     if FAMILY_AWARE_GOVERNANCE_ENABLED:
-        pool_modified = True  
+        # JANGAN set pool_modified = True di sini secara unconditional.
+        # Hanya set True jika ada promotion aktual yang terjadi.
         challenger_candidates = [
             rec for rec in pool.strategies.values()
-            if canonical_symbol(rec.symbol) in RESEARCH_FAMILY_SUMMARY_SYMBOLS and rec.timeframe == TIMEFRAME and rec.status == "candidate" and _is_challenger_family(_execution_family(rec))
+            if (
+                canonical_symbol(rec.symbol) in RESEARCH_FAMILY_SUMMARY_SYMBOLS
+                and rec.timeframe == TIMEFRAME
+                and rec.status == "candidate"
+                and _is_challenger_family(_execution_family(rec))
+            )
         ]
         challenger_candidates.sort(key=lambda r: float(r.score or 0.0), reverse=True)
         for rec in challenger_candidates[:CHALLENGER_CANDIDATE_MIN_SLOTS]:
@@ -1515,23 +1553,52 @@ def job_research_strategies() -> None:
 
         challenger_exploratory = [
             rec for rec in pool.strategies.values()
-            if canonical_symbol(rec.symbol) in RESEARCH_FAMILY_SUMMARY_SYMBOLS and rec.timeframe == TIMEFRAME and rec.status == "exploratory" and _is_challenger_family(_execution_family(rec))
+            if (
+                canonical_symbol(rec.symbol) in RESEARCH_FAMILY_SUMMARY_SYMBOLS
+                and rec.timeframe == TIMEFRAME
+                and rec.status == "exploratory"
+                and _is_challenger_family(_execution_family(rec))
+            )
         ]
         if len(challenger_exploratory) < CHALLENGER_EXPLORATORY_MIN_SLOTS:
             promotable = [
                 rec for rec in challenger_candidates
-                if float((rec.stats or {}).get("wf_overall_sharpe", 0.0) or 0.0) >= 0.18 and float((rec.stats or {}).get("mc_final_pnl_p5", 0.0) or 0.0) > 0.0
+                if (
+                    float((rec.stats or {}).get("wf_overall_sharpe", 0.0) or 0.0) >= 0.18
+                    and float((rec.stats or {}).get("mc_final_pnl_p5", 0.0) or 0.0) > 0.0
+                )
             ]
-            for rec in promotable[: max(0, CHALLENGER_EXPLORATORY_MIN_SLOTS - len(challenger_exploratory))]:
+            slots_needed = max(0, CHALLENGER_EXPLORATORY_MIN_SLOTS - len(challenger_exploratory))
+            for rec in promotable[:slots_needed]:
                 rec.status = "exploratory"
                 rec.stats["family_governance_promoted"] = True
                 rec.stats["family_governance_reason"] = "challenger_slot_bootstrap"
-
-    pool.prune(max_inactive=200, min_family_keep=8)
-    if pool_modified:   # ← hanya save jika ada perubahan
+                pool_modified = True  # ← hanya set True jika ada promotion aktual
+                logger.info(
+                    "Challenger governance: promoted %s to exploratory "
+                    "(wf=%.3f mc_p5=%.2f)",
+                    rec.name,
+                    float((rec.stats or {}).get("wf_overall_sharpe", 0.0) or 0.0),
+                    float((rec.stats or {}).get("mc_final_pnl_p5", 0.0) or 0.0),
+                )
+ 
+    pruned = pool.prune(max_inactive=200, min_family_keep=8)
+    pool_modified |= (pruned > 0)  # prune juga modifikasi pool
+ 
+    if pool_modified:
         save_pool(pool)
+        logger.info(
+            "job_research_strategies: pool saved "
+            "(degradation_changes=%d pruned=%d)",
+            degradation_changes,
+            pruned,
+        )
     else:
-        logger.info("job_research_strategies: no pool changes, skipping save")
+        logger.info(
+            "job_research_strategies: no pool changes this cycle — save skipped "
+            "(rebuild_runtime_artifacts juga tidak dijalankan)"
+        )
+
     logger.info(
         "Scheduler: job_research_strategies done | status_counts=%s",
         summarize_status_counts(pool.strategies),
