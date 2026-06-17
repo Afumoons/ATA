@@ -23,6 +23,7 @@ from ..backtests.engine import run_backtest
 from ..backtests.evaluation import evaluate_strategy
 from ..backtests.walkforward import walk_forward_test
 from ..backtests.monte_carlo import monte_carlo_pnl
+from ..execution.mt5_watchdog import mt5_watchdog
 from ..execution.live_monitor import update_live_stats
 from ..execution.live_decay import evaluate_live_decay, apply_live_decay_actions
 from ..execution.signals import execute_signals_for_symbol, get_strategy_for_ticket, _latest_closed_row
@@ -303,6 +304,10 @@ def _passes_cheap_prescreen(feat, strat, symbol: str) -> tuple[bool, dict]:
 
 def job_update_data() -> None:
     logger.info("Scheduler: job_update_data start")
+    if not mt5_watchdog.check_and_record():            # ← TAMBAHKAN INI
+        logger.warning("job_update_data: MT5 unhealthy, skipping")
+        return
+
     for symbol in MANAGED_SYMBOLS:
         try:
             df = fetch_ohlc(symbol, timeframe=TIMEFRAME)
@@ -1382,6 +1387,9 @@ def _select_diversified_execution_pool(records, current_regime: str, current_ses
 
 def job_execute_signals() -> None:
     logger.info("Scheduler: job_execute_signals start")
+    if not mt5_watchdog.check_and_record():            # ← TAMBAHKAN INI
+        logger.warning("job_execute_signals: MT5 unhealthy, skipping")
+        return
     pool = load_pool()
     live_manifest = load_live_manifest()
     risk_perc = min(2.0, risk_config.max_risk_per_trade_pct)
@@ -1938,6 +1946,9 @@ def job_evaluate_open_positions_exit() -> None:
 
 def job_live_monitor() -> None:
     logger.info("Scheduler: job_live_monitor start")
+    if not mt5_watchdog.check_and_record():            # ← TAMBAHKAN INI
+        logger.warning("job_live_monitor: MT5 unhealthy, skipping")
+        return
     try:
         job_evaluate_open_positions_exit()
     except Exception as e:
