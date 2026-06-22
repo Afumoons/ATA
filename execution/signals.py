@@ -163,7 +163,7 @@ def _load_ticket_map() -> Dict[str, str]:
 
 
 def _save_ticket_map(mapping: Dict[str, str]) -> None:
-        """Simpan ticket map ke disk dan update cache secara atomic.
+    """Simpan ticket map ke disk dan update cache secara atomic.
  
     P0 FIX #5: File write + cache update dibungkus dalam lock yang sama
     sehingga thread lain tidak bisa membaca cache yang setengah-update.
