@@ -124,3 +124,7 @@ ml/artifacts/**
 ml/*.jsonl
 ml/registry.json
 ml/reports/
+
+# --- Graphify outputs (regenerated, large) ---
+graphify-out/cost.json
+graphify-out/cache/
