@@ -10,6 +10,7 @@ from typing import List, Tuple, Any, Dict, Optional, Iterable
 from collections import Counter, defaultdict
 from types import SimpleNamespace
 import re
+import threading
 
 import pandas as pd
 
@@ -73,8 +74,13 @@ logger = get_logger(__name__)
 _TICKET_MAP_PATH = Path(__file__).resolve().parent / "ticket_strategy_map.json"
 _TRADES_LOG_PATH = Path(__file__).resolve().parent / "trades.log"
 _MAX_TICKET_MAP_SIZE = 2000
+# P0 FIX #5: Tambah RLock untuk thread-safety cache ticket map.
+# RLock (reentrant) dipilih karena register_ticket() memanggil _load lalu
+# _save dalam satu operasi — dengan RLock satu thread bisa acquire dua kali.
+_TICKET_MAP_LOCK: threading.RLock = threading.RLock()
 _TICKET_MAP_CACHE: Dict[str, str] | None = None
 _TICKET_MAP_CACHE_KEY: tuple[float | None, float | None] | None = None
+
 
 
 def _rebuild_ticket_map_from_trades_log(limit_lines: int = 5000) -> Dict[str, str]:
@@ -105,58 +111,108 @@ def _rebuild_ticket_map_from_trades_log(limit_lines: int = 5000) -> Dict[str, st
 
 
 def _load_ticket_map() -> Dict[str, str]:
+    """Load ticket→strategy map dari disk dengan thread-safe cache.
+ 
+    P0 FIX #5: Seluruh cache check + update dibungkus dengan _TICKET_MAP_LOCK
+    sehingga concurrent threads tidak bisa race pada cache read/write.
+ 
+    Cache invalidation menggunakan mtime dari DUA file:
+    - ticket_strategy_map.json (primary persistent store)
+    - trades.log (fallback rebuild source)
+    Jika salah satu berubah, cache di-invalidate dan reload dari disk.
+    """
     global _TICKET_MAP_CACHE, _TICKET_MAP_CACHE_KEY
-
+ 
+    # Baca mtime DI LUAR lock dulu (I/O murah, tidak perlu blokir thread lain)
     file_mtime = _TICKET_MAP_PATH.stat().st_mtime if _TICKET_MAP_PATH.exists() else None
     log_mtime = _TRADES_LOG_PATH.stat().st_mtime if _TRADES_LOG_PATH.exists() else None
-    cache_key = (file_mtime, log_mtime)
-
-    if _TICKET_MAP_CACHE is not None and _TICKET_MAP_CACHE_KEY == cache_key:
-        return dict(_TICKET_MAP_CACHE)
-
-    file_map: Dict[str, str] = {}
-    if _TICKET_MAP_PATH.exists():
-        try:
-            with _TICKET_MAP_PATH.open("r", encoding="utf-8") as f:
-                data = json.load(f)
-            if isinstance(data, dict):
-                file_map = data
-        except Exception:
-            logger.exception("Failed to load ticket_strategy_map")
-
-    log_map = _rebuild_ticket_map_from_trades_log()
-    merged = {**log_map, **file_map}
-    _TICKET_MAP_CACHE = dict(merged)
-    _TICKET_MAP_CACHE_KEY = cache_key
-    return merged
+    current_key = (file_mtime, log_mtime)
+ 
+    with _TICKET_MAP_LOCK:
+        # Double-check setelah acquire lock — mungkin thread lain sudah update
+        if _TICKET_MAP_CACHE is not None and _TICKET_MAP_CACHE_KEY == current_key:
+            # Cache masih valid, return copy (bukan reference) untuk safety
+            return dict(_TICKET_MAP_CACHE)
+ 
+        # Cache miss atau invalidated — reload dari disk
+        file_map: Dict[str, str] = {}
+        if _TICKET_MAP_PATH.exists():
+            try:
+                with _TICKET_MAP_PATH.open("r", encoding="utf-8") as f:
+                    data = json.load(f)
+                if isinstance(data, dict):
+                    file_map = {str(k): str(v) for k, v in data.items()}
+            except Exception:
+                logger.exception("Failed to load ticket_strategy_map")
+ 
+        log_map = _rebuild_ticket_map_from_trades_log()
+ 
+        # file_map override log_map (manual entries override auto-parsed)
+        merged = {**log_map, **file_map}
+ 
+        # Update cache atomically di dalam lock
+        _TICKET_MAP_CACHE = dict(merged)
+        _TICKET_MAP_CACHE_KEY = current_key
+ 
+        logger.debug(
+            "_load_ticket_map: cache refreshed (%d entries, key=%s)",
+            len(merged),
+            current_key,
+        )
+        return dict(merged)
 
 
 def _save_ticket_map(mapping: Dict[str, str]) -> None:
+        """Simpan ticket map ke disk dan update cache secara atomic.
+ 
+    P0 FIX #5: File write + cache update dibungkus dalam lock yang sama
+    sehingga thread lain tidak bisa membaca cache yang setengah-update.
+    """
     global _TICKET_MAP_CACHE, _TICKET_MAP_CACHE_KEY
-    try:
-        if len(mapping) > _MAX_TICKET_MAP_SIZE:
-            keys = sorted(mapping.keys(), key=lambda k: int(k) if k.isdigit() else 0)
-            mapping = {k: mapping[k] for k in keys[-_MAX_TICKET_MAP_SIZE:]}
-        data = json.dumps(mapping, indent=2)
-        fd, tmp = tempfile.mkstemp(
-            dir=_TICKET_MAP_PATH.parent, prefix=".ticket_map_", suffix=".tmp"
-        )
+ 
+    with _TICKET_MAP_LOCK:
         try:
-            with os.fdopen(fd, "w", encoding="utf-8") as f:
-                f.write(data)
-            os.replace(tmp, _TICKET_MAP_PATH)
+            # Trim jika terlalu besar
+            if len(mapping) > _MAX_TICKET_MAP_SIZE:
+                keys = sorted(mapping.keys(), key=lambda k: int(k) if k.isdigit() else 0)
+                mapping = {k: mapping[k] for k in keys[-_MAX_TICKET_MAP_SIZE:]}
+ 
+            data = json.dumps(mapping, indent=2)
+            fd, tmp = tempfile.mkstemp(
+                dir=_TICKET_MAP_PATH.parent,
+                prefix=".ticket_map_",
+                suffix=".tmp",
+            )
+            try:
+                with os.fdopen(fd, "w", encoding="utf-8") as f:
+                    f.write(data)
+                os.replace(tmp, _TICKET_MAP_PATH)
+            except Exception:
+                try:
+                    os.unlink(tmp)
+                except OSError:
+                    pass
+                raise
+ 
+            # Update cache SETELAH file berhasil ditulis, DALAM lock yang sama.
+            # Ini mencegah thread lain membaca cache lama setelah file sudah baru.
             _TICKET_MAP_CACHE = dict(mapping)
+            # Baca mtime baru setelah write selesai
             file_mtime = _TICKET_MAP_PATH.stat().st_mtime if _TICKET_MAP_PATH.exists() else None
             log_mtime = _TRADES_LOG_PATH.stat().st_mtime if _TRADES_LOG_PATH.exists() else None
             _TICKET_MAP_CACHE_KEY = (file_mtime, log_mtime)
+ 
+            logger.debug(
+                "_save_ticket_map: saved %d entries, cache updated",
+                len(mapping),
+            )
+ 
         except Exception:
-            try:
-                os.unlink(tmp)
-            except OSError:
-                pass
-            raise
-    except Exception:
-        logger.exception("Failed to save ticket_strategy_map")
+            logger.exception("Failed to save ticket_strategy_map")
+            # Invalidate cache jika save gagal — force reload dari disk next time
+            _TICKET_MAP_CACHE = None
+            _TICKET_MAP_CACHE_KEY = None
+
 
 
 def register_ticket(ticket: int, strategy_name: str, *aliases: int | str | None) -> None:
