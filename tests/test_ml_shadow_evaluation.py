@@ -86,14 +86,20 @@ def test_build_shadow_evaluation_report_aggregates_prediction_and_outcome_journa
 
     assert report["stage"] == "shadow"
     assert report["trade_taken_count"] == 0
-    assert report["overall"] == {
-        "predictions": 3,
-        "resolved_outcomes": 2,
-        "pending_outcomes": 1,
-        "correct_direction": 1,
-        "directional_accuracy": 0.5,
-        "average_quality_score": 0.25,
-    }
+    overall = report["overall"]
+    assert overall["predictions"] == 3
+    assert overall["resolved_outcomes"] == 2
+    assert overall["pending_outcomes"] == 1
+    assert overall["correct_direction"] == 1
+    assert overall["directional_accuracy"] == 0.5
+    assert overall["average_quality_score"] == 0.25
+    assert overall["average_confidence"] == 0.635
+    assert overall["confidence_brier_score"] == 0.19045
+    assert overall["confusion_matrix"]["buy"]["buy"] == 1
+    assert overall["confusion_matrix"]["buy"]["sell"] == 1
+    assert overall["class_metrics"]["buy"]["precision"] == 1.0
+    assert overall["class_metrics"]["buy"]["recall"] == 0.5
+    assert overall["confidence_calibration"]["bins"][2]["count"] == 1
     assert report["by_model"]["model-a"]["predictions"] == 2
     assert report["by_model"]["model-a"]["resolved_outcomes"] == 2
     assert report["by_model"]["model-a"]["directional_accuracy"] == 0.5
@@ -150,6 +156,9 @@ def test_ml_evaluate_shadow_cli_prints_and_optionally_writes_report(tmp_path, mo
             "model_id": "model-a",
             "correct_direction": True,
             "quality_score": 0.4,
+            "predicted_action": "buy",
+            "actual_direction": "buy",
+            "confidence": 0.73,
         },
     )
     monkeypatch.setattr(
@@ -172,4 +181,5 @@ def test_ml_evaluate_shadow_cli_prints_and_optionally_writes_report(tmp_path, mo
     printed = json.loads(capsys.readouterr().out)
     written = json.loads(output_path.read_text(encoding="utf-8"))
     assert printed["overall"]["resolved_outcomes"] == 1
+    assert printed["overall"]["confusion_matrix"]["buy"]["buy"] == 1
     assert written == printed

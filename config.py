@@ -55,7 +55,7 @@ class SchedulerConfig:
     cadence and most strategy-selection thresholds used by the engine.
     """
     enable_scheduler: bool = True
-    managed_symbols: list[str] = field(default_factory=lambda: ["XAUUSDm", "BTCUSDm", "XAGUSDm"])
+    managed_symbols: list[str] = field(default_factory=lambda: ["XAUUSDm", "BTCUSDm"])
     timeframe: str = "M15"
     minimum_edge_for_execution: float = 0.0
 
@@ -97,7 +97,7 @@ class SchedulerConfig:
     xag_bootstrap_min_sharpe: float = 0.05
     xag_bootstrap_min_wf_sharpe: float = 0.05
 
-    research_family_summary_symbols: set[str] = field(default_factory=lambda: {"XAUUSDm", "BTCUSDm", "XAGUSDm"})
+    research_family_summary_symbols: set[str] = field(default_factory=lambda: {"XAUUSDm", "BTCUSDm"})
     research_family_stage_keys: tuple[str, ...] = (
         "generated",
         "cheap_prescreen_pass",
@@ -307,7 +307,7 @@ class MLConfig:
 
     enabled: bool = True
     stage: str = "shadow"
-    managed_symbols: list[str] = field(default_factory=lambda: ["XAUUSDm", "BTCUSDm", "XAGUSDm"])
+    managed_symbols: list[str] = field(default_factory=lambda: ["XAUUSDm", "BTCUSDm"])
     timeframe: str = "M15"
 
 
