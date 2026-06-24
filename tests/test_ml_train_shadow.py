@@ -80,3 +80,31 @@ def test_train_shadow_model_supports_hist_gradient_boosting(tmp_path):
 
     assert metadata.status == "shadow"
     assert metadata.metrics["model_kind"] == "hist_gradient_boosting"
+
+
+def test_train_shadow_model_uses_btc_specific_feature_enrichment(tmp_path):
+    feature_dir = tmp_path / "data" / "features"
+    feature_dir.mkdir(parents=True)
+    _feature_frame(rows=120).to_parquet(feature_dir / "BTCUSDm_M15_features.parquet")
+
+    cfg = MLConfig(
+        enabled=True,
+        min_training_rows=20,
+        min_validation_rows=10,
+        primary_horizon_bars=2,
+        prediction_horizons_bars=(2, 4),
+        max_label_lookahead_bars=4,
+    )
+
+    metadata = train_shadow_model(
+        "BTCUSDm",
+        "M15",
+        config=cfg,
+        base_dir=tmp_path,
+        artifact_dir=tmp_path / "artifacts",
+        registry_path=tmp_path / "registry.json",
+    )
+
+    assert metadata.metrics["validation_rows"] >= cfg.min_validation_rows
+    assert metadata.metrics["accuracy"] >= 0.40
+    assert metadata.metrics["macro_f1"] >= 0.33

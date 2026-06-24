@@ -46,6 +46,47 @@ def test_build_ml_dataset_uses_chronological_splits(tmp_path):
     assert dataset.train[dataset.label_column].notna().all()
 
 
+def test_build_ml_dataset_adds_btc_specific_features(tmp_path):
+    rows = 40
+    df = pd.DataFrame(
+        {
+            "time": pd.date_range("2026-01-01", periods=rows, freq="15min", tz="UTC"),
+            "open": [100 + i * 0.5 for i in range(rows)],
+            "high": [100.8 + i * 0.5 for i in range(rows)],
+            "low": [99.2 + i * 0.5 for i in range(rows)],
+            "close": [100.3 + i * 0.5 for i in range(rows)],
+            "atr": [2.0] * rows,
+            "rsi": [50.0] * rows,
+            "trend_strength": [0.1 * ((i % 5) - 2) for i in range(rows)],
+            "session_vwap": [100.0 + i * 0.4 for i in range(rows)],
+            "volatility": [0.01 + i * 0.0001 for i in range(rows)],
+        }
+    )
+    feature_dir = tmp_path / "data" / "features"
+    feature_dir.mkdir(parents=True)
+    df.to_parquet(feature_dir / "BTCUSDm_M15_features.parquet")
+
+    cfg = MLConfig(min_training_rows=5, min_validation_rows=3, max_label_lookahead_bars=2, primary_horizon_bars=1)
+    dataset = build_ml_dataset("BTCUSDm", "M15", cfg, base_dir=tmp_path)
+
+    for column in [
+        "btc_return_1",
+        "btc_return_2",
+        "btc_return_4",
+        "btc_return_8",
+        "btc_body_atr",
+        "btc_range_atr",
+        "btc_wick_up_atr",
+        "btc_wick_down_atr",
+        "btc_trend_accel",
+        "btc_vwap_distance_atr",
+        "btc_volatility_change",
+    ]:
+        assert column in dataset.feature_columns
+    assert "btc_return_1" not in infer_feature_columns(df, label_columns=["direction_label"])
+    assert dataset.train[dataset.label_column].notna().all()
+
+
 def test_build_ml_dataset_rejects_too_small_data(tmp_path):
     feature_dir = tmp_path / "data" / "features"
     feature_dir.mkdir(parents=True)

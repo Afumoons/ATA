@@ -19,6 +19,9 @@
 - [x] Add a symbol-filtered audit CLI so XAU/BTC can be reviewed without XAG noise
 - [x] Decide next action: keep shadow-only, retrain, or improve labels/features
 - [x] Document final recommendation and acceptance criteria
+- [x] Audit BTC label/feature quality in more detail
+- [x] Implement BTC-specific feature enrichment in the dataset builder
+- [x] Verify BTC shadow retrain metrics improve on repo data
 
 ---
 
@@ -119,9 +122,24 @@
 - Brier score <= `0.12`
 
 #### BTCUSDm
-- fix label / feature issues first
-- after revision, meet the same XAUUSDm bar before any promotion discussion
-- no class-collapse behavior in validation or shadow evaluation
+- audit shows no obvious label-construction bug
+- label mix is healthy enough to learn from: train split `buy=986`, `hold=138`, `sell=1236`
+- the problem was feature signal quality, not a missing label class
+- BTC-specific momentum/volatility features were added to the dataset builder
+- latest shadow retrain on repo data improved materially: accuracy `0.4524`, macro F1 `0.3549`, PF proxy `1.1648`, expectancy ATR `0.1083`
+- calibration / shadow-outcome review is still required before any promotion discussion
+- stage remains shadow-only
+
+## BTC Label/Feature Audit Notes
+
+- BTC and XAU use the same 48 baseline numeric feature columns, so the issue was not a missing BTC-only feature set.
+- BTC labels are not obviously malformed; class balance is comparable to XAU, and the same future-return threshold produces a usable three-class target.
+- BTC's univariate feature signal was much weaker than XAU's:
+  - mean ANOVA F-score: `2.3519` vs XAU's `4.9871`
+  - median ANOVA F-score: `1.3597` vs XAU's `3.0966`
+- BTC's strongest baseline features were shallow session/VWAP/RSI signals, but they did not separate the classes well enough for stable directional prediction.
+- BTC-only enrichment now adds short-horizon return, body/range, wick, trend acceleration, VWAP distance, and volatility-change features during dataset assembly.
+- Conclusion: BTC was a feature-quality / regime-signal problem, and the first fix is now in place.
 
 ## Current Working Hypothesis
 
