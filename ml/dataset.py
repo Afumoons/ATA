@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
+import numpy as np
 import pandas as pd
 from pandas.api.types import is_numeric_dtype
 
@@ -77,6 +78,56 @@ def _augment_btc_features(df: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
+def _augment_xau_features(df: pd.DataFrame) -> pd.DataFrame:
+    """Add XAU-specific session, news, and regime interaction features.
+
+    XAU has stronger session/news structure than the baseline frame captures,
+    so we enrich those contexts without changing label construction.
+    """
+    out = df.copy()
+    time = pd.to_datetime(out["time"], utc=True, errors="coerce")
+    hour = time.dt.hour.astype(float) + time.dt.minute.astype(float) / 60.0
+    dow = time.dt.dayofweek.astype(float)
+
+    out["xau_hour_sin"] = np.sin(2.0 * np.pi * hour / 24.0)
+    out["xau_hour_cos"] = np.cos(2.0 * np.pi * hour / 24.0)
+    out["xau_dow_sin"] = np.sin(2.0 * np.pi * dow / 7.0)
+    out["xau_dow_cos"] = np.cos(2.0 * np.pi * dow / 7.0)
+    out["xau_london_ny_overlap"] = (((time.dt.hour >= 13) & (time.dt.hour < 17)).astype(int))
+    out["xau_london_open_window"] = (((time.dt.hour >= 7) & (time.dt.hour < 11)).astype(int))
+    out["xau_ny_open_window"] = (((time.dt.hour >= 13) & (time.dt.hour < 17)).astype(int))
+    out["xau_asia_london_transition"] = (((time.dt.hour >= 7) & (time.dt.hour < 10)).astype(int))
+
+    if "news_impact_level" in out.columns:
+        impact = pd.to_numeric(out["news_impact_level"], errors="coerce").fillna(0)
+        out["xau_news_impact_sq"] = impact.pow(2)
+        out["xau_news_high_impact"] = (impact >= 3).astype(int)
+        out["xau_news_medium_impact"] = (impact >= 2).astype(int)
+    if "news_time_delta_min" in out.columns:
+        delta = pd.to_numeric(out["news_time_delta_min"], errors="coerce")
+        out["xau_news_delta_inv"] = 1.0 / (1.0 + delta.abs())
+        out["xau_news_urgent"] = (delta.abs() <= 30.0).astype(int)
+        out["xau_news_stale"] = (delta.abs() >= 180.0).astype(int)
+    if "has_news_window" in out.columns and "news_impact_level" in out.columns:
+        has_news = pd.to_numeric(out["has_news_window"], errors="coerce").fillna(0)
+        impact = pd.to_numeric(out["news_impact_level"], errors="coerce").fillna(0)
+        out["xau_news_window_x_impact"] = has_news * impact
+    if "in_news_lockout" in out.columns and "news_impact_level" in out.columns:
+        lockout = pd.to_numeric(out["in_news_lockout"], errors="coerce").fillna(0)
+        impact = pd.to_numeric(out["news_impact_level"], errors="coerce").fillna(0)
+        out["xau_news_lockout_x_impact"] = lockout * impact
+    if "regime_confidence" in out.columns:
+        regime_conf = pd.to_numeric(out["regime_confidence"], errors="coerce")
+        if "trend_strength" in out.columns:
+            trend_strength = pd.to_numeric(out["trend_strength"], errors="coerce")
+            out["xau_regime_trend_strength"] = regime_conf * trend_strength
+            out["xau_regime_trend_strength_abs"] = regime_conf * trend_strength.abs()
+        if "news_impact_level" in out.columns:
+            impact = pd.to_numeric(out["news_impact_level"], errors="coerce").fillna(0)
+            out["xau_regime_news_pressure"] = regime_conf * impact
+    return out
+
+
 def _is_excluded_column(column: str, label_columns: set[str]) -> bool:
     lower = column.lower()
     if lower == "time" or column in label_columns:
@@ -110,8 +161,11 @@ def build_ml_dataset(symbol: str, timeframe: str, config: MLConfig, base_dir: Pa
     df = add_direction_label(df, config.primary_horizon_bars, config.neutral_return_threshold_atr)
     df = drop_unlabelable_tail(df, config.max_label_lookahead_bars)
     df = df[df["direction_label"].notna()].copy().reset_index(drop=True)
-    if canonical_symbol(symbol) == "BTCUSDm":
+    symbol_key = canonical_symbol(symbol)
+    if symbol_key == "BTCUSDm":
         df = _augment_btc_features(df)
+    elif symbol_key == "XAUUSDm":
+        df = _augment_xau_features(df)
     if len(df) < config.min_training_rows + config.min_validation_rows + 3:
         raise ValueError(f"labeled dataset for {symbol} {timeframe} is too small: {len(df)} rows")
 

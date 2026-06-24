@@ -40,7 +40,7 @@ def test_build_ml_dataset_uses_chronological_splits(tmp_path):
     cfg = MLConfig(min_training_rows=5, min_validation_rows=3, max_label_lookahead_bars=2, primary_horizon_bars=1)
     dataset = build_ml_dataset("XAUUSDm", "M15", cfg, base_dir=tmp_path)
 
-    assert dataset.feature_columns == ["open", "high", "low", "close", "atr", "rsi"]
+    assert all(column in dataset.feature_columns for column in ["open", "high", "low", "close", "atr", "rsi"])
     assert dataset.train["time"].max() < dataset.validation["time"].min()
     assert dataset.validation["time"].max() < dataset.test["time"].min()
     assert dataset.train[dataset.label_column].notna().all()
@@ -84,6 +84,60 @@ def test_build_ml_dataset_adds_btc_specific_features(tmp_path):
     ]:
         assert column in dataset.feature_columns
     assert "btc_return_1" not in infer_feature_columns(df, label_columns=["direction_label"])
+    assert dataset.train[dataset.label_column].notna().all()
+
+
+def test_build_ml_dataset_adds_xau_session_and_news_features(tmp_path):
+    rows = 40
+    df = pd.DataFrame(
+        {
+            "time": pd.date_range("2026-01-01", periods=rows, freq="15min", tz="UTC"),
+            "open": [1800 + i * 0.2 for i in range(rows)],
+            "high": [1801 + i * 0.2 for i in range(rows)],
+            "low": [1799 + i * 0.2 for i in range(rows)],
+            "close": [1800.4 + i * 0.2 for i in range(rows)],
+            "atr": [3.0] * rows,
+            "rsi": [50.0] * rows,
+            "session_vwap": [1800.0 + i * 0.15 for i in range(rows)],
+            "news_impact_level": [0, 1, 2, 3] * 10,
+            "news_time_delta_min": [240.0, 120.0, 30.0, -15.0] * 10,
+            "has_news_window": [False, False, True, True] * 10,
+            "in_news_lockout": [False, False, False, True] * 10,
+            "regime_confidence": [0.4 + 0.01 * (i % 5) for i in range(rows)],
+            "trend_strength": [0.05 * ((i % 7) - 3) for i in range(rows)],
+            "volatility": [0.02 + 0.0001 * i for i in range(rows)],
+            "vol_regime": ["normal", "normal", "high", "high"] * 10,
+        }
+    )
+    feature_dir = tmp_path / "data" / "features"
+    feature_dir.mkdir(parents=True)
+    df.to_parquet(feature_dir / "XAUUSDm_M15_features.parquet")
+
+    cfg = MLConfig(min_training_rows=5, min_validation_rows=3, max_label_lookahead_bars=2, primary_horizon_bars=1)
+    dataset = build_ml_dataset("XAUUSDm", "M15", cfg, base_dir=tmp_path)
+
+    for column in [
+        "xau_hour_sin",
+        "xau_hour_cos",
+        "xau_dow_sin",
+        "xau_dow_cos",
+        "xau_london_ny_overlap",
+        "xau_london_open_window",
+        "xau_ny_open_window",
+        "xau_asia_london_transition",
+        "xau_news_impact_sq",
+        "xau_news_high_impact",
+        "xau_news_medium_impact",
+        "xau_news_delta_inv",
+        "xau_news_urgent",
+        "xau_news_stale",
+        "xau_news_window_x_impact",
+        "xau_news_lockout_x_impact",
+        "xau_regime_trend_strength",
+        "xau_regime_trend_strength_abs",
+        "xau_regime_news_pressure",
+    ]:
+        assert column in dataset.feature_columns
     assert dataset.train[dataset.label_column].notna().all()
 
 

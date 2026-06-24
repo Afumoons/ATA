@@ -22,6 +22,9 @@
 - [x] Audit BTC label/feature quality in more detail
 - [x] Implement BTC-specific feature enrichment in the dataset builder
 - [x] Verify BTC shadow retrain metrics improve on repo data
+- [x] Audit XAU enrichment candidates for the highest-likelihood lift
+- [x] Implement XAU session/news enrichment in the dataset builder
+- [x] Verify XAU shadow retrain metrics improve on repo data
 
 ---
 
@@ -146,3 +149,19 @@
 - XAUUSDm is the stronger candidate right now
 - BTCUSDm likely needs more improvement before it can be considered robust
 - XAGUSDm stays out of scope until the XAU/BTC audit is complete
+
+## XAU Enrichment Audit Notes
+
+- XAU still underperforms badly on the current baseline model, so it is not safe to treat it as "done".
+- I tested several enrichment families on the repo data:
+  - price-action returns/body/range/wick features
+  - session/time-of-day cyclic features
+  - news proximity / lockout features
+  - regime interaction features
+- The most promising lift came from session/time-of-day enrichment, especially when combined with news features.
+- The XAU session/news enrichment is now implemented in the dataset builder and verified on repo data.
+- Best observed validation direction from the audit:
+  - baseline logistic regression: accuracy `0.2389`, macro F1 `0.2289`, PF proxy `0.2741`, expectancy ATR `-0.8533`
+  - session + news logistic regression: accuracy `0.2872`, macro F1 `0.2599`, PF proxy `0.4482`, expectancy ATR `-0.5707`
+- That is still not production-worthy, but it is a real uplift from the prior baseline.
+- Conclusion: if we continue enriching XAU, keep session/time-of-day + news-context features as the core, and then test lighter regime interactions on top.
