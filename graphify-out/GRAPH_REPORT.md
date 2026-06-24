@@ -1,16 +1,16 @@
 # Graph Report - autonomous_trading_ai  (2026-06-23)
 
 ## Corpus Check
-- 260 files · ~451,065 words
+- 261 files · ~451,471 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 3230 nodes · 5902 edges · 231 communities (217 shown, 14 thin omitted)
+- 3240 nodes · 5911 edges · 230 communities (216 shown, 14 thin omitted)
 - Extraction: 87% EXTRACTED · 13% INFERRED · 0% AMBIGUOUS · INFERRED: 761 edges (avg confidence: 0.59)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `78f5b9fc`
+- Built from commit: `72e985ac`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -222,7 +222,6 @@
 - [[_COMMUNITY_Community 207|Community 207]]
 - [[_COMMUNITY_Community 208|Community 208]]
 - [[_COMMUNITY_Community 209|Community 209]]
-- [[_COMMUNITY_Community 229|Community 229]]
 - [[_COMMUNITY_Community 230|Community 230]]
 
 ## God Nodes (most connected - your core abstractions)
@@ -244,10 +243,10 @@
   tests/test_hardening_regime_and_generation.py → backtests/engine.py
 - `MLConfig` --uses--> `MLConfig`  [INFERRED]
   ml/dataset.py → config.py
-- `test_canonical_symbol_is_idempotent_for_known_and_unknown_symbols()` --calls--> `canonical_symbol()`  [INFERRED]
-  tests/test_hardening_regime_and_generation.py → config.py
-- `test_canonical_symbol_maps_btc_execution_aliases_to_research_symbol()` --calls--> `canonical_symbol()`  [INFERRED]
-  tests/test_hardening_regime_and_generation.py → config.py
+- `Any` --uses--> `ExternalSignalConfig`  [INFERRED]
+  scripts/telegram_signal_listener.py → execution/external_signal.py
+- `test_manual_bucket_is_ignored_by_live_decay()` --calls--> `compute_live_decay_signal()`  [INFERRED]
+  tests/test_strategy_live_stats_manual_buckets.py → execution/live_decay.py
 
 ## Import Cycles
 - 1-file cycle: `data/news_collector.py -> data/news_collector.py`
@@ -256,23 +255,23 @@
 - 1-file cycle: `scripts/reconstruct_trade_regime_session_journal.py -> scripts/reconstruct_trade_regime_session_journal.py`
 - 1-file cycle: `scripts/scrape_news.py -> scripts/scrape_news.py`
 
-## Communities (231 total, 14 thin omitted)
+## Communities (230 total, 14 thin omitted)
 
 ### Community 0 - "Community 0"
-Cohesion: 0.10
-Nodes (103): AuditTimelineResponse, BaseModel, DriftSummaryResponse, _as_dict(), build_manual_trade_mt5_request(), classify_manual_trade_mt5_failure(), inspect_manual_trade_mt5_context(), _pick_filling_mode() (+95 more)
+Cohesion: 0.08
+Nodes (114): AuditTimelineResponse, BaseModel, DriftSummaryResponse, build_manual_ticket_execution_audit_event(), build_manual_ticket_preview_audit_event(), build_manual_ticket_submit_intent_audit_event(), manual_trade_preview_fingerprint(), Any (+106 more)
 
 ### Community 1 - "Community 1"
 Cohesion: 0.08
-Nodes (80): is_manual_trade_payload(), is_manual_strategy_bucket(), Return True when the stats bucket belongs to manual/non-engine trading., _fmt_float(), _fmt_pct(), main(), Any, summarize_strategy() (+72 more)
+Nodes (77): is_manual_trade_payload(), _fmt_float(), _fmt_pct(), main(), Any, summarize_strategy(), _eligible_for_exploratory_restore(), _get_stat() (+69 more)
 
 ### Community 2 - "Community 2"
-Cohesion: 0.12
-Nodes (28): Return True when two symbol identifiers point at the same canonical market., same_canonical_symbol(), Any, Return True when MT5 already has an open position for this strategy slot., strategy_has_open_position(), _active_directional_exposure(), _build_routing_context(), _current_session_from_row() (+20 more)
+Cohesion: 0.15
+Nodes (22): _active_directional_exposure(), _build_routing_context(), _current_session_from_row(), _dedupe_correlated_signals(), _family_label_from_strategy(), generate_signals_for_row(), _log_gate_summary(), _passes_regime_confidence_gate() (+14 more)
 
 ### Community 3 - "Community 3"
-Cohesion: 0.07
-Nodes (43): apply_live_decay_actions(), compute_live_decay_signal(), evaluate_live_decay(), LiveDecayAction, LiveDecaySignal, _loss_streak(), _negative_ratio(), StrategyLiveStats (+35 more)
+Cohesion: 0.13
+Nodes (22): apply_live_decay_actions(), compute_live_decay_signal(), evaluate_live_decay(), LiveDecayAction, LiveDecaySignal, _loss_streak(), _negative_ratio(), StrategyLiveStats (+14 more)
 
 ### Community 4 - "Community 4"
 Cohesion: 0.06
@@ -295,16 +294,16 @@ Cohesion: 0.08
 Nodes (29): _MT5HealthState, MT5Watchdog, Return dict berisi status untuk logging dan diagnostics., Coba reinitialize MT5. Dipanggil setelah setiap failure., Kirim WhatsApp alert untuk MT5 connection loss., Internal state — jangan akses langsung, gunakan MT5Watchdog methods., Kirim WhatsApp alert ketika MT5 kembali connected setelah downtime., Thread-safe singleton untuk monitor MT5 connection health.       Usage pattern (+21 more)
 
 ### Community 9 - "Community 9"
-Cohesion: 0.06
-Nodes (29): AppShell(), navItems, PageHeader(), DataTable(), ErrorState(), LoadingState(), QueryStateNotice(), Section() (+21 more)
+Cohesion: 0.09
+Nodes (34): OverviewPage(), DataTable(), ErrorState(), FreshnessBadge(), LoadingState(), QueryStateNotice(), Section(), StatCard() (+26 more)
 
 ### Community 10 - "Community 10"
-Cohesion: 0.41
-Nodes (12): append_pool_audit(), build_manual_ticket_execution_audit_event(), build_manual_ticket_preview_audit_event(), build_manual_ticket_submit_intent_audit_event(), manual_trade_preview_fingerprint(), Any, record_manual_ticket_execution_result(), record_manual_ticket_preview_intent() (+4 more)
+Cohesion: 0.10
+Nodes (8): AppShell(), navItems, PageHeader(), ReviewQueueRow, categoryLabels, severityTones, triageLabels, triageTones
 
 ### Community 11 - "Community 11"
 Cohesion: 0.06
-Nodes (59): fetch_ff_calendar(), _fetch_with_retry(), _get_field(), get_upcoming_high_impact(), _is_gold_relevant(), load_news_events(), _normalize_event(), _parse_ff_datetime() (+51 more)
+Nodes (60): fetch_ff_calendar(), _fetch_with_retry(), _get_field(), get_upcoming_high_impact(), _is_gold_relevant(), load_news_events(), _normalize_event(), _parse_ff_datetime() (+52 more)
 
 ### Community 12 - "Community 12"
 Cohesion: 0.05
@@ -327,24 +326,24 @@ Cohesion: 0.15
 Nodes (25): AppShell(), DataTable(), EmptyState(), ErrorState(), Header(), KeyValueGrid(), LoadingState(), Section() (+17 more)
 
 ### Community 17 - "Community 17"
-Cohesion: 0.15
-Nodes (27): _crossover(), EvolutionConfig, evolve_population(), _family_of(), load_population(), _mutate_params(), _mutate_strategy(), _mutate_structure() (+19 more)
+Cohesion: 0.08
+Nodes (45): _crossover(), EvolutionConfig, evolve_population(), _family_of(), load_population(), _mutate_params(), _mutate_strategy(), _mutate_structure() (+37 more)
 
 ### Community 18 - "Community 18"
-Cohesion: 0.10
-Nodes (40): _apply_live_degradation(), _base_research_min_trades(), _bootstrap_min_pf(), _bootstrap_min_sharpe(), _bootstrap_min_wf_sharpe(), _bootstrap_research_min_trades(), _challenger_research_min_trades(), _cheap_prescreen_backtest_kwargs() (+32 more)
+Cohesion: 0.09
+Nodes (39): _apply_live_degradation(), _base_research_min_trades(), _bootstrap_min_pf(), _bootstrap_min_sharpe(), _bootstrap_min_wf_sharpe(), _bootstrap_research_min_trades(), _challenger_research_min_trades(), _cheap_prescreen_backtest_kwargs() (+31 more)
 
 ### Community 19 - "Community 19"
 Cohesion: 0.06
 Nodes (33): 1. Sample both incumbents and challengers, 1. The current issue is probably not “lack of ideas”, 2. `core15` dominance may represent structural incumbent lock-in, 2. For each sampled strategy, trace these fields, 3. Acceptance pressure may be overly harsh for specialists, 3. Compare family-level death zones, 4. This is likely a governance problem as much as a generation problem, A. Acceptance-gate reform (+25 more)
 
 ### Community 20 - "Community 20"
-Cohesion: 0.13
-Nodes (26): apply_costs(), dynamic_slippage_multiplier(), dynamic_spread_multiplier(), Approximate adverse slippage expansion in stressed conditions., Apply transaction costs and return realized PnL in price * size terms.      - di, Approximate spread expansion under news proximity and high-vol regimes., BacktestResult, _build_local_vars() (+18 more)
+Cohesion: 0.14
+Nodes (25): apply_costs(), dynamic_slippage_multiplier(), dynamic_spread_multiplier(), Approximate adverse slippage expansion in stressed conditions., Apply transaction costs and return realized PnL in price * size terms.      - di, Approximate spread expansion under news proximity and high-vol regimes., BacktestResult, _build_local_vars() (+17 more)
 
 ### Community 21 - "Community 21"
-Cohesion: 0.15
-Nodes (33): ResearchMemory, Any, Serializable definition of a strategy.      This is a config object, not execu, StrategyDefinition, _classify_template(), _best_regime(), build_live_manifest(), build_strategy_index() (+25 more)
+Cohesion: 0.06
+Nodes (68): ResearchMemory, _fmt_money(), _load_json(), main(), print_live_state(), print_open_trades(), print_pool_summary(), print_strategy_live_stats() (+60 more)
 
 ### Community 22 - "Community 22"
 Cohesion: 0.19
@@ -359,8 +358,8 @@ Cohesion: 0.07
 Nodes (28): 1) Structured regime-aware routing, 2026-04-08 Search Diversity / Novelty / Motif Snapshot, 2026-04-09 UI / Operator Surface Snapshot, 2) Explicit strategy routing metadata, 3) Stronger live gating and diversification, 4) Live monitoring maturity, 5) Better doc coverage for operations, 6) Operator UI is now an official surface (+20 more)
 
 ### Community 25 - "Community 25"
-Cohesion: 0.16
-Nodes (25): MLDataset, FeatureSchema, load_feature_schema(), make_model_id(), Path, Serializable Stage 1 ML model artifacts and schemas.  The Stage 1 contract is in, save_feature_schema(), save_model_artifact() (+17 more)
+Cohesion: 0.24
+Nodes (20): MLConfig, Adaptive ML signal-generator defaults.      Afu has explicitly enabled Stage 1, MLDataset, FeatureSchema, _build_estimator(), _expectancy_atr(), _profit_factor_proxy(), Any (+12 more)
 
 ### Community 26 - "Community 26"
 Cohesion: 0.13
@@ -371,16 +370,16 @@ Cohesion: 0.07
 Nodes (26): `ai_generate_strategies.py`, Can hit live execution, Changelog (Docs), `debug_signals_for_latest_bar.py`, External signal ingestion, General Usage, Gotchas / Notes, Live debugging / operations (+18 more)
 
 ### Community 28 - "Community 28"
-Cohesion: 0.12
-Nodes (19): _family_from_params(), _family_from_stats(), _family_from_strategy_payload(), _normalize_family(), normalize_status(), Any, Path, StrategyDefinition (+11 more)
+Cohesion: 0.15
+Nodes (17): _timeframe_to_pandas_delta(), load_all_strategy_stats(), manual_bucket_name(), _now_iso(), Persist stats atomically — crash-safe via temp file + rename., Update live stats for a strategy after a closed MT5 deal.      Parameters     --, Aggregated realized live-trading stats for one strategy., 20-char truncated name as stored in MT5 deal comment. (+9 more)
 
 ### Community 29 - "Community 29"
-Cohesion: 0.20
-Nodes (24): MLConfig, Adaptive ML signal-generator defaults.      Afu has explicitly enabled Stage 1, MLPredictionRecord, load_model_artifact(), Series, ShadowModelArtifact, _bar_time(), build_prediction_record() (+16 more)
+Cohesion: 0.17
+Nodes (23): MLPredictionRecord, Series, ShadowModelArtifact, _bar_time(), build_prediction_record(), _class_probabilities(), _expected_return_proxy(), _latest_closed_feature_row() (+15 more)
 
 ### Community 30 - "Community 30"
-Cohesion: 0.09
-Nodes (29): random_strategy(), Generate a deterministic-rule strategy.      Core M15 markets use a broader bu, _weighted_choice(), manifest_entries_for_slot(), test_backtest_tracks_same_bar_ambiguity_when_sl_and_tp_hit_in_same_candle(), test_btc_challenger_trade_floor_is_softened_not_hardened(), test_btc_mc_tail_relief_is_narrow_and_family_aware(), test_canonical_symbol_is_idempotent_for_known_and_unknown_symbols() (+21 more)
+Cohesion: 0.50
+Nodes (4): DataFrame, _sample_ohlcv(), test_compute_features_adds_vwap_and_volume_profile_context(), test_vwap_profile_strategy_family_generates_orderflow_rules()
 
 ### Community 31 - "Community 31"
 Cohesion: 0.15
@@ -403,8 +402,8 @@ Cohesion: 0.12
 Nodes (18): anomalyLabel, anomalySummary(), buildDriftHeadline(), buildDriftNarrative(), DriftReviewCard(), DriftSignalCard(), regimeAlignmentBadge(), regimeAlignmentLabel (+10 more)
 
 ### Community 36 - "Community 36"
-Cohesion: 0.19
-Nodes (21): Resolve canonical symbol to the first execution-ready broker symbol., _resolve_execution_symbol(), _account_state(), _append_execution_audit(), build_external_order_request(), _build_external_signal_comment(), _derive_prices_from_plan(), execute_external_trade_plan() (+13 more)
+Cohesion: 0.23
+Nodes (20): _account_state(), _append_execution_audit(), build_external_order_request(), _build_external_signal_comment(), _derive_prices_from_plan(), execute_external_trade_plan(), ExternalExecutionDecision, _pick_filling_modes() (+12 more)
 
 ### Community 37 - "Community 37"
 Cohesion: 0.08
@@ -419,8 +418,8 @@ Cohesion: 0.18
 Nodes (7): _DummyPool, _DummyPoolRecord, test_load_audit_timeline_marks_manual_ticket_lifecycle_stages(), test_load_drift_summary_surfaces_manual_exclusion_counts(), test_load_execution_summary_builds_manual_trade_lifecycle_reconciliation(), test_load_pool_summary_payload_excludes_manual_buckets_from_family_attribution(), test_manual_trade_marker_payload_matches_ticket_contract()
 
 ### Community 40 - "Community 40"
-Cohesion: 0.10
-Nodes (21): KeyValueGrid(), DriftPageContent(), useQuery(), ReadonlyURLSearchParamsLike, readUrlState(), SetUrlStateAction, UrlStateShape, useUrlState() (+13 more)
+Cohesion: 0.11
+Nodes (17): KeyValueGrid(), ReadonlyURLSearchParamsLike, readUrlState(), SetUrlStateAction, UrlStateShape, useUrlState(), coerceNumber(), ComparisonFamilyDelta (+9 more)
 
 ### Community 41 - "Community 41"
 Cohesion: 0.09
@@ -447,8 +446,8 @@ Cohesion: 0.19
 Nodes (19): _infer_strategy_from_comment(), _load_json(), _load_strategy_live_stats(), _now_utc(), OpenTradeSnapshot, Any, datetime, Path (+11 more)
 
 ### Community 47 - "Community 47"
-Cohesion: 0.18
-Nodes (20): add_regime_column(), calibrate_thresholds(), _compute_vol_thresholds(), detect_regime(), detect_regime_structured(), EventContext, _hints_for_class(), DataFrame (+12 more)
+Cohesion: 0.11
+Nodes (32): add_regime_column(), calibrate_thresholds(), _compute_vol_thresholds(), detect_regime(), detect_regime_structured(), EventContext, _hints_for_class(), DataFrame (+24 more)
 
 ### Community 48 - "Community 48"
 Cohesion: 0.10
@@ -471,12 +470,12 @@ Cohesion: 0.19
 Nodes (18): coerceRecord(), getStrategyRelationshipState(), hasRecordContent(), pickFirstNumber(), toneFromMagnitude(), compareEdgeLabel(), detailSummary(), EMPTY_STRATEGY_ROWS (+10 more)
 
 ### Community 53 - "Community 53"
-Cohesion: 0.19
-Nodes (18): add_direction_label(), add_future_return_labels(), add_tp_sl_first_touch_labels(), _atr_series(), drop_unlabelable_tail(), DataFrame, Series, Leakage-safe label builders for adaptive ML research.  These helpers may inspect (+10 more)
+Cohesion: 0.11
+Nodes (29): build_ml_dataset(), infer_feature_columns(), _is_excluded_column(), load_feature_frame(), DataFrame, MLConfig, Path, Dataset assembly for Stage 1 adaptive ML shadow models. (+21 more)
 
 ### Community 54 - "Community 54"
-Cohesion: 0.21
-Nodes (18): job_ml_shadow_evaluate(), job_ml_shadow_label_outcomes(), job_ml_shadow_predict(), MLShadowSchedulerSummary, Any, MLConfig, Path, Stage 1 scheduler helpers for adaptive ML shadow cycles.  These helpers are inte (+10 more)
+Cohesion: 0.20
+Nodes (19): ShadowPredictionResult, job_ml_shadow_evaluate(), job_ml_shadow_label_outcomes(), job_ml_shadow_predict(), MLShadowSchedulerSummary, Any, MLConfig, Path (+11 more)
 
 ### Community 55 - "Community 55"
 Cohesion: 0.10
@@ -487,8 +486,8 @@ Cohesion: 0.11
 Nodes (18): 10) `_challenger_research_min_trades` XAU challenger floor not actually softened, 11) `_memory_is_clearly_bad` and `_memory_dead_zone_penalty` duplicate similar Chroma queries with different `n_results`, 12) Backtest engine sparse stats on `df.empty`, 18 - Bottleneck / design cross-check audit (2026-04-06), 1) Walk-forward sequential bottleneck / potential parallelization, 2) Ticket map `stat()` call per strategy, 3) Strategy JSON opened one-by-one during execution, 4) ChromaDB synchronous per-candidate upsert (+10 more)
 
 ### Community 57 - "Community 57"
-Cohesion: 0.19
-Nodes (16): canonical_symbol(), execution_variants_for(), is_canonical_symbol(), normalize_symbol_token(), Return a trimmed, upper-normalized symbol token.      This keeps canonicalizat, Normalize a broker/execution symbol to the canonical research symbol., Return True when the symbol is already one of the canonical research ids., Return broker/execution symbol variants for a canonical market symbol.      Un (+8 more)
+Cohesion: 0.13
+Nodes (27): canonical_symbol(), execution_variants_for(), is_canonical_symbol(), normalize_symbol_token(), Return a trimmed, upper-normalized symbol token.      This keeps canonicalizat, Normalize a broker/execution symbol to the canonical research symbol., Return True when the symbol is already one of the canonical research ids., Return broker/execution symbol variants for a canonical market symbol.      Un (+19 more)
 
 ### Community 58 - "Community 58"
 Cohesion: 0.11
@@ -499,12 +498,12 @@ Cohesion: 0.11
 Nodes (17): backtests/ – Simulation, Evaluation & Explainability, Changelog (Docs), Core Pass 3 Role, `costs.py`, Directory Layout, `engine.py`, `evaluation.py`, `explain.py` (+9 more)
 
 ### Community 60 - "Community 60"
-Cohesion: 0.18
-Nodes (19): _account_identity_from_info(), _get_account_equity(), _get_account_info(), _identity_changed(), LiveStats, _load_closed_trades_state(), Any, Pull new closed MT5 deals and register PnL into DailyState + per-strategy stats. (+11 more)
+Cohesion: 0.13
+Nodes (29): _account_identity_from_info(), _get_account_equity(), _get_account_info(), _identity_changed(), LiveStats, _load_closed_trades_state(), Any, Pull new closed MT5 deals and register PnL into DailyState + per-strategy stats. (+21 more)
 
 ### Community 61 - "Community 61"
-Cohesion: 0.16
-Nodes (15): build_ml_dataset(), infer_feature_columns(), _is_excluded_column(), load_feature_frame(), DataFrame, MLConfig, Path, Dataset assembly for Stage 1 adaptive ML shadow models. (+7 more)
+Cohesion: 0.50
+Nodes (4): main(), parse_args(), Namespace, Train Stage 1 shadow ML models for configured symbols.
 
 ### Community 62 - "Community 62"
 Cohesion: 0.11
@@ -575,8 +574,8 @@ Cohesion: 0.23
 Nodes (9): _normalise_position_mode(), Any, Query for similar strategy research documents by text.          Handles Chroma, Convenience helper for candidate filtering and parent scoring.          Query, Return v if ChromaDB-compatible scalar, else None., Store or update a strategy evaluation result in Chroma.          Bug fixes:, ResearchMemory, ResearchMemoryConfig (+1 more)
 
 ### Community 79 - "Community 79"
-Cohesion: 0.31
-Nodes (12): _extract_context(), _load_feature_frame(), _load_ticket_map(), _load_trade_log_rows(), main(), _nearest_feature_row(), _parse_iso_utc(), Any (+4 more)
+Cohesion: 0.25
+Nodes (7): _load_unmatched_rows(), main(), StrategyLiveStats, _reconcile_unmatched_manual_buckets(), test_manual_bucket_is_ignored_by_live_decay(), test_reconcile_unmatched_manual_buckets_is_idempotent_for_existing_stats(), test_reconcile_unmatched_manual_buckets_rolls_audit_rows_into_stats()
 
 ### Community 80 - "Community 80"
 Cohesion: 0.13
@@ -607,8 +606,8 @@ Cohesion: 0.14
 Nodes (13): 20 – Search Diversity, Novelty Gating, Pool Cleanup & Motif-Aware Selection (2026-04-08), Implemented Changes, Known Limitation After Cleanup, Metadata repair result, Phase 1 — Research Hardening, Phase 2 — Semantic Novelty Gating, Phase 3 — Motif-Aware Multi-Objective Selection, Pool Cleanup Performed (+5 more)
 
 ### Community 87 - "Community 87"
-Cohesion: 0.40
-Nodes (4): append_trade_plan_audit(), Any, Path, Append one JSONL audit row for parser/execution review.
+Cohesion: 0.20
+Nodes (9): Audit Questions, Audit Snapshot, Current Working Hypothesis, Final Output We Want, ML Quality Audit Tasklist — XAUUSDm + BTCUSDm Only, Progress, Quick read, Shadow outcome metrics (+1 more)
 
 ### Community 88 - "Community 88"
 Cohesion: 0.14
@@ -627,8 +626,8 @@ Cohesion: 0.15
 Nodes (12): 1. Canonical symbol mapping in `config.py`, 2. Broker symbol discovery in MT5-facing modules, 3. Broker lot constraints already partially consumed in execution, 4. Hard-coded pip fallbacks still exist today, Existing metadata sources already present in repo, Gaps that remain after this slice, Implementation note added in code, Manual Trade Ticket Symbol Metadata Audit (+4 more)
 
 ### Community 92 - "Community 92"
-Cohesion: 0.16
-Nodes (19): build_trade_plan(), _display_xau_pips_to_internal_pips(), ExternalSignalConfig, fetch_atr_for_symbol(), _first_float(), _numbers(), parse_external_signal(), ParsedExternalSignal (+11 more)
+Cohesion: 0.18
+Nodes (15): build_trade_plan(), _display_xau_pips_to_internal_pips(), fetch_atr_for_symbol(), _first_float(), _numbers(), parse_external_signal(), ParsedExternalSignal, Convert mentor/channel XAU pip wording to internal pip-size units.      The so (+7 more)
 
 ### Community 93 - "Community 93"
 Cohesion: 0.30
@@ -643,16 +642,16 @@ Cohesion: 0.15
 Nodes (13): `execution/closed_trades_state.json`, `execution/equity_history.json`, `execution/external_signal_audit.jsonl`, `execution/external_signal_execution.jsonl`, `execution/external_signal_seen.json`, `execution/live_state.json`, `execution/open_trades.json`, `execution/pool_audit_trail.json` (+5 more)
 
 ### Community 96 - "Community 96"
-Cohesion: 0.23
-Nodes (9): _FakeCollection, _Result, _strategy(), test_backtest_tracks_take_profit_touch_in_same_bar_ambiguity(), test_empty_backtest_returns_full_zero_trade_stats(), test_execute_signals_refreshes_open_position_snapshot_after_success(), test_memory_veto_and_dead_zone_can_share_prefetched_neighbors(), test_research_memory_store_clears_query_cache() (+1 more)
+Cohesion: 0.15
+Nodes (18): Return True when two symbol identifiers point at the same canonical market., same_canonical_symbol(), execute_signals_for_symbol(), _latest_closed_row(), _pip_params(), DataFrame, StrategyPool, _current_session() (+10 more)
 
 ### Community 97 - "Community 97"
 Cohesion: 0.15
 Nodes (12): 1. **Memory Veto (`_memory_is_clearly_bad`)** - HARDENED, 2. **Dead Zone Penalty (`_memory_dead_zone_penalty`)** - WEAKENED, 3. **Parent Bonus (`_memory_bonus_for_parent`)** - CALIBRATED, Changes Made (2026-01), Expected Outcomes, Files Modified, Key Architectural Improvements, Problem Statement (+4 more)
 
 ### Community 98 - "Community 98"
-Cohesion: 0.10
-Nodes (23): _block_bootstrap_indices(), monte_carlo_pnl(), ndarray, _random_permutation_indices(), Monte Carlo stress test on a list of Trade objects.      Supported methods:, _env_bool(), _env_int(), Return True when enough config exists to start the listener.      A `.env` file (+15 more)
+Cohesion: 0.27
+Nodes (11): Trade, _block_bootstrap_indices(), monte_carlo_pnl(), ndarray, _random_permutation_indices(), Monte Carlo stress test on a list of Trade objects.      Supported methods:, test_monte_carlo_block_method_changes_distribution_and_reports_block_metadata(), test_monte_carlo_reports_dd_threshold_probabilities_and_cvar() (+3 more)
 
 ### Community 99 - "Community 99"
 Cohesion: 0.17
@@ -719,8 +718,8 @@ Cohesion: 0.22
 Nodes (8): Acceptance criteria, Design source of truth, Goal, Hard stop rule, Phase A — foundation in `ui-front`, Phase B — operator views, Phase C — optional after MVP, UI v1 Frontend Tasklist
 
 ### Community 115 - "Community 115"
-Cohesion: 0.25
-Nodes (11): can_open_new_trade(), DailyState, load_daily_state(), Check whether new trades are allowed under daily limits.      If `enabled` is, Load daily state from disk, resetting when the date changes., Persist DailyState atomically — crash-safe via temp file + rename., Update daily state after a trade has been closed., register_trade_pnl() (+3 more)
+Cohesion: 0.27
+Nodes (6): Logger, get_logger(), Windows-friendlier rotating handler.      Standard rename-based rollover can fai, Return a module-specific logger writing to logs/system.log.      Uses size-based, SafeRotatingFileHandler, RotatingFileHandler
 
 ### Community 116 - "Community 116"
 Cohesion: 0.22
@@ -751,8 +750,8 @@ Cohesion: 0.25
 Nodes (7): Acceptance criteria, Goal, Hard stop rule, Phase A — API foundation, Phase B — adapters and endpoints, Phase C — verification/docs, UI v1 Backend Tasklist
 
 ### Community 123 - "Community 123"
-Cohesion: 0.23
-Nodes (11): BackgroundScheduler, initialize_mt5(), shutdown_mt5(), shutdown_scheduler(), start_scheduler(), main(), _channel_ref(), main() (+3 more)
+Cohesion: 0.21
+Nodes (12): append_trade_plan_audit(), Any, Path, Append one JSONL audit row for parser/execution review., _channel_ref(), main(), _main_async(), _parse_args() (+4 more)
 
 ### Community 124 - "Community 124"
 Cohesion: 0.25
@@ -783,8 +782,8 @@ Cohesion: 0.29
 Nodes (6): New artifact path, Scope, Track D1b — BTC family-stage observability parity, What changed, Why this is conservative, Why this is needed
 
 ### Community 131 - "Community 131"
-Cohesion: 0.19
-Nodes (12): OverviewPage(), FreshnessBadge(), StatusStrip(), ExecutionPage(), formatPercent(), formatRelativeAge(), getFreshnessState(), getHighSignalExecutionReasons() (+4 more)
+Cohesion: 0.38
+Nodes (3): formatPercent(), compactValue(), formatNumber()
 
 ### Community 133 - "Community 133"
 Cohesion: 0.52
@@ -864,11 +863,11 @@ Nodes (5): Intended identity, Likely strong playbooks, Priorities, Warning, XAG 
 
 ### Community 152 - "Community 152"
 Cohesion: 0.10
-Nodes (16): DataConfig, ExecutionConfig, LiveDecayConfig, NotificationConfig, Live order-execution defaults and broker-specific constraints., Thresholds for degrading strategies based on recent live results., Portfolio and per-trade risk guardrails.      These values should reflect the, Notification routing and alert-timing defaults. (+8 more)
+Nodes (17): DataConfig, ExecutionConfig, LiveDecayConfig, NotificationConfig, Live order-execution defaults and broker-specific constraints., Thresholds for degrading strategies based on recent live results., Portfolio and per-trade risk guardrails.      These values should reflect the, Notification routing and alert-timing defaults. (+9 more)
 
 ### Community 153 - "Community 153"
-Cohesion: 0.40
-Nodes (4): Request, Minimal inbound webhook surface for outbound WhatsApp notifications.  This ser, Webhook endpoint to receive WhatsApp notifications.      Expected:       - Qu, whatsapp_outbound()
+Cohesion: 0.33
+Nodes (8): load_feature_schema(), load_model_artifact(), make_model_id(), Path, Serializable Stage 1 ML model artifacts and schemas.  The Stage 1 contract is in, save_feature_schema(), save_model_artifact(), utc_now_iso()
 
 ### Community 154 - "Community 154"
 Cohesion: 0.50
@@ -967,16 +966,16 @@ Cohesion: 0.83
 Nodes (3): load_pool(), prune_pool(), save_pool()
 
 ### Community 179 - "Community 179"
-Cohesion: 0.50
-Nodes (8): _feature_context(), _load_journal(), Any, Path, register_trade_entry_context(), register_trade_exit_context(), _resolve_feature_path(), _safe_write_json()
+Cohesion: 0.39
+Nodes (7): _env_bool(), _env_int(), Return True when enough config exists to start the listener.      A `.env` file, Start Telegram signal listener in a daemon thread when configured.      Env knob, start_telegram_signal_service(), telegram_signal_service_configured(), TelegramSignalServiceHandle
 
 ### Community 180 - "Community 180"
 Cohesion: 0.83
 Nodes (3): _feature_frame(), test_train_shadow_model_registers_shadow_artifact(), test_train_shadow_model_supports_hist_gradient_boosting()
 
 ### Community 181 - "Community 181"
-Cohesion: 0.32
-Nodes (6): fetch_ohlc(), DataFrame, Path, Resolve canonical symbol to the first broker-visible MT5 symbol variant., _resolve_mt5_symbol(), save_ohlc()
+Cohesion: 0.14
+Nodes (15): BackgroundScheduler, fetch_ohlc(), initialize_mt5(), DataFrame, Path, Resolve canonical symbol to the first broker-visible MT5 symbol variant., _resolve_mt5_symbol(), save_ohlc() (+7 more)
 
 ### Community 183 - "Community 183"
 Cohesion: 0.50
@@ -1003,8 +1002,8 @@ Cohesion: 0.50
 Nodes (4): 9.1 Page structure refinement, 9.2 Card system polish, 9.3 Navigation polish, 9. Visual Hierarchy & Layout Polish
 
 ### Community 189 - "Community 189"
-Cohesion: 0.52
-Nodes (6): append_circuit_breaker_event(), append_unmatched_closed_deal(), _load_json_list(), Any, Path, _safe_write_json()
+Cohesion: 0.50
+Nodes (7): append_circuit_breaker_event(), append_pool_audit(), append_unmatched_closed_deal(), _load_json_list(), Any, Path, _safe_write_json()
 
 ### Community 190 - "Community 190"
 Cohesion: 0.67
@@ -1023,23 +1022,19 @@ Cohesion: 0.67
 Nodes (3): Confidence config, `min_regime_confidence_active`, `min_regime_confidence_exploratory`
 
 ### Community 196 - "Community 196"
-Cohesion: 0.22
-Nodes (16): Controls pass-3 live routing gates.      These settings decide whether a strat, RoutingConfig, _passes_regime_confidence_gate(), _passes_regime_gate(), _passes_session_gate(), _passes_volatility_gate(), Any, _regime_edge() (+8 more)
+Cohesion: 0.42
+Nodes (9): Controls pass-3 live routing gates.      These settings decide whether a strat, RoutingConfig, _passes_session_gate(), _stats(), test_regime_confidence_gate_uses_configurable_thresholds(), test_session_gate_can_disable_allowed_sessions_check(), test_session_gate_can_relax_best_session_requirement(), test_session_gate_requires_best_session_by_default_when_enabled() (+1 more)
 
 ### Community 204 - "Community 204"
-Cohesion: 0.42
-Nodes (8): _fmt_money(), _load_json(), main(), print_live_state(), print_open_trades(), print_pool_summary(), print_strategy_live_stats(), Path
-
-### Community 229 - "Community 229"
-Cohesion: 0.67
-Nodes (3): _feature_frame(), test_shadow_prediction_disabled_fails_closed(), test_shadow_prediction_journals_no_trade_record()
+Cohesion: 0.40
+Nodes (3): Return a known ML stage or fail closed for unsafe unknown values., validate_ml_stage(), test_validate_ml_stage_rejects_unknown_stage()
 
 ### Community 230 - "Community 230"
 Cohesion: 0.67
 Nodes (3): Deliverables, Goal, Phase 6 — Promotion ladder + incubation lane
 
 ## Knowledge Gaps
-- **1293 isolated node(s):** `DataFrame`, `StrategyDefinition`, `Path`, `ndarray`, `DatetimeIndex` (+1288 more)
+- **1300 isolated node(s):** `DataFrame`, `StrategyDefinition`, `Path`, `ndarray`, `DatetimeIndex` (+1295 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **14 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -1048,15 +1043,15 @@ _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `label_pending_predictions()` connect `Community 4` to `Community 54`?**
   _High betweenness centrality (0.014) - this node is a cross-community bridge._
-- **Why does `get_logger()` connect `Community 98` to `Community 2`, `Community 3`, `Community 8`, `Community 11`, `Community 17`, `Community 18`, `Community 20`, `Community 21`, `Community 22`, `Community 26`, `Community 28`, `Community 36`, `Community 47`, `Community 181`, `Community 60`, `Community 189`, `Community 72`, `Community 73`, `Community 78`, `Community 115`?**
+- **Why does `get_logger()` connect `Community 115` to `Community 2`, `Community 3`, `Community 8`, `Community 11`, `Community 17`, `Community 18`, `Community 20`, `Community 21`, `Community 22`, `Community 26`, `Community 28`, `Community 36`, `Community 47`, `Community 179`, `Community 181`, `Community 60`, `Community 189`, `Community 72`, `Community 73`, `Community 78`, `Community 98`?**
   _High betweenness centrality (0.013) - this node is a cross-community bridge._
-- **Why does `run_shadow_outcome_label_cycle()` connect `Community 54` to `Community 4`, `Community 61`?**
+- **Why does `run_shadow_outcome_label_cycle()` connect `Community 54` to `Community 4`, `Community 53`?**
   _High betweenness centrality (0.013) - this node is a cross-community bridge._
 - **Are the 27 inferred relationships involving `StrategyDefinition` (e.g. with `EvolutionConfig` and `Any`) actually correct?**
   _`StrategyDefinition` has 27 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `Approximate spread expansion under news proximity and high-vol regimes.`, `Approximate adverse slippage expansion in stressed conditions.`, `Apply transaction costs and return realized PnL in price * size terms.      - di` to the rest of the system?**
-  _1472 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _1479 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
-  _Cohesion score 0.09668597168597169 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.08374193548387097 - nodes in this community are weakly interconnected._
 - **Should `Community 1` be split into smaller, more focused modules?**
-  _Cohesion score 0.0783132530120482 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.08271604938271605 - nodes in this community are weakly interconnected._

@@ -40,8 +40,8 @@
     "semantic_hash": ""
   },
   "config.py": {
-    "mtime": 1780924064.98709,
-    "ast_hash": "aeee68a0b38c4b2b938c868e7d274063",
+    "mtime": 1782162005.4956732,
+    "ast_hash": "c2a1f1c1e98fa5368ca7010f88b406c8",
     "semantic_hash": ""
   },
   "data/__init__.py": {
@@ -135,8 +135,8 @@
     "semantic_hash": ""
   },
   "execution/signals.py": {
-    "mtime": 1782151752.8545046,
-    "ast_hash": "07a19812ec43ed04f450e346dab731fd",
+    "mtime": 1782161590.6763182,
+    "ast_hash": "fc3c1b73f4bd200c19699ac963ea847f",
     "semantic_hash": ""
   },
   "execution/strategy_live_stats.py": {
@@ -460,8 +460,8 @@
     "semantic_hash": ""
   },
   "strategies/pool_state.json": {
-    "mtime": 1781994281.2238839,
-    "ast_hash": "759909390249d56957c3eecb9c4d4f9b",
+    "mtime": 1782162230.8425856,
+    "ast_hash": "758bd44ce74ec4d8c3c0f822d89abd8a",
     "semantic_hash": ""
   },
   "tests/test_bugfix_batch_20260406.py": {
@@ -525,8 +525,8 @@
     "semantic_hash": ""
   },
   "tests/test_ml_config.py": {
-    "mtime": 1780677068.5947282,
-    "ast_hash": "3433c88a43ab2de0341f4fda1716cae1",
+    "mtime": 1782162084.2540367,
+    "ast_hash": "0f6c183c8caca1bbbce000eeb9cc2944",
     "semantic_hash": ""
   },
   "tests/test_ml_dataset.py": {
@@ -1337,6 +1337,11 @@
   "vector_memory/VECTOR_MEMORY_IMPROVEMENTS.md": {
     "mtime": 1781661766.7221797,
     "ast_hash": "3334269a454984fae691d58785f6f9db",
+    "semantic_hash": ""
+  },
+  "docs/clio/20-ML-QUALITY-AUDIT-XAU-BTC-2026-06-23.md": {
+    "mtime": 1782162267.975735,
+    "ast_hash": "5af1c84c0179b5cbd6bfccb1b0cec862",
     "semantic_hash": ""
   }
 }

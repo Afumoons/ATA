@@ -11,26 +11,26 @@ def plan(text: str):
     return build_trade_plan(parsed, config=cfg)
 
 
-def test_buy_without_sl_defaults_500_pips_from_entry() -> None:
+def test_buy_without_sl_defaults_1000_pips_from_entry() -> None:
     p = plan("BUY XAUUSD 4500")
 
     assert p.decision == "planned"
     assert p.direction == "long"
     assert p.symbol == "XAUUSD"
     assert p.entry_reference == 4500.0
-    assert p.stop_loss_price == 4495.0
+    assert p.stop_loss_price == 4490.0
     assert p.stop_loss_mode == "default_from_entry"
-    assert p.stop_loss_pips_for_sizing == 500.0
+    assert p.stop_loss_pips_for_sizing == 1000.0
     assert p.exit_mode == "trailing_stop"
-    assert p.trailing_stop_pips == 500.0
+    assert p.trailing_stop_pips == 1000.0
 
 
-def test_sell_without_sl_defaults_500_pips_from_entry() -> None:
+def test_sell_without_sl_defaults_1000_pips_from_entry() -> None:
     p = plan("SELL GOLD 4500")
 
     assert p.decision == "planned"
     assert p.direction == "short"
-    assert p.stop_loss_price == 4505.0
+    assert p.stop_loss_price == 4510.0
     assert p.exit_mode == "trailing_stop"
 
 

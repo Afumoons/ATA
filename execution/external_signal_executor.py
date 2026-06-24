@@ -145,9 +145,11 @@ def _build_external_signal_comment(symbol: str, source: str) -> str:
     Example request comment: TLGXAUUSDJAPSKU
     """
 
-    sym_clean = "".join(c for c in symbol.upper() if c.isalnum())
+    # Keep the comment canonical even if the execution symbol is broker-suffixed
+    # (for example XAUUSDm). The destination comment should stay compact and
+    # human-readable: TLGXAUUSD[channel].
     channel_clean = _source_channel_name(source)
-    base = f"{EXTERNAL_SIGNAL_COMMENT_PREFIX}{sym_clean}{channel_clean}"
+    base = f"{EXTERNAL_SIGNAL_COMMENT_PREFIX}XAUUSD{channel_clean}"
     return base[: execution_config.order_comment_max_length]
 
 

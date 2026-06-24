@@ -6102,7 +6102,18 @@
       "circuit_breaker_dd_pct": 39.97875735270942,
       "circuit_breaker_threshold": 30.0,
       "recovered_after_circuit_breaker_at": "2026-06-11T19:42:31.566204Z",
-      "recovery_path": "restore_to_exploratory"
+      "recovery_path": "restore_to_exploratory",
+      "live_decay": {
+        "signal_level": "warning",
+        "reason": "recent_avg_negative",
+        "updated_at": "2026-06-23T22:23:58.700984+00:00",
+        "recent_count": 15,
+        "recent_sum_pnl": -1185.1000000000001,
+        "recent_avg_pnl": -79.00666666666667,
+        "loss_streak": 2,
+        "negative_ratio": 0.5333333333333333,
+        "total_trades": 15
+      }
     }
   },
   "core15_BTCUSDm_M15_e765": {
@@ -9665,7 +9676,7 @@
     "name": "core15_BTCUSDm_M15_df0a",
     "symbol": "BTCUSDm",
     "timeframe": "M15",
-    "status": "active",
+    "status": "candidate",
     "score": 4.4997190568359375,
     "stats": {
       "initial_equity": 10000.0,
@@ -9903,21 +9914,22 @@
       "motif": "range_fade",
       "live_decay": {
         "signal_level": "warning",
-        "reason": "recent_avg_negative",
-        "updated_at": "2026-06-10T15:15:09.813004+00:00",
-        "recent_count": 15,
-        "recent_sum_pnl": -113.55999999999997,
-        "recent_avg_pnl": -7.570666666666665,
-        "loss_streak": 0,
-        "negative_ratio": 0.6,
-        "total_trades": 15
+        "reason": "loss_streak>=4",
+        "updated_at": "2026-06-18T08:38:59.100764+00:00",
+        "recent_count": 30,
+        "recent_sum_pnl": -102.98999999999995,
+        "recent_avg_pnl": -3.4329999999999985,
+        "loss_streak": 4,
+        "negative_ratio": 0.5,
+        "total_trades": 31
       },
       "circuit_breaker_disabled_at": "2026-06-11T18:20:30.791904+00:00",
       "circuit_breaker_previous_status": "active",
       "circuit_breaker_dd_pct": 39.97875735270942,
       "circuit_breaker_threshold": 30.0,
       "recovered_after_circuit_breaker_at": "2026-06-11T19:42:31.566228Z",
-      "recovery_path": "restore_to_exploratory"
+      "recovery_path": "restore_to_exploratory",
+      "family_governance_protected": true
     }
   },
   "core15_BTCUSDm_M15_025b": {
@@ -11748,13 +11760,13 @@
       "live_decay": {
         "signal_level": "warning",
         "reason": "recent_avg_negative",
-        "updated_at": "2026-06-15T01:29:26.992356+00:00",
-        "recent_count": 13,
-        "recent_sum_pnl": -38.85000000000001,
-        "recent_avg_pnl": -2.988461538461539,
-        "loss_streak": 0,
-        "negative_ratio": 0.6153846153846154,
-        "total_trades": 13
+        "updated_at": "2026-06-23T22:23:58.700984+00:00",
+        "recent_count": 17,
+        "recent_sum_pnl": -141.55,
+        "recent_avg_pnl": -8.326470588235296,
+        "loss_streak": 1,
+        "negative_ratio": 0.5882352941176471,
+        "total_trades": 17
       },
       "circuit_breaker_disabled_at": "2026-06-11T18:20:30.791904+00:00",
       "circuit_breaker_previous_status": "active",
@@ -13117,14 +13129,14 @@
       "recovery_path": "restore_to_exploratory",
       "live_decay": {
         "signal_level": "warning",
-        "reason": "recent_avg_negative",
-        "updated_at": "2026-06-15T01:29:26.992356+00:00",
-        "recent_count": 9,
-        "recent_sum_pnl": -7.89,
-        "recent_avg_pnl": -0.8766666666666666,
-        "loss_streak": 3,
-        "negative_ratio": 0.5555555555555556,
-        "total_trades": 9
+        "reason": "loss_streak>=4",
+        "updated_at": "2026-06-23T22:23:58.700984+00:00",
+        "recent_count": 10,
+        "recent_sum_pnl": -18.61,
+        "recent_avg_pnl": -1.861,
+        "loss_streak": 4,
+        "negative_ratio": 0.6,
+        "total_trades": 10
       }
     }
   },
@@ -20585,13 +20597,13 @@
       "live_decay": {
         "signal_level": "warning",
         "reason": "recent_avg_negative",
-        "updated_at": "2026-06-15T01:29:26.992356+00:00",
-        "recent_count": 9,
-        "recent_sum_pnl": -223.58,
-        "recent_avg_pnl": -24.842222222222222,
-        "loss_streak": 1,
-        "negative_ratio": 0.5555555555555556,
-        "total_trades": 9
+        "updated_at": "2026-06-23T22:23:58.700984+00:00",
+        "recent_count": 11,
+        "recent_sum_pnl": -6.539999999999996,
+        "recent_avg_pnl": -0.5945454545454542,
+        "loss_streak": 0,
+        "negative_ratio": 0.45454545454545453,
+        "total_trades": 11
       },
       "circuit_breaker_disabled_at": "2026-06-11T18:20:30.791904+00:00",
       "circuit_breaker_previous_status": "active",

@@ -17,8 +17,8 @@
 - [x] Compare validation metrics vs shadow outcome metrics
 - [x] Build the phase-1 audit tooling for confusion matrix, class metrics, and confidence calibration
 - [x] Add a symbol-filtered audit CLI so XAU/BTC can be reviewed without XAG noise
-- [ ] Decide next action: keep shadow-only, retrain, or improve labels/features
-- [ ] Document final recommendation and acceptance criteria
+- [x] Decide next action: keep shadow-only, retrain, or improve labels/features
+- [x] Document final recommendation and acceptance criteria
 
 ---
 
@@ -99,6 +99,29 @@
 - A short next-step plan with the highest-value ML work after the audit
 
 ---
+
+## Final Recommendation
+
+- `XAUUSDm`: `retrain`
+- `BTCUSDm`: `revise labels / features` before any retrain or promotion discussion
+- Stage remains shadow-only for both symbols
+- No promotion decision is justified yet
+
+### Acceptance criteria for a future promotion discussion
+
+#### XAUUSDm
+- validation accuracy >= `0.45`
+- macro F1 >= `0.35`
+- profit factor proxy >= `1.05`
+- expectancy ATR >= `0.02`
+- shadow directional accuracy >= `0.50`
+- confidence gap <= `0.08`
+- Brier score <= `0.12`
+
+#### BTCUSDm
+- fix label / feature issues first
+- after revision, meet the same XAUUSDm bar before any promotion discussion
+- no class-collapse behavior in validation or shadow evaluation
 
 ## Current Working Hypothesis
 

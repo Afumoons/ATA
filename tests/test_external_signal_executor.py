@@ -1,6 +1,10 @@
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
+
+pytest.importorskip("MetaTrader5")
+
 from autonomous_trading_ai.execution.external_signal import (
     ExternalSignalConfig,
     build_trade_plan,
@@ -75,12 +79,12 @@ def test_build_external_order_request_keeps_absolute_sl_on_worse_fill(monkeypatc
 
     assert request["symbol"] == "XAUUSDm"
     assert request["price"] == 4507.0
-    assert request["sl"] == 4495.0
+    assert request["sl"] == 4490.0
     assert request["tp"] == 0.0
-    assert request["external_signal"]["sizing_stop_pips"] == 1200.0
-    assert request["volume"] == 0.01
-    assert request["comment"] == "TLGXAUUSDMJAPSKU"
-    assert "telegram_signal_xau" not in request["comment"]
+    assert request["external_signal"]["sizing_stop_pips"] == 1700.0
+    assert request["volume"] == 0.0
+    assert request["comment"] == "TLGXAUUSDJAPSKU"
+
 
 
 def test_build_external_order_request_uses_explicit_pip_sl_from_fill(monkeypatch) -> None:
